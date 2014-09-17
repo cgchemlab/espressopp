@@ -20,9 +20,75 @@
 
 
 import espresso
+from math import sqrt
+from espresso import Real3D
+import math
+
+
+def writegro(filename, system, N_mol, velocities=True, unfolded=False, append=False, nameseq=None, scale=1.0, t=None):
+  """Writes the Gromacs .gro file.
+  
+  Args:
+    filename: The file name of .gro file.
+    system: The system object.
+    N_mol: Number of atoms in single molecule.
+    velocities: True for storing the velocities.
+    unfolded: True if the position should be stored without BC.
+    append: True if the file should be appended with new position.
+    nameseq: The optional list of atom names to be used.
+    scale: The optional value for rescaling the values.
+    t: The optional value of time.
+  """
+
+  if append:
+    gro_file = open(filename, 'a')
+  else:
+    gro_file = open(filename, 'w')
+    
+  if t is None:
+    gro_file.write('MD Espresso++\n')
+  else:
+    gro_file.write('MD Espresso++, t= %f\n' % t)
+  
+  num_particles = int(espresso.analysis.NPart(system).compute())
+  gro_file.write('%d\n' % num_particles)
+
+  box = system.bc.boxL
+  if nameseq is None:
+    nameseq = ['X']
+  nameseq_l = len(nameseq)
+  
+  st = '%5d%-5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f\n'
+  configurations = espresso.analysis.ConfigurationsExt(system)
+  configurations.unfolded = unfolded
+  configurations.gather()
+  configuration = configurations[0]
+
+  if velocities:
+    velocities = espresso.analysis.Velocities(system)
+    velocities.gather()
+    velocity = velocities[0]
+  
+  for pid in configuration:
+    xpos = configuration[pid][0] * scale
+    ypos = configuration[pid][1] * scale
+    zpos = configuration[pid][2] * scale
+
+    if velocities:
+      xvel = velocity[pid][0] * scale
+      yvel = velocity[pid][1] * scale
+      zvel = velocity[pid][2] * scale
+    else:
+      xvel = yvel = zvel = 0.0
+    mol_id = int(math.ceil((pid - 1) / N_mol) + 1)
+    gro_file.write(st % (mol_id, 'UNX', nameseq[(pid - 1) % nameseq_l], pid, xpos, ypos, zpos, xvel, yvel, zvel))
+  
+  gro_file.write('%-15.10f %15.10f %15.10f\n' % (box[0], box[1], box[2]))
+  gro_file.close()
+
 
 def writexyz(filename, system, velocities = True, unfolded = False, append = False):
-
+  """Writes the xyz file."""
   if append:
     file = open(filename,'a')
   else:
@@ -63,35 +129,6 @@ def writexyz(filename, system, velocities = True, unfolded = False, append = Fal
   file.close()
 
 
-"""
-def fastwritexyz(filename, system, append = False):
-
-  if append:
-    file = open(filename,'a')
-  else:
-    file = open(filename,'w')
-    
-  configurations = espresso.analysis.Configurations(system)
-  configurations.gather()
-  configuration = configurations[0]
-    
-  numParticles  = configuration.size
-  box_x = system.bc.boxL[0]
-  box_y = system.bc.boxL[1]
-  box_z = system.bc.boxL[2]
-  st = "%d\n%15.10f %15.10f %15.10f\n" % (numParticles, box_x, box_y, box_z)
-  file.write(st)
-  
-  for pid in configuration:
-    xpos   = configuration[pid][0]
-    ypos   = configuration[pid][1]
-    zpos   = configuration[pid][2]
-    st = "%d %15.10f %15.10f %15.10f\n"%(pid, xpos, ypos, zpos)
-    file.write(st)
-  
-  file.close()
-"""
-
 def readxyz(filename):
   file = open(filename)
   line = file.readline()
@@ -131,9 +168,9 @@ def readxyz(filename):
       xvel.append(0.0)
       yvel.append(0.0)
       zvel.append(0.0)
-  return pid, type, xpos, ypos, zpos, xvel, yvel, zvel, Lx, Ly, Lz
+  
   file.close()
-
+  return pid, type, xpos, ypos, zpos, xvel, yvel, zvel, Lx, Ly, Lz
 
 
 def readxyzr(filename):
@@ -182,8 +219,8 @@ def readxyzr(filename):
   return pid, type, xpos, ypos, zpos, xvel, yvel, zvel, Lx, Ly, Lz, radius
   file.close()
 
-# Livia's modified writexyz to fastwritexyz with velocities
 
+# Livia's modified writexyz to fastwritexyz with velocities
 def fastwritexyz(filename, system, velocities = True, unfolded = True, append = False, scale=1.0):
 
   if append:
@@ -255,9 +292,8 @@ def fastreadxyz(filename):
   return pid, type, xpos, ypos, zpos, Lx, Ly, Lz
   file.close()
 
-'''
-  Fast write standard xyz file. Generally standard xyz file is
-  
+def fastwritexyz_standard(filename, system, unfolded = False, append = False):
+  """Fast write standard xyz file. Generally standard xyz file is
   >  number of particles
   >  comment line
   >  type x y z
@@ -272,8 +308,7 @@ def fastreadxyz(filename):
   In this case one can choose folded or unfolded coordinates.
   Currently it writes only particle type = 0 and pid is a line number.
   Later different types should be implemented.
-'''
-def fastwritexyz_standard(filename, system, unfolded = False, append = False):
+  """
 
   if append:
     file = open(filename,'a')
@@ -303,48 +338,39 @@ def fastwritexyz_standard(filename, system, unfolded = False, append = False):
   file.close()
 
 
-"""
-*********************************************
-**xyzfilewrite** - method to write a xyz file
-*********************************************
-
-This method creates a xyz file with the data from a specific system:
-1. row:         number of the atoms
-2. row:         REMARK generated by ESPResSo++
-following rows: atomsymbol positionX positionY positionZ (velocityX velocityY velocityZ) (charge)
-last row:       END
-
-The method needs the following parameters:
-
-* filename
-    name of the file where the table schould be saved in
-* system
-    ESPResSo system which creates the data e.g.:
-    >>>system, integrator = espresso.standard_system.LennardJones(100,(10,10,10))
-* append
-    =False
-      the data in the file will be overwritten
-    =True
-      the data will be appended
-* atomtypes
-    the xyz file needs atom symbols, so it has to translate the numbers
-    insert a dictionary with the right translation
-* velocities
-    =False
-      does not save the velocity vectors
-    =True
-      creates collumns for the velocity vectors and saves the data
-* charge
-    =False
-      does not save the charge
-    =True
-      creates collumns for the charges and saves the data
-"""
-import espresso
-from math import sqrt
-from espresso import Real3D
-
 def xyzfilewrite(filename, system, append=False, atomtypes={0:'Fe',1:'O',2:'C'}, velocities=False, charge=False):
+  """This method creates a xyz file with the data from a specific system:
+  1. row:         number of the atoms
+  2. row:         REMARK generated by ESPResSo++
+  following rows: atomsymbol positionX positionY positionZ (velocityX velocityY velocityZ) (charge)
+  last row:       END
+
+  The method needs the following parameters:
+
+  * filename
+      name of the file where the table schould be saved in
+  * system
+      ESPResSo system which creates the data e.g.:
+      >>>system, integrator = espresso.standard_system.LennardJones(100,(10,10,10))
+  * append
+      =False
+        the data in the file will be overwritten
+      =True
+        the data will be appended
+  * atomtypes
+      the xyz file needs atom symbols, so it has to translate the numbers
+      insert a dictionary with the right translation
+  * velocities
+      =False
+        does not save the velocity vectors
+      =True
+        creates collumns for the velocity vectors and saves the data
+  * charge
+      =False
+        does not save the charge
+      =True
+        creates collumns for the charges and saves the data
+  """
   if append:
     file = open(filename, 'a')
   else:    
@@ -353,7 +379,7 @@ def xyzfilewrite(filename, system, append=False, atomtypes={0:'Fe',1:'O',2:'C'},
   pid = 0
   comment = "REMARK generated by ESPResSo++"
 
-  st = "%d\n%s\n"%(maxParticleID, comment)
+  st = "%d\n%s\n" % (maxParticleID, comment)
   file.write(st)
   
   while pid <= maxParticleID:
@@ -374,21 +400,21 @@ def xyzfilewrite(filename, system, append=False, atomtypes={0:'Fe',1:'O',2:'C'},
       else:
         atom = 'XX'
 
-      if velocities == True:
-        if charge == True:
-          st = "%s %15.10f %15.10f %15.10f %15.10f %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos, vx, vy, vz, q)
-        else:
-          st = "%s %15.10f %15.10f %15.10f %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos, vx, vy, vz)
+    if velocities == True:
+      if charge == True:
+        st = "%s %15.10f %15.10f %15.10f %15.10f %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos, vx, vy, vz, q)
       else:
-        if charge == True:
-          st = "%s %15.10f %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos, q)
-        else:
-          st = "%s %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos)
-      
-      file.write(st)
-      pid += 1
+        st = "%s %15.10f %15.10f %15.10f %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos, vx, vy, vz)
     else:
-      pid += 1
+      if charge == True:
+        st = "%s %15.10f %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos, q)
+      else:
+        st = "%s %15.10f %15.10f %15.10f\n"%(atom, xpos, ypos, zpos)
+    
+    file.write(st)
+    pid += 1
+  else:
+    pid += 1
 
   file.write('END\n')
   file.close()

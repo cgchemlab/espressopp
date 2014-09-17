@@ -36,3 +36,4 @@ from espresso.tools.warmup import *
 from espresso.tools.lammpsfilewrite import *
 from espresso.tools.povwrite import *
 from espresso.tools.pathintegral import *
+from espresso.tools.logger import *

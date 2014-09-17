@@ -58,16 +58,27 @@ def read(gro_file, top_file="", doRegularExcl=True):
             y.append(float(s[8:16]))
             z.append(float(s[16:24]))
             
-            if len(s.split()) > 3:
+            if len(s) > 24:
                 # velocities
                 vx.append(float(s[24:32]))
                 vy.append(float(s[32:40]))
                 vz.append(float(s[40:49]))
-        
+
         # store box size
         Lx, Ly, Lz = map(float, f.readline().split()) # read last line, convert to float
         f.close()
-
+        
+        # Check if the number of entries is correct
+        if (len(x) != total_num_particles or len(y) != total_num_particles 
+            or len(z) != total_num_particles):
+          raise Exception('Number of particles and number of coordinates is not the same.')
+        
+        # Check if we have velocities.
+        if vx:
+          if (len(vx) != total_num_particles or len(vy) != total_num_particles
+              or len(vz) != total_num_particles):
+            raise Exception('Number of particles and number of velocities is not the same.')
+      
 
     # read top and itp files
     masses, charges = [], [] # mases and charges of the whole configuration
