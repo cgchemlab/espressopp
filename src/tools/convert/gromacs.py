@@ -2,21 +2,21 @@
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-#  
+#
 #  This file is part of ESPResSo++.
-#  
+#
 #  ESPResSo++ is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  ESPResSo++ is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 # -*- coding: utf-8 -*-
@@ -32,7 +32,7 @@ from operator import itemgetter # for sorting a dict
    ESPResSo++ tables.
    It containts functions: read(), setInteractions(), convertTable()
    """
-   
+
 def read(gro_file, top_file="", doRegularExcl=True):
     """ Read GROMACS data files.
 
@@ -47,17 +47,16 @@ def read(gro_file, top_file="", doRegularExcl=True):
         f = open(gro_file)
         f.readline() # skip comment line
         total_num_particles = int(f.readline())
-        
         # store coordinates and velocities
         x, y, z = [], [], []
         vx, vy, vz = [], [], []
         for i in range(total_num_particles):
-            s = f.readline()[20:69]
+            s = f.readline()[20:69].rstrip()
             # coordinates
             x.append(float(s[0:8]))
             y.append(float(s[8:16]))
             z.append(float(s[16:24]))
-            
+
             if len(s) > 24:
                 # velocities
                 vx.append(float(s[24:32]))
@@ -67,18 +66,18 @@ def read(gro_file, top_file="", doRegularExcl=True):
         # store box size
         Lx, Ly, Lz = map(float, f.readline().split()) # read last line, convert to float
         f.close()
-        
+
         # Check if the number of entries is correct
-        if (len(x) != total_num_particles or len(y) != total_num_particles 
+        if (len(x) != total_num_particles or len(y) != total_num_particles
             or len(z) != total_num_particles):
           raise Exception('Number of particles and number of coordinates is not the same.')
-        
+
         # Check if we have velocities.
         if vx:
           if (len(vx) != total_num_particles or len(vy) != total_num_particles
               or len(vz) != total_num_particles):
             raise Exception('Number of particles and number of velocities is not the same.')
-      
+
 
     # read top and itp files
     masses, charges = [], [] # mases and charges of the whole configuration
@@ -87,22 +86,22 @@ def read(gro_file, top_file="", doRegularExcl=True):
     angles={} # dict: key angletype value: tuple of triples
     dihedrals = {} #same...
     exclusions=[] #list of atom pairs no considered in non-bonded interactions
-    
+
     defaults={} # gromacs default values
-    atomtypeparams={} # a dict: key atomtypeid , value : class storing actual parameters of each type e.g. c6, c12, etc..      
+    atomtypeparams={} # a dict: key atomtypeid , value : class storing actual parameters of each type e.g. c6, c12, etc..
     bondtypeparams={} # same for bonds
     angletypeparams={} # same for angles
     dihedraltypeparams={} # same for dihedrals
-    
+
     if top_file != "":
         #f = open(top_file)
         # FileBuffer: a class which behaves like a file, but all lines are in memory
         # we use this for emulating a 'preprocessor' which handles the #include
         # statements in the .top and .itp files
-        f=FileBuffer() 
-        
+        f=FileBuffer()
+
         FillFileBuffer(top_file, f)
-                
+
         print "Reading top file: "+top_file
         line = ''
         itp_files = []
@@ -114,43 +113,43 @@ def read(gro_file, top_file="", doRegularExcl=True):
         bondtypes={} # a dict: key atomindex(int),atomindex(int)  value: bondtypeid(int)
         angletypes={} # a dict: key atomindex(int), atomindex(int),atomindex(int) value: angletypeid(int)
         dihedraltypes={} # a dict: key atomtindex(int), atomindex(int), atomindex(int),atomindex(int) value: dihedraltypeid(int)
-        
+
         # it was moved out of "if" statement
-        #atomtypeparams={} # a dict: key atomtypeid , value : class storing actual parameters of each type e.g. c6, c12, etc..      
+        #atomtypeparams={} # a dict: key atomtypeid , value : class storing actual parameters of each type e.g. c6, c12, etc..
         #bondtypeparams={} # same for bonds
         #angletypeparams={} # same for angles
         #dihedraltypeparams={} # same for dihedrals
-        
+
         #atomparams={} # key: atomindex(int) value: per atom parameters e.g. q, mass
         molecules=[]
         #molecules = {} # key: moleculeid value: name (string)
         readmolecules = False
-        
+
         for line in f.lines:
             if line[0] == ";":  # skip comment line
                 continue
-                
+
             if 'defaults' in line: # store some gromacs default values
                 readdefaults =True
                 continue
-                
+
             if readdefaults:
                 if line.strip() == "" or '[' in line: # end of defaults section
                     readdefaults=False
                     print "Defaults: ", defaults
                 else:
                     fields=line.split()
-                    if len(fields)==5: 
+                    if len(fields)==5:
                         defaults={"nbtype":fields[0], "combinationrule":fields[1],
                         "genpairs":fields[2], "fudgeLJ":fields[3], "fudgeQQ":fields[4]}
-                    else: 
-                        defaults={"nbtype":fields[0], "combinationrule":fields[1]} 
-            
+                    else:
+                        defaults={"nbtype":fields[0], "combinationrule":fields[1]}
+
             if 'atomtypes' in line: # map atom types (espresso++ uses ints)
                 readattypes = True
                 print "Reading atomtypes (GROMACS: ESPResSo++): "
                 continue
-            
+
             if readattypes:
                 if line.strip() == "" or '[' in line: # end of atomtypes section
                     readattypes = False
@@ -160,7 +159,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
                 else:
                     fields=line.split()
                     attypename = fields[0]
-                
+
                 #make a map containing the properties
                 # sig, eps may be c6 and c12: this is specified in the defaults
                 # and converted later
@@ -172,40 +171,40 @@ def read(gro_file, top_file="", doRegularExcl=True):
                         tmpprop={"mass":float(fields[1]),
                         "charge":float(fields[2]), "particletype":fields[3],
                         "sig":float(fields[4]), "eps":float(fields[5])}
-                
-                    
+
+
                 if attypename not in atomtypes:
                     atomtypes.update({attypename:a}) # atomtypes is used when reading the "atoms" section
                     atomtypeparams.update({a:tmpprop})
                     a += 1
-                    
+
             if 'bondtypes' in line:
                 readbdtypes = True
                 continue
-            
+
             if readbdtypes:
                 if line.strip() == "" or '[' in line: # end of bondtypes section
                     readbdtypes = False
                 else:
-                    tmp = line.split() 
+                    tmp = line.split()
                      # i: i-atomname  i, j: j-atomname
                     i, j = atomtypes[tmp[0]], atomtypes[tmp[1]]
-                    p=ParseBondTypeParam(line)                
+                    p=ParseBondTypeParam(line)
                     #check if this type has been defined before
                     bdtypeid=FindType(p, bondtypeparams)
                     if bdtypeid==None:
                         bdtypeid=len(bondtypeparams)
                         bondtypeparams.update({bdtypeid:p})
-                    
+
                     if i in bondtypes:
                         bondtypes[i].update({j:bdtypeid})
                     else:
                         bondtypes.update({i:{j:bdtypeid}})
-            
+
             if 'angletypes' in line:
                 readantypes = True
                 continue
-            
+
             if readantypes:
                 if line.strip() == "" or '[' in line: # end of angletypes section
                     readantypes = False
@@ -213,12 +212,12 @@ def read(gro_file, top_file="", doRegularExcl=True):
                     tmp = line.split()
                     i, j, k= atomtypes[tmp[0]], atomtypes[tmp[1]], atomtypes[tmp[2]]
                     p=ParseAngleTypeParam(line)
-                    
+
                     atypeid=FindType(p, angletypeparams)
                     if atypeid==None:
                         atypeid=len(angletypeparams)
                         angletypeparams.update({atypeid:p})
-                    
+
                     if i in angletypes:
                         if j in angletypes[i]:
                             angletypes[i][j].update({k:atypeid})
@@ -226,14 +225,14 @@ def read(gro_file, top_file="", doRegularExcl=True):
                             angletypes[i].update({j:{k:atypeid}})
                     else:
                         angletypes.update({i:{j:{k:atypeid}}})
-                    #print "FOUND angletype: ", angletypecount, " : ", p.parameters 
+                    #print "FOUND angletype: ", angletypecount, " : ", p.parameters
                     #angletypeparams.update({angletypecount:p})
                     #angletypecount+=1
-            
+
             if 'dihedraltypes' in line:
                 readdhtypes = True
                 continue
-            
+
             if readdhtypes:
                 if line.strip() == "" or '[' in line: # end of angletypes section
                     readdhtypes = False
@@ -241,7 +240,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
                     tmp = line.split()
                     i, j, k, l = atomtypes[tmp[0]], atomtypes[tmp[1]], atomtypes[tmp[2]], atomtypes[tmp[3]]
                     p=ParseDihedralTypeParam(line)
-                    
+
                     dtypeid=FindType(p, dihedraltypeparams)
                     if dtypeid==None:
                         dtypeid=len(dihedraltypeparams)
@@ -256,15 +255,15 @@ def read(gro_file, top_file="", doRegularExcl=True):
                             dihedraltypes[i].update({j:{k:{l:dtypeid}}})
                     else:
                         dihedraltypes.update({i:{j:{k:{l:dtypeid}}}})
-            
+
             if 'include' in line: # add included topology files
                 itp_files.append((line.split()[1]).strip('\"')) # strip " and add filename
-            
+
             if 'molecules' in line: # store number of chains
                 readmolecules = True
                 print "Reading number of molecules: "
                 continue
-            
+
             if readmolecules:
                 if line.strip() == "" or '[' in line: # end of molecules section
                     readmolecules = False
@@ -277,19 +276,19 @@ def read(gro_file, top_file="", doRegularExcl=True):
                     elif molecules[-1]['name'] == mol: #check if mol was added earlier already
                         molecules[-1]['count'] = molecules[-1]['count'] + int(nrmol) #update count
                     else: molecules.append({'name':mol, 'count':int(nrmol)}) #if mol newly added
-              
-        
+
+
         molstartindex=0 #this is the index of the first atom in the molecule being parsed
-        
-        
+
+
         f.seek(0) # Now we search for bonds, angles definitions and start from the beginning of the file buffer
 
         for mol in molecules:
-            print "Preparing %d %s molecules... " %(mol['count'], mol['name']) 
+            print "Preparing %d %s molecules... " %(mol['count'], mol['name'])
             print "-----------------------------"
 
             # find and store number of molecules
-            
+
             num_molecule_copies=mol['count']
             # this does not what the name suggests....
             nrexcl = storeMolecules(f, molecules, mol)
@@ -310,16 +309,16 @@ def read(gro_file, top_file="", doRegularExcl=True):
                                        num_atoms_molecule, num_molecule_copies, molstartindex)
 
             molstartindex+=num_molecule_copies*num_atoms_molecule
-            
-            
-    
+
+
+
     params = []
-    
+
     unpackvars=[]
-    
+
     # The data is packed into a touple, unpackvars contains a string which
     # tells the user which kind of data was read.
-    
+
     if len(defaults) != 0:
         print "Found default values"
         unpackvars.append("defaults")
@@ -337,7 +336,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
         unpackvars.append("charges")
         params.append(charges)
     if len(atomtypeparams) !=0:
-        print "Found ", len(atomtypeparams), " atomtypeparameters" 
+        print "Found ", len(atomtypeparams), " atomtypeparameters"
         unpackvars.append("atomtypeparameters")
         params.append(atomtypeparams)
     if len(bonds) != 0:
@@ -345,9 +344,9 @@ def read(gro_file, top_file="", doRegularExcl=True):
         unpackvars.append("bondtypes")
         params.append(bonds)
     if len(bondtypeparams) !=0:
-        print "Found ", len(bondtypeparams), " bondtypeparams" 
+        print "Found ", len(bondtypeparams), " bondtypeparams"
         unpackvars.append("bondtypeparams")
-        params.append(bondtypeparams)        
+        params.append(bondtypeparams)
     if len(angles) != 0:
         print "Found ", len(angles), " angle types"
         unpackvars.append("angletypes")
@@ -355,7 +354,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
     if len(angletypeparams) != 0:
         print "Found ", len(angletypeparams), " angle type parameters"
         unpackvars.append("angletypeparams")
-        params.append(angletypeparams)      
+        params.append(angletypeparams)
     if len(dihedrals) != 0:
         unpackvars.append("dihedraltypes")
         print "Found ", len(dihedrals), " dihedral types"
@@ -363,12 +362,12 @@ def read(gro_file, top_file="", doRegularExcl=True):
     if len(dihedraltypeparams) != 0:
         print "Found ", len(dihedraltypeparams), " dihedral type parameters"
         unpackvars.append("dihedraltypeparams")
-        params.append(dihedraltypeparams)       
+        params.append(dihedraltypeparams)
     if len(exclusions) != 0:
         print "Found ", len(exclusions), "bond exclusions"
         unpackvars.append("exclusions")
-        params.append(exclusions)  
-        
+        params.append(exclusions)
+
     unpackvars.append("x, y, z")
     params.extend([x, y, z])
     print "Found Box:", [Lx, Ly, Lz]
@@ -376,10 +375,10 @@ def read(gro_file, top_file="", doRegularExcl=True):
         params.extend([vx, vy, vz])
         print "Found ", len(vx), " velocities"
         unpackvars.append("vx, vy, vz")
-        
+
     params.extend([Lx, Ly, Lz])
     unpackvars.append("Lx, Ly, Lz")
-    
+
     print "USAGE: unpack as"
     s=""
     for i in range(len(unpackvars)):
@@ -414,7 +413,7 @@ def storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecul
     types_tmp = []
     charge_tmp =[]
     mass_tmp=[]
-    
+
     line=f.readlastline()
     while not 'atoms' in line:
         line = f.readline()
@@ -426,7 +425,7 @@ def storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecul
             continue
         fields=line.split()
         attypeid=atomtypes[fields[1]] # map str type to int type
-        types_tmp.append(attypeid) 
+        types_tmp.append(attypeid)
         if len(fields) > 6:
             # this atom has a charge different from its atomtype
             charge_tmp.append(float(fields[6]))
@@ -438,16 +437,16 @@ def storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecul
             mass_tmp.append(float(fields[7]))
         else:
             mass_tmp.append(atomtypeparams[attypeid]['mass'])
-            
+
         line = f.readline()
-    
+
     # extend copies of this molecule
     num_atoms_molecule = len(types_tmp)
     for i in range(num_molecule_copies):
         types.extend(types_tmp)
         charges.extend(charge_tmp)
         masses.extend(mass_tmp)
-    
+
     return types, masses, charges, num_atoms_molecule
 
 def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
@@ -458,7 +457,7 @@ def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
     pos = f.tell()
     line=f.readlastline()
     local_exclusions=[] # excluded pairs of atoms within this mol (local ids)
-      
+
     while not 'bonds' in line:
         line = f.readline()
         if 'moleculetype' in line or not line:
@@ -487,14 +486,14 @@ def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
             if bdtypeid==None:
                 bdtypeid=len(bondtypeparams)
                 bondtypeparams.update({bdtypeid:temptype})
-            
+
         bonds_tmp.append((pid1, pid2, bdtypeid)) # store bondtypes for this molecule
         if bondtypeparams[bdtypeid].automaticExclusion():
              # this bond type generates an exclusion as defined by the
              # function type (see gromacs manual)
             local_exclusions.append((pid1, pid2))
         line = f.readline()
-    
+
 
     if doRegularExcl:
         # generate exclusions for atoms up to a number of nregxcl bonds away
@@ -502,7 +501,7 @@ def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
         exclusions_bonds=[]
         for b in bonds_tmp:
             pid1, pid2, bdtypeid = b[0:3]
-            exclusions_bonds.append((pid1, pid2))   
+            exclusions_bonds.append((pid1, pid2))
         print "Generating Regular exclusions nregxcl=", nregxcl
         local_exclusions=GenerateRegularExclusions(exclusions_bonds, nregxcl,local_exclusions)
     # extend bonds to copies of this molecule
@@ -512,13 +511,13 @@ def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
             pid1, pid2, bdtypeid = bonds_tmp[j][0:3]
             ia=molstartindex+pid1 + (i * num_atoms_molecule) # index of copy atom i
             ib=molstartindex+pid2 + (i * num_atoms_molecule) # index of copy atom j
-            
+
             if bdtypeid in bonds:
                 bonds[bdtypeid].append((ia, ib))
             else:
                 bonds.update({bdtypeid:[(ia, ib)]})
-                
-                
+
+
     # now, extend also the regular exclusions
     for i in range(num_molecule_copies):
         for exclpair in local_exclusions:
@@ -527,7 +526,7 @@ def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
             ib=molstartindex+pid2 + (i * num_atoms_molecule) # index of copy atom j
             exclusions.append((ia,ib))
     return bonds
-        
+
 def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecule, num_molecule_copies, molstartindex):
     line = ''
     angles_tmp = []
@@ -538,7 +537,7 @@ def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecul
         if 'moleculetype' in line or not line:
             f.seek(pos)
             return angles
-        
+
     line = f.readline()
     while(len(line) > 1 and not '[' in line):
         if line[0] == ";": # skip comment lines
@@ -557,16 +556,16 @@ def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecul
                 antypeid = angletypes[t1][t2][t3]
         else:
             #check if we need to make new type
-            temptype=ParseAngleTypeParam(line) 
+            temptype=ParseAngleTypeParam(line)
             antypeid=FindType(temptype, angletypeparams)
             if antypeid==None:
                 antypeid=len(angletypeparams)
                 angletypeparams.update({antypeid:temptype})
-                
+
         angles_tmp.append((pid1, pid2, pid3, antypeid)) # store angletypes for this molecule
-        
+
         line = f.readline()
-        
+
     # extend angles to copies of this molecule
     angles_per_mol = len(angles_tmp)
     for i in range(num_molecule_copies):
@@ -579,7 +578,7 @@ def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecul
                 angles[antypeid].append((ia, ib, ic))
             else:
                 angles.update({antypeid:[(ia, ib, ic)]})
-    return angles  
+    return angles
 
 def storeDihedrals(f, types, dihedraltypes, dihedraltypeparams, dihedrals, num_atoms_molecule, num_molecule_copies, molstartindex):
     line = ''
@@ -615,10 +614,10 @@ def storeDihedrals(f, types, dihedraltypes, dihedraltypeparams, dihedrals, num_a
             if dihtypeid==None:
                 dihtypeid=len(dihedraltypeparams)
                 dihedraltypeparams.update({dihtypeid:temptype})
-        
+
         dihedrals_tmp.append((pid1, pid2, pid3,pid4, dihtypeid)) # store angletypes for this molecule
         line = f.readline()
-        
+
     # extend angles to copies of this molecule
     dihedrals_per_mol = len(dihedrals_tmp)
     for i in range(num_molecule_copies):
@@ -633,7 +632,7 @@ def storeDihedrals(f, types, dihedraltypes, dihedraltypeparams, dihedrals, num_a
             else:
                 dihedrals.update({dihtypeid:[(ia, ib, ic, id)]})
     return dihedrals
-    
+
 
 def setBondedInteractions(system, bonds, bondtypeparams, fpl=None):
     list={}
@@ -641,7 +640,7 @@ def setBondedInteractions(system, bonds, bondtypeparams, fpl=None):
     for id, bondlist in bonds.iteritems():
         if (not fpl): fpl = espresso.FixedPairList(system.storage)
         fpl.addBonds(bondlist)
-        bc+=len(bondlist) 
+        bc+=len(bondlist)
         bdinteraction=bondtypeparams[id].createEspressoInteraction(system, fpl)
         if bdinteraction:
             system.addInteraction(bdinteraction)
@@ -650,7 +649,7 @@ def setBondedInteractions(system, bonds, bondtypeparams, fpl=None):
 
 def setAngleInteractions(system, angles, angletypeparams, fpl=None):
     list={}
-    
+
     for id, anglelist in angles.iteritems():
         if (not fpl):fpl = espresso.FixedTripleList(system.storage)
         fpl.addTriples(anglelist)
@@ -662,7 +661,7 @@ def setAngleInteractions(system, angles, angletypeparams, fpl=None):
 
 def setDihedralInteractions(system, dihedrals, dihedraltypeparams, fpl=None):
     list={}
-    
+
     for id, dihedrallist in dihedrals.iteritems():
         if (not fpl):fpl = espresso.FixedQuadrupleList(system.storage)
         fpl.addQuadruples(dihedrallist)
@@ -671,7 +670,7 @@ def setDihedralInteractions(system, dihedrals, dihedraltypeparams, fpl=None):
             system.addInteraction(dihedralinteraction)
             list.update({id: dihedralinteraction})
     return list
-        
+
 def setLennardJonesInteractions(system, defaults, atomtypeparams, verletlist, cutoff, hadress=False, ftpl=None):
     """ Set lennard jones interactions which were read from gromacs based on the atomypes"""
     if not hadress:
@@ -679,7 +678,7 @@ def setLennardJonesInteractions(system, defaults, atomtypeparams, verletlist, cu
     else:
 	interaction=espresso.interaction.VerletListHadressLennardJones(verletlist, ftpl)
     #interaction = espresso.interaction.VerletListLennardJonesGromacs(verletlist)
-    
+
     print "Setting up Lennard-Jones interactions"
     if defaults:
         if int(defaults['combinationrule'])!=2:
@@ -692,7 +691,7 @@ def setLennardJonesInteractions(system, defaults, atomtypeparams, verletlist, cu
                 at['sig']=sig
                 at['eps']=eps
                 print "WARNING: Converted atomtype number ", atnr, "to sigma, epsilon parameters", " sig= ", sig, " eps=", eps
-    
+
     for i in range(len(atomtypeparams)):
         for j in range(i, len(atomtypeparams)):
             pi=atomtypeparams[i]
@@ -714,18 +713,18 @@ def setLennardJonesInteractions(system, defaults, atomtypeparams, verletlist, cu
     return interaction
 
 def setCoulombInteractions(system, verletlist, rc, types, epsilon1, epsilon2,kappa, hadress=False, ftpl=None):
- 
+
 
     pref=138.935485 # we want gromacs units, so this is 1/(4 pi eps_0) ins units of kJ mol^-1 e^-2
-    
+
     pot = espresso.interaction.ReactionFieldGeneralized(prefactor=pref, kappa=kappa, epsilon1=epsilon1, epsilon2=epsilon2, cutoff=rc)
     #pot = espresso.interaction.CoulombTruncated(qq=0.6724, cutoff=rc, shift=0)
-    if (not hadress):	
+    if (not hadress):
 	interaction=espresso.interaction.VerletListReactionFieldGeneralized(verletlist)
-    else: 
+    else:
 	interaction=espresso.interaction.VerletListHadressReactionFieldGeneralized(verletlist, ftpl)
    # interaction=espresso.interaction.VerletListCoulombTruncated(verletlist)
-            
+
     for i in range(max(types)+1):
         for k in range(i, max(types)+1):
 	    if (not hadress):
@@ -754,7 +753,7 @@ def setTabulatedInteractions(potentials, particleTypes, system, interaction):
     for k, v in particleTypes.iteritems():
         for i in v:
             allparticles.append((i,k)) # create tuples: (particle, type)
-    
+
     for i in range(len(allparticles)):
         for j in range(i, len(allparticles)):
             type1 = allparticles[i][1]
@@ -773,7 +772,7 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
     is created). First column of input file can be either distance or angle.
     For non-bonded files, c6 and c12 can be provided. Default value for sigma, epsilon,
     c6 and c12 is 1.0. Electrostatics are not taken into account (f and fd columns).
-    
+
     Keyword arguments:
     gro_in_file -- the GROMACS tabulated file name (bonded, nonbonded, angle
     or dihedral).
@@ -784,7 +783,7 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
     c12 -- optional
     """
 
-    
+
 
     # determine file type
     bonded, angle, dihedral = False, False, False
@@ -804,12 +803,12 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
         for line in fin:
             if line[0] == "#": # skip comment lines
                 continue
-            
+
             columns = line.split()
             r = float(columns[0])
             f = float(columns[1]) # energy
             fd= float(columns[2]) # force
-            
+
             # convert units
             if angle or dihedral: # degrees to radians
                 r = math.radians(r)
@@ -818,17 +817,17 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
                 r = r / sigma
             e = f / epsilon
             f = fd*sigma / epsilon
-            
+
             if (not angle and not dihedral and r != 0) or \
                  (angle and r <= 3.1415 and r > 0) or \
                   (dihedral and r >= -3.1415 and r <= 3.1415):
                 fout.write("%15.8g %15.8g %15.8g\n" % (r, e, f))
-    
+
     else: # non-bonded has 7 columns
         for line in fin:
             if line[0] == "#": # skip comment lines
                 continue
-            
+
             columns = line.split()
             r = float(columns[0])
             #f = float(columns[1]) # electrostatics not implemented yet
@@ -837,17 +836,17 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
             gd= float(columns[4])
             h = float(columns[5]) # repulsion
             hd= float(columns[6])
-            
+
             e = c6*g + c12*h
             f = c6*gd+ c12*hd
-            
+
             # convert units
             r = r / sigma
             e = e / epsilon
             f = f*sigma / epsilon
-            
+
             if r != 0: # skip 0
                 fout.write("%15.8g %15.8g %15.8g\n" % (r, e, f))
-    
+
     fin.close()
     fout.close()
