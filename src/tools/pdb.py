@@ -142,7 +142,6 @@ def fastwritepdb(filename, system, molsize=1000, append=False, folded=True, name
   file.write(st)
 
   for i, pos_vec in enumerate(configuration):
-    print pos_vec
     pid = i+1
     if folded:
       foldedpos = system.bc.getFoldedPosition(pos_vec)
