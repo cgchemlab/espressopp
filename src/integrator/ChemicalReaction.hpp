@@ -23,8 +23,8 @@
 */
 
 // ESPP_CLASS
-#ifndef _INTEGRATOR_ASSOCIATIONREACTION_HPP
-#define _INTEGRATOR_ASSOCIATIONREACTION_HPP
+#ifndef _INTEGRATOR_CHEMICALREACTION_HPP
+#define _INTEGRATOR_CHEMICALREACTION_HPP
 
 #include "types.hpp"
 #include "logging.hpp"
@@ -43,7 +43,7 @@
 namespace espresso {
   namespace integrator {
 
-    const int AR_COMM_TAG = 0xac;
+    const int CR_COMM_TAG = 0xad;
     using namespace storage;
 
     /** Reaction scheme for polymer growth and curing/crosslinking
@@ -65,14 +65,14 @@ namespace espresso {
 
     */
 
-    class AssociationReaction : public Extension {
+    class ChemicalReaction : public Extension {
 
      public:
-      AssociationReaction(shared_ptr<System> system, 
-                          shared_ptr<VerletList> _verletList, 
-                          shared_ptr<FixedPairList> _fixedPairList, 
-                          shared_ptr<DomainDecomposition> _domdec);
-      ~AssociationReaction();
+      ChemicalReaction(shared_ptr<System> system, 
+                       shared_ptr<VerletList> _verletList, 
+                       shared_ptr<FixedPairList> _fixedPairList, 
+                       shared_ptr<DomainDecomposition> _domdec);
+      ~ChemicalReaction();
 
       void setRate(real rate);
       real getRate();
@@ -137,10 +137,67 @@ namespace espresso {
       /** container for (A,B) effective partners */
       boost::unordered_multimap<longint, longint> Blist;
 
-     /** container for reactions */
+      /** container for reactions */
+      
 
       static LOG4ESPP_DECL_LOGGER(theLogger);
     };
+
+    class Reaction {
+     private:
+      size_t typeA_;
+      size_t typeB_;
+      int minStateA_;
+      int minStateB_;
+      int maxStateA_;
+      int maxStateB_;
+      int deltaA_;
+      int deltaB_;
+      int rate_;
+      real cutoff_;
+      real cuoffSqr_;
+     public:
+      Reaction();
+      ~Reaction();
+
+      void setRate(real rate);
+      real getRate();
+      
+      void setCutoff(real cutoff);
+      real getCutoff();
+      
+      void setTypeA(size_t typeA);
+      size_t getTypeA();
+      
+      void setTypeB(size_t typeB);
+      size_t getTypeB();
+      
+      void setDeltaA(int deltaA);
+      int getDeltaA();
+      
+      void setDeltaB(int deltaB);
+      int getDeltaB();
+      
+      void setMinStateA(int stateAMin);
+      int getMinStateA();
+      
+      void setMinStateB(int stateBMin);
+      int getMinStateB();
+      
+      void setMaxStateA(int stateAMax);
+      int getMinStateA();
+      
+      void setMaxStateB(int stateBMax);
+      int getMinStateB();
+
+      bool isValidPair(Particle& p1, Particle& p2);
+
+      /** Register this class so it can be used from Python. */
+      static void registerPython();
+    };
+
+    class SynthesisReaction : Reaction {};
+
   }
 }
 

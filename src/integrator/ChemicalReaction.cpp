@@ -23,7 +23,7 @@
 */
 
 #include "python.hpp"
-#include "AssociationReaction.hpp"
+#include "ChemicalReaction.hpp"
 
 #include "types.hpp"
 #include "System.hpp"
@@ -41,9 +41,9 @@ namespace espresso {
     //using namespace espresso::iterator;
     using namespace storage;
 
-    LOG4ESPP_LOGGER(AssociationReaction::theLogger, "AssociationReaction");
+    LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
-    AssociationReaction::AssociationReaction(shared_ptr<System> system,
+    ChemicalReaction::ChemicalReaction(shared_ptr<System> system,
                                              shared_ptr<VerletList> _verletList,
                                              shared_ptr<FixedPairList> _fpl,
                                              shared_ptr<DomainDecomposition> _domdec)
@@ -65,102 +65,102 @@ namespace espresso {
       if (!system->rng) throw std::runtime_error("system has no RNG");
 
       rng = system->rng;
-      LOG4ESPP_INFO(theLogger, "AssociationReaction constructed");
+      LOG4ESPP_INFO(theLogger, "ChemicalReaction constructed");
     }
 
-    void AssociationReaction::setRate(real _rate) {
+    void ChemicalReaction::setRate(real _rate) {
       rate = _rate;
     }
 
-    real AssociationReaction::getRate() {
+    real ChemicalReaction::getRate() {
       return rate;
     }
 
-    void AssociationReaction::setCutoff(real _cutoff) {
+    void ChemicalReaction::setCutoff(real _cutoff) {
       cutoff = _cutoff;
       cutoff_sqr = _cutoff*_cutoff;
     }
 
-    real AssociationReaction::getCutoff() {
+    real ChemicalReaction::getCutoff() {
       return cutoff;
     }
 
-    void AssociationReaction::setTypeA(size_t _typeA) {
+    void ChemicalReaction::setTypeA(size_t _typeA) {
       typeA = _typeA;
     }
 
-    size_t AssociationReaction::getTypeA() {
+    size_t ChemicalReaction::getTypeA() {
       return typeA;
     }
 
-    void AssociationReaction::setTypeB(size_t _typeB) {
+    void ChemicalReaction::setTypeB(size_t _typeB) {
       typeB = _typeB;
     }
 
-    size_t AssociationReaction::getTypeB() {
+    size_t ChemicalReaction::getTypeB() {
       return typeB;
     }
 
-    void AssociationReaction::setDeltaA(int _deltaA) {
+    void ChemicalReaction::setDeltaA(int _deltaA) {
       deltaA = _deltaA;
     }
 
-    int AssociationReaction::getDeltaA() {
+    int ChemicalReaction::getDeltaA() {
       return deltaA;
     }
 
-    void AssociationReaction::setDeltaB(int _deltaB) {
+    void ChemicalReaction::setDeltaB(int _deltaB) {
       deltaB = _deltaB;
     }
 
-    int AssociationReaction::getDeltaB() {
+    int ChemicalReaction::getDeltaB() {
       return deltaB;
     }
 
-    void AssociationReaction::setStateAMin(int _stateAMin) {
+    void ChemicalReaction::setStateAMin(int _stateAMin) {
       stateAMin = _stateAMin;
     }
 
-    int AssociationReaction::getStateAMin() {
+    int ChemicalReaction::getStateAMin() {
       return stateAMin;
     }
 
-    void AssociationReaction::setInterval(int _interval) {
+    void ChemicalReaction::setInterval(int _interval) {
       interval = _interval;
     }
 
-    int AssociationReaction::getInterval() {
+    int ChemicalReaction::getInterval() {
       return interval;
     }
 
-    AssociationReaction::~AssociationReaction() {
+    ChemicalReaction::~ChemicalReaction() {
       disconnect();
     }
 
-    void AssociationReaction::disconnect() {
+    void ChemicalReaction::disconnect() {
 
       _initialize.disconnect();
       _react.disconnect();
     }
 
-    void AssociationReaction::connect() {
+    void ChemicalReaction::connect() {
 
       // connect to initialization inside run()
       _initialize = integrator->runInit.connect(
-          boost::bind(&AssociationReaction::initialize, this));
+          boost::bind(&ChemicalReaction::initialize, this));
 
       _react = integrator->aftIntV.connect(
-          boost::bind(&AssociationReaction::react, this));
+          boost::bind(&ChemicalReaction::react, this));
     }
 
     /** Performs all steps of the reactive scheme.
      */
-    void AssociationReaction::react() {
+    void ChemicalReaction::react() {
       if (integrator->getStep() % interval != 0) return;
 
       System& system = getSystemRef();
 
-      LOG4ESPP_INFO(theLogger, "Perform AssociationReaction");
+      LOG4ESPP_INFO(theLogger, "Perform ChemicalReaction");
 
       dt = integrator->getTimeStep();
 
@@ -188,7 +188,7 @@ namespace espresso {
     /** For a given pair of particles, check if they meet the condition the
     reactive scheme. If it is so, the (A,B) pair is added to Alist.
     */
-    void AssociationReaction::reactPair(Particle& p1, Particle& p2) {
+    void ChemicalReaction::reactPair(Particle& p1, Particle& p2) {
       Real3D r = p1.position() - p2.position();
       real dist2 = r.sqr();
       if ((dist2 < cutoff_sqr) && ((*rng)() < rate*dt*interval)){
@@ -200,15 +200,15 @@ namespace espresso {
       }
     }
 
-    void AssociationReaction::initialize() {
-      LOG4ESPP_INFO(theLogger, "init AssociationReaction");
+    void ChemicalReaction::initialize() {
+      LOG4ESPP_INFO(theLogger, "init ChemicalReaction");
     }
 
     /** Performs two-way parallel communication to consolidate mm between
     neighbours. The parallel scheme is taken from
     DomainDecomposition::doGhostCommunication
     */
-    void AssociationReaction::sendMultiMap(boost::unordered_multimap<longint, longint> &mm) {
+    void ChemicalReaction::sendMultiMap(boost::unordered_multimap<longint, longint> &mm) {
 
       LOG4ESPP_INFO(theLogger, "Entering sendMultiMap");
 
@@ -261,19 +261,19 @@ namespace espresso {
 
             // exchange particles, odd-even rule
             if (nodeGrid.getNodePosition(coord) % 2 == 0) {
-              outBuffer.send(receiver, AR_COMM_TAG);
+              outBuffer.send(receiver, CR_COMM_TAG);
               if (lr == 0)  {
-                inBuffer0.recv(sender, AR_COMM_TAG);
+                inBuffer0.recv(sender, CR_COMM_TAG);
               } else {
-                inBuffer1.recv(sender, AR_COMM_TAG);
+                inBuffer1.recv(sender, CR_COMM_TAG);
               }
             } else {
               if (lr == 0) {
-                inBuffer0.recv(sender, AR_COMM_TAG);
+                inBuffer0.recv(sender, CR_COMM_TAG);
               } else {
-                inBuffer1.recv(sender, AR_COMM_TAG);
+                inBuffer1.recv(sender, CR_COMM_TAG);
               }
-              outBuffer.send(receiver, AR_COMM_TAG);
+              outBuffer.send(receiver, CR_COMM_TAG);
             }
           }
         }
@@ -315,7 +315,7 @@ namespace espresso {
     each id1 and return it in place. In addition, only pairs for which
     id1 is local are kept.
     */
-    void AssociationReaction::uniqueA(boost::unordered_multimap<longint, longint> &mm) {
+    void ChemicalReaction::uniqueA(boost::unordered_multimap<longint, longint> &mm) {
       // Collect indices
       boost::unordered_set<longint> idxSet;
       boost::unordered_multimap<longint, longint> idxList;
@@ -365,7 +365,7 @@ namespace espresso {
     each id2 and return it in place. In addition, only pairs for which
     id2 is local are kept.
     */
-    void AssociationReaction::uniqueB(boost::unordered_multimap<longint, longint> &mm, boost::unordered_multimap<longint, longint> &nn) {
+    void ChemicalReaction::uniqueB(boost::unordered_multimap<longint, longint> &mm, boost::unordered_multimap<longint, longint> &nn) {
       // Collect indices
       boost::unordered_set<longint> idxSet;
       boost::unordered_multimap<longint, longint> idxList;
@@ -414,7 +414,7 @@ namespace espresso {
     /** Use the (A,B) list "partners" to add bonds and change the state of the
     particles accordingly.
     */
-    void AssociationReaction::applyAR() {
+    void ChemicalReaction::applyAR() {
       longint A, B;
       System& system = getSystemRef();
 
@@ -444,20 +444,20 @@ namespace espresso {
     /****************************************************
      ** REGISTRATION WITH PYTHON
      ****************************************************/
-    void AssociationReaction::registerPython() {
+    void ChemicalReaction::registerPython() {
       using namespace espresso::python;
-      class_<AssociationReaction, shared_ptr<AssociationReaction>, bases<Extension> >
-        ("integrator_AssociationReaction", init<shared_ptr<System>, shared_ptr<VerletList>, shared_ptr<FixedPairList>, shared_ptr<DomainDecomposition> >())
-        .def("connect", &AssociationReaction::connect)
-        .def("disconnect", &AssociationReaction::disconnect)
-        .add_property("rate", &AssociationReaction::getRate, &AssociationReaction::setRate)
-        .add_property("cutoff", &AssociationReaction::getCutoff, &AssociationReaction::setCutoff)
-        .add_property("typeA", &AssociationReaction::getTypeA, &AssociationReaction::setTypeA)
-        .add_property("typeB", &AssociationReaction::getTypeB, &AssociationReaction::setTypeB)
-        .add_property("deltaA", &AssociationReaction::getDeltaA, &AssociationReaction::setDeltaA)
-        .add_property("deltaB", &AssociationReaction::getDeltaB, &AssociationReaction::setDeltaB)
-        .add_property("stateAMin", &AssociationReaction::getStateAMin, &AssociationReaction::setStateAMin)
-        .add_property("interval", &AssociationReaction::getInterval, &AssociationReaction::setInterval);
+      class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >
+        ("integrator_ChemicalReaction", init<shared_ptr<System>, shared_ptr<VerletList>, shared_ptr<FixedPairList>, shared_ptr<DomainDecomposition> >())
+        .def("connect", &ChemicalReaction::connect)
+        .def("disconnect", &ChemicalReaction::disconnect)
+        .add_property("rate", &ChemicalReaction::getRate, &ChemicalReaction::setRate)
+        .add_property("cutoff", &ChemicalReaction::getCutoff, &ChemicalReaction::setCutoff)
+        .add_property("typeA", &ChemicalReaction::getTypeA, &ChemicalReaction::setTypeA)
+        .add_property("typeB", &ChemicalReaction::getTypeB, &ChemicalReaction::setTypeB)
+        .add_property("deltaA", &ChemicalReaction::getDeltaA, &ChemicalReaction::setDeltaA)
+        .add_property("deltaB", &ChemicalReaction::getDeltaB, &ChemicalReaction::setDeltaB)
+        .add_property("stateAMin", &ChemicalReaction::getStateAMin, &ChemicalReaction::setStateAMin)
+        .add_property("interval", &ChemicalReaction::getInterval, &ChemicalReaction::setInterval);
     }
   }
 }
