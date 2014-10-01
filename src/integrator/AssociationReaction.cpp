@@ -61,7 +61,7 @@ namespace espresso {
 
       current_cutoff = verletList->getVerletCutoff() - system->getSkin();
       current_cutoff_sqr = current_cutoff*current_cutoff;
-      
+
       if (!system->rng) throw std::runtime_error("system has no RNG");
 
       rng = system->rng;
@@ -242,7 +242,7 @@ namespace espresso {
           tmp = it->second;
           outBuffer.write(tmp);
         }
-        
+
         // lr loop: left right
         for (int lr = 0; lr < 2; ++lr) {
           int dir = 2 * coord + lr;
