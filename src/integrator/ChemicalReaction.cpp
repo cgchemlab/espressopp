@@ -47,19 +47,6 @@ namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
-Reaction::Reaction():rate_(0.0),
-                     type_a_(-1),
-                     type_b_(-1),
-                     delta_a_(-1),
-                     delta_b_(-1),
-                     min_state_a_(0),
-                     min_state_b_(0),
-                     max_state_a_(0),
-                     max_state_b_(0),
-                     cutoff_(0.0),
-                     cutoff_sqr_(0.0) { }
-
-
 bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
   Real3D distance = p1.position() - p2.position();
   real distance_2 = distance.sqr();
@@ -80,10 +67,10 @@ bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
   return false;
 }
 
-void SynthesisReaction::registerPython() {
+void Reaction::registerPython() {
   using namespace espresso::python;  //NOLINT
   class_<SynthesisReaction, shared_ptr<SynthesisReaction> >
-    ("integrator_SynthesisReaction", no_init)
+    ("integrator_Reaction", no_init)
       .add_property(
         "type_a",
         &Reaction::type_a,
@@ -126,8 +113,16 @@ void SynthesisReaction::registerPython() {
         &Reaction::set_cutoff);
   }
 
+void SynthesisReaction::registerPython() {
+  using namespace espresso::python;  //NOLINT
+  class_<SynthesisReaction, shared_ptr<SynthesisReaction>, bases<Reaction> >
+    ("integrator_SynthesisReaction", no_init);
+  }
 
-/** ChemicalReaction */
+
+/** ChemicalReaction
+ *
+ * */
 ChemicalReaction::ChemicalReaction(shared_ptr<System> system,
                                    shared_ptr<VerletList> verletList,
                                    shared_ptr<FixedPairList> fpl,
@@ -352,19 +347,19 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) { 
   if (a_indexes.size() > 0) {
     int idx_a;
     real max_reaction_rate;
-    boost::unordered_map<real, std::pair<longint, int> > rate_idx_b;
-    boost::unordered_map<real, std::pair<longint, int> >::local_iterator idx_b_reaction_id;
+    // rate => idx_b, reaction_id
+    boost::unordered_multimap<real, std::pair<longint, int> > rate_idx_b;
+    boost::unordered_multimap<real, std::pair<longint, int> >::local_iterator idx_b_reaction_id;
     Particle *p = NULL;
     std::pair<integrator::ReactionMap::iterator,
               integrator::ReactionMap::iterator> candidates_b;
     // Iterate over the ids of particle A, looking for the particle B
     for (boost::unordered_set<longint>::iterator it = a_indexes.begin();
-              it != a_indexes.end(); it++) {
+              it != a_indexes.end(); ++it) {
       idx_a = *it;
       p = system.storage->lookupLocalParticle(idx_a);
 
-      if (p == NULL) continue;
-      if (p->ghost()) continue;  // We only consider the real particles.
+      if (p == NULL || p->ghost()) continue;
 
       // Select all possible candidates (so
       candidates_b = potential_candidates.equal_range(idx_a);
@@ -407,102 +402,100 @@ id2 is local are kept.
 void ChemicalReaction::UniqueB(
     integrator::ReactionMap& potential_candidates,  //NOLINT
     integrator::ReactionMap& effective_candidates) {  //NOLINT
-  /*
-  // Collect indices
-  boost::unordered_set<longint> idxSet;
-  boost::unordered_multimap<longint, longint> idxList;
-  longint idx1, idx2;
-  System& system = getSystemRef();
-  boost::unordered_multimap<longint, longint> uniqueList;
 
-  idxSet.clear();
-  idxList.clear();
-  // Create idxList, containing (idx2, idx1) pairs
-  // Create idxSet, containing each idx2 only once
-  for (boost::unordered_multimap<longint, longint>::iterator it = potential_candidatesbegin();
-          it != potential_candidatesend(); it++) {
-    idx1 = it->first;
-    idx2 = it->second;
-    idxList.insert(std::make_pair(idx2, idx1));
-    idxSet.insert(idx2);
+  typedef boost::unordered_set<longint> Indexes;
+  typedef boost::unordered_multimap<real, std::pair<longint, int> > RateParticleIdx;
+
+  System& system = getSystemRef();
+  Indexes b_indexes;
+  integrator::ReactionMap reverse_candidates;
+
+  effective_candidates.clear();
+
+  // Collect the b particle pairs. REQOPT
+  for (integrator::ReactionMap::iterator it = potential_candidates.begin();
+       it != potential_candidates.end(); ++it) {
+    b_indexes.insert(it->second.first);
+    reverse_candidates.insert(
+        std::make_pair(
+          it->second.first,
+          std::make_pair(it->first, it->second.second)));
   }
 
-  uniqueList.clear();
-  if (idxSet.size() > 0) {
-    // For each active idx1, pick a partner
-    for (boost::unordered_set<longint>::iterator it = idxSet.begin();
-            it != idxSet.end(); it++) {
-      idx2 = *it;
-      Particle* p = system.storage->lookupLocalParticle(idx2);
-      if (p == NULL) continue;
-      if (p->ghost()) continue;
-      int size = idxList.count(idx2);
-      if (size > 0) {
-        int pick = (*rng)(size);
-        std::pair<
-            boost::unordered_multimap<longint, longint>::iterator,
-            boost::unordered_multimap<longint, longint>::iterator> candidates;
-        candidates = idxList.equal_range(idx2);
-        int i = 0;
-        for (boost::unordered_multimap<longint, longint>::iterator jt = candidates.first;
-                jt != candidates.second; jt++, i++) {
-          if (i == pick) {
-            uniqueList.insert(std::make_pair(jt->first, jt->second));
-            break;
-          }
+  if (b_indexes.size() > 0) {
+    int idx_b;
+    real max_reaction_rate;
+    // rate => idx_a, reaction_id
+    RateParticleIdx rate_idx_a;
+    RateParticleIdx::local_iterator idx_a_reaction_id;
+    std::pair<integrator::ReactionMap::iterator,
+              integrator::ReactionMap::iterator> candidates_a;
+    Particle *p = NULL;
+
+    for (Indexes::iterator it = b_indexes.begin(); it != b_indexes.end(); ++it) {
+      idx_b = *it;
+      p = system.storage->lookupLocalParticle(idx_b);
+
+      if (p == NULL || p->ghost()) continue;
+
+      candidates_a = reverse_candidates.equal_range(idx_b);
+      max_reaction_rate = -1;
+      rate_idx_a.clear();
+      for (integrator::ReactionMap::iterator jt = candidates_a.first;
+          jt != candidates_a.second; ++jt) {
+        integrator::Reaction reaction = *reaction_list_.at(jt->second.second);
+        real reaction_rate = reaction.rate();
+        if (reaction_rate > max_reaction_rate) {
+          max_reaction_rate = reaction_rate;
         }
+        rate_idx_a.insert(
+            std::make_pair(reaction_rate, std::make_pair(jt->second.first, jt->second.second)));
+      }
+      // Found reaction with the maximum rate. If there are several candidates
+      // then select randomly.
+      if (max_reaction_rate > -1) {
+        int bucket_size = rate_idx_a.count(max_reaction_rate);
+        int pick_offset = (*rng_)(bucket_size);
+        idx_a_reaction_id = rate_idx_a.begin(rate_idx_a.bucket(max_reaction_rate));
+        std::advance(idx_a_reaction_id, pick_offset);
+        effective_candidates.insert(
+            std::make_pair(
+              idx_a_reaction_id->second.first,
+              std::make_pair(idx_b, idx_a_reaction_id->second.second)));
       }
     }
   }
-  effective_candidates = uniqueList;
-  uniqueList.clear();
-  */
 }
 
 /** Use the (A,B) list "partners" to add bonds and change the state of the
 particles accordingly.
 */
 void ChemicalReaction::ApplyAR() {
-  /*
-  longint A, B, tmp_AB;
-  int reaction_idx;
+  Particle* pA = NULL;
+  Particle* pB = NULL;
   System& system = getSystemRef();
 
   LOG4ESPP_INFO(theLogger, "Entering applyAR");
 
-  for (boost::unordered_multimap<longint, longint>::iterator it = effective_pairs_.begin();
+  for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
           it != effective_pairs_.end(); it++) {
-    A = it->second.first;
-    reaction_idx = it->second.second;
-    B = it->first;
-
-    Reaction reaction = (Reaction)reaction_list_.at(reaction_idx);
+    integrator::Reaction reaction = *reaction_list_.at(it->second.second);
 
     // Change the state of A and B.
-    Particle* pA = system.storage->lookupLocalParticle(A);
-    Particle* pB = system.storage->lookupLocalParticle(B);
-    Particle* tmp;
-    if (pA->getType() == reaction.type_b()) {
-      tmp = pB;
-      tmp_AB = B;
-      pB = pA;
-      B = A;
-      pA = tmp;
-      A = tmp_AB;
+    pA = system.storage->lookupLocalParticle(it->first);
+    pB = system.storage->lookupLocalParticle(it->second.first);
+    if (pA != NULL && pB != NULL) {
+      if (pA->getType() == reaction.type_a()) {
+        pA->setState(pA->getState() + reaction.delta_a());
+        pB->setState(pB->getState() + reaction.delta_b());
+      } else if (pA->getType() == reaction.type_b()) {
+        pA->setState(pA->getState() + reaction.delta_b());
+        pB->setState(pB->getState() + reaction.delta_a());
+      }
+      fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
     }
-    if (pA == NULL) {
-    } else {
-      pA->setState(pA->getState()+reaction.delta_a());
-    }
-    if (pB == NULL) {
-    } else {
-      pB->setState(pB->getState()+reaction.delta_b());
-    }
-    // Add a bond
-    fixed_pair_list_->add(A, B);
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
-  */
 }
 
 

@@ -88,6 +88,7 @@ namespace espresso {
       Settle::registerPython();
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
+      Reaction::registerPython();
       SynthesisReaction::registerPython();
       ChemicalReaction::registerPython();
       EmptyExtension::registerPython();

@@ -137,6 +137,7 @@ class Reaction {
   shared_ptr<real> dt_;  //!< timestep from the integrator
 };
 
+
 class SynthesisReaction : public Reaction {
  public:
   bool IsValidPair(const Particle& p1, const Particle &p2);
