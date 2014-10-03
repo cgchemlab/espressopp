@@ -27,6 +27,7 @@
 #define _INTEGRATOR_CHEMICALREACTION_HPP
 
 #include <utility>
+#include <map>
 #include <vector>
 
 #include "types.hpp"
@@ -143,7 +144,7 @@ class SynthesisReaction : public Reaction {
 };
 
 
-typedef boost::unordered_multimap<longint, std::pair<longint, longint> > ReactionMap;
+typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
 typedef std::vector<shared_ptr<integrator::Reaction> > ReactionList;
 
 
@@ -165,9 +166,9 @@ class ChemicalReaction:public Extension {
   void React();
 
   void SendMultiMap(integrator::ReactionMap &mm);  //NOLINT
-  void UniqueA(integrator::ReactionMap& mm);  //NOLINT
-  void UniqueB(integrator::ReactionMap& mm,  //NOLINT
-               integrator::ReactionMap& nn);  //NOLINT
+  void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
+  void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
+               integrator::ReactionMap& effective_candidates);  //NOLINT
   void ApplyAR();
 
   /** Register this class so it can be used from Python. */

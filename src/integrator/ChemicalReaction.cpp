@@ -26,6 +26,8 @@
 
 #include <utility>
 #include <vector>
+#include <set>
+
 #include "python.hpp"
 
 #include "types.hpp"
@@ -229,61 +231,62 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
   System& system = getSystemRef();
   const storage::NodeGrid& nodeGrid = domdec_->getNodeGrid();
 
+  // Prepare out buffer with the reactions that potential will happen on this node.
+  outBuffer.reset();
+  // fill outBuffer from mm
+  int tmp = mm.size();
+  int a, b, c;
+  outBuffer.write(tmp);
+  for (integrator::ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
+    a = it->first;
+    b = it->second.first;
+    c = it->second.second;
+    outBuffer.write(a);
+    outBuffer.write(b);
+    outBuffer.write(c);
+  }
+
   /* direction loop: x, y, z.
     Here we could in principle build in a one sided ghost
     communication, simply by taking the lr loop only over one
     value. */
 
-  for (int coord = 0; coord < 3; ++coord) {
+  for (int direction = 0; direction < 3; ++direction) {
     /* inverted processing order for ghost force communication,
        since the corner ghosts have to be collected via several
        nodes. We now add back the corner ghost forces first again
        to ghost forces, which only eventually go back to the real
        particle.
     */
-
-    real curCoordBoxL = system.bc->getBoxL()[coord];
-
-    outBuffer.reset();
-    // fill outBuffer from mm
-    int tmp = mm.size();
-    int a, b, c;
-    outBuffer.write(tmp);
-    for (integrator::ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
-      a = it->first;
-      b = it->second.first;
-      c = it->second.second;
-      outBuffer.write(a);
-      outBuffer.write(b);
-      outBuffer.write(c);
-    }
+    real curCoordBoxL = system.bc->getBoxL()[direction];
 
     // lr loop: left right
-    for (int lr = 0; lr < 2; ++lr) {
-      int dir = 2 * coord + lr;
-      int oppositeDir = 2 * coord + (1 - lr);
-      int dirSize = nodeGrid.getGridSize(coord);
-      // Avoids double communication for size 2 directions.
-      if ( (dirSize == 2) && (lr == 1) ) continue;
+    for (int left_right_dir = 0; left_right_dir < 2; ++left_right_dir) {
+      int neighbour_node = 2 * direction + left_right_dir;
+      int opposite_neighbour_node = 2 * direction + (1 - left_right_dir);
+      int direction_size = nodeGrid.getGridSize(direction);
 
-      if (dirSize == 1) {
-        LOG4ESPP_DEBUG(theLogger, "no communication");
+      // Avoids double communication for size 2 directions.
+      if ( (direction_size == 2) && (left_right_dir == 1) ) continue;
+
+      if (direction_size == 1) {  // No communication needed in this direction.
+        LOG4ESPP_DEBUG(theLogger, "No communication needed.");
       } else {
         // prepare send and receive buffers
         longint receiver, sender;
-        receiver = nodeGrid.getNodeNeighborIndex(dir);
-        sender = nodeGrid.getNodeNeighborIndex(oppositeDir);
+        receiver = nodeGrid.getNodeNeighborIndex(neighbour_node);
+        sender = nodeGrid.getNodeNeighborIndex(opposite_neighbour_node);
 
         // exchange particles, odd-even rule
-        if (nodeGrid.getNodePosition(coord) % 2 == 0) {
+        if (nodeGrid.getNodePosition(direction) % 2 == 0) {
           outBuffer.send(receiver, kCrCommTag);
-          if (lr == 0)  {
+          if (left_right_dir == 0)  {
             inBuffer0.recv(sender, kCrCommTag);
           } else {
             inBuffer1.recv(sender, kCrCommTag);
           }
         } else {
-          if (lr == 0) {
+          if (left_right_dir == 0) {
             inBuffer0.recv(sender, kCrCommTag);
           } else {
             inBuffer1.recv(sender, kCrCommTag);
@@ -295,31 +298,31 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
     LOG4ESPP_DEBUG(theLogger, "Entering unpack");
     // unpack received data
     // add content of inBuffer to mm
-    int lengthA, Aidx, Bidx, Ridx;
-    for (int lr = 0; lr < 2; ++lr) {
-      int dir = 2 * coord + lr;
-      int oppositeDir = 2 * coord + (1 - lr);
-      int dirSize = nodeGrid.getGridSize(coord);
-      if (dirSize == 1) {
-      } else {
-      // Avoids double communication for size 2 directions.
-        if ( (dirSize == 2) && (lr == 1) ) continue;
-        if (lr == 0) {
-          inBuffer0.read(lengthA);
+    int data_length, idx_a, idx_b, reaction_idx;
+
+    for (int left_right_dir = 0; left_right_dir < 2; ++left_right_dir) {
+      int neighbour_node = 2 * direction + left_right_dir;
+      int opposite_neighbour_node = 2 * direction + (1 - left_right_dir);
+      int direction_size = nodeGrid.getGridSize(direction);
+      if (direction_size > 1) {
+        // Avoids double communication for size 2 directions.
+        if ( (direction_size == 2) && (left_right_dir == 1) ) continue;
+        if (left_right_dir == 0) {
+          inBuffer0.read(data_length);
         } else {
-          inBuffer1.read(lengthA);
+          inBuffer1.read(data_length);
         }
-        for (longint i = 0; i < lengthA; i++) {
-          if (lr == 0) {
-            inBuffer0.read(Aidx);
-            inBuffer0.read(Bidx);
-            inBuffer0.read(Ridx);
+        for (longint i = 0; i < data_length; i++) {
+          if (left_right_dir == 0) {
+            inBuffer0.read(idx_a);
+            inBuffer0.read(idx_b);
+            inBuffer0.read(reaction_idx);
           } else {
-            inBuffer1.read(Aidx);
-            inBuffer1.read(Bidx);
-            inBuffer1.read(Ridx);
+            inBuffer1.read(idx_a);
+            inBuffer1.read(idx_b);
+            inBuffer1.read(reaction_idx);
           }
-          mm.insert(std::make_pair(Aidx, std::make_pair(Bidx, Ridx)));
+          mm.insert(std::make_pair(idx_a, std::make_pair(idx_b, reaction_idx)));
         }
       }
     }
@@ -328,62 +331,73 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
   LOG4ESPP_INFO(theLogger, "Leaving sendMultiMap");
 }
 
+
 /** Given a multimap mm with several pairs (id1,id2), keep only one pair for
 each id1 and return it in place. In addition, only pairs for which
 id1 is local are kept.
 */
-void ChemicalReaction::UniqueA(integrator::ReactionMap &mm) {  //NOLINT
-  // Collect indices
-  boost::unordered_set<longint> idxSet;
-  boost::unordered_multimap<longint, longint> idxList;
-  longint idx1, idx2, reactIdx;
+void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) { //NOLINT
   System& system = getSystemRef();
-  boost::unordered_multimap<longint, longint> uniqueList;
+  integrator::ReactionMap unique_list_of_candidates;
+  boost::unordered_set<longint> a_indexes;
 
-  idxSet.clear();
-  idxList.clear();
-  // Create idxList, containing (idx1, idx2) pairs
-  // Create idxSet, containing each idx1 only once
-  for (integrator::ReactionMap::iterator it = mm.begin();
-          it != mm.end(); it++) {
-    idx1 = it->first;
-    idx2 = it->second.first;
-    reactIdx = it->second.second;
-    idxList.insert(std::make_pair(idx1, idx2));
-    idxSet.insert(idx1);
+  unique_list_of_candidates.clear();
+  // Gets the list of indexes of particle a. REQOPT
+  for (integrator::ReactionMap::iterator it = potential_candidates.begin();
+       it != potential_candidates.end(); ++it) {
+    a_indexes.insert(it->first);
   }
 
-  /*
-  uniqueList.clear();
   // For each active idx1, pick a partner
-  if (idxSet.size() > 0) {
-    for (boost::unordered_set<longint>::iterator it = idxSet.begin();
-            it != idxSet.end(); it++) {
-      idx1 = *it;
-      Particle* p = system.storage->lookupLocalParticle(idx1);
+  if (a_indexes.size() > 0) {
+    int idx_a;
+    real max_reaction_rate;
+    boost::unordered_map<real, std::pair<longint, int> > rate_idx_b;
+    boost::unordered_map<real, std::pair<longint, int> >::local_iterator idx_b_reaction_id;
+    Particle *p = NULL;
+    std::pair<integrator::ReactionMap::iterator,
+              integrator::ReactionMap::iterator> candidates_b;
+    // Iterate over the ids of particle A, looking for the particle B
+    for (boost::unordered_set<longint>::iterator it = a_indexes.begin();
+              it != a_indexes.end(); it++) {
+      idx_a = *it;
+      p = system.storage->lookupLocalParticle(idx_a);
+
       if (p == NULL) continue;
-      if (p->ghost()) continue;
-      int size = idxList.count(idx1);
-      if (size > 0) {
-        int pick = (*rng)(size);
-        std::pair<
-            boost::unordered_multimap<longint, longint>::iterator,
-            boost::unordered_multimap<longint, longint>::iterator> candidates;
-        candidates = idxList.equal_range(idx1);
-        int i = 0;
-        for (boost::unordered_multimap<longint, longint>::iterator jt = candidates.first;
-                jt != candidates.second; jt++, i++) {
-          if (i == pick) {
-            uniqueList.insert(std::make_pair(jt->first, jt->second));
-            break;
-          }
+      if (p->ghost()) continue;  // We only consider the real particles.
+
+      // Select all possible candidates (so
+      candidates_b = potential_candidates.equal_range(idx_a);
+
+      // Group the candidates by the reaction rate.
+      max_reaction_rate = -1;
+      rate_idx_b.clear();
+      for (integrator::ReactionMap::iterator jt = candidates_b.first;
+              jt != candidates_b.second; ++jt) {
+        integrator::Reaction reaction = *reaction_list_.at(jt->second.second);
+        real reaction_rate = reaction.rate();
+        if (reaction_rate > max_reaction_rate) {
+          max_reaction_rate = reaction_rate;
         }
+        // rate => (idx_b, reaction_id)
+        rate_idx_b.insert(
+            std::make_pair(reaction_rate, std::make_pair(jt->second.first, jt->second.second)));
+      }
+
+      // Found reaction with the maximum rate. If there are several candidates with the same
+      // rate, then we choose randomly.
+      if (max_reaction_rate != -1) {
+        int bucket_size = rate_idx_b.count(max_reaction_rate);
+        // Pick up random number in given range.
+        int pick_offset = (*rng_)(bucket_size);
+        idx_b_reaction_id = rate_idx_b.begin(rate_idx_b.bucket(max_reaction_rate));
+        std::advance(idx_b_reaction_id, pick_offset);
+
+        unique_list_of_candidates.insert(std::make_pair(idx_a, idx_b_reaction_id->second));
       }
     }
   }
-  mm = uniqueList;
-  uniqueList.clear();
-  */
+  potential_candidates = unique_list_of_candidates;
 }
 
 /** Given a multimap mm with several pairs (id1,id2), keep only one pair for
@@ -391,7 +405,8 @@ each id2 and return it in place. In addition, only pairs for which
 id2 is local are kept.
 */
 void ChemicalReaction::UniqueB(
-    integrator::ReactionMap& mm, integrator::ReactionMap& nn) {  //NOLINT
+    integrator::ReactionMap& potential_candidates,  //NOLINT
+    integrator::ReactionMap& effective_candidates) {  //NOLINT
   /*
   // Collect indices
   boost::unordered_set<longint> idxSet;
@@ -404,8 +419,8 @@ void ChemicalReaction::UniqueB(
   idxList.clear();
   // Create idxList, containing (idx2, idx1) pairs
   // Create idxSet, containing each idx2 only once
-  for (boost::unordered_multimap<longint, longint>::iterator it = mm.begin();
-          it != mm.end(); it++) {
+  for (boost::unordered_multimap<longint, longint>::iterator it = potential_candidatesbegin();
+          it != potential_candidatesend(); it++) {
     idx1 = it->first;
     idx2 = it->second;
     idxList.insert(std::make_pair(idx2, idx1));
@@ -439,7 +454,7 @@ void ChemicalReaction::UniqueB(
       }
     }
   }
-  nn = uniqueList;
+  effective_candidates = uniqueList;
   uniqueList.clear();
   */
 }
