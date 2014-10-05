@@ -3,6 +3,8 @@ from espresso import pmi
 
 from espresso.integrator.Extension import *  #NOQA
 from _espresso import integrator_ChemicalReaction
+from _espresso import integrator_Reaction
+from _espresso import integrator_SynthesisReaction
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -13,20 +15,20 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
             cxxinit(self, integrator_ChemicalReaction, system, vl, fpl, domdec)
 
 
-class ReactionLocal():
+class ReactionLocal(integrator_Reaction):
     """Base class for Reaction scheme."""
     def __init__(self):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self)
+            cxxinit(self, integrator_Reaction)
 
 
-class SynthesisReactionLocal(ReactionLocal):
+class SynthesisReactionLocal(ReactionLocal, integrator_SynthesisReaction):
     """Synthesis reaction scheme."""
     def __init__(self):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self)
+            cxxinit(self, integrator_SynthesisReaction)
 
 
 if pmi.isController:
