@@ -69,7 +69,7 @@ bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
 
 void Reaction::registerPython() {
   using namespace espresso::python;  //NOLINT
-  class_<SynthesisReaction, shared_ptr<SynthesisReaction> >
+  class_<Reaction, boost::noncopyable, shared_ptr<Reaction> >
     ("integrator_Reaction", no_init)
       .add_property(
         "type_a",
@@ -116,7 +116,7 @@ void Reaction::registerPython() {
 void SynthesisReaction::registerPython() {
   using namespace espresso::python;  //NOLINT
   class_<SynthesisReaction, shared_ptr<SynthesisReaction>, bases<Reaction> >
-    ("integrator_SynthesisReaction", no_init);
+    ("integrator_SynthesisReaction");
   }
 
 
