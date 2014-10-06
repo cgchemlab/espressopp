@@ -4,7 +4,6 @@ from espresso import pmi
 from espresso.integrator.Extension import *  #NOQA
 from _espresso import integrator_ChemicalReaction
 from _espresso import integrator_Reaction
-from _espresso import integrator_SynthesisReaction
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -14,29 +13,53 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(self, integrator_ChemicalReaction, system, vl, fpl, domdec)
 
+    def addReaction(self, reaction):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            self.cxxclass.addReaction(self, reaction)
+
+    def removeReaction(self, reaction_id):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            self.cxxclass.removeReaction(self, reaction_id)
+
 
 class ReactionLocal(integrator_Reaction):
     """Base class for Reaction scheme."""
-    def __init__(self):
+    def __init__(self, type_a, type_b, delta_a, delta_b, min_state_a, min_state_b,
+                 max_state_a, max_state_b, cutoff, rate):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self, integrator_Reaction)
+            cxxinit(
+                self,
+                integrator_Reaction,
+                type_a,
+                type_b,
+                delta_a,
+                delta_b,
+                min_state_a,
+                min_state_b,
+                max_state_a,
+                max_state_b,
+                cutoff,
+                rate
+            )
 
-
-class SynthesisReactionLocal(ReactionLocal, integrator_SynthesisReaction):
-    """Synthesis reaction scheme."""
+"""
+class SynthesisReactionLocal(integrator_SynthesisReaction, ReactionLocal):
     def __init__(self):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(self, integrator_SynthesisReaction)
-
+"""
 
 if pmi.isController:
     class ChemicalReaction(Extension):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espresso.integrator.ChemicalReactionLocal',
-            pmiproperty=['interval']
+            pmiproperty=['interval'],
+            pmicall=['addReaction', 'removeReaction']
             )
 
     class Reaction():
@@ -56,7 +79,10 @@ if pmi.isController:
                 'cutoff'
                 ]
             )
-
-    class SynthesisReaction(Reaction):
-        __metaclass__ = pmi.Proxy
-        pmiproxydefs = dict(cls='espresso.integrator.SynthesisReactionLocal')
+        """
+        class SynthesisReaction():
+            __metaclass__ = pmi.Proxy
+            pmiproxydefs = dict(
+                cls='espresso.integrator.SynthesisReactionLocal',
+                )
+        """

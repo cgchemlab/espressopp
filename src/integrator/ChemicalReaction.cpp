@@ -24,6 +24,7 @@
 
 #include "ChemicalReaction.hpp"
 
+#include <cstdio>
 #include <utility>
 #include <vector>
 #include <set>
@@ -47,7 +48,7 @@ namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
-bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
+bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
   Real3D distance = p1.position() - p2.position();
   real distance_2 = distance.sqr();
 
@@ -59,8 +60,8 @@ bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
         (p2_state >= min_state_b_ && p2_state <= max_state_b_)) {
       return true;
     } else if ((p1.type() == type_b_) && (p2.type() == type_a_) &&
-        (p1_state >= min_state_b_ && p1_state <= max_state_b_) &&
-        (p2_state >= min_state_a_ && p2_state <= max_state_a_)) {
+               (p1_state >= min_state_b_ && p1_state <= max_state_b_) &&
+               (p2_state >= min_state_a_ && p2_state <= max_state_a_)) {
       return true;
     }
   }
@@ -69,8 +70,8 @@ bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
 
 void Reaction::registerPython() {
   using namespace espresso::python;  //NOLINT
-  class_<Reaction, boost::noncopyable, shared_ptr<Reaction> >
-    ("integrator_Reaction", no_init)
+  class_< Reaction, shared_ptr<Reaction> >
+    ("integrator_Reaction", init<int, int, int, int, int, int, int, int, real, real>())
       .add_property(
         "type_a",
         &Reaction::type_a,
@@ -89,8 +90,8 @@ void Reaction::registerPython() {
         &Reaction::set_min_state_a)
       .add_property(
         "max_state_a",
-        &Reaction::max_state_b,
-        &Reaction::set_max_state_b)
+        &Reaction::max_state_a,
+        &Reaction::set_max_state_a)
       .add_property(
         "delta_b",
         &Reaction::delta_b,
@@ -111,17 +112,10 @@ void Reaction::registerPython() {
         "cutoff",
         &Reaction::cutoff,
         &Reaction::set_cutoff);
-  }
+}
 
-void SynthesisReaction::registerPython() {
-  using namespace espresso::python;  //NOLINT
-  class_<SynthesisReaction, shared_ptr<SynthesisReaction>, bases<Reaction> >
-    ("integrator_SynthesisReaction");
-  }
-
-
-/** ChemicalReaction
- *
+/**
+ * ChemicalReaction
  * */
 ChemicalReaction::ChemicalReaction(shared_ptr<System> system,
                                    shared_ptr<VerletList> verletList,
@@ -145,7 +139,6 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system,
 
   reaction_list_ = ReactionList();
 }
-
 
 ChemicalReaction::~ChemicalReaction() {
   disconnect();
@@ -182,21 +175,18 @@ void ChemicalReaction::React() {
   *dt_ = integrator->getTimeStep();
 
   potential_pairs_.clear();
+  effective_pairs_.clear();
   // loop over VL pairs
   for (PairList::Iterator it(verlet_list_->getPairs()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
-    bool found = false;
     int reaction_idx_ = 0;
 
     for (integrator::ReactionList::iterator it = reaction_list_.begin();
-        it != reaction_list_.end() && !found; ++it, ++reaction_idx_) {
-      found = (*it)->IsValidPair(p1, p2);
-    }
-
-    // If criteria for reaction match, add the indices to potential_pairs_
-    if (found) {
-      potential_pairs_.insert(std::make_pair(p1.id(), std::make_pair(p2.id(), reaction_idx_)));
+        it != reaction_list_.end(); ++it, ++reaction_idx_) {
+      if ((*it)->IsValidPair(p1, p2)) {
+        potential_pairs_.insert(std::make_pair(p1.id(), std::make_pair(p2.id(), reaction_idx_)));
+      }
     }
   }
   SendMultiMap(potential_pairs_);
@@ -332,6 +322,7 @@ each id1 and return it in place. In addition, only pairs for which
 id1 is local are kept.
 */
 void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) { //NOLINT
+  LOG4ESPP_INFO(theLogger, "UniqueA");
   System& system = getSystemRef();
   integrator::ReactionMap unique_list_of_candidates;
   boost::unordered_set<longint> a_indexes;
@@ -402,6 +393,8 @@ id2 is local are kept.
 void ChemicalReaction::UniqueB(
     integrator::ReactionMap& potential_candidates,  //NOLINT
     integrator::ReactionMap& effective_candidates) {  //NOLINT
+
+  LOG4ESPP_INFO(theLogger, "UniqueB");
 
   typedef boost::unordered_set<longint> Indexes;
   typedef boost::unordered_multimap<real, std::pair<longint, int> > RateParticleIdx;
@@ -493,6 +486,7 @@ void ChemicalReaction::ApplyAR() {
         pB->setState(pB->getState() + reaction.delta_a());
       }
       fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
+      LOG4ESPP_DEBUG(theLogger, "created pair");
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");

@@ -74,8 +74,15 @@ each particle enters only in one new bond per reaction step.
 
 class Reaction {
  public:
-  Reaction();
-  virtual ~Reaction() {}
+  Reaction() { }
+  Reaction(int type_a, int type_b, int delta_a, int delta_b, int min_state_a,
+           int min_state_b, int max_state_a, int max_state_b, real cutoff, real rate)
+          : type_a_(type_a), type_b_(type_b), delta_a_(delta_a), delta_b_(delta_b),
+             min_state_a_(min_state_a), min_state_b_(min_state_b), max_state_a_(max_state_a),
+             max_state_b_(max_state_b), rate_(rate) {
+    set_cutoff(cutoff);
+  }
+  // virtual ~Reaction() { }
 
   void set_rate(real rate) { rate_ = rate; }
   real rate() { return rate_; }
@@ -86,28 +93,28 @@ class Reaction {
   }
   real cutoff() { return cutoff_; }
 
-  void set_type_a(int typeA) { type_a_ = typeA; }
+  void set_type_a(int type_a) { type_a_ = type_a; }
   int type_a() { return type_a_; }
 
-  void set_type_b(int typeB) { type_b_ = typeB; }
+  void set_type_b(int type_b) { type_b_ = type_b; }
   int type_b() { return type_b_; }
 
-  void set_delta_a(int deltaA) { delta_a_ = deltaA; }
+  void set_delta_a(int delta_a) { delta_a_ = delta_a; }
   int delta_a() { return delta_a_; }
 
-  void set_delta_b(int deltaB) { delta_b_ = deltaB; }
+  void set_delta_b(int delta_b) { delta_b_ = delta_b; }
   int delta_b() { return delta_b_; }
 
-  void set_min_state_a(int minStateA) { min_state_a_ = minStateA; }
+  void set_min_state_a(int min_state_a) { min_state_a_ = min_state_a; }
   int min_state_a() { return min_state_a_; }
 
-  void set_min_state_b(int minStateB) { min_state_b_ = minStateB; }
+  void set_min_state_b(int min_state_b) { min_state_b_ = min_state_b; }
   int min_state_b() { return min_state_b_; }
 
-  void set_max_state_a(int maxStateA) { max_state_a_ = maxStateA; }
+  void set_max_state_a(int max_state_a) { max_state_a_ = max_state_a; }
   int max_state_a() { return max_state_a_; }
 
-  void set_max_state_b(int maxStateB) { max_state_b_ = maxStateB; }
+  void set_max_state_b(int max_state_b) { max_state_b_ = max_state_b; }
   int max_state_b() { return max_state_b_; }
 
   void set_rng(const shared_ptr<esutil::RNG> rng) { rng_ = rng; }
@@ -115,6 +122,8 @@ class Reaction {
   void set_dt(shared_ptr<real> dt) { dt_ = dt; }
 
   virtual bool IsValidPair(const Particle& p1, const Particle& p2);
+
+  // virtual void PostProcess(const Particle& p1, const Particle& p2) { }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -135,13 +144,6 @@ class Reaction {
   shared_ptr<esutil::RNG> rng_;  //!< random number generator
   shared_ptr<int> interval_;  //!< number of steps between reaction loops
   shared_ptr<real> dt_;  //!< timestep from the integrator
-};
-
-
-class SynthesisReaction : public Reaction {
- public:
-  bool IsValidPair(const Particle& p1, const Particle &p2);
-  static void registerPython();
 };
 
 
