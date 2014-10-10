@@ -76,11 +76,13 @@ class Reaction {
  public:
   Reaction() { }
   Reaction(int type_a, int type_b, int delta_a, int delta_b, int min_state_a,
-           int min_state_b, int max_state_a, int max_state_b, real cutoff, real rate)
+           int min_state_b, int max_state_a, int max_state_b, real cutoff, real rate,
+           bool intramolecular)
           : type_a_(type_a), type_b_(type_b), delta_a_(delta_a), delta_b_(delta_b),
              min_state_a_(min_state_a), min_state_b_(min_state_b), max_state_a_(max_state_a),
-             max_state_b_(max_state_b), rate_(rate) {
+             max_state_b_(max_state_b), rate_(rate), intramolecular_(intramolecular) {
     set_cutoff(cutoff);
+    intramolecular_ = false;
   }
   // virtual ~Reaction() { }
 
@@ -117,13 +119,17 @@ class Reaction {
   void set_max_state_b(int max_state_b) { max_state_b_ = max_state_b; }
   int max_state_b() { return max_state_b_; }
 
+  void set_intramolecular(bool intramolecular) { intramolecular_ = intramolecular; }
+  bool intramolecular() { return intramolecular_; }
+
   void set_rng(const shared_ptr<esutil::RNG> rng) { rng_ = rng; }
   void set_interval(shared_ptr<int> interval) { interval_ = interval; }
   void set_dt(shared_ptr<real> dt) { dt_ = dt; }
 
   virtual bool IsValidPair(const Particle& p1, const Particle& p2);
+  virtual bool IsValidState(const Particle& p1, const Particle& p2);
 
-  // virtual void PostProcess(const Particle& p1, const Particle& p2) { }
+  virtual void PostProcess(const Particle& p1, const Particle& p2) { }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -141,11 +147,29 @@ class Reaction {
   real cutoff_;  //!< reaction cutoff
   real cutoff_sqr_;  //!< reactio cutoff^2
 
+  bool intramolecular_;  //!< Allow to intramolecular reactions.
+
   shared_ptr<esutil::RNG> rng_;  //!< random number generator
   shared_ptr<int> interval_;  //!< number of steps between reaction loops
   shared_ptr<real> dt_;  //!< timestep from the integrator
 };
 
+/*
+class SynthesisReaction : public integrator::Reaction {
+ public:
+  SynthesisReaction(int type_a, int type_b, int delta_a, int delta_b, int min_state_a,
+                    int min_state_b, int max_state_a, int max_state_b, real cutoff, real rate,
+                    bool intramolecular)
+                   : inteReaction(type_a, type_b, delta_a, delta_b,
+                     min_state_a, min_state_b,
+                     max_state_a, max_state_b, cutoff, rate,
+                     intramolecular) { }
+
+  bool IsValidPair(const Particle& p1, const Particle& p2);
+  bool IsValidState(const Particle& p1, const Particle& p2);
+  static void registerPython();
+};
+*/
 
 typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
 typedef std::vector<shared_ptr<integrator::Reaction> > ReactionList;

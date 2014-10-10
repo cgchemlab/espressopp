@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 // ESPP_CLASS
@@ -47,6 +47,7 @@ namespace espresso {
     real lambda;
     real lambdaDeriv;
     int state;
+    int res_id;
   private:
     friend class boost::serialization::access;
     template< class Archive >
@@ -59,6 +60,7 @@ namespace espresso {
       ar & lambda;
       ar & lambdaDeriv;
       ar & state;
+      ar & res_id;
     }
   };
 
@@ -190,9 +192,10 @@ namespace espresso {
       f.fradius      = 0.0;
       m.vradius      = 0.0;
       l.ghost        = false;
-      p.lambda       = 0.0;      
-      p.lambdaDeriv  = 0.0;      
+      p.lambda       = 0.0;
+      p.lambdaDeriv  = 0.0;
       p.state        = 0;
+      p.res_id   = 0;
     }
 
     // getter and setter used for export in Python
@@ -274,13 +277,13 @@ namespace espresso {
     const bool& ghost() const { return l.ghost; }
     bool getGhostStatus() const { return l.ghost; }
     void setGhostStatus(const bool& gs) { l.ghost = gs; }
-    
+
     // weight/lambda (used in H-Adress)
     real& lambda() { return p.lambda; }
     const real& lambda() const { return p.lambda; }
     real getLambda() const { return p.lambda; }
     void setLambda(const real& _lambda) { p.lambda = _lambda; }
-    
+
     // weight/lambda derivative (used in H-Adress)
     real& lambdaDeriv() { return p.lambdaDeriv; }
     const real& lambdaDeriv() const { return p.lambdaDeriv; }
@@ -293,8 +296,14 @@ namespace espresso {
     int getState() const { return p.state; }
     void setState(const int& _state) { p.state = _state; }
 
+    // res_id (eg. define the id of the polymer chain)
+    int& res_id() { return p.res_id; }
+    const int& res_id() const { return p.res_id; }
+    int getResId() const { return p.res_id; }
+    void setResId(const int& _res_id) { p.res_id = _res_id; }
+
     static void registerPython();
-  
+
     void copyAsGhost(const Particle& src, int extradata, const Real3D& shift) {
 
       src.r.copyShifted(r, shift);
@@ -325,8 +334,8 @@ namespace espresso {
     }
   };
 
-  struct ParticleList 
-    : public esutil::ESPPContainer < std::vector< Particle > > 
+  struct ParticleList
+    : public esutil::ESPPContainer < std::vector< Particle > >
   {};
 
   // singles
@@ -358,14 +367,14 @@ namespace espresso {
   };
 
   // pairs
-  class ParticlePair 
-    : public std::pair< class Particle*, class Particle* > 
+  class ParticlePair
+    : public std::pair< class Particle*, class Particle* >
   {
   private:
     typedef std::pair< class Particle*, class Particle* > Super;
   public:
     ParticlePair() : Super() {}
-    ParticlePair(Particle* p1, Particle* p2) 
+    ParticlePair(Particle* p1, Particle* p2)
       : Super(p1, p2) {}
     ParticlePair(Particle &p1, Particle &p2)
       : Super(&p1, &p2) {}
@@ -378,7 +387,7 @@ namespace espresso {
         this->push_back(ParticlePair(p1, p2));
     }
 
-    void add(Particle &p1, Particle &p2) 
+    void add(Particle &p1, Particle &p2)
     { this->add(&p1, &p2); }
 
     void add(std::vector<Particle*> particles) {

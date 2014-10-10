@@ -27,7 +27,7 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
 class ReactionLocal(integrator_Reaction):
     """Base class for Reaction scheme."""
     def __init__(self, type_a, type_b, delta_a, delta_b, min_state_a, min_state_b,
-                 max_state_a, max_state_b, cutoff, rate):
+                 max_state_a, max_state_b, cutoff, rate, intramolecular=False):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(
@@ -42,7 +42,8 @@ class ReactionLocal(integrator_Reaction):
                 max_state_a,
                 max_state_b,
                 cutoff,
-                rate
+                rate,
+                intramolecular
             )
 
 """
@@ -76,7 +77,8 @@ if pmi.isController:
                 'min_state_b',
                 'max_state_b',
                 'rate',
-                'cutoff'
+                'cutoff',
+                'intramolecular'
                 ]
             )
         """

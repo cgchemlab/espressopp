@@ -48,30 +48,43 @@ namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
+/** Checks if the particles pair is valid. */
 bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
-  Real3D distance = p1.position() - p2.position();
-  real distance_2 = distance.sqr();
+  if (IsValidState(p1, p2)) {
+    Real3D distance = p1.position() - p2.position();
+    real distance_2 = distance.sqr();
 
-  if ((distance_2 < cutoff_sqr_) && ((*rng_)() < rate_*(*dt_)*(*interval_))) {
-    int p1_state = p1.state();
-    int p2_state = p2.state();
-    if ((p1.type() == type_a_) && (p2.type() == type_b_) &&
-        (p1_state >= min_state_a_ && p1_state <= max_state_a_) &&
-        (p2_state >= min_state_b_ && p2_state <= max_state_b_)) {
-      return true;
-    } else if ((p1.type() == type_b_) && (p2.type() == type_a_) &&
-               (p1_state >= min_state_b_ && p1_state <= max_state_b_) &&
-               (p2_state >= min_state_a_ && p2_state <= max_state_a_)) {
-      return true;
-    }
+    return ((distance_2 < cutoff_sqr_) && ((*rng_)() < rate_*(*dt_)*(*interval_)));
   }
   return false;
 }
 
+
+/** Checks if the particles has correct state. */
+bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
+  if ((p1.res_id() == p2.res_id()) && !intramolecular_)
+    return false;
+
+  int p1_state = p1.state();
+  int p2_state = p2.state();
+  if ((p1.type() == type_a_) && (p2.type() == type_b_) &&
+      (p1_state >= min_state_a_ && p1_state < max_state_a_) &&
+      (p2_state >= min_state_b_ && p2_state < max_state_b_)) {
+    return true;
+  } else if ((p1.type() == type_b_) && (p2.type() == type_a_) &&
+             (p1_state >= min_state_b_ && p1_state < max_state_b_) &&
+             (p2_state >= min_state_a_ && p2_state < max_state_a_)) {
+    return true;
+  }
+  return false;
+}
+
+
 void Reaction::registerPython() {
   using namespace espresso::python;  //NOLINT
   class_< Reaction, shared_ptr<Reaction> >
-    ("integrator_Reaction", init<int, int, int, int, int, int, int, int, real, real>())
+    ("integrator_Reaction",
+     init<int, int, int, int, int, int, int, int, real, real, bool>())
       .add_property(
         "type_a",
         &Reaction::type_a,
@@ -111,8 +124,22 @@ void Reaction::registerPython() {
       .add_property(
         "cutoff",
         &Reaction::cutoff,
-        &Reaction::set_cutoff);
+        &Reaction::set_cutoff)
+      .add_property(
+        "intramolecular",
+        &Reaction::intramolecular,
+        &Reaction::set_intramolecular);
 }
+
+/*
+void SynthesisReaction::registerPython() {
+  using namespace espresso::python;  //NOLINT
+  class_< SynthesisReaction, bases<Reaction>, shared_ptr<Reaction> >
+    ("integrator_SynthesisReaction",
+     init<int, int, int, int, int, int, int, int, real, real, bool>());
+}
+*/
+
 
 /**
  * ChemicalReaction
@@ -460,6 +487,7 @@ void ChemicalReaction::UniqueB(
   }
 }
 
+
 /** Use the (A,B) list "partners" to add bonds and change the state of the
 particles accordingly.
 */
@@ -478,15 +506,19 @@ void ChemicalReaction::ApplyAR() {
     pA = system.storage->lookupLocalParticle(it->first);
     pB = system.storage->lookupLocalParticle(it->second.first);
     if (pA != NULL && pB != NULL) {
-      if (pA->getType() == reaction.type_a()) {
-        pA->setState(pA->getState() + reaction.delta_a());
-        pB->setState(pB->getState() + reaction.delta_b());
-      } else if (pA->getType() == reaction.type_b()) {
-        pA->setState(pA->getState() + reaction.delta_b());
-        pB->setState(pB->getState() + reaction.delta_a());
+      if (reaction.IsValidState(*pA, *pB)) {
+        if (pA->getType() == reaction.type_a()) {
+          pA->setState(pA->getState() + reaction.delta_a());
+          pB->setState(pB->getState() + reaction.delta_b());
+          pB->setResId(pA->getResId());
+        } else if (pA->getType() == reaction.type_b()) {
+          pA->setState(pA->getState() + reaction.delta_b());
+          pB->setState(pB->getState() + reaction.delta_a());
+          pA->setResId(pB->getResId());
+        }
+        fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
+        LOG4ESPP_DEBUG(theLogger, "Created pair.");
       }
-      fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
-      LOG4ESPP_DEBUG(theLogger, "created pair");
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
