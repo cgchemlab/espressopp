@@ -63,8 +63,10 @@ where A and B may possess additional bonds not shown.
 
 An extra bond is added between A and B whenever the state of A and B falls
 into the defined range by variables min/max state.
-The condition is as follow: \f[state_A >= min_state_a & state_A <= max_state_a \f]
-the same holds for the particle B.
+The condition is as follow: \f[state_A >= min_state_a & state_A < max_state_a \f]
+the same holds for the particle B. Both condition should match.
+In addition if the intramolecular property is set to true (by default) then
+the reaction only happend between heterogenous molecules.
 
 The reaction proceeds by testing for all possible (A,B) pairs and
 selects them only at a given rate. It works in parallel, by gathering
@@ -72,19 +74,30 @@ first the successful pairs between neigboring CPUs and ensuring that
 each particle enters only in one new bond per reaction step.
 */
 
+
+
 class Reaction {
  public:
-  Reaction() { }
+  Reaction()
+          : type_a_(-1), type_b_(-1), delta_a_(-1), delta_b_(-1), min_state_a_(-1),
+            min_state_b_(-1), max_state_a_(-1), max_state_b_(-1), rate_(0.0),
+            intramolecular_(false) {
+    cutoff_ = 0.0;
+    cutoff_sqr_ = 0.0;
+  }
+
   Reaction(int type_a, int type_b, int delta_a, int delta_b, int min_state_a,
            int min_state_b, int max_state_a, int max_state_b, real cutoff, real rate,
-           bool intramolecular)
+           bool intramolecular = false
+           )
           : type_a_(type_a), type_b_(type_b), delta_a_(delta_a), delta_b_(delta_b),
-             min_state_a_(min_state_a), min_state_b_(min_state_b), max_state_a_(max_state_a),
-             max_state_b_(max_state_b), rate_(rate), intramolecular_(intramolecular) {
+            min_state_a_(min_state_a), min_state_b_(min_state_b),
+            max_state_a_(max_state_a),
+            max_state_b_(max_state_b), rate_(rate),
+            intramolecular_(intramolecular) {
     set_cutoff(cutoff);
-    intramolecular_ = false;
   }
-  // virtual ~Reaction() { }
+  virtual ~Reaction() { }
 
   void set_rate(real rate) { rate_ = rate; }
   real rate() { return rate_; }
@@ -126,8 +139,8 @@ class Reaction {
   void set_interval(shared_ptr<int> interval) { interval_ = interval; }
   void set_dt(shared_ptr<real> dt) { dt_ = dt; }
 
-  virtual bool IsValidPair(const Particle& p1, const Particle& p2);
-  virtual bool IsValidState(const Particle& p1, const Particle& p2);
+  virtual bool IsValidPair(const Particle& p1, const Particle& p2) = 0;
+  virtual bool IsValidState(const Particle& p1, const Particle& p2) = 0;
 
   virtual void PostProcess(const Particle& p1, const Particle& p2) { }
 
@@ -154,13 +167,18 @@ class Reaction {
   shared_ptr<real> dt_;  //!< timestep from the integrator
 };
 
-/*
+
+typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
+typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
+
+
 class SynthesisReaction : public integrator::Reaction {
  public:
   SynthesisReaction(int type_a, int type_b, int delta_a, int delta_b, int min_state_a,
-                    int min_state_b, int max_state_a, int max_state_b, real cutoff, real rate,
+                    int min_state_b, int max_state_a, int max_state_b,
+                    real cutoff, real rate,
                     bool intramolecular)
-                   : inteReaction(type_a, type_b, delta_a, delta_b,
+                   : Reaction(type_a, type_b, delta_a, delta_b,
                      min_state_a, min_state_b,
                      max_state_a, max_state_b, cutoff, rate,
                      intramolecular) { }
@@ -169,10 +187,6 @@ class SynthesisReaction : public integrator::Reaction {
   bool IsValidState(const Particle& p1, const Particle& p2);
   static void registerPython();
 };
-*/
-
-typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
-typedef std::vector<shared_ptr<integrator::Reaction> > ReactionList;
 
 
 class ChemicalReaction:public Extension {
@@ -187,7 +201,7 @@ class ChemicalReaction:public Extension {
   int interval() { return *interval_; }
 
   void Initialize();
-  void AddReaction(shared_ptr<integrator::Reaction> reaction);
+  void AddReaction(boost::shared_ptr<integrator::Reaction> reaction);
   void RemoveReaction(int reaction_id);
 
   void React();
