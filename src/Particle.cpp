@@ -24,9 +24,7 @@
 #include "Particle.hpp"
 
 namespace espresso {
-  void
-  Particle::
-  registerPython() {
+  void Particle::registerPython() {
     using namespace python;
     class_< Particle >("_TmpParticle", no_init)
       .add_property("id", &Particle::getId)
@@ -46,5 +44,35 @@ namespace espresso {
       .add_property("state", &Particle::getState, &Particle::setState)
       .add_property("res_id", &Particle::getResId, &Particle::setResId)
       ;
+  }
+
+  void ParticleProperties::registerPython() {
+    using namespace python;
+    class_< ParticleProperties >("ParticleProperties", no_init)
+        .add_property(
+            "id",
+            make_getter(&ParticleProperties::id),
+            make_setter(&ParticleProperties::id))
+        .add_property(
+            "type",
+            make_getter(&ParticleProperties::type),
+            make_setter(&ParticleProperties::type))
+        .add_property(
+            "mass",
+            make_getter(&ParticleProperties::mass),
+            make_setter(&ParticleProperties::mass))
+        .add_property(
+            "q",
+            make_getter(&ParticleProperties::q),
+            make_setter(&ParticleProperties::q))
+        .add_property(
+            "state",
+            make_getter(&ParticleProperties::state),
+            make_setter(&ParticleProperties::state))
+        .add_property(
+            "res_id",
+            make_getter(&ParticleProperties::res_id),
+            make_setter(&ParticleProperties::res_id)
+            );
   }
 }

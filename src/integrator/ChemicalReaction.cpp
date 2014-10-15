@@ -50,7 +50,7 @@ LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
 
 /** Checks if the particles pair is valid. */
-bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
+bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
   if (IsValidState(p1, p2)) {
     Real3D distance = p1.position() - p2.position();
     real distance_2 = distance.sqr();
@@ -63,7 +63,7 @@ bool SynthesisReaction::IsValidPair(const Particle& p1, const Particle& p2) {
 
 
 /** Checks if the particles has correct state. */
-bool SynthesisReaction::IsValidState(const Particle& p1, const Particle& p2) {
+bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
   if ((p1.res_id() == p2.res_id()) && !intramolecular_)
     return false;
 
@@ -111,6 +111,37 @@ void SynthesisReaction::registerPython() {
        init<int, int, int, int, int, int, int, int, real, real, bool>());
 }
 
+
+/* Addition reacton */
+
+/** Adds new change property definition. */
+void AdditionReaction::AddChangeProperty(int type_id, ParticleProperties new_property){
+  type_properties_.insert(std::pair<int, ParticleProperties>(type_id, new_property));
+}
+
+/** Removes change property definition. */
+void AdditionReaction::RemoveChangeProperty(int type_id) {
+  type_properties_.erase(type_id);
+}
+
+
+/** Post process after pairs were added.
+ *
+ * In this case method will update the properties of the particles.
+ * */
+void AdditionReaction::PostProcess(const Particle& p1, const Particle& p2){
+
+}
+
+void AdditionReaction::registerPython() {
+  using namespace espresso::python;  // NOLINT
+  class_<AdditionReaction, bases<integrator::Reaction>,
+        boost::shared_ptr<integrator::AdditionReaction> >
+      ("integrator_AdditionReaction",
+         init<int, int, int, int, int, int, int, int, real, real, bool>())
+         .def("add_change_property", &AdditionReaction::AddChangeProperty);
+
+}
 
 /** ChemicalReaction part*/
 ChemicalReaction::ChemicalReaction(
@@ -497,6 +528,7 @@ void ChemicalReaction::ApplyAR() {
           pB->setState(pB->getState() + reaction->delta_a());
           pA->setResId(pB->getResId());  // transfer the residue id
         }
+        reaction->PostProcess(pA, pB);  // Do some postprocess modifications. Only on real particles.
         fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
         LOG4ESPP_DEBUG(theLogger, "Created pair.");
       }

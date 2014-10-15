@@ -99,6 +99,7 @@ from espresso.integrator.Extension import *  # NOQA
 from _espresso import integrator_ChemicalReaction
 from _espresso import integrator_Reaction
 from _espresso import integrator_SynthesisReaction
+from _espresso import integrator_AdditionReaction
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -159,6 +160,29 @@ class SynthesisReactionLocal(integrator_SynthesisReaction, integrator_Reaction):
             )
 
 
+class AdditionReactionLocal(integrator_AdditionReaction, integrator_Reaction):
+    """Addition reaction."""
+    def __init__(self, type_a, type_b, delta_a, delta_b, min_state_a, min_state_b,
+                 max_state_a, max_state_b, cutoff, rate, intramolecular=False):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            cxxinit(
+                self,
+                integrator_AdditionReaction,
+                type_a,
+                type_b,
+                delta_a,
+                delta_b,
+                min_state_a,
+                min_state_b,
+                max_state_a,
+                max_state_b,
+                cutoff,
+                rate,
+                intramolecular
+            )
+
+
 if pmi.isController:
     class ChemicalReaction(Extension):
         __metaclass__ = pmi.Proxy
@@ -187,5 +211,29 @@ if pmi.isController:
                 'rate',
                 'cutoff',
                 'intramolecular'
+                )
+            )
+
+
+    class AdditionReaction:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espresso.integrator.AdditionReactionLocal',
+            pmiproperty=(
+                'type_a',
+                'type_b',
+                'delta_a',
+                'delta_b',
+                'min_state_a',
+                'max_state_a',
+                'min_state_b',
+                'max_state_b',
+                'rate',
+                'cutoff',
+                'intramolecular'
+                ),
+            pmicall=(
+                'add_change_property',
+                'remove_change_property'
                 )
             )

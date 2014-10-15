@@ -88,7 +88,8 @@ namespace espresso {
       Settle::registerPython();
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
-      Reaction::registerPython();
+      Reaction::registerPython();  // This is base class for reaction, has to be first.
+      AdditionReaction::registerPython();
       SynthesisReaction::registerPython();
       ChemicalReaction::registerPython();
       EmptyExtension::registerPython();

@@ -175,13 +175,9 @@ class Reaction {
   }
 
   /** Checks if the pair is valid. */
-  virtual bool IsValidPair(const Particle& p1, const Particle& p2) = 0;
-  /** Checsk if the pair has valid state. */
-  virtual bool IsValidState(const Particle& p1, const Particle& p2) = 0;
-
-  /** The method implements the post process of the particles. */
-  virtual void PostProcess(const Particle& p1, const Particle& p2) {
-  }
+  virtual bool IsValidPair(const Particle& p1, const Particle& p2);
+  /** Checks if the pair has valid state. */
+  virtual bool IsValidState(const Particle& p1, const Particle& p2);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -204,6 +200,10 @@ class Reaction {
   shared_ptr<esutil::RNG> rng_;  //!< random number generator
   shared_ptr<int> interval_;  //!< number of steps between reaction loops
   shared_ptr<real> dt_;  //!< timestep from the integrator
+
+  /** The method implements the post process of the particles. */
+  virtual void PostProcess(const Particle& p1, const Particle& p2) { }
+
 };
 
 typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
@@ -227,10 +227,9 @@ class SynthesisReaction : public integrator::Reaction {
                  max_state_a, max_state_b, cutoff, rate, intramolecular) {
   }
 
-  bool IsValidPair(const Particle& p1, const Particle& p2);
-  bool IsValidState(const Particle& p1, const Particle& p2);
   static void registerPython();
 };
+
 
 class AdditionReaction : public integrator::Reaction {
  public:
@@ -241,13 +240,18 @@ class AdditionReaction : public integrator::Reaction {
                  max_state_a, max_state_b, cutoff, rate, intramolecular) {
   }
 
-  bool IsValidPair(const Particle& p1, const Particle& p2);
-  bool IsValidState(const Particle& p1, const Particle& p2);
-
-  void PostProcess(const Particle& p1, const Particle& p2);
+  void AddChangeProperty(int type_id, ParticleProperties new_property);
+  void RemoveChangeProperty(int type_id);
 
   static void registerPython();
-}
+
+ protected:
+  void PostProcess(const Particle& p1, const Particle& p2);
+
+ private:
+  std::map<int, ParticleProperties> type_properties_;
+
+};
 
 /** Reaction scheme for polymer growth and curing/crosslinking
 

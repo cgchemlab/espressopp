@@ -1,5 +1,5 @@
-#!/usr/bin/env python                                                               
-# -*- coding: iso-8859-1 -*-                                                        
+#!/usr/bin/env python
+# -*- coding: iso-8859-1 -*-
 
 ###########################################################################
 #                                                                         #
@@ -55,7 +55,7 @@ system.addInteraction(interLJ)
 # FENE bonds
 fpl = espresso.FixedPairList(system.storage)
 fpl.addBonds(bonds)
-potFENE = espresso.interaction.FENE(K=30.0, r0=0.0, rMax=1.5)
+potFENE = espresso.interaction.FENE(K=30.0, r0=2.0, rMax=3.0)
 interFENE = espresso.interaction.FixedPairListFENE(system, fpl, potFENE)
 system.addInteraction(interFENE)
 
@@ -80,7 +80,7 @@ print 'NodeGrid            = ', system.storage.getNodeGrid()
 print 'CellGrid            = ', system.storage.getCellGrid()
 print ''
 
-# espresso.tools.decomp.tuneSkin(system, integrator)
+espresso.tools.decomp.tuneSkin(system, integrator)
 
 espresso.tools.analyse.info(system, integrator)
 start_time = time.clock()

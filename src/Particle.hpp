@@ -48,6 +48,9 @@ namespace espresso {
     real lambdaDeriv;
     int state;
     int res_id;
+
+    static void registerPython();
+
   private:
     friend class boost::serialization::access;
     template< class Archive >
@@ -228,19 +231,16 @@ namespace espresso {
     void setRadius(real q) { r.radius = q; }
 
     // Position
-
     Real3D& position() { return r.p; }
     const Real3D& position() const { return r.p; }
     Real3D getPos() const { return r.p; }
     void setPos(const Real3D& pos) { r.p = pos; }
 
     // All Forces
-
     ParticleForce& particleForce() { return f; }
     const ParticleForce& particleForce() const { return f; }
 
     // Force
-
     Real3D& force() { return f.f; }
     const Real3D& force() const { return f.f; }
 
@@ -254,7 +254,6 @@ namespace espresso {
     void setFRadius(const real &fr) { f.fradius = fr; }
 
     // Momentum
-
     Real3D& velocity() { return m.v; }
     const Real3D& velocity() const { return m.v; }
     Real3D getV() const { return m.v; }
@@ -267,7 +266,6 @@ namespace espresso {
     void setVRadius(const real& vr) { m.vradius = vr;}
 
     // Image, Ghost
-
     Int3D& image() { return l.i; }
     const Int3D& image() const { return l.i; }
     Int3D getImageBox() const { return l.i; }

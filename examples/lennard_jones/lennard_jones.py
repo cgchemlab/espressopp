@@ -5,18 +5,18 @@ the simulation box interacting via a shifted Lennard-Jones type potential
 with an interaction cutoff at 2.5.
 Newtons equations of motion are integrated with a Velocity-Verlet integrator.
 The canonical (NVT) ensemble is realized by using a Langevin thermostat.
-In order to prevent explosion due to strongly overlapping volumes of 
-random particles the system needs to be warmed up first.   
+In order to prevent explosion due to strongly overlapping volumes of
+random particles the system needs to be warmed up first.
 Warm-up is accomplished by using a repelling-only LJ interaction
 (cutoff=1.12246, shift=0.25) with a force capping at radius 0.6
 and initial small LJ epsilon value of 0.1.
-During warmup epsilon is gradually increased to its final value 1.0.  
+During warmup epsilon is gradually increased to its final value 1.0.
 After warm-up the system is equilibrated using the full uncapped  LJ Potential.
 
 If a system still explodes during warmup or equilibration, warmup time
 could be increased by increasing warmup_nloops and the capradius could
 be set to another value. Depending on the system (number of particles, density, ...)
-it could also be necessary to vary sigma during warmup.  
+it could also be necessary to vary sigma during warmup.
 
 The simulation consists of the following steps:
 
@@ -47,9 +47,9 @@ L                  = pow(Npart/rho, 1.0/3.0)
 # cubic simulation box of size L
 box                = (L, L, L)
 # cutoff of the short range potential
-r_cutoff           = 2.5
+r_cutoff           = pow(2., 1./6.)
 # VerletList skin size (also used for domain decomposition)
-skin               = 0.4
+skin               = 0.3
 # the temperature of the system
 temperature        = 1.0
 # time step for the velocity verlet integrator
@@ -86,7 +86,7 @@ print espresso.Version().info()
 print "Npart              = ", Npart
 print "rho                = ", rho
 print "L                  = ", L
-print "box                = ", box 
+print "box                = ", box
 print "r_cutoff           = ", r_cutoff
 print "skin               = ", skin
 print "temperature        = ", temperature
@@ -112,7 +112,7 @@ print "equil_isteps       = ", equil_isteps
 system             = espresso.System()
 # use the random number generator that is included within the ESPResSo++ package
 system.rng         = espresso.esutil.RNG()
-# use orthorhombic periodic boundary conditions 
+# use orthorhombic periodic boundary conditions
 system.bc          = espresso.bc.OrthorhombicBC(system.rng, box)
 # set the skin size used for verlet lists and cell sizes
 system.skin        = skin
@@ -135,7 +135,7 @@ print "cellGrid           = ", cellGrid
 
 # use a velocity Verlet integration scheme
 integrator     = espresso.integrator.VelocityVerlet(system)
-# set the integration step  
+# set the integration step
 integrator.dt  = dt
 # use a thermostat if the temperature is set
 if (temperature != None):
@@ -155,7 +155,7 @@ if (temperature != None):
 # 4. adding the particles                                              #
 ########################################################################
 
-print "adding ", Npart, " particles to the system ..." 
+print "adding ", Npart, " particles to the system ..."
 for pid in range(Npart):
   # get a 3D random coordinate within the box
   pos = system.bc.getRandomPos()
@@ -164,7 +164,7 @@ for pid in range(Npart):
   # the following default values are set for each particle:
   # (type=0, mass=1.0, velocity=(0,0,0), charge=0.0)
   system.storage.addParticle(pid, pos)
-# distribute the particles to parallel CPUs 
+# distribute the particles to parallel CPUs
 system.storage.decompose()
 
 ########################################################################
@@ -177,10 +177,10 @@ verletlist  = espresso.VerletList(system, warmup_cutoff)
 # create a force capped Lennard-Jones potential
 # the potential is automatically shifted so that U(r=cutoff) = 0.0
 LJpot       = espresso.interaction.LennardJonesCapped(epsilon=epsilon_start, sigma=sigma, cutoff=warmup_cutoff, caprad=capradius, shift='auto')
-# create a force capped Lennard-Jones interaction that uses a verlet list 
+# create a force capped Lennard-Jones interaction that uses a verlet list
 interaction = espresso.interaction.VerletListLennardJonesCapped(verletlist)
 # tell the interaction to use the above defined force capped Lennard-Jones potential
-# between 2 particles of type 0 
+# between 2 particles of type 0
 interaction.setPotential(type1=0, type2=0, potential=LJpot)
 
 ########################################################################
@@ -201,10 +201,10 @@ for step in range(warmup_nloops):
   # update the type0-type0 interaction to use the new values of LJpot
   interaction.setPotential(type1=0, type2=0, potential=LJpot)
   # print status info
-  espresso.tools.info(system, integrator)  
+  espresso.tools.info(system, integrator)
 print "warmup finished"
 # remove the force capping interaction from the system
-system.removeInteraction(0) 
+system.removeInteraction(0)
 # the equilibration uses a different interaction cutoff therefore the current
 # verlet list is not needed any more and would waste only CPU time
 verletlist.disconnect()
@@ -216,9 +216,9 @@ verletlist.disconnect()
 # create a new verlet list that uses a cutoff radius = r_cutoff
 # the verlet radius is automatically increased by system.skin (see system setup)
 verletlist  = espresso.VerletList(system, r_cutoff)
-# define a Lennard-Jones interaction that uses a verlet list 
+# define a Lennard-Jones interaction that uses a verlet list
 interaction = espresso.interaction.VerletListLennardJones(verletlist)
-# use a Lennard-Jones potential between 2 particles of type 0 
+# use a Lennard-Jones potential between 2 particles of type 0
 # the potential is automatically shifted so that U(r=cutoff) = 0.0
 # if the potential should not be shifted set shift=0.0
 potential   = interaction.setPotential(type1=0, type2=0,
@@ -232,7 +232,7 @@ potential   = interaction.setPotential(type1=0, type2=0,
 # add the new interaction to the system
 system.addInteraction(interaction)
 # since the interaction cut-off changed the size of the cells that are used
-# to speed up verlet list builds should be adjusted accordingly 
+# to speed up verlet list builds should be adjusted accordingly
 system.storage.cellAdjust()
 
 # set all integrator timers to zero again (they were increased during warmup)
@@ -258,9 +258,9 @@ print "equilibration finished"
 # format of xyz file is:
 # first line      : number of particles
 # second line     : box_Lx, box_Ly, box_Lz
-# all other lines : ParticleID  ParticleType  x_pos  y_pos  z_pos  x_vel  y_vel  z_vel 
+# all other lines : ParticleID  ParticleType  x_pos  y_pos  z_pos  x_vel  y_vel  z_vel
 filename = "lennard_jones_fluid_%0i.xyz" % integrator.step
-print "writing final configuration file ..." 
+print "writing final configuration file ..."
 espresso.tools.writexyz(filename, system, velocities = True, unfolded = False)
 
 # also write a PDB file which can be used to visualize configuration with VMD
