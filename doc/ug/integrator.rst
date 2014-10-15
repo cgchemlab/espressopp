@@ -9,6 +9,7 @@ integrator
    espresso.integrator.BerendsenBarostatAnisotropic.rst
    espresso.integrator.BerendsenThermostat.rst
    espresso.integrator.CapForce.rst
+   espresso.integrator.ChemicalReaction.rst
    espresso.integrator.DPDThermostat.rst
    espresso.integrator.ExtAnalyze.rst
    espresso.integrator.ExtForce.rst

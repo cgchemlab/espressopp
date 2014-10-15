@@ -65,10 +65,10 @@ class ParticleLocal(object):
     def __getTmp(self):
       return self.storage.lookupRealParticle(self.pid)
 
-        #if tmp is None:
+        # if tmp is None:
             # TODO: Exception
             # raise ParticleDoesNotExistHere('pid='+str(self.pid)+' rank='+str(pmi.rank) )
-        #else:
+        # else:
         #  return tmp
 
     # Defining __getattr__ will make sure that you can use any
@@ -151,9 +151,9 @@ class ParticleLocal(object):
     def state(self, val): self.__getTmp().state = val
 
     @property
-    def segment_id(self): return self.__getTmp().segment_id
-    @segment_id.setter
-    def segment_id(self, val): self.__getTmp().segment_id = val
+    def res_id(self): return self.__getTmp().res_id
+    @res_id.setter
+    def res_id(self, val): self.__getTmp().res_id = val
 
 
     def getLocalData(self, key):
@@ -171,8 +171,8 @@ if pmi.isController:
     class Particle(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls = 'espresso.ParticleLocal',
-            pmiproperty = [ "id", "storage" ]
+            cls='espresso.ParticleLocal',
+            pmiproperty=[ "id", "storage" ]
             )
 
         @property

@@ -195,7 +195,7 @@ namespace espresso {
       p.lambda       = 0.0;
       p.lambdaDeriv  = 0.0;
       p.state        = 0;
-      p.res_id   = 0;
+      p.res_id       = 0;
     }
 
     // getter and setter used for export in Python

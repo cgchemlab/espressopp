@@ -1,6 +1,7 @@
 /*
  Copyright (C) 2014
-   Pierre de Buyl, Jakub Krajniak
+   Pierre de Buyl
+   Jakub Krajniak (jkrajniak@gmail.com)
  Copyright (C) 2012,2013
    Max Planck Institute for Polymer Research
  Copyright (C) 2008,2009,2010,2011
@@ -144,6 +145,7 @@ void ChemicalReaction::Initialize() {
   LOG4ESPP_INFO(theLogger, "init ChemicalReaction");
 }
 
+/** Adds the chemical reaction to the list of reactions */
 void ChemicalReaction::AddReaction(boost::shared_ptr<integrator::Reaction> reaction) {
   reaction->set_dt(dt_);
   reaction->set_interval(interval_);
@@ -157,12 +159,12 @@ void ChemicalReaction::AddReaction(boost::shared_ptr<integrator::Reaction> react
   reaction_list_.push_back(reaction);
 }
 
+/** Removes the reaction from the list. */
 void ChemicalReaction::RemoveReaction(int reaction_id) {
   reaction_list_.erase(reaction_list_.begin() + reaction_id);
 }
 
-/** Performs all steps of the reactive scheme.
- */
+/** Performs all steps of the reactive scheme. */
 void ChemicalReaction::React() {
   if (integrator->getStep() % (*interval_) != 0)
     return;
@@ -291,6 +293,7 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
       // Avoids double communication for size 2 directions.
       if ((direction_size == 2) && (left_right_dir == 1))
         continue;
+
       if (left_right_dir == 0) {
         in_buffer_0.read(data_length);
       } else {
@@ -324,10 +327,14 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) { 
   integrator::ReactionMap unique_list_of_candidates;
   boost::unordered_set<longint> a_indexes;
 
+  Particle *p = NULL;
   unique_list_of_candidates.clear();
-  // Gets the list of indexes of particle a. REQOPT
+  // Gets the list of indexes of particle a. Gets only real particles, skip ghost.
   for (integrator::ReactionMap::iterator it = potential_candidates.begin();
       it != potential_candidates.end(); ++it) {
+    p = system.storage->lookupLocalParticle(it->first);
+    if (p == NULL || p->ghost())
+      continue;
     a_indexes.insert(it->first);
   }
 
@@ -338,7 +345,7 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) { 
     // rate => idx_b, reaction_id
     boost::unordered_multimap<real, std::pair<longint, int> > rate_idx_b;
     boost::unordered_multimap<real, std::pair<longint, int> >::local_iterator idx_b_reaction_id;
-    Particle *p = NULL;
+
     // Iterators for the equal_range.
     std::pair<integrator::ReactionMap::iterator,
               integrator::ReactionMap::iterator> candidates_b;
@@ -346,12 +353,8 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) { 
     for (boost::unordered_set<longint>::iterator it = a_indexes.begin();
         it != a_indexes.end(); ++it) {
       idx_a = *it;
-      p = system.storage->lookupLocalParticle(idx_a);
 
-      if (p == NULL || p->ghost())
-        continue;
-
-      // Select all possible candidates (so
+      // Select all possible candidates
       candidates_b = potential_candidates.equal_range(idx_a);
 
       // Group the candidates by the reaction rate.
@@ -404,11 +407,17 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
   Indexes b_indexes;
   integrator::ReactionMap reverse_candidates;
 
+  Particle *p = NULL;
   effective_candidates.clear();
 
   // Collect the b particle pairs. REQOPT
   for (integrator::ReactionMap::iterator it = potential_candidates.begin();
       it != potential_candidates.end(); ++it) {
+
+    p = system.storage->lookupLocalParticle(it->second.first);
+    if (p == NULL || p->ghost())
+      continue;
+
     b_indexes.insert(it->second.first);
     reverse_candidates.insert(
         std::make_pair(it->second.first,
@@ -423,15 +432,10 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
     RateParticleIdx::local_iterator idx_a_reaction_id;
     std::pair<integrator::ReactionMap::iterator,
         integrator::ReactionMap::iterator> candidates_a;
-    Particle *p = NULL;
 
     for (Indexes::iterator it = b_indexes.begin(); it != b_indexes.end();
         ++it) {
       idx_b = *it;
-      p = system.storage->lookupLocalParticle(idx_b);
-
-      if (p == NULL || p->ghost())
-        continue;
 
       candidates_a = reverse_candidates.equal_range(idx_b);
       max_reaction_rate = -1;
@@ -483,19 +487,19 @@ void ChemicalReaction::ApplyAR() {
     pA = system.storage->lookupLocalParticle(it->first);
     pB = system.storage->lookupLocalParticle(it->second.first);
     if (pA != NULL && pB != NULL) {
-      //if (reaction->IsValidState(*pA, *pB)) {
+      if (reaction->IsValidState(*pA, *pB)) {
         if (pA->getType() == reaction->type_a()) {
           pA->setState(pA->getState() + reaction->delta_a());
           pB->setState(pB->getState() + reaction->delta_b());
-          pB->setResId(pA->getResId());
-        } else if (pA->getType() == reaction->type_b()) {
+          pB->setResId(pA->getResId());  // transfer the residue id
+        } else if (pA->getType() == reaction->type_b()) { // This time the pA is of type_b
           pA->setState(pA->getState() + reaction->delta_b());
           pB->setState(pB->getState() + reaction->delta_a());
-          pA->setResId(pB->getResId());
+          pA->setResId(pB->getResId());  // transfer the residue id
         }
         fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
         LOG4ESPP_DEBUG(theLogger, "Created pair.");
-      //}
+      }
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
