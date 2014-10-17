@@ -26,19 +26,7 @@
 **espresso.interaction.DihedralHarmonicNCos**
 *********************************************
 
-The dihedral harmonic potential
-
-.. math::
-
-   U(\phi_{ijkl}) = K\cdot[1+cos(N\cdot\phi_{ijkl} - \phi_0)]
-
-where the `K` is a constant, the angles should be provided in radians.
-The `N` is a multiplicity.
-
-Reference: http://www.uark.edu/ua/fengwang/DLPOLY2/node49.html
 """
-
-
 # pylint: disable=W0401, W0614, W0212
 from espresso import pmi
 from espresso.esutil import *
@@ -49,16 +37,14 @@ from espresso.interaction.Interaction import *
 from _espresso import interaction_DihedralHarmonicNCos
 from _espresso import interaction_FixedQuadrupleListDihedralHarmonicNCos
 
-
 class DihedralHarmonicNCosLocal(DihedralPotentialLocal, interaction_DihedralHarmonicNCos):
-  'The (local) DihedralHarmoniNCos potential.'
+  'The (local) DihedralHarmoniNcCos potential.'
   def __init__(self, K=0.0, phi0=0.0, multiplicity=1):
     """Initialize the local DihedralHarmonicNCos object."""
     # pylint: disable=W0212
     if (not (pmi._PMIComm and pmi._PMIComm.isActive())
         or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
       cxxinit(self, interaction_DihedralHarmonicNCos, K, phi0, multiplicity)
-
 
 class FixedQuadrupleListDihedralHarmonicNCosLocal(
     InteractionLocal,
@@ -80,6 +66,20 @@ class FixedQuadrupleListDihedralHarmonicNCosLocal(
       return self.cxxclass.getFixedQuadrupleList(self)
 
 
+if pmi.isController:
+  class DihedralHarmonicNCos(DihedralPotential):
+    'The DihedralHarmonicNCos potential.'
+    pmiproxydefs = dict(
+      cls='espresso.interaction.DihedralHarmonicNCosLocal',
+      pmiproperty=['K', 'phi', 'multiplicity']
+    )
+
+  class FixedQuadrupleListDihedralHarmonicNCos(Interaction):
+    __metaclass__ = pmi.Proxy
+    pmiproxydefs = dict(
+      cls='espresso.interaction.FixedQuadrupleListDihedralHarmonicNCosLocal',
+      pmicall=['setPotential', 'getFixedQuadrupleList']
+    )
 if pmi.isController:
   class DihedralHarmonicNCos(DihedralPotential):
     'The DihedralHarmonicNCos potential.'
