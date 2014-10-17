@@ -47,7 +47,7 @@ namespace espresso {
 namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
-
+LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles pair is valid. */
 bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
@@ -140,6 +140,7 @@ void AdditionReaction::RemoveChangeProperty(int type_id) {
  * In this case method will update the properties of the particles.
  * */
 bool AdditionReaction::PostProcess(Particle& p1, Particle& p2){
+  LOG4ESPP_DEBUG(theLogger, "Entering AdditionReaction::PostProcess");
   TypeParticlePropertiesMap::iterator it;
   // Process particle p1.
   bool modified = false;
@@ -149,6 +150,8 @@ bool AdditionReaction::PostProcess(Particle& p1, Particle& p2){
     p1.setMass(it->second->mass);
     p1.setQ(it->second->q);
     modified = true;
+    LOG4ESPP_DEBUG(theLogger, "Modified particle A");
+    LOG4ESPP_DEBUG(theLogger, p1.id());
   }
   // Process particle p2.
   it = type_properties_.find(p2.type());
@@ -157,7 +160,10 @@ bool AdditionReaction::PostProcess(Particle& p1, Particle& p2){
     p2.setMass(it->second->mass);
     p2.setQ(it->second->q);
     modified = true;
+    LOG4ESPP_DEBUG(theLogger, "Modified particle B");
+    LOG4ESPP_DEBUG(theLogger, p2.id());
   }
+  LOG4ESPP_DEBUG(theLogger, "Leaving AdditionReaction::PostProcess");
   return modified;
 }
 

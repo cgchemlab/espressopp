@@ -186,6 +186,8 @@ class Reaction {
   static void registerPython();
 
  protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
   int type_a_;  //!< type of reactant A
   int type_b_;  //!< type of reactant B
   int min_state_a_;  //!< min state of reactant A
