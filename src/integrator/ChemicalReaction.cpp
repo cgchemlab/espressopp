@@ -115,13 +115,23 @@ void SynthesisReaction::registerPython() {
 /* Addition reacton */
 
 /** Adds new change property definition. */
-void AdditionReaction::AddChangeProperty(int type_id, ParticleProperties new_property){
-  type_properties_.insert(std::pair<int, ParticleProperties>(type_id, new_property));
+void AdditionReaction::AddChangeProperty(
+    int type_id,
+    boost::shared_ptr<ParticleProperties> new_property
+    ){
+  std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
+  ret = type_properties_.insert(
+      std::pair<int, boost::shared_ptr<ParticleProperties> >(type_id, new_property));
+  if (ret.second == false)
+    throw std::runtime_error("Requested type already exists. To replace please remove it firstly");
 }
 
 /** Removes change property definition. */
 void AdditionReaction::RemoveChangeProperty(int type_id) {
-  type_properties_.erase(type_id);
+  int remove_elements = type_properties_.erase(type_id);
+  if (remove_elements == 0) {
+    throw std::runtime_error("Invalid type.");
+  }
 }
 
 
@@ -129,8 +139,26 @@ void AdditionReaction::RemoveChangeProperty(int type_id) {
  *
  * In this case method will update the properties of the particles.
  * */
-void AdditionReaction::PostProcess(const Particle& p1, const Particle& p2){
-
+bool AdditionReaction::PostProcess(Particle& p1, Particle& p2){
+  TypeParticlePropertiesMap::iterator it;
+  // Process particle p1.
+  bool modified = false;
+  it = type_properties_.find(p1.type());
+  if (it != type_properties_.end()) {
+    p1.setType(it->second->type);
+    p1.setMass(it->second->mass);
+    p1.setQ(it->second->q);
+    modified = true;
+  }
+  // Process particle p2.
+  it = type_properties_.find(p2.type());
+  if (it != type_properties_.end()) {
+    p2.setType(it->second->type);
+    p2.setMass(it->second->mass);
+    p2.setQ(it->second->q);
+    modified = true;
+  }
+  return modified;
 }
 
 void AdditionReaction::registerPython() {
@@ -139,9 +167,15 @@ void AdditionReaction::registerPython() {
         boost::shared_ptr<integrator::AdditionReaction> >
       ("integrator_AdditionReaction",
          init<int, int, int, int, int, int, int, int, real, real, bool>())
-         .def("add_change_property", &AdditionReaction::AddChangeProperty);
+         .def("addChangeProperty", &AdditionReaction::AddChangeProperty)
+         .def("removeChangeProperty", &AdditionReaction::RemoveChangeProperty);
 
 }
+
+
+//**
+//**  Integrator extension.
+//**
 
 /** ChemicalReaction part*/
 ChemicalReaction::ChemicalReaction(
@@ -169,11 +203,11 @@ ChemicalReaction::ChemicalReaction(
 
 ChemicalReaction::~ChemicalReaction() {
   disconnect();
-  LOG4ESPP_INFO(theLogger, "destructor ChemicalReaction");
+  LOG4ESPP_INFO(theLogger, "Destructor ChemicalReaction");
 }
 
 void ChemicalReaction::Initialize() {
-  LOG4ESPP_INFO(theLogger, "init ChemicalReaction");
+  LOG4ESPP_INFO(theLogger, "Init ChemicalReaction");
 }
 
 /** Adds the chemical reaction to the list of reactions */
@@ -232,7 +266,10 @@ void ChemicalReaction::React() {
   UniqueB(potential_pairs_, effective_pairs_);
   SendMultiMap(effective_pairs_);
   // Use effective_pairs_ to apply the reaction.
-  ApplyAR();
+  std::vector<Particle*> modified_particles = ApplyAR();
+  // Update the ghost particles.
+  if (modified_particles.size() > 0)
+    UpdateGhost(modified_particles);
 }
 
 /** Performs two-way parallel communication to consolidate mm between
@@ -243,27 +280,27 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
   LOG4ESPP_INFO(theLogger, "Entering sendMultiMap");
 
   InBuffer in_buffer_0(*getSystem()->comm);
-  InBuffer inBuffer1(*getSystem()->comm);
-  OutBuffer outBuffer(*getSystem()->comm);
-  const storage::NodeGrid& nodeGrid = domdec_->getNodeGrid();
+  InBuffer in_buffer_1(*getSystem()->comm);
+  OutBuffer out_buffer(*getSystem()->comm);
+  const storage::NodeGrid& node_grid = domdec_->getNodeGrid();
 
   // Prepare out buffer with the reactions that potential will happen on this node.
-  outBuffer.reset();
+  out_buffer.reset();
   in_buffer_0.reset();
-  inBuffer1.reset();
+  in_buffer_1.reset();
 
-  // Fill outBuffer from mm.
+  // Fill out_buffer from mm.
   int tmp = mm.size();
   int a, b, c;
-  outBuffer.write(tmp);
+  out_buffer.write(tmp);
   for (integrator::ReactionMap::iterator it = mm.begin(); it != mm.end();
       it++) {
     a = it->first;  // particle id
     b = it->second.first;  // particle id
     c = it->second.second;  // reaction id
-    outBuffer.write(a);
-    outBuffer.write(b);
-    outBuffer.write(c);
+    out_buffer.write(a);
+    out_buffer.write(b);
+    out_buffer.write(c);
   }
 
   /* direction loop: x, y, z.
@@ -279,7 +316,7 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
      to ghost forces, which only eventually go back to the real
      particle.
      */
-    direction_size = nodeGrid.getGridSize(direction);
+    direction_size = node_grid.getGridSize(direction);
     if (direction_size == 1) {
       LOG4ESPP_DEBUG(theLogger, "No communication needed.");
       continue;
@@ -292,29 +329,29 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
 
       // prepare send and receive buffers
       longint receiver, sender;
-      receiver = nodeGrid.getNodeNeighborIndex(2 * direction + left_right_dir);
-      sender = nodeGrid.getNodeNeighborIndex(2 * direction + (1 - left_right_dir));
+      receiver = node_grid.getNodeNeighborIndex(2 * direction + left_right_dir);
+      sender = node_grid.getNodeNeighborIndex(2 * direction + (1 - left_right_dir));
 
       // exchange particles, odd-even rule. getNodePosition returns the position
       // of the current node.
-      if (nodeGrid.getNodePosition(direction) % 2 == 0) {
+      if (node_grid.getNodePosition(direction) % 2 == 0) {
         // sending the data
-        outBuffer.send(receiver, kCrCommTag);
+        out_buffer.send(receiver, kCrCommTag);
         // receiving the data
         if (left_right_dir == 0) {
           in_buffer_0.recv(sender, kCrCommTag);
         } else {
-          inBuffer1.recv(sender, kCrCommTag);
+          in_buffer_1.recv(sender, kCrCommTag);
         }
       } else {
         // receiving the data
         if (left_right_dir == 0) {
           in_buffer_0.recv(sender, kCrCommTag);
         } else {
-          inBuffer1.recv(sender, kCrCommTag);
+          in_buffer_1.recv(sender, kCrCommTag);
         }
         // sending the data
-        outBuffer.send(receiver, kCrCommTag);
+        out_buffer.send(receiver, kCrCommTag);
       }
     }
     LOG4ESPP_DEBUG(theLogger, "Entering unpack");
@@ -328,7 +365,7 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
       if (left_right_dir == 0) {
         in_buffer_0.read(data_length);
       } else {
-        inBuffer1.read(data_length);
+        in_buffer_1.read(data_length);
       }
       for (longint i = 0; i < data_length; i++) {
         if (left_right_dir == 0) {
@@ -336,9 +373,9 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
           in_buffer_0.read(idx_b);
           in_buffer_0.read(reaction_idx);
         } else {
-          inBuffer1.read(idx_a);
-          inBuffer1.read(idx_b);
-          inBuffer1.read(reaction_idx);
+          in_buffer_1.read(idx_a);
+          in_buffer_1.read(idx_b);
+          in_buffer_1.read(reaction_idx);
         }
         mm.insert(std::make_pair(idx_a, std::make_pair(idx_b, reaction_idx)));
       }
@@ -346,6 +383,136 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
   }
   LOG4ESPP_INFO(theLogger, "Leaving sendMultiMap");
+}
+
+/** Performs two-way parallel communication to update the ghost particles.
+ * The parallel scheme is taken from
+ * storage::DomainDecomposition::doGhostCommunication
+ */
+void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_particles) {  //NOLINT
+  LOG4ESPP_INFO(theLogger, "Entering UpdateGhost");
+
+  System& system = getSystemRef();
+
+  InBuffer in_buffer_0(*getSystem()->comm);
+  InBuffer in_buffer_1(*getSystem()->comm);
+  OutBuffer out_buffer(*getSystem()->comm);
+  const storage::NodeGrid& node_grid = domdec_->getNodeGrid();
+
+  // Prepare out buffer with the reactions that potential will happen on this node.
+  out_buffer.reset();
+  in_buffer_0.reset();
+  in_buffer_1.reset();
+
+  // Fill out_buffer from the particles properties.
+  int tmp = modified_particles.size();
+  longint data_length, p_id, p_type;
+  real p_mass, p_q;
+  out_buffer.write(tmp);
+  for (std::vector<Particle*>::const_iterator it = modified_particles.begin();
+       it != modified_particles.end();
+       ++it) {
+    p_id = (*it)->id();
+    p_type = (*it)->type();
+    p_mass = (*it)->mass();
+    p_q = (*it)->q();
+    out_buffer.write(p_id);
+    out_buffer.write(p_type);
+    out_buffer.write(p_mass);
+    out_buffer.write(p_q);
+  }
+
+  // Temporary data.
+  Particle* particle = NULL;
+  int direction_size = 0;
+
+  /* direction loop: x, y, z.
+   Here we could in principle build in a one sided ghost
+   communication, simply by taking the lr loop only over one
+   value. */
+  for (int direction = 0; direction < 3; ++direction) {
+    /* inverted processing order for ghost force communication,
+     since the corner ghosts have to be collected via several
+     nodes. We now add back the corner ghost forces first again
+     to ghost forces, which only eventually go back to the real
+     particle.
+     */
+    direction_size = node_grid.getGridSize(direction);
+    if (direction_size == 1) {
+      LOG4ESPP_DEBUG(theLogger, "No communication needed.");
+      continue;
+    }
+    // lr loop: left right
+    for (int left_right_dir = 0; left_right_dir < 2; ++left_right_dir) {
+      // Avoids double communication for size 2 directions.
+      if ((direction_size == 2) && (left_right_dir == 1))
+        continue;
+
+      // prepare send and receive buffers
+      longint receiver, sender;
+      receiver = node_grid.getNodeNeighborIndex(2 * direction + left_right_dir);
+      sender = node_grid.getNodeNeighborIndex(2 * direction + (1 - left_right_dir));
+
+      // exchange particles, odd-even rule. getNodePosition returns the position
+      // of the current node.
+      if (node_grid.getNodePosition(direction) % 2 == 0) {
+        // sending the data
+        out_buffer.send(receiver, kCrCommTag);
+        // receiving the data
+        if (left_right_dir == 0) {
+          in_buffer_0.recv(sender, kCrCommTag);
+        } else {
+          in_buffer_1.recv(sender, kCrCommTag);
+        }
+      } else {
+        // receiving the data
+        if (left_right_dir == 0) {
+          in_buffer_0.recv(sender, kCrCommTag);
+        } else {
+          in_buffer_1.recv(sender, kCrCommTag);
+        }
+        // sending the data
+        out_buffer.send(receiver, kCrCommTag);
+      }
+    }
+    LOG4ESPP_DEBUG(theLogger, "Entering unpack");
+
+    // Unpacking phase. Get the parameters and set the data to particles.
+    for (int left_right_dir = 0; left_right_dir < 2; ++left_right_dir) {
+      // Avoids double communication for size 2 directions.
+      if ((direction_size == 2) && (left_right_dir == 1))
+        continue;
+
+      if (left_right_dir == 0) {
+        in_buffer_0.read(data_length);
+      } else {
+        in_buffer_1.read(data_length);
+      }
+      for (longint i = 0; i < data_length; i++) {
+        if (left_right_dir == 0) {
+          in_buffer_0.read(p_id);
+          in_buffer_0.read(p_type);
+          in_buffer_0.read(p_mass);
+          in_buffer_0.read(p_q);
+        } else {
+          in_buffer_1.read(p_id);
+          in_buffer_1.read(p_type);
+          in_buffer_1.read(p_mass);
+          in_buffer_1.read(p_q);
+        }
+        // Update the ghost particle data on neighbour CPUs.
+        particle = system.storage->lookupLocalParticle(p_id);
+        if(particle != NULL && particle->ghost()) {
+          LOG4ESPP_DEBUG(theLogger, "Update particle data");
+          particle->setType(p_type);
+          particle->setMass(p_mass);
+          particle->setQ(p_q);
+        }
+      }
+    }
+    LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
+  }
+  LOG4ESPP_INFO(theLogger, "Leaving UpdateGhost");
 }
 
 /** Given a multimap mm with several pairs (id1,id2), keep only one pair for
@@ -503,10 +670,12 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
 /** Use the (A,B) list "partners" to add bonds and change the state of the
  particles accordingly.
  */
-void ChemicalReaction::ApplyAR() {
+std::vector<Particle*> ChemicalReaction::ApplyAR() {
   Particle* pA = NULL;
   Particle* pB = NULL;
   System& system = getSystemRef();
+
+  std::vector<Particle*> modified_particles;
 
   LOG4ESPP_INFO(theLogger, "Entering applyAR");
 
@@ -528,13 +697,19 @@ void ChemicalReaction::ApplyAR() {
           pB->setState(pB->getState() + reaction->delta_a());
           pA->setResId(pB->getResId());  // transfer the residue id
         }
-        reaction->PostProcess(pA, pB);  // Do some postprocess modifications. Only on real particles.
+        // Do some postprocess modifications. Only on real particles.
+        if (reaction->PostProcess(*pA, *pB)) {
+          modified_particles.push_back(pA);
+          modified_particles.push_back(pB);
+        }
+
         fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
         LOG4ESPP_DEBUG(theLogger, "Created pair.");
       }
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
+  return modified_particles;
 }
 
 void ChemicalReaction::disconnect() {

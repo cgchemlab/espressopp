@@ -181,6 +181,28 @@ class AdditionReactionLocal(integrator_AdditionReaction, integrator_Reaction):
                 rate,
                 intramolecular
             )
+    
+    def add_change_property(self, type_id, particle_property):
+      """Adds change in particle properties.
+      
+      Args:
+        type_id: The particle type identificator.
+        particle_property: The new particle properties.
+      """
+      if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+              pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+          self.cxxclass.addChangeProperty(self, type_id, particle_property)
+    
+    def remove_change_property(self, type_id):
+      """Removes change in particle properties.
+      
+      Args:
+        type_id: The particle type indentificator.
+      """
+      if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+              pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+          self.cxxclass.removeChangeProperty(self, type_id)
+    
 
 
 if pmi.isController:

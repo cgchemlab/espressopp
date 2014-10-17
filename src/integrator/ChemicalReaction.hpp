@@ -179,6 +179,9 @@ class Reaction {
   /** Checks if the pair has valid state. */
   virtual bool IsValidState(const Particle& p1, const Particle& p2);
 
+  /** The method implements the post process of the particles. */
+  virtual bool PostProcess(Particle& p1, Particle& p2) { return false; }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
@@ -191,7 +194,7 @@ class Reaction {
   int max_state_b_;  //!< max state of reactant B
   int delta_a_;  //!< state change for reactant A
   int delta_b_;  //!< state change for reactant B
-  int rate_;  //!< reaction rate
+  real rate_;  //!< reaction rate
   real cutoff_;  //!< reaction cutoff
   real cutoff_sqr_;  //!< reactio cutoff^2
 
@@ -201,13 +204,14 @@ class Reaction {
   shared_ptr<int> interval_;  //!< number of steps between reaction loops
   shared_ptr<real> dt_;  //!< timestep from the integrator
 
-  /** The method implements the post process of the particles. */
-  virtual void PostProcess(const Particle& p1, const Particle& p2) { }
-
 };
+
+
+/** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
 
 typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
+typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
 
 /** Implements the synthesis reaction
  *
@@ -240,16 +244,15 @@ class AdditionReaction : public integrator::Reaction {
                  max_state_a, max_state_b, cutoff, rate, intramolecular) {
   }
 
-  void AddChangeProperty(int type_id, ParticleProperties new_property);
+  void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void RemoveChangeProperty(int type_id);
+
+  bool PostProcess(Particle& p1, Particle& p2);
 
   static void registerPython();
 
- protected:
-  void PostProcess(const Particle& p1, const Particle& p2);
-
  private:
-  std::map<int, ParticleProperties> type_properties_;
+  TypeParticlePropertiesMap type_properties_;
 
 };
 
@@ -302,18 +305,19 @@ class ChemicalReaction : public Extension {
   void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
   void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
       integrator::ReactionMap& effective_candidates);  //NOLINT
-  void ApplyAR();
+  std::vector<Particle*> ApplyAR();
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
  private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
+  void UpdateGhost(const std::vector<Particle*>& modified_particles);
 
   real current_cutoff_;
 
   shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
-  shared_ptr<real> dt_;//!< Timestep from the integrator.
+  shared_ptr<real> dt_;  //!< Timestep from the integrator.
 
   shared_ptr<storage::DomainDecomposition> domdec_;
   shared_ptr<espresso::interaction::Potential> potential_;

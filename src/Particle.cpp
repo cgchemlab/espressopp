@@ -48,11 +48,7 @@ namespace espresso {
 
   void ParticleProperties::registerPython() {
     using namespace python;
-    class_< ParticleProperties >("ParticleProperties", no_init)
-        .add_property(
-            "id",
-            make_getter(&ParticleProperties::id),
-            make_setter(&ParticleProperties::id))
+    class_< ParticleProperties, boost::shared_ptr<ParticleProperties> >("ParticleProperties")
         .add_property(
             "type",
             make_getter(&ParticleProperties::type),

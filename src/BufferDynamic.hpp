@@ -177,6 +177,10 @@ namespace espresso {
       }
     }
 
+    void read(ParticleProperties& pp) {
+      readAll<ParticleProperties>(pp);
+    }
+
     void recv(longint sender, int tag) {
 
       // blocking test for the incomming message
@@ -269,6 +273,10 @@ namespace espresso {
 
     void write(ParticleForce& f) {
       writeAll<ParticleForce>(f);
+    }
+
+    void write(ParticleProperties& pp) {
+      writeAll<ParticleProperties>(pp);
     }
 
     void write(Particle& p) {

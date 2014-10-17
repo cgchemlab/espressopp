@@ -26,6 +26,7 @@
 
 """
 import _espresso
+from espresso.esutil import cxxinit
 import esutil
 import pmi
 from espresso import toReal3DFromVector, toInt3DFromVector
@@ -167,7 +168,28 @@ class ParticleLocal(object):
         tmp = self.storage.lookupRealParticle(self.pid)
         return (tmp is not None)
 
+
+class ParticlePropertiesLocal(_espresso.ParticleProperties):
+    def __init__(self):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            cxxinit(self, _espresso.ParticleProperties)
+
+
 if pmi.isController:
+    class ParticleProperties(object):
+      __metaclass__ = pmi.Proxy
+      pmiproxydefs = dict(
+          cls='espresso.ParticlePropertiesLocal',
+          pmiproperty=[
+              'type',
+              'mass',
+              'q',
+              'state',
+              'res_id'
+              ]
+          )
+    
     class Particle(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
