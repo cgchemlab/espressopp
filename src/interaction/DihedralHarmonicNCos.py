@@ -22,9 +22,9 @@
 
 
 """
-********************************************
-**espresso.interaction.DihedralHarmonicCos**
-********************************************
+*********************************************
+**espresso.interaction.DihedralHarmonicNCos**
+*********************************************
 
 """
 # pylint: disable=W0401, W0614, W0212
@@ -66,6 +66,20 @@ class FixedQuadrupleListDihedralHarmonicNCosLocal(
       return self.cxxclass.getFixedQuadrupleList(self)
 
 
+if pmi.isController:
+  class DihedralHarmonicNCos(DihedralPotential):
+    'The DihedralHarmonicNCos potential.'
+    pmiproxydefs = dict(
+      cls='espresso.interaction.DihedralHarmonicNCosLocal',
+      pmiproperty=['K', 'phi', 'multiplicity']
+    )
+
+  class FixedQuadrupleListDihedralHarmonicNCos(Interaction):
+    __metaclass__ = pmi.Proxy
+    pmiproxydefs = dict(
+      cls='espresso.interaction.FixedQuadrupleListDihedralHarmonicNCosLocal',
+      pmicall=['setPotential', 'getFixedQuadrupleList']
+    )
 if pmi.isController:
   class DihedralHarmonicNCos(DihedralPotential):
     'The DihedralHarmonicNCos potential.'

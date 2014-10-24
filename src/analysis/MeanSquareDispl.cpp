@@ -92,8 +92,8 @@ namespace espresso {
           for (vector<longint>::iterator itr=localIDs.begin(); itr!=localIDs.end(); ++itr) {
             size_t i = *itr;
             
-            Real3D pos1 = getConf(n + m)->getCoordinates(i) - centerOfMassList[n+m];
-            Real3D pos2 = getConf(n)->getCoordinates(i)     - centerOfMassList[n];
+            Real3D pos1 = getConf(n + m)->getCoordinates(i); // - centerOfMassList[n+m];
+            Real3D pos2 = getConf(n)->getCoordinates(i); //     - centerOfMassList[n];
             Real3D delta = pos2 - pos1;
             Z[m] += delta.sqr();
           }
@@ -269,7 +269,7 @@ namespace espresso {
       for (map<size_t,int>::const_iterator itr=idToCpu.begin(); itr!=idToCpu.end(); ++itr) {
         size_t i = itr->first; //particle ID
         int whichCPU = itr->second; //CPU number
-        printf("id %u  CPU %i \n", i, whichCPU);
+        printf("id %lu  CPU %i \n", i, whichCPU);
         if(system.comm->rank()==whichCPU){
           localIDs.push_back(i);
         }
