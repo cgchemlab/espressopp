@@ -31,14 +31,14 @@
 
 namespace espresso {
   namespace interaction {
-    /** 
+    /**
      * This class provides methods to compute forces and energies of
      * the DihedralHarmonicNCos dihedral potential.
      *
      * The reference potential is as follow:
      * \f$U(\phi_{ijkn}) = K\cdot[1+cos(n\cdot\phi_{ijkn} - \phi_0)]\f$
-     * 
-     * where the K is a constant. The angles \f$\phi\f$ and \f$\phi_0\f$ should be 
+     *
+     * where the K is a constant. The angles \f$\phi\f$ and \f$\phi_0\f$ should be
      * provided in radians.
      *
      * The reference documentation:
@@ -202,7 +202,7 @@ namespace espresso {
        * @return The value of the force
        */
       real _computeForceRaw(real phi) const {
-        return K * multiplicity * sin(phi0 - multiplicity*phi);
+        return -1.0 * K * multiplicity * sin(phi0 - multiplicity*phi);
       }
 
     }; // class
