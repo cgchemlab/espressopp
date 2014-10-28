@@ -170,10 +170,14 @@ class ParticleLocal(object):
 
 
 class ParticlePropertiesLocal(_espresso.ParticleProperties):
-    def __init__(self):
+    def __init__(self, type, mass, q):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(self, _espresso.ParticleProperties)
+            self.cxxclass.init(self)
+            self.type = type
+            self.mass = mass
+            self.q = q
 
 
 if pmi.isController:

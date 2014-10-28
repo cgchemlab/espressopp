@@ -51,6 +51,17 @@ namespace espresso {
 
     static void registerPython();
 
+    void init() {
+      id = 0;
+      type = 0;
+      mass = 1.0;
+      q = 0.0;
+      lambda = 0.0;
+      lambdaDeriv = 0.0;
+      state = 0;
+      res_id = 0;
+    }
+
   private:
     friend class boost::serialization::access;
     template< class Archive >

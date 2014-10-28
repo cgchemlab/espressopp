@@ -175,7 +175,6 @@ void AdditionReaction::registerPython() {
          init<int, int, int, int, int, int, int, int, real, real, bool>())
          .def("addChangeProperty", &AdditionReaction::AddChangeProperty)
          .def("removeChangeProperty", &AdditionReaction::RemoveChangeProperty);
-
 }
 
 

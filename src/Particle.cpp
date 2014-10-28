@@ -69,6 +69,10 @@ namespace espresso {
             "res_id",
             make_getter(&ParticleProperties::res_id),
             make_setter(&ParticleProperties::res_id)
-            );
+            )
+        .def(
+            "init",
+            &ParticleProperties::init
+        );
   }
 }

@@ -66,7 +66,7 @@ def gaussian(T, N, particle_mass=None, zero_momentum=True, seed=7654321, kb=1.0)
         vz.append(v_z)
 
     # Scale the temperature
-    local_temp = (2.0*E_kin)/(3*N*boltzmann_factor)
+    local_temp = (2.0*E_kin)/(3*N*kb)
     if local_temp > 0:
         temp_scale = (T/local_temp)**0.5
         for i in range(N):
