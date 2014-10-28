@@ -111,9 +111,8 @@ namespace espresso {
 
       /**
        * Compute the force.
-       *
-       * so only the forme of the potential derivative has to be changed
-       *
+       * Only the form of the potential derivative has to be changed. The rest
+       * remain the same as for the harmonic cosine potential
        */
       void _computeForceRaw(Real3D& force1,
                             Real3D& force2,
@@ -149,12 +148,12 @@ namespace espresso {
         }
 
         /// The part of the formula. 1/sin(phi) * d/dphi U(phi)
-        /// where the U(phi) = K*[1+cos(n*phi - phi0)]
+        /// where the \f$U(\phi) = K*[1+cos(n*\phi - \phi_0)]\f$
         /// The n is multiplicity.
         ///
-        /// The derivative of U(phi) is K*n*sin(n*phi - phi0)
+        /// The derivative of \f$U(phi)\f$ is \f$K*n*sin(\phi_0 - n*\phi)\f$
         ///
-        real coef1 = (1.0/sin(_phi))*(K*multiplicity*sin(multiplicity*_phi - phi0));
+        real coef1 = (1.0/sin(_phi))*(K*multiplicity*sin(phi0 - multiplicity*_phi));
 
         real A1 = inv_rijjk * inv_rjkkn;
         real A2 = inv_rijjk * inv_rijjk;
@@ -195,15 +194,15 @@ namespace espresso {
 
       /*
        * Compute raw force for the tabulated potential, depend only on the phi value
-       * F(phi) = -grad V = -grad [ K*(1+cos(n*phi - phi_0)) ] = -K*n*sin(phi_0 - n*phi)
-       * where n is a multiplicity and phi0 is the reference angle
+       * \f$F(\phi) = -grad V = -grad [ K*(1+cos(n*\phi - \phi_0)) ] = K*n*sin(\phi_0 - n*\phi) \f$
+       * where n is a multiplicity and \f$phi_0\f$ is the reference angle
        *
        * @param[in] phi Degree in radians
        *
        * @return The value of the force
        */
       real _computeForceRaw(real phi) const {
-        return -K * multiplicity * sin(phi0 - multiplicity*phi);
+        return K * multiplicity * sin(phi0 - multiplicity*phi);
       }
 
     }; // class
