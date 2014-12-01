@@ -169,9 +169,6 @@ namespace espresso {
   void DomainDecompositionAdress::scaleVolume(Real3D s, bool particleCoordinates){
     std::cout<<"Nothing happened"<<std::endl;
   }
-  
-  
-
 
   void DomainDecompositionAdress::cellAdjust(){
       // create an appropriate cell grid
@@ -551,40 +548,6 @@ namespace espresso {
         }
     }
 
-  /* -- this is now solved in FixedTupleList.cpp in onparticleschanged()
-  void DomainDecompositionAdress::foldAdrPartCoor(Particle& part, Real3D& oldpos, int coord) {
-
-      if (part.position()[coord] != oldpos[coord]) {
-          real moved = oldpos[coord] - part.position()[coord];
-
-          FixedTupleList::iterator it;
-          it = fixedtupleList->find(&part);
-          if (it != fixedtupleList->end()) {
-              std::vector<Particle*> atList;
-              atList = it->second;
-
-              for (std::vector<Particle*>::iterator itv = atList.begin();
-                    itv != atList.end(); ++itv) {
-                  Particle &at = **itv;
-
-                  //std::cout << " updating position for AT part " << at.id() << " (" << at.position() << ") ";
-
-                  at.position()[coord] = at.position()[coord] - moved;
-                  //getSystem()->bc->foldCoordinate(at.position(), at.image(), coord);
-
-                  //std::cout << "to (" << at.position() << ")\n";
-              }
-          }
-          else {
-              std::cout << getSystem()->comm->rank() << ": foldAdrPartCoor "
-                      << "VP particle "<< part.id() << "-" << part.ghost() << " not found in tuples!\n";
-              exit(1);
-              return;
-          }
-      }
-  }
-  */
-
   void DomainDecompositionAdress::packForces(OutBuffer &buf, Cell &_ghosts) {
 
     ParticleList &ghosts = _ghosts.particles;
@@ -726,18 +689,6 @@ namespace espresso {
           return;
       }
   }
-
-
-
-
-
-
-
-
-
-
-
-
 
   bool DomainDecompositionAdress::
   appendParticles(ParticleList &l, int dir) {
@@ -1162,7 +1113,6 @@ namespace espresso {
   }
 
 
-
   class PyDomainDecompositionAdress : public DomainDecompositionAdress {
       public:
         PyDomainDecompositionAdress(shared_ptr< System > _system,
@@ -1189,10 +1139,5 @@ namespace espresso {
   .def("cellAdjust", &DomainDecompositionAdress::cellAdjust)
   ;
   }
-
-
-
- 
-
   }
 }

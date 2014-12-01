@@ -105,16 +105,11 @@ namespace espresso {
 
 
     void Adress::SetPosVel(){
-
         System& system = getSystemRef();
-
         // Set the positions and velocity of CG particles & update weights.
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-
-
               Particle &vp = *cit;
-
               FixedTupleListAdress::iterator it3;
               it3 = fixedtupleList->find(&vp);
 
@@ -149,7 +144,6 @@ namespace espresso {
                   vp.velocity() = cmv;
 
                   if (KTI == false) {
-
                       // calculate distance to nearest adress particle or center
                       std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
                       Real3D pa = **it2; // position of adress particle
@@ -175,12 +169,9 @@ namespace espresso {
                       real w = weight(min1sq);
                       vp.lambda() = w;
                       //weights.insert(std::make_pair(&vp, w));
-
                       real wDeriv = weightderivative(sqrt(min1sq));
                       vp.lambdaDeriv() = wDeriv;
-
                   }
-
               }
               else { // this should not happen
                   std::stringstream msg;
@@ -188,15 +179,10 @@ namespace espresso {
                   msg << " (" << vp.position() << ")\n";
                   throw std::runtime_error(msg.str());
               }
-
-
         }
-
     }
 
-
     void Adress::initForces(){
-
         System& system = getSystemRef();
 
         // AT reals
@@ -219,23 +205,13 @@ namespace espresso {
         }
     }
 
-
-
     void Adress::integrate1(real& maxSqDist){
-
         System& system = getSystemRef();
         real dt = integrator->getTimeStep();
 
         ParticleList& adrATparticles = system.storage->getAdrATParticles();
         for (std::vector<Particle>::iterator it = adrATparticles.begin();
                 it != adrATparticles.end(); it++) {
-
-            //if(it->id()==2135){
-            //   std::cout << "Force of atomistic particle (AdResS. sim.) with id " << it->id() << " is: " << std::setprecision(15) << it->force() << "\n";  // FOR DEBUGGING
-            //}
-
-            //std::cout << "Force of atomistic particle (AdResS. sim.) with id " << it->id() << " is: " << std::setprecision(15) << it->force() << "\n";  // FOR DEBUGGING
-            //std::cout << "Position of atomistic particle (AdResS. sim.) with id " << it->id() << " is: " << std::setprecision(15) << it->position() << "\n";
 
             real sqDist = 0.0;
             real dtfm = 0.5 * dt / it->mass();
@@ -245,10 +221,8 @@ namespace espresso {
 
             // Propagate positions (only NVT): p(t + dt) = p(t) + dt * v(t+0.5*dt)
             Real3D deltaP = dt * it->velocity();
-            //std::cout << it->id() << ": from (" << it->position() << ")";
             it->position() += deltaP;
             sqDist += deltaP * deltaP;
-            //std::cout << " to (" << it->position() << ") " << sqrt(sqDist) << "\n";
 
             maxSqDist = std::max(maxSqDist, sqDist);
         }
@@ -256,8 +230,6 @@ namespace espresso {
         // Set the positions and velocity of CG particles & update weights.
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-
-
               Particle &vp = *cit;
 
               FixedTupleListAdress::iterator it3;
@@ -275,19 +247,11 @@ namespace espresso {
                   for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
                       Particle &at = **it2;
-                      //Real3D d1 = at.position() - vp.position();
-                      //Real3D d1;
-                      //verletList->getSystem()->bc->getMinimumImageVectorBox(d1, at.position(), vp.position());
-                      //cmp += at.mass() * d1;
-
                       cmp += at.mass() * at.position();
                       cmv += at.mass() * at.velocity();
                   }
                   cmp /= vp.getMass();
                   cmv /= vp.getMass();
-                  //cmp += vp.position(); // cmp is a relative position
-                  //std::cout << " cmp M: "  << M << "\n\n";
-                  //std::cout << "  moving VP to " << cmp << ", velocitiy is " << cmv << "\n";
 
                   // update (overwrite) the position and velocity of the VP
                   vp.position() = cmp;
@@ -299,11 +263,7 @@ namespace espresso {
                       std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
                       Real3D pa = **it2; // position of adress particle
                       Real3D d1(0.0, 0.0, 0.0);
-                      //Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
                       verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
-                      //real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
-                      //real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-                      //real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
                       real min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
                       ++it2;
                       for (; it2 != verletList->getAdrPositions().end(); ++it2) {
@@ -323,9 +283,7 @@ namespace espresso {
 
                       real wDeriv = weightderivative(sqrt(min1sq));
                       vp.lambdaDeriv() = wDeriv;
-
                   }
-
               }
               else { // this should not happen
                   std::stringstream msg;
@@ -333,13 +291,9 @@ namespace espresso {
                   msg << " (" << vp.position() << ")\n";
                   throw std::runtime_error(msg.str());
               }
-
-
         }
-
         //std::cout << " " << maxSqDist << "\n";
     }
-
 
     void Adress::integrate2() {
 
@@ -360,9 +314,7 @@ namespace espresso {
         //Update CG velocities
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-
               Particle &vp = *cit;
-
               FixedTupleListAdress::iterator it3;
               it3 = fixedtupleList->find(&vp);
 
@@ -403,15 +355,8 @@ namespace espresso {
                   msg << " (" << vp.position() << ")\n";
                   throw std::runtime_error(msg.str());
               }
-
-
         }
-
-
-
     }
-
-
 
     // AdResS Weighting function
     real Adress::weight(real distanceSqr){
@@ -438,35 +383,35 @@ namespace espresso {
         /*for (std::set<Particle*>::iterator it=adrZone.begin();
                 it != adrZone.end(); ++it) {*/
 
-        Particle &vp = *cit;
+          Particle &vp = *cit;
 
-        FixedTupleListAdress::iterator it3;
-        it3 = fixedtupleList->find(&vp);
+          FixedTupleListAdress::iterator it3;
+          it3 = fixedtupleList->find(&vp);
 
-        if (it3 != fixedtupleList->end()) {
+          if (it3 != fixedtupleList->end()) {
 
-            std::vector<Particle*> atList;
-            atList = it3->second;
+              std::vector<Particle*> atList;
+              atList = it3->second;
 
-            // update force of AT particles belonging to a VP
-            Real3D vpfm = vp.force() / vp.getMass();
-            for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                 it2 != atList.end(); ++it2) {
-                Particle &at = **it2;
+              // update force of AT particles belonging to a VP
+              Real3D vpfm = vp.force() / vp.getMass();
+              for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                   it2 != atList.end(); ++it2) {
+                  Particle &at = **it2;
 
-                //vp.force() +=  (vp.getMass() * at.force()) / (3.0 * at.mass());
+                  //vp.force() +=  (vp.getMass() * at.force()) / (3.0 * at.mass());
 
-                at.force() += at.mass() * vpfm;
-                //std::cout << "Force of atomistic particle (AdResS sim.) with id " << at.id() << " is: " << at.force() << "\n";
-            }
+                  at.force() += at.mass() * vpfm;
+                  //std::cout << "Force of atomistic particle (AdResS sim.) with id " << at.id() << " is: " << at.force() << "\n";
+              }
+          }
+          else { // this should not happen
+              std::cout << " particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+              std::cout << " (" << vp.position() << ")\n";
+              exit(1);
+              return;
+          }
         }
-        else { // this should not happen
-            std::cout << " particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-            std::cout << " (" << vp.position() << ")\n";
-            exit(1);
-            return;
-        }
-      }
 
       /*for (std::set<Particle*>::iterator it=cgZone.begin();
                     it != cgZone.end(); ++it) {

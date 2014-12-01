@@ -336,7 +336,6 @@ namespace espresso {
         /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t) */
         cit->velocity() += dtfm * cit->force();
       }
-
       step++;
     }
 
