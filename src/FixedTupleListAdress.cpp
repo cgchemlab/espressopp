@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -50,12 +50,8 @@ namespace espresso {
           (boost::bind(&FixedTupleListAdress::beforeSendParticles, this, _1, _2));
         con2 = storage->afterRecvParticles.connect
           (boost::bind(&FixedTupleListAdress::afterRecvParticles, this, _1, _2));
-        /*con3 = storage->onParticlesChanged.connect
-          (boost::bind(&FixedTupleListAdress::onParticlesChanged, this));*/
         con4 = storage->onTuplesChanged.connect
           (boost::bind(&FixedTupleListAdress::onParticlesChanged, this));
-
-        //storage->setFixedTuples(this);
 
     }
 
@@ -68,17 +64,6 @@ namespace espresso {
         //con3.disconnect();
         con4.disconnect();
     }
-
-    /* -- not used anymore
-    int FixedTupleListAdress::getNumPart(longint pid) {
-        //std::cout << "looking up pid " << pid << "\n";
-        int size = 0;
-        GlobalTuples::const_iterator it = globalTuples.find(pid);
-        if (it != globalTuples.end()) {
-            size = it->second.size();
-        }
-        return size;
-    }*/
 
     bool FixedTupleListAdress::addT(tuple pids) {
         bool returnVal = true;
@@ -117,7 +102,7 @@ namespace espresso {
           }
         }
         err.checkException();
-        
+
         if(returnVal){
             this->add(vp, tmp); // add to TupleList
 
@@ -141,7 +126,7 @@ namespace espresso {
 
         std::vector<longint> atpl;
 
-        // loop over the particle list
+        // Loop over the particle list pl that contains only CG particles.
         for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
             longint pidK = pit->id();
             LOG4ESPP_DEBUG(theLogger, "send particle with pid " << pidK << ", find tuples");
@@ -162,7 +147,7 @@ namespace espresso {
 				buf.write(s);
 				atpl.reserve(s);
 
-				// iterate through vector and add pids
+				// Iterate through vector of AT particles.
 				//std::cout << storage->getRank() << ": removing AT particles ";
 				for (tuple::const_iterator it2 = it->second.begin();
 				 it2 != it->second.end(); ++it2) {
@@ -308,7 +293,7 @@ namespace espresso {
     }
 
     void FixedTupleListAdress::onParticlesChanged() {
-      
+
       // TODO errors should be thrown in a nice way
 
         LOG4ESPP_INFO(theLogger, "rebuild local particle list from global tuples\n");

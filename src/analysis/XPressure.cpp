@@ -177,7 +177,8 @@ namespace espresso {
       python::list XpressureResult;
       for(int i=0; i<n;i++){
         wfinal[i] = w.at(i);
-        vv[i] = vv[i]/Volume;       
+        vv[i] = vv[i]/Volume;
+        // Final value of pressure is a kinetic part and the viral part.
         XpressureResult.append(vv[i] + wfinal[i]);
       }
 

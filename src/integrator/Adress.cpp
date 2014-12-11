@@ -40,8 +40,14 @@ namespace espresso {
 
     using namespace espresso::iterator;
 
-    Adress::Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI /*= false*/)
-        : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), KTI(_KTI){
+    Adress::Adress(
+      shared_ptr<System> _system,
+      shared_ptr<VerletListAdress> _verletList,
+      shared_ptr<FixedTupleListAdress> _fixedtupleList,
+      bool _KTI, /*= false*/
+      real static_weight
+      ):Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), KTI(_KTI),
+        static_weight_(static_weight) {
         LOG4ESPP_INFO(theLogger, "construct Adress");
         type = Extension::Adress;
 
@@ -52,6 +58,11 @@ namespace espresso {
         dex2 = dex * dex;
         dexdhy = dex + verletList->getHy();
         dexdhy2 = dexdhy * dexdhy;
+
+        if (static_weight_ >= 0.0)
+          has_static_weight_ = true;
+        else
+          has_static_weight_ = false;
     }
 
 
@@ -360,8 +371,10 @@ namespace espresso {
 
     // AdResS Weighting function
     real Adress::weight(real distanceSqr){
-        if (dex2 > distanceSqr) return 1.0;
-        else if (dexdhy2 < distanceSqr) return 0.0;
+        if(has_static_weight_)
+          return static_weight_;
+        if (dex2 > distanceSqr) return 1.0; // inside the atomoistic region
+        else if (dexdhy2 < distanceSqr) return 0.0; // inside the coarse-graine region
         else {
             real argument = sqrt(distanceSqr) - dex;
             //return 1.0-(30.0/(pow(dhy, 5.0)))*(1.0/5.0*pow(argument, 5.0)-dhy/2.0*pow(argument, 4.0)+1.0/3.0*pow(argument, 3.0)*dhy*dhy);
@@ -369,6 +382,8 @@ namespace espresso {
         }
     }
     real Adress::weightderivative(real distance){
+        if (has_static_weight_)
+          return 0.0;
         real argument = distance - dex;
         //return -(30.0/(pow(dhy, 5.0)))*(pow(argument, 4.0)-2.0*dhy*pow(argument, 3.0)+argument*argument*dhy*dhy);
         return -pidhy2 * 2.0 * cos(pidhy2*argument) * sin(pidhy2*argument); // for cosine squared weighting function
