@@ -120,7 +120,6 @@ class LennardJonesForceCapped : public PotentialTemplate< LennardJonesForceCappe
     if (max_force != -1) {
       real abs_force = force.abs();
       if (abs_force > max_force) {
-        Real3D e_force = force / abs_force * max_force;
         force = (force / abs_force) * max_force;
       }
     }
