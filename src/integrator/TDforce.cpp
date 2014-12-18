@@ -3,22 +3,24 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include <math.h>
 
 #include "python.hpp"
 #include "TDforce.hpp"
@@ -44,7 +46,6 @@ namespace espresso {
         type = Extension::FreeEnergyCompensation;
 
         center = (0.0,0.0,0.0);
-
         LOG4ESPP_INFO(theLogger, "TDforce constructed");
     }
 
@@ -62,10 +63,14 @@ namespace espresso {
     }
 
 
-    void TDforce::addForce(int itype, const char* _filename, int type) {
+    void TDforce::addForce(int itype, const char* _filename, int type, int force_type) {
         boost::mpi::communicator world;
         filename = _filename;
         Table table;
+
+        if (force_type != 0 && force_type != 1)
+          throw std::runtime_error("Wrong TD force type. Set 0 for x-direction and 1 for radius");
+        force_type_ = force_type;
 
         if (itype == 1) { // create a new InterpolationLinear
             table = make_shared <interaction::InterpolationLinear> ();
@@ -99,22 +104,23 @@ namespace espresso {
 
               if (table) {
                   // calculate distance from reference point
-                  Real3D dist3D = cit->getPos() - center;
-                  real dist = sqrt(dist3D.sqr());
+                  if (force_type_ == 1){
+                    Real3D dist3D = cit->getPos() - center;
+                    real dist = sqrt(dist3D.sqr());
 
-                  // read fforce from table
-                  real fforce = table->getForce(dist);
-                  fforce /= dist;
+                    // read fforce from table
+                    real fforce = table->getForce(dist);
+                    fforce /= dist;
 
-                  // substract td force
-                  cit->force() -= (dist3D * fforce);
+                    // substract td force
+                    cit->force() -= (dist3D * fforce);
 
-                  /*
-                  // use this if you need 1-dir force only!
-                  real d1 = cit->getPos()[0] - center[0];
-                  real force = table->getForce(d1);
-                  cit->force()[0] -= force;
-                  */
+                  } else if (force_type_ == 0){
+                    // use this if you need 1-dir force only!
+                    real d1 = fabs(cit->getPos()[0] - center[0]);
+                    real force = table->getForce(d1);
+                    cit->force()[0] -= force;
+                  }
               }
           }
     }
@@ -135,7 +141,7 @@ namespace espresso {
       void (TDforce::*pySetCenter)(real x, real y, real z)
                         = &TDforce::setCenter;
 
-      void (TDforce::*pyAddForce)(int itype, const char* filename, int type)
+      void (TDforce::*pyAddForce)(int itype, const char* filename, int type, int force_type)
                         = &TDforce::addForce;
 
       class_<TDforce, shared_ptr<TDforce>, bases<Extension> >
