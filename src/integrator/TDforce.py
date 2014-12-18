@@ -40,7 +40,7 @@ class TDforceLocal(integrator_TDforce):
             if (center != []):
                 self.cxxclass.setCenter(self, center[0], center[1], center[2])
 
-    def addForce(self, itype, filename, cg_type, force_type):
+    def addForce(self, itype, filename, cg_type, force_type=1):
             """Adds the TD force.
 
             Args:
