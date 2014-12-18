@@ -84,14 +84,16 @@ namespace espresso {
             int index;
             index = static_cast<int>((r - inner) * invdelta);
             if (index < 0) {
-                LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
-                                << inner << " - " << inner + (N - 1) * delta);
-                index = 0;
+              std::stringstream ss;
+              ss << "Distance " << r << " out of range " << inner << " - " << inner + (N-1) * delta;
+              LOG4ESPP_ERROR(theLogger, ss.str());
+              throw std::runtime_error(ss.str());
             }
             if (index >= N) {
-                LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
-                                << inner << " - " << inner + (N - 1) * delta);
-                index = N-1;
+              std::stringstream ss;
+              ss << "Distance " << r << " out of range " << inner << " - "
+                << inner + (N-1)*delta;
+              throw std::runtime_error(ss.str());
             }
             
             return a[index]*r + b[index];

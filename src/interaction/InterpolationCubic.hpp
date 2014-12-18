@@ -88,16 +88,18 @@ namespace espresso {
         inline real InterpolationCubic::splineInterpolation(real r, const real* fn, 
                                                          const real* fn2) const {
             int index = static_cast<int>((r - inner) * invdelta);
-                
+
             if (index < 0) {
-                LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
-                                << inner << " - " << inner + (N - 1) * delta);
-                index = 0;
+              std::stringstream ss;
+              ss << "Distance " << r << " out of range " << inner << " - " << inner + (N-1) * delta;
+              LOG4ESPP_ERROR(theLogger, ss.str());
+              throw std::runtime_error(ss.str());
             }
-            else if (index >= N) {
-                LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
-                                << inner << " - " << inner + (N - 1) * delta);
-                index = N-1;
+            if (index >= N) {
+              std::stringstream ss;
+              ss << "Distance " << r << " out of range " << inner << " - "
+                << inner + (N-1)*delta;
+              throw std::runtime_error(ss.str());
             }
                 
             real b = (r - radius[index]) * invdelta;
