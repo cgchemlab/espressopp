@@ -32,12 +32,12 @@ from _espresso import integrator_TDforce
 
 class TDforceLocal(integrator_TDforce):
     'The (local) Velocity Verlet Integrator.'
-    def __init__(self, system, center=[]):
+    def __init__(self, system, center=None):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, integrator_TDforce, system)
 
             # set center of TD force
-            if (center != []):
+            if center:
                 self.cxxclass.setCenter(self, center[0], center[1], center[2])
 
     def addForce(self, itype, filename, cg_type, force_type=1):

@@ -21,6 +21,7 @@
 */
 
 #include <math.h>
+#include <bc/BC.hpp>
 
 #include "python.hpp"
 #include "TDforce.hpp"
@@ -117,8 +118,9 @@ namespace espresso {
 
                   } else if (force_type_ == 0){
                     // use this if you need 1-dir force only!
-                    real d1 = fabs(cit->getPos()[0] - center[0]);
-                    real force = table->getForce(d1);
+                    Real3D dl;
+                    system.bc->getMinimumImageVector(dl, cit->getPos(), center);
+                    real force = table->getForce(dl[0]);
                     cit->force()[0] -= force;
                   }
               }
