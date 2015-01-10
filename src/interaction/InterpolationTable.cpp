@@ -225,13 +225,17 @@ namespace espresso {
       int index = static_cast<int>((r - inner) * invdelta);
 
       if (index < 0) {
-         LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
+        LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
                         << inner << " - " << inner + (N - 1) * delta);
-            index = 0;
+        std::stringstream ss;
+        ss << "Distance " << r << " out of range. Found index " << index;
+        throw std::runtime_error(ss.str());
       } else if (index >= N) {
-         LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
+        LOG4ESPP_ERROR(theLogger, "distance " << r << " out of range "
                         << inner << " - " << inner + (N - 1) * delta);
-            index = N-1;
+        std::stringstream ss;
+        ss << "Distance " << r << " out of range. Found index " << index << " but max N is " << N;
+        throw std::runtime_error(ss.str());
       }
 
       real b = (r - radius[index]) * invdelta;

@@ -19,10 +19,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import datetime
 import sys
 import espresso
 
 def info(system, integrator, per_atom=False, kb=1.0):
+<<<<<<< /home/jakub/project/software/Espresso/espressopp_chem/src/tools/analyse.py
   """Displays basic information about the simulated system.
 
   Args:
@@ -31,7 +33,6 @@ def info(system, integrator, per_atom=False, kb=1.0):
     per_atom: If set to true then calculate the values per atom otherwise per system.
     kb: The Boltzmann factor.
   """
-
   NPart  = espresso.analysis.NPart(system).compute()
   T      = espresso.analysis.Temperature(system).compute() / kb
   P      = espresso.analysis.Pressure(system).compute()
@@ -78,4 +79,5 @@ def final_info(system, integrator, vl, start_time, end_time):
   sys.stdout.write('Neighbor list builds = %d\n' % vl.builds)
   sys.stdout.write('Integration steps = %d\n' % integrator.step)
   sys.stdout.write('CPUs = %i CPU time per CPU = %.5f\n' % (espresso.MPI.COMM_WORLD.size, end_time - start_time))
-
+  sys.stdout.write('Started at %s, finished at %s\n' % (
+      datetime.datetime.fromtimestamp(start_time), datetime.datetime.fromtimestamp(end_time)))

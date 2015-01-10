@@ -93,6 +93,14 @@ namespace espresso {
 		/* for local forces */
     void LBSite::setExtForceLoc (Real3D _extForceLoc) {extForceLoc = _extForceLoc;}
     Real3D LBSite::getExtForceLoc () {return extForceLoc;}
+		void LBSite::addExtForceLoc (Real3D _extForceLoc) {extForceLoc += _extForceLoc;}
+
+		void LBSite::setCouplForceLoc (Real3D _couplForceLoc) {couplForceLoc = _couplForceLoc;}
+		Real3D LBSite::getCouplForceLoc () {return couplForceLoc;}
+		void LBSite::addCouplForceLoc (Real3D _couplForceLoc) {couplForceLoc += _couplForceLoc;}
+		
+		/* for LB to MD coupling forces */
+//		Real3D LBSite::getMDForceLoc() {return MDForceLoc;}
 
     /* OTHER HELPFUL OPERATIONS */
     void LBSite::scaleF_i (int _i, real _value) { f[_i] *= _value;}
@@ -177,16 +185,14 @@ namespace espresso {
       jLoc *= (aLocal / tauLocal);
 
       /* if we have external forces then modify the eq.fluxes */
-      if (_extForceFlag == 1) {
-        jLoc[0] += 0.5*getExtForceLoc().getItem(0);
-        jLoc[1] += 0.5*getExtForceLoc().getItem(1);
-        jLoc[2] += 0.5*getExtForceLoc().getItem(2);
-      }
+			// ADD LB TO MD COUPLING??
+			if (_extForceFlag == 0) printf ("extForceFlag is %d\n",_extForceFlag);
+			if (_extForceFlag == 1) jLoc += 0.5*(getExtForceLoc() + getCouplForceLoc()); // when doing coupling, the flag is set to 1!
 
       /* eq. stress modes */
       setMeq_i (4, jLoc.sqr() / rhoLoc);
       setMeq_i (5, (jLoc[0]*jLoc[0] - jLoc[1]*jLoc[1]) / rhoLoc);
-      setMeq_i (6, (3*jLoc[0]*jLoc[0] - jLoc.sqr()) / rhoLoc);
+      setMeq_i (6, (3.*jLoc[0]*jLoc[0] - jLoc.sqr()) / rhoLoc);
       setMeq_i (7, jLoc[0]*jLoc[1] / rhoLoc);
       setMeq_i (8, jLoc[0]*jLoc[2] / rhoLoc);
       setMeq_i (9, jLoc[1]*jLoc[2] / rhoLoc);
@@ -250,9 +256,10 @@ namespace espresso {
     }
 
     void LBSite::applyForces(int _numVels) {
-      Real3D _f;
-      _f = getExtForceLoc();
-
+      Real3D _f = Real3D(0.,0.,0.);
+			
+			_f = getExtForceLoc() + getCouplForceLoc();
+			
       // set velocity _u
       Real3D _u (getM_i(1) + 0.5*_f[0], getM_i(2) + 0.5*_f[1], getM_i(3) + 0.5*_f[2]);
       _u /= getM_i(0);

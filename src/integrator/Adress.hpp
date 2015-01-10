@@ -55,7 +55,12 @@ namespace espresso {
         real dexdhy;
         real dexdhy2;
         
-        Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI = false);
+        Adress(shared_ptr<System> _system,
+          shared_ptr<VerletListAdress> _verletList,
+          shared_ptr<FixedTupleListAdress> _fixedtupleList,
+          bool _KTI = false,
+          real static_weight = -1.0
+        );
 
         ~Adress();
         
@@ -77,6 +82,9 @@ namespace espresso {
         
         real weight(real);
         real weightderivative(real);
+
+        real static_weight_;
+        bool has_static_weight_;
       };
 
   }
