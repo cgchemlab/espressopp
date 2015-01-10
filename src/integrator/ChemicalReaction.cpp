@@ -709,6 +709,7 @@ std::vector<Particle*> ChemicalReaction::ApplyAR() {
         }
 
         fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
+        verlet_list_->exclude(it->first, it->second.first);
         LOG4ESPP_DEBUG(theLogger, "Created pair.");
       }
     }

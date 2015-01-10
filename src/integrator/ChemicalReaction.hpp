@@ -323,17 +323,17 @@ class ChemicalReaction : public Extension {
 
   shared_ptr<storage::DomainDecomposition> domdec_;
   shared_ptr<espresso::interaction::Potential> potential_;
-  shared_ptr<esutil::RNG> rng_;//!< Random number generator.
-  shared_ptr<FixedPairList> fixed_pair_list_;//!< Bond list.
-  shared_ptr<VerletList> verlet_list_;//!< Verlet list of used potential.
+  shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
+  shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
+  shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
 
   boost::signals2::connection initialize_;
   boost::signals2::connection react_;
 
-  integrator::ReactionMap potential_pairs_;//!< Container for (A,B) potential partners/
-  integrator::ReactionMap effective_pairs_;//!< Container for (A,B) effective partners.
+  integrator::ReactionMap potential_pairs_;  //!< Container for (A,B) potential partners/
+  integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
 
-  ReactionList reaction_list_;//<! Container for reactions.
+  ReactionList reaction_list_;  //<! Container for reactions.
 
   void connect();
   void disconnect();
