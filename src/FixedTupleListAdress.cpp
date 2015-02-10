@@ -46,23 +46,20 @@ namespace espresso {
 
         LOG4ESPP_INFO(theLogger, "construct FixedTupleListAdress");
 
-        con1 = storage->beforeSendParticles.connect
+        sigBeforeSend = storage->beforeSendParticles.connect
           (boost::bind(&FixedTupleListAdress::beforeSendParticles, this, _1, _2));
-        con2 = storage->afterRecvParticles.connect
+        sigAfterRecv = storage->afterRecvParticles.connect
           (boost::bind(&FixedTupleListAdress::afterRecvParticles, this, _1, _2));
-        con4 = storage->onTuplesChanged.connect
+        sigOnTupleChanged = storage->onTuplesChanged.connect
           (boost::bind(&FixedTupleListAdress::onParticlesChanged, this));
 
     }
 
     FixedTupleListAdress::~FixedTupleListAdress() {
-
-        LOG4ESPP_INFO(theLogger, "~FixedTupleListAdress");
-
-        con1.disconnect();
-        con2.disconnect();
-        //con3.disconnect();
-        con4.disconnect();
+      LOG4ESPP_INFO(theLogger, "~FixedTupleListAdress");
+      sigBeforeSend.disconnect();
+      sigAfterRecv.disconnect();
+      sigOnTupleChanged.disconnect();
     }
 
     bool FixedTupleListAdress::addT(tuple pids) {
@@ -121,175 +118,78 @@ namespace espresso {
     }
 
     /* send global tuple information */
-    void FixedTupleListAdress::beforeSendParticles
-                                    (ParticleList& pl, OutBuffer& buf) {
+    void FixedTupleListAdress::beforeSendParticles(ParticleList& pl, OutBuffer& buf) {
+      LOG4ESPP_INFO(theLogger, "prepared fixed tuple list of adress particles "
+          << "before send particles");
+      std::vector<longint> atpl;
+      // Loop over the particle list pl that contains only CG particles.
+      for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
+        longint pidK = pit->id();
+        LOG4ESPP_DEBUG(theLogger, "send particle with pid " << pidK << ", find tuples");
 
-        std::vector<longint> atpl;
+        // find particle that involves this particle id
+        GlobalTuples::const_iterator it = globalTuples.find(pidK);
+        if (it != globalTuples.end()) {
+          // first write the pid of the first particle
+          buf.write(pidK);
 
-        // Loop over the particle list pl that contains only CG particles.
-        for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
-            longint pidK = pit->id();
-            LOG4ESPP_DEBUG(theLogger, "send particle with pid " << pidK << ", find tuples");
+          // write the size of the vector
+          int s = it->second.size();
 
-            // find particle that involves this particle id
-            GlobalTuples::const_iterator it = globalTuples.find(pidK);
-            if (it != globalTuples.end()) {
+          buf.write(s);
+          atpl.reserve(s);
 
-                // first write the pid of the first particle
-                //toSend.push_back(pidK);
-                //std::cout << "write pidK "<< pidK << "\n";
-            	buf.write(pidK);
+          // Iterate through vector of AT particles.
+          //std::cout << storage->getRank() << ": removing AT particles ";
+          for (tuple::const_iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
+            Particle* tp = storage->lookupAdrATParticle(*it2);
+            buf.write(*tp);
+            atpl.push_back(*it2);
 
-				// write the size of the vector
-				int s = it->second.size();
-				//toSend.push_back(s);
-				//std::cout << "write s "<< s << "\n";
-				buf.write(s);
-				atpl.reserve(s);
-
-				// Iterate through vector of AT particles.
-				//std::cout << storage->getRank() << ": removing AT particles ";
-				for (tuple::const_iterator it2 = it->second.begin();
-				 it2 != it->second.end(); ++it2) {
-					//toSend.push_back(*it2);
-					//std::cout << " write pid "<< *it2 << " (";
-
-					Particle* tp = storage->lookupAdrATParticle(*it2);
-					//std::cout << " write " << tp->getId() << " ("  << tp->getPos() << ")\n";
-					buf.write(*tp);
-					atpl.push_back(*it2);
-
-					// remove AT particle from storage
-					storage->removeAdrATParticle(*it2);
-					//std::cout << " " << *it2;
-				}
-				//std::cout << "\n";
-
-                // delete this pid from the global list
-                globalTuples.erase(pidK);
-
-            }
+            // remove AT particle from storage
+            storage->removeAdrATParticle(*it2);
+          }
+          // delete this pid from the global list
+          globalTuples.erase(pidK);
         }
-
-        beforeSendATParticles(atpl, buf);
+      }
+      beforeSendATParticles(atpl, buf);
     }
 
     /* recieve and rebuild global tuple information */
-    void FixedTupleListAdress::afterRecvParticles
-                                    (ParticleList &pl, InBuffer& buf) {
+    void FixedTupleListAdress::afterRecvParticles(ParticleList &pl, InBuffer& buf) {
+      LOG4ESPP_INFO(theLogger, "received fixed tuple list of adress particles "
+          << "before send particles");
 
-        //std::cout << "afterRecvParticles\n";
+      std::vector<longint> pids;
+      int size, i, n;
+      longint pidK;
+      GlobalTuples::iterator it = globalTuples.begin();
 
-        /*
-        std::vector<longint> received, pids;
-        int n;
-        longint pidK;
-        GlobalTuples::iterator it = globalTuples.begin();
+      size = pl.size();
 
+      if (size > 0) {
+        for (i = 0; i < size; ++i) {
+          // receive the tuple list
+          buf.read(pidK);
+          buf.read(n);
 
-        // receive the tuple list
-        buf.read(received);
-        int size = received.size();
+          for (; n > 0; --n) {
+            LOG4ESPP_DEBUG(theLogger, "received vector for pid " << pidK);
+            Particle p;
+            buf.read(p);
 
-        int i = 0;
-        while (i < size) {
-            // unpack the list
-            pidK = received[i++];
-            //std::cout << "receive pidK "<< pidK << "\n";
+            storage->addAdrATParticleFTPL(p);
+            pids.push_back(p.id());
+          }
 
-            n = received[i++];
-            //std::cout << "receive n "<< n << "\n";
-
-            for (; n > 0; --n) {
-            	LOG4ESPP_DEBUG(theLogger, "received vector for pid " << pidK);
-                storage->addAdrATParticleFTPL(received[i]); // add AT particle to storage
-                pids.push_back(received[i++]);
-            }
-
-            // add pids vector to global tuples
-            it = globalTuples.insert(it, std::make_pair(pidK, pids));
-            pids.clear();
+          // add pids vector to global tuples
+          it = globalTuples.insert(it, std::make_pair(pidK, pids));
+          pids.clear();
         }
-
-        if (i != size) {
-            LOG4ESPP_ERROR(theLogger,
-                    "recv particles might have read garbage\n");
-        }
-
-        LOG4ESPP_INFO(theLogger,
-                "received fixed particle list after receive particles");
-        */
-
-
-        std::vector<longint> pids;
-		int size, i, n;
-		longint pidK;
-		GlobalTuples::iterator it = globalTuples.begin();
-
-		size = pl.size();
-
-		for (i = 0; i < size; ++i) {
-		    //std::cout << "i: " << i << "\n";
-
-            // receive the tuple list
-            //std::cout << "receive pidK: ";
-            buf.read(pidK);
-            //std::cout << pidK << " at ";
-
-
-            /*
-            // testing
-            Particle* vp = storage->lookupRealParticle(pidK);
-            Real3D vpp = vp->position();
-
-            // see where VP is folded
-            Real3D vpp_old = vpp;
-            Real3D vpp_new = vpp;
-            Real3D moved;
-            int dir;
-            Int3D image(0,0,0);
-
-            for (dir = 0; dir < 3; ++dir) {
-                storage->getSystem()->bc->foldCoordinate(vpp_new, image, dir);
-                if (vpp_new[dir] != vpp_old[dir]) {
-                    moved[dir] = vpp_old[dir] - vpp_new[dir];
-                    break; // do not continue looping
-                }
-            }
-            */
-
-
-            //std::cout << "receive n: ";
-            buf.read(n);
-            //std::cout << n << "\n";
-
-            //std::cout << storage->getRank() << ": add AT particles ";
-            for (; n > 0; --n) {
-                LOG4ESPP_DEBUG(theLogger, "received vector for pid " << pidK);
-                /*storage->addAdrATParticleFTPL(received[i]); // add AT particle to storage
-                pids.push_back(received[i++]);
-                Particle *p = storage->addAdrATParticleFTPL();*/
-
-                Particle p;
-                //std::cout << " read *p : ";
-                buf.read(p);
-
-                //std::cout << " AT particle " << p.id() << " at " << p.position() << " ";
-                //p.position()[dir] = p.position()[dir] - moved[dir];
-                //std::cout << "--> moved to " << p.position() << "\n";
-
-                storage->addAdrATParticleFTPL(p);
-
-                //std::cout << p.getId() << " at " << p.position() << "\n";
-                pids.push_back(p.id());
-            }
-            //std::cout << "\n";
-
-            // add pids vector to global tuples
-            it = globalTuples.insert(it, std::make_pair(pidK, pids));
-            pids.clear();
-		}
-
+        // emit signal to all fixed list adress
+        afterRecvATParticles(pl, buf);
+      }
     }
 
     void FixedTupleListAdress::onParticlesChanged() {
