@@ -153,37 +153,54 @@ def read(gro_file, top_file="", doRegularExcl=True):
             if readattypes:
                 if line.strip() == "" or '[' in line: # end of atomtypes section
                     readattypes = False
-                    # prints gromacs type and esp++ type
-                    for t in sorted(atomtypes.items(), key=itemgetter(1)):
-                        print " %s: %d"%(t[0],t[1])
                 else:
                     fields=line.split()
                     attypename = fields[0]
+                    attypealias = fields[1] if attypename.startswith('opls') else None
 
                 #make a map containing the properties
                 # sig, eps may be c6 and c12: this is specified in the defaults
                 # and converted later
-                    if len(fields)==7:
-                        tmpprop={"atnum":int(fields[1]), "mass": float(fields[2]),
-                        "charge":float(fields[3]), "particletype":fields[4],
-                        "sig":float(fields[5]), "eps":float(fields[6])}
+                    if len(fields) == 7:
+                        tmpprop = {
+                            'atnum': int(fields[1]),
+                            'mass': float(fields[2]),
+                            'charge': float(fields[3]),
+                            'particletype': fields[4],
+                            'sig': float(fields[5]),
+                            'eps': float(fields[6])
+                        }
+                    elif fields[0].startswith('opls') or len(fields) == 8:  # OPLS
+                        tmpprop = {
+                            'mass': float(fields[3]),
+                            'charge': float(fields[4]),
+                            'particletype': fields[5],
+                            'sig': float(fields[6]),
+                            'eps': float(fields[7])
+                        }
                     else:
-                        tmpprop={"mass":float(fields[1]),
-                        "charge":float(fields[2]), "particletype":fields[3],
-                        "sig":float(fields[4]), "eps":float(fields[5])}
+                        tmpprop = {
+                            'mass': float(fields[1]),
+                            'charge': float(fields[2]),
+                            'particletype': fields[3],
+                            'sig': float(fields[4]),
+                            'eps': float(fields[5])
+                        }
 
-
-                if attypename not in atomtypes:
-                    atomtypes.update({attypename:a}) # atomtypes is used when reading the "atoms" section
-                    atomtypeparams.update({a:tmpprop})
-                    a += 1
+                    if attypename not in atomtypes:
+                        atomtypes.update({attypename: a})
+                        if attypealias:
+                            atomtypes.update({attypealias: a})
+                        atomtypeparams.update({a: tmpprop})
+                        a += 1
 
             if 'bondtypes' in line:
                 readbdtypes = True
+                print 'Reading bondtypes...'
                 continue
 
             if readbdtypes:
-                if line.strip() == "" or '[' in line: # end of bondtypes section
+                if line.strip() == "" or '[' in line:  # end of bondtypes section
                     readbdtypes = False
                 else:
                     tmp = line.split()
@@ -203,6 +220,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
 
             if 'angletypes' in line:
                 readantypes = True
+                print 'Reading angletypes...'
                 continue
 
             if readantypes:
@@ -231,6 +249,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
 
             if 'dihedraltypes' in line:
                 readdhtypes = True
+                print 'Reading dihedraltypes...'
                 continue
 
             if readdhtypes:
@@ -238,7 +257,15 @@ def read(gro_file, top_file="", doRegularExcl=True):
                     readdhtypes = False
                 else:
                     tmp = line.split()
-                    i, j, k, l = atomtypes[tmp[0]], atomtypes[tmp[1]], atomtypes[tmp[2]], atomtypes[tmp[3]]
+                    try:
+                        i, j, k, l = (atomtypes[tmp[0]],
+                                    atomtypes[tmp[1]],
+                                    atomtypes[tmp[2]],
+                                    atomtypes[tmp[3]]
+                                    )
+                    except Exception as ex:
+                        print 'Undefined atom', tmp
+                        continue
                     p=ParseDihedralTypeParam(line)
 
                     dtypeid=FindType(p, dihedraltypeparams)

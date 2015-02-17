@@ -46,9 +46,14 @@ namespace espresso {
       FixedQuadrupleListDihedralHarmonicNCos;
       class_ <FixedQuadrupleListDihedralHarmonicNCos, bases <Interaction> >
         ("interaction_FixedQuadrupleListDihedralHarmonicNCos",
-                  init< shared_ptr<System>,
-                        shared_ptr<FixedQuadrupleList>,
-                        shared_ptr<DihedralHarmonicNCos> >())
+            init< shared_ptr<System>,
+                  shared_ptr<FixedQuadrupleList>,
+                  shared_ptr<DihedralHarmonicNCos>
+                >())
+        .def(init< shared_ptr<System>,
+                   shared_ptr<FixedQuadrupleListAdress>,
+                   shared_ptr<DihedralHarmonicNCos>
+                >())
         .def("setPotential", &FixedQuadrupleListDihedralHarmonicNCos::setPotential)
         .def("getFixedQuadrupleList", &FixedQuadrupleListDihedralHarmonicNCos::getFixedQuadrupleList)
         ;
