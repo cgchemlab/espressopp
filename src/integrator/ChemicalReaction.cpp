@@ -42,6 +42,7 @@
 #include "storage/DomainDecomposition.hpp"
 
 #include "boost/make_shared.hpp"
+#include "../../../../../../../../usr/include/boost/noncopyable.hpp"
 
 namespace espresso {
 namespace integrator {
@@ -82,6 +83,16 @@ bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
 }
 
 
+bool Reaction::PostProcess(Particle &pA, Particle &pB) {
+  bool modified = false;
+  for(std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_.begin();
+      it != post_process_.end(); ++it) {
+    modified = modified || (*it)->operator()(pA, pB);
+  }
+  return modified;
+}
+
+
 void Reaction::registerPython() {
   using namespace espresso::python; //NOLINT
   class_<Reaction, shared_ptr<integrator::Reaction>, boost::noncopyable>
@@ -99,7 +110,8 @@ void Reaction::registerPython() {
       .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
       .def("is_valid_state", pure_virtual(&Reaction::IsValidState))
       .def("is_valid_pair", pure_virtual(&Reaction::IsValidPair))
-      .def("post_process", pure_virtual(&Reaction::PostProcess));
+      .def("add_postprocess", &Reaction::AddPostProcess)
+      ;
 }
 
 
@@ -112,10 +124,28 @@ void SynthesisReaction::registerPython() {
 }
 
 
-/* Addition reacton */
+void PostProcess::registerPython() {
+  using namespace espresso::python;  //NOLINT
+  class_<PostProcess, shared_ptr<integrator::PostProcess>, boost::noncopyable>
+  ("integrator_PostProcess", no_init)
+      .def("__call__", pure_virtual(&PostProcess::operator()))
+      ;
+}
+
+
+void PostProcessChangesProperty::registerPython() {
+  using namespace espresso::python;  //NOLINT
+  class_<PostProcessChangesProperty, bases<integrator::PostProcess>,
+      boost::shared_ptr<integrator::PostProcessChangesProperty> >
+  ("integrator_PostProcessChangesProperty",
+   init<>())
+   .def("add_change_property", &PostProcessChangesProperty::AddChangeProperty)
+   .def("remove_change_property", &PostProcessChangesProperty::RemoveChangeProperty)
+   ;
+}
 
 /** Adds new change property definition. */
-void AdditionReaction::AddChangeProperty(
+void PostProcessChangesProperty::AddChangeProperty(
     int type_id,
     boost::shared_ptr<ParticleProperties> new_property
     ){
@@ -127,7 +157,7 @@ void AdditionReaction::AddChangeProperty(
 }
 
 /** Removes change property definition. */
-void AdditionReaction::RemoveChangeProperty(int type_id) {
+void PostProcessChangesProperty::RemoveChangeProperty(int type_id) {
   int remove_elements = type_properties_.erase(type_id);
   if (remove_elements == 0) {
     throw std::runtime_error("Invalid type.");
@@ -139,8 +169,8 @@ void AdditionReaction::RemoveChangeProperty(int type_id) {
  *
  * In this case method will update the properties of the particles.
  * */
-bool AdditionReaction::PostProcess(Particle& p1, Particle& p2){
-  LOG4ESPP_DEBUG(theLogger, "Entering AdditionReaction::PostProcess");
+bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2){
+  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
   TypeParticlePropertiesMap::iterator it;
   // Process particle p1.
   bool modified = false;
@@ -163,20 +193,14 @@ bool AdditionReaction::PostProcess(Particle& p1, Particle& p2){
     LOG4ESPP_DEBUG(theLogger, "Modified particle B");
     LOG4ESPP_DEBUG(theLogger, p2.id());
   }
-  LOG4ESPP_DEBUG(theLogger, "Leaving AdditionReaction::PostProcess");
+  LOG4ESPP_DEBUG(theLogger, "Leaving PostProcessChangesProperty::operator()");
   return modified;
 }
 
-void AdditionReaction::registerPython() {
-  using namespace espresso::python;  // NOLINT
-  class_<AdditionReaction, bases<integrator::Reaction>,
-        boost::shared_ptr<integrator::AdditionReaction> >
-      ("integrator_AdditionReaction",
-         init<int, int, int, int, int, int, int, int, real, real, bool>())
-         .def("addChangeProperty", &AdditionReaction::AddChangeProperty)
-         .def("removeChangeProperty", &AdditionReaction::RemoveChangeProperty);
-}
+/** Create new particle. **/
+bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2){
 
+}
 
 //**
 //**  Integrator extension.
