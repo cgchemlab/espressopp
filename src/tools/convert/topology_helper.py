@@ -2,21 +2,21 @@
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-#  
+#
 #  This file is part of ESPResSo++.
-#  
+#
 #  ESPResSo++ is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  ESPResSo++ is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 # Some helper classes usefull when parsing the gromacs topology
@@ -24,6 +24,7 @@
 import espresso
 import math
 import gromacs
+import os
 
 class FileBuffer():
     def __init__(self):
@@ -46,23 +47,77 @@ class FileBuffer():
             return ''
         return line
     def seek(self, p):
-	self.pos=p
+        self.pos=p
     def tell(self):
-	return self.pos
-        
+        return self.pos
 
-def FillFileBuffer(fname, filebuffer):
-    f=open(fname, 'r')
+
+def FillFileBuffer(fname, filebuffer, context=None):
+    f = open(fname, 'r')
+    base_path = os.path.dirname(fname)
+
+    skip_lines = False
+    in_ifdef = False
+
+    if context is None:
+        context = {}
+
+    special_symbols = ['define', 'ifdef', 'ifndef', 'else', 'endif']
+
     for line in f:
-	if "include" in line and not line[0]==';':
-	    name=(line.split()[1]).strip('\"')
-	    FillFileBuffer(name, filebuffer)
-	else:
-            l=line.rstrip('\n')
-	    if l:
-                filebuffer.appendline(l)
-            
-    f.close
+        # Skip commends
+        if line.strip().startswith(';'):
+            continue
+
+        # Support for define
+        if 'define' in line:
+            tmp = line.split()
+            context[tmp[1]] = tmp[2:]
+            continue
+
+        # By definition skip the ifdef clauses
+        if 'ifdef' in line:
+            define_var = line.split()[1]
+            if define_var not in context:
+                skip_lines = True
+            in_ifdef = True
+            continue
+
+        if 'ifndef' in line:
+            define_var = line.split()[1]
+            if define_var in context:
+                skip_lines = True
+            in_ifdef = True
+            continue
+
+        if 'else' in line:
+            skip_lines = not skip_lines
+            continue
+
+        if 'endif' in line:
+            if not in_ifdef:
+                raise ValueError('Wrong sequence of if-else-endif')
+            skip_lines = False
+            in_ifdef = False
+            continue
+
+        # Support for define variables
+        if line.startswith('#'):
+            symbol = line.strip().lstrip('#').split()[0]
+            if symbol not in special_symbols:
+                value = context.get(symbol)
+                if value:
+                    filebuffer.appendline(' '.join(value))
+
+        if not skip_lines:
+            if "include" in line:
+                name = os.path.join(base_path, (line.split()[1]).strip('\"'))
+                FillFileBuffer(name, filebuffer, context)
+            else:
+                l = line.rstrip('\n')
+                if l:
+                    filebuffer.appendline(l)
+    f.close()
     return
 
 
@@ -74,7 +129,7 @@ def FindType(proposedtype, typelist):
     elif len(list)==0:
         return None
     return list[0]
-    
+
 
 class InteractionType:
     def __init__(self, parameters):
@@ -101,7 +156,7 @@ class HarmonicBondedInteractionType(InteractionType):
         return interb
     def automaticExclusion(self):
         return True
-    
+
 class MorseBondedInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
         # interaction specific stuff here
@@ -110,7 +165,7 @@ class MorseBondedInteractionType(InteractionType):
         return interb
     def automaticExclusion(self):
         return True
-    
+
 class FENEBondedInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
         # interaction specific stuff here
@@ -120,15 +175,15 @@ class FENEBondedInteractionType(InteractionType):
         return interb
     def automaticExclusion(self):
         return True
-    
+
 class HarmonicAngleInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
         # interaction specific stuff here
         # spring constant kb is half the gromacs spring constant. Also convert deg to rad
         pot = espresso.interaction.AngularHarmonic(self.parameters['k']/2.0, self.parameters['theta']*2*math.pi/360)
         interb = espresso.interaction.FixedTripleListAngularHarmonic(system, fpl, pot)
-        return interb     
-    
+        return interb
+
 
 class TabulatedBondInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
@@ -141,7 +196,7 @@ class TabulatedBondInteractionType(InteractionType):
         return interb
     def automaticExclusion(self):
         return self.parameters['excl']
-    
+
 class TabulatedAngleInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
         spline = 3
@@ -150,7 +205,7 @@ class TabulatedAngleInteractionType(InteractionType):
         gromacs.convertTable(fg, fe)
         potTab = espresso.interaction.TabulatedAngular(itype=spline, filename=fe)
         interb = espresso.interaction.FixedTripleListTabulatedAngular(system, fpl, potTab)
-        return interb  
+        return interb
 class TabulatedDihedralInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
         spline = 3
@@ -159,8 +214,8 @@ class TabulatedDihedralInteractionType(InteractionType):
         gromacs.convertTable(fg, fe)
         potTab = espresso.interaction.TabulatedDihedral(itype=spline, filename=fe)
         interb = espresso.interaction.FixedQuadrupleListTabulatedDihedral(system, fpl, potTab)
-        return interb       
-    
+        return interb
+
 """class HarmonicDihedralInteractionType(InteractionType):
 # Not implemented yet in Esp++
     def createEspressoInteraction(self, system, fpl):
@@ -170,9 +225,9 @@ class TabulatedDihedralInteractionType(InteractionType):
         pot = espresso.interaction.DihedralHarmonicCos(K=self.parameters['k']/2.0, phi0=self.parameters['phi']*2*math.pi/360)
         interb = espresso.interaction.FixedQuadrupleListDihedralHarmonicCos(system, fpl, pot)
         return interb          """
-    
+
 def ParseBondTypeParam(line):
-    tmp = line.split() 
+    tmp = line.split()
     btype= tmp[2]
     # TODO: handle exclusions automatically
     if btype == "8":
@@ -190,11 +245,11 @@ def ParseBondTypeParam(line):
     else:
         print "Unsupported bond type", tmp[2], "in line:"
         print line
-        exit()
-    return p     
+        return None
+    return p
 
 def ParseAngleTypeParam(line):
-    tmp = line.split() 
+    tmp = line.split()
     type= int(tmp[3])
     if type == 1:
         p=HarmonicAngleInteractionType({"theta":float(tmp[4]), "k":float(tmp[5])})
@@ -203,19 +258,19 @@ def ParseAngleTypeParam(line):
     else:
         print "Unsupported angle type", type, "in line:"
         print line
-        exit()
-    return p    
+        return None
+    return p
 
 def ParseDihedralTypeParam(line):
-    tmp = line.split() 
+    tmp = line.split()
     type= int(tmp[4])
     if type == 8:
-        p=TabulatedDihedralInteractionType({"tablenr":int(tmp[5]), "k":float(tmp[6])})
+        p = TabulatedDihedralInteractionType({"tablenr":int(tmp[5]), "k":float(tmp[6])})
     else:
         print "Unsupported dihedral type", type, "in line:"
         print line
-        exit()
-    return p    
+        return None
+    return p
 
 
 
@@ -240,18 +295,18 @@ def FindNodeById(id, nodes):
 def FindNNextNeighbours(startnode, numberNeighbours, neighbours, forbiddenNodes):
     if numberNeighbours==0:
 	return neighbours
-	
+
     #avoid going back the same path
     forbiddenNodes.append(startnode)
-    
+
     # Loop over next neighbours and add them to the neighbours list
     # Recursively call the function with numberNeighbours-1
     for n in startnode.neighbours:
 	if not n in forbiddenNodes:
 	    if n not in neighbours: neighbours.append(n) # avoid double counting in rings
 	    FindNNextNeighbours(n, numberNeighbours-1, neighbours, forbiddenNodes)
-            
- 
+
+
 def GenerateRegularExclusions(bonds, nrexcl, exclusions):
     nodes=[]
     # make a Node object for each atom involved in bonds
@@ -262,14 +317,14 @@ def GenerateRegularExclusions(bonds, nrexcl, exclusions):
                n=Node(i)
                nodes.append(n)
 
-    # find the next neighbours for each node and append them   
+    # find the next neighbours for each node and append them
     for b in bonds:
         permutations=[(b[0], b[1]), (b[1], b[0])]
         for p in permutations:
             n=FindNodeById(p[0], nodes)
             nn=FindNodeById(p[1], nodes)
-            n.addNeighbour(nn)   
-    
+            n.addNeighbour(nn)
+
     # for each atom, call the FindNNextNeighbours function, which recursively
     # seraches for nrexcl next neighbours
     for n in nodes:
@@ -282,5 +337,5 @@ def GenerateRegularExclusions(bonds, nrexcl, exclusions):
             if not (n.id, nb.id) in exclusions:
                 if not (nb.id, n.id) in exclusions:
                     exclusions.append((n.id, nb.id))
-   
+
     return exclusions
