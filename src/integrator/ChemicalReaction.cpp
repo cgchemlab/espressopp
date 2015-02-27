@@ -1,7 +1,7 @@
 /*
  Copyright (C) 2014
    Pierre de Buyl
-   Jakub Krajniak (jkrajniak@gmail.com)
+   Jakub Krajniak (jkrajniak at gmail.com)
  Copyright (C) 2012,2013
    Max Planck Institute for Polymer Research
  Copyright (C) 2008,2009,2010,2011
@@ -49,6 +49,7 @@ namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
+LOG4ESPP_LOGGER(PostProcess::theLogger, "PostProcess");
 
 /** Checks if the particles pair is valid. */
 bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
@@ -85,7 +86,7 @@ bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
 
 bool Reaction::PostProcess(Particle &pA, Particle &pB) {
   bool modified = false;
-  for(std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_.begin();
+  for (std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_.begin();
       it != post_process_.end(); ++it) {
     modified = modified || (*it)->operator()(pA, pB);
   }
@@ -110,8 +111,7 @@ void Reaction::registerPython() {
       .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
       .def("is_valid_state", pure_virtual(&Reaction::IsValidState))
       .def("is_valid_pair", pure_virtual(&Reaction::IsValidPair))
-      .def("add_postprocess", &Reaction::AddPostProcess)
-      ;
+      .def("add_postprocess", &Reaction::AddPostProcess);
 }
 
 
@@ -128,8 +128,7 @@ void PostProcess::registerPython() {
   using namespace espresso::python;  //NOLINT
   class_<PostProcess, shared_ptr<integrator::PostProcess>, boost::noncopyable>
   ("integrator_PostProcess", no_init)
-      .def("__call__", pure_virtual(&PostProcess::operator()))
-      ;
+      .def("__call__", pure_virtual(&PostProcess::operator()));
 }
 
 
@@ -137,18 +136,15 @@ void PostProcessChangesProperty::registerPython() {
   using namespace espresso::python;  //NOLINT
   class_<PostProcessChangesProperty, bases<integrator::PostProcess>,
       boost::shared_ptr<integrator::PostProcessChangesProperty> >
-  ("integrator_PostProcessChangesProperty",
-   init<>())
-   .def("add_change_property", &PostProcessChangesProperty::AddChangeProperty)
-   .def("remove_change_property", &PostProcessChangesProperty::RemoveChangeProperty)
-   ;
+  ("integrator_PostProcessChangesProperty", init<>())
+    .def("add_change_property", &PostProcessChangesProperty::AddChangeProperty)
+    .def("remove_change_property", &PostProcessChangesProperty::RemoveChangeProperty);
 }
 
 /** Adds new change property definition. */
 void PostProcessChangesProperty::AddChangeProperty(
     int type_id,
-    boost::shared_ptr<ParticleProperties> new_property
-    ){
+    boost::shared_ptr<ParticleProperties> new_property) {
   std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
   ret = type_properties_.insert(
       std::pair<int, boost::shared_ptr<ParticleProperties> >(type_id, new_property));
@@ -169,7 +165,7 @@ void PostProcessChangesProperty::RemoveChangeProperty(int type_id) {
  *
  * In this case method will update the properties of the particles.
  * */
-bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2){
+bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
   TypeParticlePropertiesMap::iterator it;
   // Process particle p1.
@@ -197,10 +193,6 @@ bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2){
   return modified;
 }
 
-/** Create new particle. **/
-bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2){
-
-}
 
 //**
 //**  Integrator extension.
@@ -531,7 +523,7 @@ void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_partic
         }
         // Update the ghost particle data on neighbour CPUs.
         particle = system.storage->lookupLocalParticle(p_id);
-        if(particle != NULL && particle->ghost()) {
+        if (particle != NULL && particle->ghost()) {
           LOG4ESPP_DEBUG(theLogger, "Update particle data");
           particle->setType(p_type);
           particle->setMass(p_mass);
@@ -640,7 +632,6 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
   // Collect the b particle pairs. REQOPT
   for (integrator::ReactionMap::iterator it = potential_candidates.begin();
       it != potential_candidates.end(); ++it) {
-
     p = system.storage->lookupLocalParticle(it->second.first);
     if (p == NULL || p->ghost())
       continue;
@@ -721,7 +712,7 @@ std::vector<Particle*> ChemicalReaction::ApplyAR() {
           pA->setState(pA->getState() + reaction->delta_a());
           pB->setState(pB->getState() + reaction->delta_b());
           pB->setResId(pA->getResId());  // transfer the residue id
-        } else if (pA->getType() == reaction->type_b()) { // This time the pA is of type_b
+        } else if (pA->getType() == reaction->type_b()) {  // This time the pA is of type_b
           pA->setState(pA->getState() + reaction->delta_b());
           pB->setState(pB->getState() + reaction->delta_a());
           pA->setResId(pB->getResId());  // transfer the residue id

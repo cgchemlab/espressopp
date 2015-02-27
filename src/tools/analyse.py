@@ -24,7 +24,6 @@ import sys
 import espresso
 
 def info(system, integrator, per_atom=False, kb=1.0):
-<<<<<<< /home/jakub/project/software/Espresso/espressopp_chem/src/tools/analyse.py
   """Displays basic information about the simulated system.
 
   Args:

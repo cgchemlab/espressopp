@@ -84,7 +84,7 @@ namespace espresso {
       LBInitPeriodicForce::registerPython();
       LBInitPopUniform::registerPython();
       LBInitPopWave::registerPython();
-			LiquidGasLB::registerPython();
+      LiquidGasLB::registerPython();
       ExtForce::registerPython();
       CapForce::registerPython();
       ExtAnalyze::registerPython();
@@ -94,6 +94,8 @@ namespace espresso {
       Reaction::registerPython();  // This is base class for reaction, has to be first.
       SynthesisReaction::registerPython();
       ChemicalReaction::registerPython();
+      PostProcess::registerPython();
+      PostProcessChangesProperty::registerPython();
       EmptyExtension::registerPython();
     }
   }

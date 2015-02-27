@@ -1,11 +1,11 @@
 /*
  Copyright (C) 2014
- Pierre de Buyl
- Jakub Krajniak (jkrajniak@gmail.com)
+    Pierre de Buyl
+    Jakub Krajniak (jkrajniak at gmail.com)
  Copyright (C) 2012,2013
- Max Planck Institute for Polymer Research
+    Max Planck Institute for Polymer Research
  Copyright (C) 2008,2009,2010,2011
- Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
+    Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
 
  This file is part of ESPResSo++.
 
@@ -81,21 +81,6 @@ class PostProcessChangesProperty : public integrator::PostProcess {
 
  private:
   TypeParticlePropertiesMap type_properties_;
-};
-
-
-class PostProcessCreateParticle : public integrator::PostProcess {
-public:
-  bool operator()(Particle& p1, Particle& p2);
-  void ParticleProperty(boost::shared_ptr<ParticleProperties> new_property) {
-    particle_properties_ = new_property;
-  }
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
-private:
-  ParticleProperties *particle_properties_;
 };
 
 
