@@ -606,13 +606,8 @@ namespace espresso {
           real w = vp.lambda(); 
           //real w = weights.find(&vp)->second;
                   
-<<<<<<< HEAD
-          if(w!=1.0 && w!=0.0){   //   only chose those in the hybrid region
-              
-=======
           //if(w!=1.0 && w!=0.0){   //   only chose those in the hybrid region
           if(w<0.9999999 && w>0.0000001){   //   only chose those in the hybrid region
->>>>>>> upstream/master
               // calculate distance to nearest adress particle or center
               std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
               Real3D pa = **it2; // position of adress particle
@@ -639,16 +634,6 @@ namespace espresso {
               min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
               real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
               //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
-<<<<<<< HEAD
-              mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
-              mindriftforceX *= 0.5;
-              mindriftforceX *= energydiff.find(&vp)->second;   // get the energy differences which were calculated previously and put in drift force
-              //vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
-              Real3D driftforceadd(mindriftforceX,0.0,0.0);                                                                                            // X SPLIT VS SPHERE CHANGE
-              //Real3D driftforceadd(0.0,0.0,0.0);   
-              //std::cout << "Driftforce: " << driftforceadd << std::endl;
-              vp.force() += driftforceadd;                                                                                                            // X SPLIT VS SPHERE CHANGE
-=======
               mindriftforceX *= 0.5;
               mindriftforceX *= energydiff.find(&vp)->second;   // get the energy differences which were calculated previously and put in drift force
                       
@@ -661,7 +646,6 @@ namespace espresso {
               vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
               //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
               
->>>>>>> upstream/master
           }
           
       }
@@ -747,14 +731,10 @@ namespace espresso {
     VerletListHadressInteractionTemplate < _PotentialAT, _PotentialCG >::
     computeEnergy() {
       LOG4ESPP_INFO(theLogger, "compute energy of the Verlet list pairs");
-<<<<<<< HEAD
-      
-=======
 
 
 
       // REMOVE FOR IDEAL GAS 
->>>>>>> upstream/master
       real e = 0.0;        
       for (PairList::Iterator it(verletList->getPairs()); 
            it.isValid(); ++it) {
@@ -765,12 +745,9 @@ namespace espresso {
           const PotentialCG &potential = getPotentialCG(type1, type2);
           e += potential._computeEnergy(p1, p2);
       }
-<<<<<<< HEAD
-=======
       // REMOVE FOR IDEAL GAS
       
       
->>>>>>> upstream/master
 
       //if (KTI == false) {
       //makeWeights();

@@ -66,11 +66,7 @@ namespace espresso {
       VT_TRACER("run");
       int nResorts = 0;
       real time;
-<<<<<<< HEAD
-=======
       timeIntegrate.reset();
-      resetTimers();
->>>>>>> upstream/master
       System& system = getSystemRef();
       storage::Storage& storage = *system.storage;
       real skinHalf = 0.5 * system.getSkin();
