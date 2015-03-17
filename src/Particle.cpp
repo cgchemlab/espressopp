@@ -43,6 +43,8 @@ namespace espresso {
       .add_property("lambda_adrd", &Particle::getLambdaDeriv, &Particle::setLambdaDeriv)
       .add_property("state", &Particle::getState, &Particle::setState)
       .add_property("res_id", &Particle::getResId, &Particle::setResId)
+      .add_property("extVar", &Particle::getExtVar, &Particle::setExtVar)
+      .add_property("drift_f", &Particle::getDrift, &Particle::setDrift)
       ;
   }
 

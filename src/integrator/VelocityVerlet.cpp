@@ -66,6 +66,11 @@ namespace espresso {
       VT_TRACER("run");
       int nResorts = 0;
       real time;
+<<<<<<< HEAD
+=======
+      timeIntegrate.reset();
+      resetTimers();
+>>>>>>> upstream/master
       System& system = getSystemRef();
       storage::Storage& storage = *system.storage;
       real skinHalf = 0.5 * system.getSkin();
@@ -123,13 +128,11 @@ namespace espresso {
         LOG4ESPP_INFO(theLogger, "Next step " << i << " of " << nsteps << " starts");
 
         //saveOldPos(); // save particle positions needed for constraints
-
         time = timeIntegrate.getElapsedTime();
         // signal
         befIntP();
         timeBefIntPS += timeIntegrate.getElapsedTime() - time;
 
-        time = timeIntegrate.getElapsedTime();
         LOG4ESPP_INFO(theLogger, "updating positions and velocities")
         maxDist += integrate1();
         timeInt1 += timeIntegrate.getElapsedTime() - time;
@@ -184,6 +187,9 @@ namespace espresso {
       // Substract the timeForceComp.
       for (int i =0; i < timeForceComp.size(); i++)
         timeLost -= timeForceComp[i];
+      timeRun = timeIntegrate.getElapsedTime();
+      timeLost = timeRun - (timeForceComp[0] + timeForceComp[1] + timeForceComp[2] +
+                 timeComm1 + timeComm2 + timeInt1 + timeInt2 + timeResort);
 
       LOG4ESPP_INFO(theLogger, "finished run");
     }
@@ -298,9 +304,9 @@ namespace espresso {
         // Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t)
         cit->velocity() += dtfm * cit->force();
 
-        // Propagate positions (only NVT): p(t + dt) = p(t) + dt * v(t+0.5*dt)
+        // Propagate positions (only NVT): p(t + dt) = p(t) + dt * v(t+0.5*dt) 
         Real3D deltaP = cit->velocity();
-
+        
         deltaP *= dt;
         cit->position() += deltaP;
         sqDist += deltaP * deltaP;
@@ -309,7 +315,7 @@ namespace espresso {
 
         maxSqDist = std::max(maxSqDist, sqDist);
       }
-
+      
       // signal
       inIntP(maxSqDist);
 
@@ -319,7 +325,7 @@ namespace espresso {
       LOG4ESPP_INFO(theLogger, "moved " << count << " particles in integrate1" <<
 		    ", max move local = " << sqrt(maxSqDist) <<
 		    ", global = " << sqrt(maxAllSqDist));
-
+      
       return sqrt(maxAllSqDist);
     }
 
@@ -330,12 +336,13 @@ namespace espresso {
       CellList realCells = system.storage->getRealCells();
 
       // loop over all particles of the local cells
-      real half_dt = 0.5 * dt;
+      real half_dt = 0.5 * dt; 
       for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
         real dtfm = half_dt / cit->mass();
         /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t) */
         cit->velocity() += dtfm * cit->force();
       }
+      
       step++;
     }
 
@@ -401,6 +408,7 @@ namespace espresso {
 
       for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
         cit->force() = 0.0;
+        cit->drift() = 0.0;   // Can in principle be commented, when drift is not used.
       }
     }
 
@@ -418,7 +426,7 @@ namespace espresso {
 	    cells = system.storage->getRealCells();
 	    LOG4ESPP_DEBUG(theLogger, "real forces");
       }
-
+  
       for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
 	    LOG4ESPP_DEBUG(theLogger, "Particle " << cit->id() << ", force = " << cit->force());
       }
@@ -438,7 +446,7 @@ namespace espresso {
 	    cells = system.storage->getRealCells();
 	    LOG4ESPP_DEBUG(theLogger, "real positions");
       }
-
+  
       for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
 	    LOG4ESPP_DEBUG(theLogger, "Particle " << cit->id() << ", position = " << cit->position());
       }

@@ -45,6 +45,7 @@ namespace espresso {
     real mass;
     real q;
     real lambda;
+    real drift;
     real lambdaDeriv;
     int state;
     int res_id;
@@ -72,6 +73,7 @@ namespace espresso {
       ar & mass;
       ar & q;
       ar & lambda;
+      ar & drift;
       ar & lambdaDeriv;
       ar & state;
       ar & res_id;
@@ -89,6 +91,7 @@ namespace espresso {
 
     Real3D p;
     real radius;
+    real extVar;
 
     void copyShifted(ParticlePosition& dst, const Real3D& shift) const {
       dst.p = p + shift;
@@ -100,6 +103,7 @@ namespace espresso {
       for (int i = 0; i < 3; ++i)
         ar & p[i];
       ar & radius;
+      ar & extVar;
     }
   };
 
@@ -207,7 +211,9 @@ namespace espresso {
       m.vradius      = 0.0;
       l.ghost        = false;
       p.lambda       = 0.0;
+      p.drift        = 0.0;      
       p.lambdaDeriv  = 0.0;
+      r.extVar       = 0.0;      
       p.state        = 0;
       p.res_id       = 0;
     }
@@ -240,6 +246,12 @@ namespace espresso {
     const real& radius() const { return r.radius; }
     real getRadius() const { return r.radius; }
     void setRadius(real q) { r.radius = q; }
+    
+    // Extended Variable for Generalized Langevin Friction
+    real& extVar() { return r.extVar; }
+    const real& extVar() const { return r.extVar; }
+    real getExtVar() const { return r.extVar; }
+    void setExtVar(real q) { r.extVar = q; }
 
     // Position
     Real3D& position() { return r.p; }
@@ -292,7 +304,13 @@ namespace espresso {
     const real& lambda() const { return p.lambda; }
     real getLambda() const { return p.lambda; }
     void setLambda(const real& _lambda) { p.lambda = _lambda; }
-
+    
+    // drift (used in H-Adress)
+    real& drift() { return p.drift; }
+    const real& drift() const { return p.drift; }
+    real getDrift() const { return p.drift; }
+    void setDrift(const real& _drift) { p.drift = _drift; }
+    
     // weight/lambda derivative (used in H-Adress)
     real& lambdaDeriv() { return p.lambdaDeriv; }
     const real& lambdaDeriv() const { return p.lambdaDeriv; }
