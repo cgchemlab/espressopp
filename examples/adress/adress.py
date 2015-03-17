@@ -33,7 +33,7 @@ hy_size = 5.0
 def writeTabFile(pot, name, N, low=0.0, high=2.5, body=2):
     outfile = open(name, "w")
     delta = (high - low) / (N - 1)
-
+     
     for i in range(N):
         r = low + i * delta
         energy = pot.computeEnergy(r)
@@ -43,7 +43,7 @@ def writeTabFile(pot, name, N, low=0.0, high=2.5, body=2):
         else: # this is for 3- and 4-body potentials
             force = pot.computeForce(r)
         outfile.write("%15.8g %15.8g %15.8g\n"%(r, energy, force))
-
+     
     outfile.close()
 
 
@@ -64,10 +64,10 @@ writeTabFile(potMorse, tabMorse, N=512, low=0.005, high=4.5)
 
 
 
-# read ESPResSo configuration file
+# read ESPResSo configuration file 
 Lx, Ly, Lz, x, y, z, type, q, vx, vy, vz, fx, fy, fz, bonds = espresso_old.read("adress.espresso")
 num_particlesCG = 5001 # number of VP/CG particles
-#num_particles = len(x) - num_particlesCG  # 20004 = 25005 - 5001
+#num_particles = len(x) - num_particlesCG  # 20004 = 25005 - 5001 
 num_particles = len(x) # 20004
 
 #Lx, Ly, Lz = 45, 45, 45
@@ -95,7 +95,7 @@ allParticles = []
 tuples = []
 for pidAT in range(num_particles):
     #print pidAT,
-    allParticlesAT.append([pidAT, # add here these particles just temporarly!
+    allParticlesAT.append([pidAT, # add here these particles just temporarly! 
                          Real3D(x[pidAT], y[pidAT], z[pidAT]),
                          Real3D(vx[pidAT], vy[pidAT], vz[pidAT]),
                          Real3D(fx[pidAT], fy[pidAT], fz[pidAT]),
@@ -118,14 +118,14 @@ for pidCG in range(num_particlesCG):
     for i in range(3):
         cmp[i] /= 4.0 # 4.0 is the mass of molecule
         cmv[i] /= 4.0
-
+        
     allParticles.append([pidCG+num_particles, # CG particle has to bo added first!
                          Real3D(cmp[0], cmp[1], cmp[2]), # pos
                          Real3D(cmv[0], cmv[1], cmv[2]), # vel
                          Real3D(0, 0, 0), # f
                          0, 4.0, 0]) # type, mass, is not AT particle
-
-    for pidAT in range(4):
+    
+    for pidAT in range(4): 
         pid = pidCG*4+pidAT
         allParticles.append([pid, # now the AT particles can be added
                             (allParticlesAT[pid])[1], # pos
@@ -133,10 +133,10 @@ for pidCG in range(num_particlesCG):
                             (allParticlesAT[pid])[3], # f
                             (allParticlesAT[pid])[4], # type
                             (allParticlesAT[pid])[5], # mass
-                            (allParticlesAT[pid])[6]]) # is AT particle
-
+                            (allParticlesAT[pid])[6]]) # is AT particle 
+        
     tuples.append(tmptuple)
-
+    
 
 # add particles
 system.storage.addParticles(allParticles, "id", "pos", "v", "f", "type", "mass", "adrat")
@@ -152,7 +152,7 @@ fpl = espresso.FixedPairListAdress(system.storage, ftpl)
 fpl.addBonds(bonds)
 
 # decompose after adding tuples and bonds
-print "Added tuples and bonds, decomposing now ..."
+print "Added tuples and bonds, decomposing now ..." 
 system.storage.decompose()
 
 print "done decomposing"

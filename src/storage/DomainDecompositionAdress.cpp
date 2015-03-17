@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-
+  
   This file is part of ESPResSo++.
-
+  
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-
+  
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-
+  
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
 #include "python.hpp"
@@ -38,7 +38,7 @@
 using namespace boost;
 using namespace espresso::iterator;
 
-namespace espresso {
+namespace espresso { 
   namespace storage {
 
 
@@ -159,7 +159,7 @@ namespace espresso {
     }
   }
 
-
+  
   // @TODO should be some implementation for adress!!!
   /** scale position coordinates of all real particles by factor s */
   void DomainDecompositionAdress::scaleVolume(real s, bool particleCoordinates){
@@ -169,6 +169,9 @@ namespace espresso {
   void DomainDecompositionAdress::scaleVolume(Real3D s, bool particleCoordinates){
     std::cout<<"Nothing happened"<<std::endl;
   }
+  
+  
+
 
   void DomainDecompositionAdress::cellAdjust(){
       // create an appropriate cell grid
@@ -548,6 +551,40 @@ namespace espresso {
         }
     }
 
+  /* -- this is now solved in FixedTupleList.cpp in onparticleschanged()
+  void DomainDecompositionAdress::foldAdrPartCoor(Particle& part, Real3D& oldpos, int coord) {
+
+      if (part.position()[coord] != oldpos[coord]) {
+          real moved = oldpos[coord] - part.position()[coord];
+
+          FixedTupleList::iterator it;
+          it = fixedtupleList->find(&part);
+          if (it != fixedtupleList->end()) {
+              std::vector<Particle*> atList;
+              atList = it->second;
+
+              for (std::vector<Particle*>::iterator itv = atList.begin();
+                    itv != atList.end(); ++itv) {
+                  Particle &at = **itv;
+
+                  //std::cout << " updating position for AT part " << at.id() << " (" << at.position() << ") ";
+
+                  at.position()[coord] = at.position()[coord] - moved;
+                  //getSystem()->bc->foldCoordinate(at.position(), at.image(), coord);
+
+                  //std::cout << "to (" << at.position() << ")\n";
+              }
+          }
+          else {
+              std::cout << getSystem()->comm->rank() << ": foldAdrPartCoor "
+                      << "VP particle "<< part.id() << "-" << part.ghost() << " not found in tuples!\n";
+              exit(1);
+              return;
+          }
+      }
+  }
+  */
+
   void DomainDecompositionAdress::packForces(OutBuffer &buf, Cell &_ghosts) {
 
     ParticleList &ghosts = _ghosts.particles;
@@ -690,6 +727,18 @@ namespace espresso {
       }
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
   bool DomainDecompositionAdress::
   appendParticles(ParticleList &l, int dir) {
     bool outlier = false;
@@ -784,10 +833,8 @@ namespace espresso {
                         // isnan function is C99 only, x != x is only true if x == nan
                         if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2]) {
                             // TODO: error handling
-                            std::stringstream ss;
-                            ss << "Particle " << part.id() << " has moved to outer space (one or more coordinates are nan)";
-                            LOG4ESPP_ERROR(logger, ss.str());
-                            throw std::runtime_error(ss.str());
+                            LOG4ESPP_ERROR(logger, "particle " << part.id() <<
+                                    " has moved to outer space (one or more coordinates are nan)");
                         } else {
                             // particle stays where it is, and will be sorted in the next round
                             finished = false;
@@ -1115,6 +1162,7 @@ namespace espresso {
   }
 
 
+
   class PyDomainDecompositionAdress : public DomainDecompositionAdress {
       public:
         PyDomainDecompositionAdress(shared_ptr< System > _system,
@@ -1141,5 +1189,10 @@ namespace espresso {
   .def("cellAdjust", &DomainDecompositionAdress::cellAdjust)
   ;
   }
+
+
+
+ 
+
   }
 }

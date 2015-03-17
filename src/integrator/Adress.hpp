@@ -55,12 +55,7 @@ namespace espresso {
         real dexdhy;
         real dexdhy2;
         
-        Adress(shared_ptr<System> _system,
-          shared_ptr<VerletListAdress> _verletList,
-          shared_ptr<FixedTupleListAdress> _fixedtupleList,
-          bool _KTI = false,
-          real static_weight = -1.0
-        );
+        Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI = false);
 
         ~Adress();
         
@@ -69,13 +64,14 @@ namespace espresso {
 
       private:
 
-        boost::signals2::connection _SetPosVel, _initForces, _integrate1, _integrate2, _recalc2, _befIntV;  //_aftCalcF;
+        boost::signals2::connection _SetPosVel, _initForces, _integrate1, _inIntP, _integrate2, _recalc2, _befIntV;  //_aftCalcF;
         
         void integrate1(real&);
         void initForces();
         void SetPosVel();
         void integrate2();
         void aftCalcF();
+        void communicateAdrPositions();
 
         void connect();
         void disconnect();
@@ -83,8 +79,6 @@ namespace espresso {
         real weight(real);
         real weightderivative(real);
 
-        real static_weight_;
-        bool has_static_weight_;
       };
 
   }

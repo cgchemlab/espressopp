@@ -94,7 +94,10 @@ namespace espresso {
       LennardJonesAutoBonds::registerPython();
       LennardJonesCapped::registerPython();
       LennardJonesEnergyCapped::registerPython();
+<<<<<<< HEAD
       LennardJonesForceCapped::registerPython();
+=======
+>>>>>>> upstream/master
       LennardJonesExpand::registerPython();
       LennardJonesGromacs::registerPython();
       LennardJonesGeneric::registerPython();
