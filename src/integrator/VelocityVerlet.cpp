@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-
+  
   This file is part of ESPResSo++.
-
+  
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-
+  
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-
+  
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
 //#include <iomanip>
@@ -51,9 +51,6 @@ namespace espresso {
       LOG4ESPP_INFO(theLogger, "construct VelocityVerlet");
       resortFlag = true;
       maxDist    = 0.0;
-      timeIntegrate.reset();
-      resetTimers();
-      System& sys = getSystemRef();
     }
 
     VelocityVerlet::~VelocityVerlet()
@@ -66,29 +63,14 @@ namespace espresso {
       VT_TRACER("run");
       int nResorts = 0;
       real time;
-<<<<<<< HEAD
-=======
       timeIntegrate.reset();
       resetTimers();
->>>>>>> upstream/master
       System& system = getSystemRef();
       storage::Storage& storage = *system.storage;
       real skinHalf = 0.5 * system.getSkin();
 
-      // Prepare the force comp timers if the size is not valid.
-      const InteractionList& srIL = system.shortRangeInteractions;
-      if (timeForceComp.size() < srIL.size()) {
-        LOG4ESPP_DEBUG(theLogger, "Prepare timeForceComp");
-        timeForceComp.clear();
-        for (size_t i = 0; i < srIL.size(); i++) {
-          timeForceComp.push_back(0.0);
-        }
-      }
-
-      time = timeIntegrate.getElapsedTime();
       // signal
       runInit();
-      timeRunInitS += timeIntegrate.getElapsedTime() - time;
 
       // Before start make sure that particles are on the right processor
       if (resortFlag) {
@@ -106,33 +88,29 @@ namespace espresso {
       if (recalcForces) {
         LOG4ESPP_INFO(theLogger, "recalc forces before starting main integration loop");
 
-        time = timeIntegrate.getElapsedTime();
         // signal
         recalc1();
-        timeRecalc1S += timeIntegrate.getElapsedTime() - time;
 
         updateForces();
         if (LOG4ESPP_DEBUG_ON(theLogger)) {
             // printForces(false);   // forces are reduced to real particles
         }
 
-        time = timeIntegrate.getElapsedTime();
         // signal
         recalc2();
-        timeRecalc2S += timeIntegrate.getElapsedTime() - time;
       }
 
       LOG4ESPP_INFO(theLogger, "starting main integration loop (nsteps=" << nsteps << ")");
-
+  
       for (int i = 0; i < nsteps; i++) {
         LOG4ESPP_INFO(theLogger, "Next step " << i << " of " << nsteps << " starts");
 
         //saveOldPos(); // save particle positions needed for constraints
-        time = timeIntegrate.getElapsedTime();
+
         // signal
         befIntP();
-        timeBefIntPS += timeIntegrate.getElapsedTime() - time;
 
+        time = timeIntegrate.getElapsedTime();
         LOG4ESPP_INFO(theLogger, "updating positions and velocities")
         maxDist += integrate1();
         timeInt1 += timeIntegrate.getElapsedTime() - time;
@@ -143,16 +121,14 @@ namespace espresso {
           cout<<"WARNING!!!!!! huge jump: "<<maxDist<<endl;
           exit(1);
         }*/
-
-        time = timeIntegrate.getElapsedTime();
+        
         // signal
         aftIntP();
-        timeAftIntPS += timeIntegrate.getElapsedTime() - time;
 
         LOG4ESPP_INFO(theLogger, "maxDist = " << maxDist << ", skin/2 = " << skinHalf);
 
         if (maxDist > skinHalf) resortFlag = true;
-
+        
         if (resortFlag) {
             VT_TRACER("resort1");
             time = timeIntegrate.getElapsedTime();
@@ -167,26 +143,17 @@ namespace espresso {
         LOG4ESPP_INFO(theLogger, "updating forces")
         updateForces();
 
-        timeIntegrate.startMeasure();
         // signal
         befIntV();
-        timeBefIntVS += timeIntegrate.stopMeasure();
 
         time = timeIntegrate.getElapsedTime();
         integrate2();
         timeInt2 += timeIntegrate.getElapsedTime() - time;
 
-        timeIntegrate.startMeasure();
         // signal
         aftIntV();
-        timeAftIntVS += timeIntegrate.stopMeasure();
       }
 
-      timeRun = timeIntegrate.getElapsedTime();
-      timeLost = timeRun - (timeComm1 + timeComm2 + timeInt1 + timeInt2 + timeResort);
-      // Substract the timeForceComp.
-      for (int i =0; i < timeForceComp.size(); i++)
-        timeLost -= timeForceComp[i];
       timeRun = timeIntegrate.getElapsedTime();
       timeLost = timeRun - (timeForceComp[0] + timeForceComp[1] + timeForceComp[2] +
                  timeComm1 + timeComm2 + timeInt1 + timeInt2 + timeResort);
@@ -196,25 +163,44 @@ namespace espresso {
 
     void VelocityVerlet::resetTimers() {
       timeForce  = 0.0;
-
+      for(int i = 0; i < 100; i++)
+        timeForceComp[i] = 0.0;
       timeComm1  = 0.0;
       timeComm2  = 0.0;
       timeInt1   = 0.0;
       timeInt2   = 0.0;
       timeResort = 0.0;
-
-      // Reset signal timers.
-      timeRunInitS = 0.0;
-      timeRecalc1S = 0.0;
-      timeRecalc2S = 0.0;
-      timeBefIntPS = 0.0;
-      timeAftIntPS = 0.0;
-      timeAftInitFS = 0.0;
-      timeAftCalcFS = 0.0;
-      timeBefIntVS = 0.0;
-      timeAftIntVS = 0.0;
     }
 
+    using namespace boost::python;
+
+    static object wrapGetTimers(class VelocityVerlet* obj) {
+      real tms[10];
+      obj->loadTimers(tms);
+      return make_tuple(tms[0],
+                        tms[1],
+                        tms[2],
+                        tms[3],
+                        tms[4],
+                        tms[5],
+                        tms[6],
+                        tms[7],
+                        tms[8],
+                        tms[9]);
+    }
+
+    void VelocityVerlet::loadTimers(real t[10]) {
+      t[0] = timeRun;
+      t[1] = timeForceComp[0];
+      t[2] = timeForceComp[1];
+      t[3] = timeForceComp[2];
+      t[4] = timeComm1;
+      t[5] = timeComm2;
+      t[6] = timeInt1;
+      t[7] = timeInt2;
+      t[8] = timeResort;
+      t[9] = timeLost;
+    }
 
     void VelocityVerlet::printTimers() {
 
@@ -244,38 +230,6 @@ namespace espresso {
       cout << endl;
     }
 
-    void VelocityVerlet::loadTimers(std::vector<real> &return_vector) {
-
-      return_vector.push_back(timeRun);
-      for (int i = 0; i < timeForceComp.size(); i++)
-        return_vector.push_back(timeForceComp[i]);
-
-      // signal timers.
-      return_vector.push_back(
-          timeRunInitS + timeRecalc1S + timeRecalc2S + timeBefIntPS +
-          timeAftIntPS + timeAftCalcFS + timeBefIntVS + timeAftIntVS
-          );
-
-      return_vector.push_back(timeComm1);
-      return_vector.push_back(timeComm2);
-      return_vector.push_back(timeInt1);
-      return_vector.push_back(timeInt2);
-      return_vector.push_back(timeResort);
-      return_vector.push_back(timeLost);
-    }
-
-    static boost::python::object wrapGetTimers(class VelocityVerlet* obj) {
-      std::vector<real> timers;
-      obj->loadTimers(timers);
-
-      boost::python::list return_list;
-      for (int i = 0; i < timers.size(); i++) {
-        return_list.append(timers[i]);
-      }
-      return return_list;
-    }
-
-
     real VelocityVerlet::integrate1()
     {
       System& system = getSystemRef();
@@ -287,9 +241,9 @@ namespace espresso {
       for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
         real sqDist = 0.0;
         LOG4ESPP_INFO(theLogger, "updating first half step of velocities and full step of positions")
-        LOG4ESPP_DEBUG(theLogger, "Particle " << cit->id() <<
+        LOG4ESPP_DEBUG(theLogger, "Particle " << cit->id() << 
                 ", pos = " << cit->position() <<
-                ", v = " << cit->velocity() <<
+                ", v = " << cit->velocity() << 
                 ", f = " << cit->force());
 
         /* more precise for DEBUG:
@@ -301,7 +255,7 @@ namespace espresso {
 
         real dtfm = 0.5 * dt / cit->mass();
 
-        // Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t)
+        // Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t) 
         cit->velocity() += dtfm * cit->force();
 
         // Propagate positions (only NVT): p(t + dt) = p(t) + dt * v(t+0.5*dt) 
@@ -354,16 +308,15 @@ namespace espresso {
 
       initForces();
 
-      timeIntegrate.startMeasure();
       // signal
       aftInitF();
-      timeAftInitFS += timeIntegrate.stopMeasure();
 
       System& sys = getSystemRef();
       const InteractionList& srIL = sys.shortRangeInteractions;
-      real time;
+
       for (size_t i = 0; i < srIL.size(); i++) {
-        LOG4ESPP_INFO(theLogger, "compute forces for srIL " << i << " of " << srIL.size());
+	    LOG4ESPP_INFO(theLogger, "compute forces for srIL " << i << " of " << srIL.size());
+        real time;
         time = timeIntegrate.getElapsedTime();
         srIL[i]->addForces();
         timeForceComp[i] += timeIntegrate.getElapsedTime() - time;
@@ -376,7 +329,7 @@ namespace espresso {
       real time;
       storage::Storage& storage = *getSystemRef().storage;
       time = timeIntegrate.getElapsedTime();
-      {
+      { 
         VT_TRACER("commF");
         storage.updateGhosts();
       }
@@ -391,10 +344,8 @@ namespace espresso {
       }
       timeComm2 += timeIntegrate.getElapsedTime() - time;
 
-      timeIntegrate.startMeasure();
       // signal
       aftCalcF();
-      timeAftCalcFS += timeIntegrate.stopMeasure();
     }
 
     void VelocityVerlet::initForces()
