@@ -45,7 +45,7 @@
 
 #include "boost/signals2.hpp"
 
-namespace espresso {
+namespace espressopp {
 namespace integrator {
 
 /** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
@@ -288,7 +288,7 @@ class ChemicalReaction : public Extension {
   shared_ptr<real> dt_;  //!< Timestep from the integrator.
 
   shared_ptr<storage::DomainDecomposition> domdec_;
-  shared_ptr<espresso::interaction::Potential> potential_;
+  shared_ptr<espressopp::interaction::Potential> potential_;
   shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
   shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
   shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
@@ -307,6 +307,6 @@ class ChemicalReaction : public Extension {
 
 }
   // namespace integrator
-} // namespace espresso
+} // namespace espressopp
 
 #endif

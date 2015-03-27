@@ -2,34 +2,34 @@
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-#  
+#
 #  This file is part of ESPResSo++.
-#  
+#
 #  ESPResSo++ is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  ESPResSo++ is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """
 *************************************************
-**espresso.interaction.LennardJonesForceCapped**
+**espressopp.interaction.LennardJonesForceCapped**
 *************************************************
 
 """
 from espresso import pmi, infinity
-from espresso.esutil import *
+from espressopp.esutil import *
 
-from espresso.interaction.Potential import *
-from espresso.interaction.Interaction import *
+from espressopp.interaction.Potential import *
+from espressopp.interaction.Interaction import *
 from _espresso import interaction_LennardJonesForceCapped, \
                       interaction_VerletListLennardJonesForceCapped, \
                       interaction_VerletListAdressLennardJonesForceCapped, \
@@ -39,7 +39,7 @@ from _espresso import interaction_LennardJonesForceCapped, \
 
 class LennardJonesForceCappedLocal(PotentialLocal, interaction_LennardJonesForceCapped):
     'The (local) Lennard-Jones potential with energy capping.'
-    def __init__(self, epsilon=1.0, sigma=1.0, 
+    def __init__(self, epsilon=1.0, sigma=1.0,
                  cutoff=infinity, max_force=0.0 ,shift="auto"):
         """Initialize the local Lennard Jones object."""
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -85,7 +85,7 @@ class VerletListAdressLennardJonesForceCappedLocal(InteractionLocal, interaction
     def getPotentialCG(self, type1, type2):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getPotentialCG(self, type1, type2)
-        
+
 class VerletListHadressLennardJonesForceCappedLocal(InteractionLocal, interaction_VerletListHadressLennardJonesForceCapped):
     'The (local) Lennard Jones interaction using Verlet lists.'
     def __init__(self, vl, fixedtupleList):
@@ -113,7 +113,7 @@ class CellListLennardJonesForceCappedLocal(InteractionLocal, interaction_CellLis
     def __init__(self, stor):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, interaction_CellListLennardJonesForceCapped, stor)
-        
+
     def setPotential(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotential(self, type1, type2, potential)
@@ -127,7 +127,7 @@ class FixedPairListLennardJonesForceCappedLocal(InteractionLocal, interaction_Fi
     def __init__(self, system, vl, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, interaction_FixedPairListLennardJonesForceCapped, system, vl, potential)
-        
+
     def setPotential(self, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotential(self, potential)
@@ -140,41 +140,41 @@ if pmi.isController:
     class LennardJonesForceCapped(Potential):
         'The Lennard-Jones potential.'
         pmiproxydefs = dict(
-            cls = 'espresso.interaction.LennardJonesForceCappedLocal',
+            cls = 'espressopp.interaction.LennardJonesForceCappedLocal',
             pmiproperty = ['epsilon', 'sigma', 'cutoff', 'max_force']
             )
 
     class VerletListLennardJonesForceCapped(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espresso.interaction.VerletListLennardJonesForceCappedLocal',
+            cls =  'espressopp.interaction.VerletListLennardJonesForceCappedLocal',
             pmicall = ['setPotential', 'getPotential']
             )
 
     class VerletListAdressLennardJonesForceCapped(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espresso.interaction.VerletListAdressLennardJonesForceCappedLocal',
+            cls =  'espressopp.interaction.VerletListAdressLennardJonesForceCappedLocal',
             pmicall = ['setPotentialAT', 'setPotentialCG', 'getPotentialAT', 'getPotentialCG']
             )
-            
+
     class VerletListHadressLennardJonesForceCapped(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espresso.interaction.VerletListHadressLennardJonesForceCappedLocal',
+            cls =  'espressopp.interaction.VerletListHadressLennardJonesForceCappedLocal',
             pmicall = ['setPotentialAT', 'setPotentialCG', 'getPotentialAT', 'getPotentialCG']
             )
 
     class CellListLennardJonesForceCapped(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espresso.interaction.CellListLennardJonesForceCappedLocal',
+            cls =  'espressopp.interaction.CellListLennardJonesForceCappedLocal',
             pmicall = ['setPotential', 'getPotential']
             )
-        
+
     class FixedPairListLennardJonesForceCapped(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espresso.interaction.FixedPairListLennardJonesForceCappedLocal',
+            cls =  'espressopp.interaction.FixedPairListLennardJonesForceCappedLocal',
             pmicall = ['setPotential']
             )

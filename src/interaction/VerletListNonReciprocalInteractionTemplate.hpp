@@ -49,7 +49,7 @@
  * Warning: This potential violate third Newton law and can produce unwanted results.
  */
 
-namespace espresso {
+namespace espressopp {
 namespace interaction {
 template < typename _Potential >
 class VerletListNonReciprocalInteractionTemplate: public Interaction {
@@ -177,5 +177,5 @@ inline real VerletListNonReciprocalInteractionTemplate< _Potential >::getMaxCuto
 }
 
 }  // namespace interaction
-}  // namespace espresso
+}  // namespace espressopp
 #endif

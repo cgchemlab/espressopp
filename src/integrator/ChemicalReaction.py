@@ -59,7 +59,7 @@ Example
 
 **Creating the integrator extension**
 
->>> ar = espresso.integrator.ChemicalReaction(
+>>> ar = espressopp.integrator.ChemicalReaction(
 >>>     system,
 >>>     verletList,
 >>>     fpl_a_b,
@@ -68,7 +68,7 @@ Example
 
 **Creates synthesis reaction**
 
->>> r_type_1 = espresso.integrator.SynthesisReaction(
+>>> r_type_1 = espressopp.integrator.SynthesisReaction(
 >>>     type_a=ar_type_M,
 >>>     type_b=ar_type_B,
 >>>     delta_a=1,
@@ -92,10 +92,10 @@ Add the extension to the integrator
 """
 
 
-from espresso.esutil import cxxinit
+from espressopp.esutil import cxxinit
 from espresso import pmi
 
-from espresso.integrator.Extension import *  # NOQA
+from espressopp.integrator.Extension import *  # NOQA
 from _espresso import integrator_ChemicalReaction
 from _espresso import integrator_Reaction
 from _espresso import integrator_SynthesisReaction
@@ -110,7 +110,7 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
         """Chemical reaction extension.
 
         Args:
-          system: The espresso.System object.
+          system: The espressopp.System object.
           vl: The verlet list.
           fpl: The fixed pair list that will hold new bonds.
           domdec: The domain decomposition object.
@@ -189,7 +189,7 @@ if pmi.isController:
     class ChemicalReaction(Extension):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espresso.integrator.ChemicalReactionLocal',
+            cls='espressopp.integrator.ChemicalReactionLocal',
             pmiproperty=('interval',),
             pmicall=(
                 'add_reaction',
@@ -200,14 +200,14 @@ if pmi.isController:
     class PostProcessChangesProperty:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espresso.integrator.PostProcessChangesPropertyLocal',
+            cls='espressopp.integrator.PostProcessChangesPropertyLocal',
             pmicall=('add_change_property', 'remove_change_property')
         )
 
     class SynthesisReaction:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espresso.integrator.SynthesisReactionLocal',
+            cls='espressopp.integrator.SynthesisReactionLocal',
             pmicall=(
                 'add_postprocess'
             ),

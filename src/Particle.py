@@ -21,17 +21,16 @@
 
 """
 *********************
-**espresso.Particle**
+**espressopp.Particle**
 *********************
 
 """
-import _espresso
-from espresso.esutil import cxxinit
+import _espressopp
 import esutil
 import pmi
-from espresso import toReal3DFromVector, toInt3DFromVector
+from espressopp import toReal3DFromVector, toInt3DFromVector
 import mpi4py.MPI as MPI
-from espresso.Exceptions import ParticleDoesNotExistHere
+from espressopp.Exceptions import ParticleDoesNotExistHere
 
 # Controller Particle:
 # * requests are directly forwarded
@@ -179,11 +178,11 @@ class ParticleLocal(object):
         return (tmp is not None)
 
 
-class ParticlePropertiesLocal(_espresso.ParticleProperties):
+class ParticlePropertiesLocal(_espressopp.ParticleProperties):
     def __init__(self, type, mass, q):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self, _espresso.ParticleProperties)
+            cxxinit(self, _espressopp.ParticleProperties)
             self.cxxclass.init(self)
             self.type = type
             self.mass = mass
@@ -194,7 +193,7 @@ if pmi.isController:
     class ParticleProperties(object):
       __metaclass__ = pmi.Proxy
       pmiproxydefs = dict(
-          cls='espresso.ParticlePropertiesLocal',
+          cls='espressopp.ParticlePropertiesLocal',
           pmiproperty=[
               'type',
               'mass',
@@ -207,8 +206,8 @@ if pmi.isController:
     class Particle(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espresso.ParticleLocal',
-            pmiproperty=[ "id", "storage" ]
+            cls = 'espressopp.ParticleLocal',
+            pmiproperty = [ "id", "storage" ]
             )
 
         @property

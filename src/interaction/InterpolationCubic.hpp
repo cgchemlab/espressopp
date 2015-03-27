@@ -28,7 +28,7 @@
 
 
 
-namespace espresso {
+namespace espressopp {
     namespace interaction {
         class InterpolationCubic: public InterpolationTemplate <InterpolationCubic> {
             public:
@@ -117,7 +117,7 @@ namespace espresso {
         
         
     }//ns interaction
-}//ns espresso
+}//ns espressopp
 
 
 

@@ -23,8 +23,10 @@
 #include <python.hpp>
 #include "Particle.hpp"
 
-namespace espresso {
-  void Particle::registerPython() {
+namespace espressopp {
+  void 
+  Particle::
+  registerPython() {
     using namespace python;
     class_< Particle >("_TmpParticle", no_init)
       .add_property("id", &Particle::getId)

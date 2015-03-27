@@ -80,7 +80,7 @@
 #include "PotentialVSpherePair.hpp"
 #include "SingleParticlePotential.hpp"
 
-namespace espresso {
+namespace espressopp {
   namespace interaction {
     void registerPython() {
       Interaction::registerPython();

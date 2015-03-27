@@ -1,1 +1,14 @@
 *.pyc
+COPYING
+INSTALL
+ESPRC
+espressopp
+src/acconfig.hpp
+src/gitversion.hpp
+build
+CMakeFiles
+cmake_install.cmake
+CMakeCache.txt
+CPack*.cmake
+install_manifest.txt
+doc/dg/html/

@@ -42,9 +42,9 @@
 #include "storage/DomainDecomposition.hpp"
 
 #include "boost/make_shared.hpp"
-#include "../../../../../../../../usr/include/boost/noncopyable.hpp"
+//#include "../../../../../../../../usr/include/boost/noncopyable.hpp"
 
-namespace espresso {
+namespace espressopp {
 namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
@@ -95,7 +95,7 @@ bool Reaction::PostProcess(Particle &pA, Particle &pB) {
 
 
 void Reaction::registerPython() {
-  using namespace espresso::python; //NOLINT
+  using namespace espressopp::python; //NOLINT
   class_<Reaction, shared_ptr<integrator::Reaction>, boost::noncopyable>
     ("integrator_Reaction", no_init)
       .add_property("type_a", &Reaction::type_a, &Reaction::set_type_a)
@@ -116,7 +116,7 @@ void Reaction::registerPython() {
 
 
 void SynthesisReaction::registerPython() {
-  using namespace espresso::python; //NOLINT
+  using namespace espressopp::python; //NOLINT
   class_<SynthesisReaction, bases<integrator::Reaction>,
          boost::shared_ptr<integrator::SynthesisReaction> >
       ("integrator_SynthesisReaction",
@@ -125,7 +125,7 @@ void SynthesisReaction::registerPython() {
 
 
 void PostProcess::registerPython() {
-  using namespace espresso::python;  //NOLINT
+  using namespace espressopp::python;  //NOLINT
   class_<PostProcess, shared_ptr<integrator::PostProcess>, boost::noncopyable>
   ("integrator_PostProcess", no_init)
       .def("__call__", pure_virtual(&PostProcess::operator()));
@@ -133,7 +133,8 @@ void PostProcess::registerPython() {
 
 
 void PostProcessChangesProperty::registerPython() {
-  using namespace espresso::python;  //NOLINT
+  using namespace espressopp::python;  //NOLINT
+
   class_<PostProcessChangesProperty, bases<integrator::PostProcess>,
       boost::shared_ptr<integrator::PostProcessChangesProperty> >
   ("integrator_PostProcessChangesProperty", init<>())
@@ -752,7 +753,7 @@ void ChemicalReaction::connect() {
  ** REGISTRATION WITH PYTHON
  ****************************************************/
 void ChemicalReaction::registerPython() {
-  using namespace espresso::python; //NOLINT
+  using namespace espressopp::python; //NOLINT
   class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >(
       "integrator_ChemicalReaction",
       init<shared_ptr<System>, shared_ptr<VerletList>,
@@ -767,5 +768,5 @@ void ChemicalReaction::registerPython() {
           &ChemicalReaction::set_interval);
   }
 }  // namespace integrator
-}  // namespace espresso
+}  // namespace espressopp
 
