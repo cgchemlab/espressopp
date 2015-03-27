@@ -26,7 +26,7 @@
 
 """
 import _espressopp
-import esutil
+from espressopp.esutil import cxxinit
 import pmi
 from espressopp import toReal3DFromVector, toInt3DFromVector
 import mpi4py.MPI as MPI
@@ -143,8 +143,8 @@ class ParticleLocal(object):
     @property
     def drift_f(self): return self.__getTmp().drift_f
     @isGhost.setter
-    def drift_f(self, val): self.__getTmp().drift_f = val       
-    
+    def drift_f(self, val): self.__getTmp().drift_f = val
+
     @property
     def lambda_adrd(self): return self.__getTmp().lambda_adrd
     @isGhost.setter
@@ -178,13 +178,13 @@ class ParticleLocal(object):
         return (tmp is not None)
 
 
-class ParticlePropertiesLocal(_espressopp.ParticleProperties):
+class ParticlePropertiesLocal(_espressopp._ParticleProperties):
     def __init__(self, type, mass, q):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self, _espressopp.ParticleProperties)
+            cxxinit(self, _espressopp._ParticleProperties)
             self.cxxclass.init(self)
-            self.type = type
+            self.type = int(type)
             self.mass = mass
             self.q = q
 
@@ -198,11 +198,9 @@ if pmi.isController:
               'type',
               'mass',
               'q',
-              'state',
-              'res_id'
               ]
           )
-    
+
     class Particle(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(

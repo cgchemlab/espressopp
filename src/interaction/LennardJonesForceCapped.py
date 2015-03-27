@@ -25,17 +25,17 @@
 *************************************************
 
 """
-from espresso import pmi, infinity
+from espressopp import pmi, infinity
 from espressopp.esutil import *
 
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
-from _espresso import interaction_LennardJonesForceCapped, \
-                      interaction_VerletListLennardJonesForceCapped, \
-                      interaction_VerletListAdressLennardJonesForceCapped, \
-                      interaction_VerletListHadressLennardJonesForceCapped, \
-                      interaction_CellListLennardJonesForceCapped, \
-                      interaction_FixedPairListLennardJonesForceCapped
+from _espressopp import interaction_LennardJonesForceCapped, \
+                        interaction_VerletListLennardJonesForceCapped, \
+                        interaction_VerletListAdressLennardJonesForceCapped, \
+                        interaction_VerletListHadressLennardJonesForceCapped, \
+                        interaction_CellListLennardJonesForceCapped, \
+                        interaction_FixedPairListLennardJonesForceCapped
 
 class LennardJonesForceCappedLocal(PotentialLocal, interaction_LennardJonesForceCapped):
     'The (local) Lennard-Jones potential with energy capping.'

@@ -42,7 +42,6 @@
 #include "storage/DomainDecomposition.hpp"
 
 #include "boost/make_shared.hpp"
-//#include "../../../../../../../../usr/include/boost/noncopyable.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -120,7 +119,8 @@ void SynthesisReaction::registerPython() {
   class_<SynthesisReaction, bases<integrator::Reaction>,
          boost::shared_ptr<integrator::SynthesisReaction> >
       ("integrator_SynthesisReaction",
-       init<int, int, int, int, int, int, int, int, real, real, bool>());
+       init<int, int, int, int, int, int, int, int, real, real, bool>())
+      .def("add_postprocess", &SynthesisReaction::AddPostProcess);
 }
 
 

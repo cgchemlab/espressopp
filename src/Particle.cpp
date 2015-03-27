@@ -52,31 +52,31 @@ namespace espressopp {
 
   void ParticleProperties::registerPython() {
     using namespace python;
-    class_< ParticleProperties, boost::shared_ptr<ParticleProperties> >("ParticleProperties")
-        .add_property(
-            "type",
-            make_getter(&ParticleProperties::type),
-            make_setter(&ParticleProperties::type))
-        .add_property(
-            "mass",
-            make_getter(&ParticleProperties::mass),
-            make_setter(&ParticleProperties::mass))
-        .add_property(
-            "q",
-            make_getter(&ParticleProperties::q),
-            make_setter(&ParticleProperties::q))
-        .add_property(
-            "state",
-            make_getter(&ParticleProperties::state),
-            make_setter(&ParticleProperties::state))
-        .add_property(
-            "res_id",
-            make_getter(&ParticleProperties::res_id),
-            make_setter(&ParticleProperties::res_id)
-            )
-        .def(
-            "init",
-            &ParticleProperties::init
-        );
+    class_<ParticleProperties,
+        boost::shared_ptr<ParticleProperties> >("_ParticleProperties")
+      .add_property(
+          "type",
+          make_getter(&ParticleProperties::type),
+          make_setter(&ParticleProperties::type))
+      .add_property(
+          "mass",
+          make_getter(&ParticleProperties::mass),
+          make_setter(&ParticleProperties::mass))
+      .add_property(
+          "q",
+          make_getter(&ParticleProperties::q),
+          make_setter(&ParticleProperties::q))
+      .add_property(
+          "state",
+          make_getter(&ParticleProperties::state),
+          make_setter(&ParticleProperties::state))
+      .add_property(
+          "res_id",
+          make_getter(&ParticleProperties::res_id),
+          make_setter(&ParticleProperties::res_id))
+      .def(
+          "init",
+          &ParticleProperties::init
+      );
   }
 }

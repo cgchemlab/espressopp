@@ -93,15 +93,15 @@ Add the extension to the integrator
 
 
 from espressopp.esutil import cxxinit
-from espresso import pmi
+from espressopp import pmi
 
 from espressopp.integrator.Extension import *  # NOQA
-from _espresso import integrator_ChemicalReaction
-from _espresso import integrator_Reaction
-from _espresso import integrator_SynthesisReaction
+from _espressopp import integrator_ChemicalReaction
+from _espressopp import integrator_Reaction
+from _espressopp import integrator_SynthesisReaction
 
-from _espresso import integrator_PostProcess
-from _espresso import integrator_PostProcessChangesProperty
+from _espressopp import integrator_PostProcess
+from _espressopp import integrator_PostProcessChangesProperty
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -147,15 +147,15 @@ class PostProcessChangesPropertyLocal(integrator_PostProcessChangesProperty,
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(self, integrator_PostProcessChangesProperty)
 
-    def add_change_property(self, prop):
+    def add_change_property(self, type_id, prop):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            self.cxxclass.add_change_property(self, prop)
+            self.cxxclass.add_change_property(self, type_id, prop)
 
-    def remove_change_property(self, prop_id):
+    def remove_change_property(self, type_id):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            self.cxxclass.remove_change_property(self, prop_id)
+            self.cxxclass.remove_change_property(self, type_id)
 
 
 class SynthesisReactionLocal(integrator_SynthesisReaction, integrator_Reaction):
@@ -179,6 +179,7 @@ class SynthesisReactionLocal(integrator_SynthesisReaction, integrator_Reaction):
                 rate,
                 intramolecular
             )
+
     def add_postprocess(self, post_process):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.GetMPIcpugroup()):
@@ -209,7 +210,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls='espressopp.integrator.SynthesisReactionLocal',
             pmicall=(
-                'add_postprocess'
+                'add_postprocess',
             ),
             pmiproperty=(
                 'type_a',
