@@ -25,6 +25,7 @@
 
 #include "ChemicalReaction.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <utility>
 #include <vector>
@@ -132,18 +133,18 @@ void PostProcess::registerPython() {
 }
 
 
-void PostProcessChangesProperty::registerPython() {
+void ChangesProperty::registerPython() {
   using namespace espressopp::python;  //NOLINT
 
-  class_<PostProcessChangesProperty, bases<integrator::PostProcess>,
-      boost::shared_ptr<integrator::PostProcessChangesProperty> >
-  ("integrator_PostProcessChangesProperty", init<>())
-    .def("add_change_property", &PostProcessChangesProperty::AddChangeProperty)
-    .def("remove_change_property", &PostProcessChangesProperty::RemoveChangeProperty);
+  class_<ChangesProperty, bases<integrator::PostProcess>,
+      boost::shared_ptr<integrator::ChangesProperty> >
+  ("integrator_ChangesProperty", init<>())
+    .def("add_change_property", &ChangesProperty::AddChangeProperty)
+    .def("remove_change_property", &ChangesProperty::RemoveChangeProperty);
 }
 
 /** Adds new change property definition. */
-void PostProcessChangesProperty::AddChangeProperty(
+void ChangesProperty::AddChangeProperty(
     int type_id,
     boost::shared_ptr<ParticleProperties> new_property) {
   std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
@@ -154,7 +155,7 @@ void PostProcessChangesProperty::AddChangeProperty(
 }
 
 /** Removes change property definition. */
-void PostProcessChangesProperty::RemoveChangeProperty(int type_id) {
+void ChangesProperty::RemoveChangeProperty(int type_id) {
   int remove_elements = type_properties_.erase(type_id);
   if (remove_elements == 0) {
     throw std::runtime_error("Invalid type.");
@@ -166,8 +167,8 @@ void PostProcessChangesProperty::RemoveChangeProperty(int type_id) {
  *
  * In this case method will update the properties of the particles.
  * */
-bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
-  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
+bool ChangesProperty::operator()(Particle& p1, Particle& p2) {
+  LOG4ESPP_DEBUG(theLogger, "Entering ChangesProperty::operator()");
   TypeParticlePropertiesMap::iterator it;
   // Process particle p1.
   bool modified = false;
@@ -190,10 +191,52 @@ bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
     LOG4ESPP_DEBUG(theLogger, "Modified particle B");
     LOG4ESPP_DEBUG(theLogger, p2.id());
   }
-  LOG4ESPP_DEBUG(theLogger, "Leaving PostProcessChangesProperty::operator()");
+  LOG4ESPP_DEBUG(theLogger, "Leaving ChangesProperty::operator()");
   return modified;
 }
 
+
+/** Post process the bond tuple to remove some bonds.
+ */
+bool RemoveBonds::operator()(Particle &p1, Particle &p2) {
+  int p_type_1 = p1.type();
+  int p_type_2 = p2.type();
+
+  int bond_1, bond_2;
+  bool state = false;
+
+  for (TypeBondMap::iterator t = type_fpl_.begin();
+       t != type_fpl_.end(); ++t) {
+    if ((t->first == p_type_1 && t->second.first == p_type_2) ||
+        (t->first == p_type_2 && t->second.first == p_type_1)) {
+      bond_1 = p1.id();
+      bond_2 = p2.id();
+      if (bond_1 > bond_2)
+        std::swap(bond_1, bond_2);
+
+      /// Lets remove that tuple.
+      t->second.second->remove(bond_1, bond_2);
+      state = true;
+    }
+  }
+  return state;
+}
+
+void RemoveBonds::add_bond_to_remove(int src_type, int removed_type,
+    boost::shared_ptr<FixedPairList> fpl) {
+  type_fpl_.insert(
+    std::pair<int, RemoveBonds::BondMapValue>(
+      src_type, RemoveBonds::BondMapValue(removed_type, fpl)));
+}
+
+void RemoveBonds::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_<RemoveBonds, bases<integrator::PostProcess>,
+      boost::shared_ptr<integrator::RemoveBonds> >
+  ("integrator_RemoveBonds", init<int, int, shared_ptr<FixedPairList> >())
+    .def("add_bond_to_remove", &RemoveBonds::add_bond_to_remove);
+}
 
 //**
 //**  Integrator extension.

@@ -27,6 +27,9 @@
 #ifndef _INTEGRATOR_CHEMICALREACTION_HPP
 #define _INTEGRATOR_CHEMICALREACTION_HPP
 
+#include <boost/unordered_map.hpp>
+#include <boost/signals2.hpp>
+
 #include <utility>
 #include <map>
 #include <vector>
@@ -43,13 +46,13 @@
 #include "VerletList.hpp"
 #include "interaction/Potential.hpp"
 
-#include "boost/signals2.hpp"
 
 namespace espressopp {
 namespace integrator {
 
 /** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
 typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
+// First: source particle type, second: int of target type, tuple with bond
 
 const int kCrCommTag = 0xad;
 
@@ -70,7 +73,7 @@ class PostProcess {
 };
 
 
-class PostProcessChangesProperty : public integrator::PostProcess {
+class ChangesProperty : public integrator::PostProcess {
  public:
   bool operator()(Particle& p1, Particle& p2);
   void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
@@ -83,6 +86,23 @@ class PostProcessChangesProperty : public integrator::PostProcess {
   TypeParticlePropertiesMap type_properties_;
 };
 
+
+class RemoveBonds : public integrator::PostProcess {
+ public:
+  typedef std::pair<int, boost::shared_ptr<FixedPairList> > BondMapValue;
+  typedef boost::unordered_map<int, BondMapValue> TypeBondMap;
+
+  RemoveBonds(int src_type, int removed_type, boost::shared_ptr<FixedPairList> fpl);
+  bool operator()(Particle& p1, Particle& p2);
+
+  void add_bond_to_remove(int src_type, int removed_type, boost::shared_ptr<FixedPairList> fpl);
+
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+ private:
+  TypeBondMap type_fpl_;
+};
 
 /** Abstract class for the chemical reactions. */
 class Reaction {
@@ -195,7 +215,6 @@ class Reaction {
   shared_ptr<real> dt_;  //!< timestep from the integrator
 
   std::vector<shared_ptr<integrator::PostProcess> > post_process_;
-
 };
 
 
@@ -305,8 +324,8 @@ class ChemicalReaction : public Extension {
   void disconnect();
 };
 
-}
-  // namespace integrator
-} // namespace espressopp
+
+}  // namespace integrator
+}  // namespace espressopp
 
 #endif
