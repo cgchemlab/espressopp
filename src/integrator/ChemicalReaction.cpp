@@ -470,10 +470,15 @@ void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_partic
   in_buffer_1.reset();
 
   // Fill out_buffer from the particles properties.
-  int tmp = modified_particles.size();
-  longint data_length, p_id, p_type;
+  longint data_length = modified_particles.size();
+  longint p_id, p_type;
   real p_mass, p_q;
-  out_buffer.write(tmp);
+  // Set the type of output buffer.
+  // 0 - only ghost data
+  // 1 - tuple changes and ghost data
+  out_buffer.write(0);
+  beforeSendUpdateGhost(out_buffer);
+  out_buffer.write(data_length);
   for (std::vector<Particle*>::const_iterator it = modified_particles.begin();
        it != modified_particles.end();
        ++it) {
@@ -548,9 +553,11 @@ void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_partic
       if ((direction_size == 2) && (left_right_dir == 1))
         continue;
 
-      if (left_right_dir == 0) {
+      if (leift_right_dir == 0) {
+        afterRecvUpdateGhost(in_buffer_0);
         in_buffer_0.read(data_length);
       } else {
+        afterRecvUpdateGhost(in_buffer_1);
         in_buffer_1.read(data_length);
       }
       for (longint i = 0; i < data_length; i++) {

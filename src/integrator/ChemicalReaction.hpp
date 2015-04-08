@@ -181,6 +181,7 @@ class Reaction {
 
   void AddPostProcess(const shared_ptr<integrator::PostProcess> pp) {
     post_process_.push_back(pp);
+    post_process_->connect();
   }
 
   /** Checks if the pair is valid. */
@@ -319,6 +320,9 @@ class ChemicalReaction : public Extension {
   integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
 
   ReactionList reaction_list_;  //<! Container for reactions.
+
+  boost::signals2::signal1 <void, class OutBuffer&> beforeSendUpdateGhost;
+  boost::signals2::signal1 <void, class InBuffer&> afterRecvUpdateGhost;
 
   void connect();
   void disconnect();
