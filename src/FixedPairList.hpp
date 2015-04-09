@@ -61,19 +61,7 @@ namespace espressopp {
 		\return whether the particle was inserted on this processor.
 		*/
 		virtual bool add(longint pid1, longint pid2);
-    /** Removes locally pairs from the list. Only if both pid1, pid2 are real
-     * particles. It will not work with ghost particles. */
-    bool remove(longint pid1, longint pid2) {
-      std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange = 
-        globalPairs.equal_range(pid1);
-      for (GlobalPairs::iterator it = equalRange.first; it != equalRange.second; ++it) {
-        // Remove if pid is valid.
-        if (it->second == pid2) {
-          globalPairs.erase(it);
-        }
-      }
-    }
-		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
+    		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
 		void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
 		virtual void onParticlesChanged();
 

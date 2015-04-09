@@ -41,6 +41,7 @@
 #include "DPDThermostat.hpp"
 #include "LangevinBarostat.hpp"
 #include "FixPositions.hpp"
+#include "FixDistances.hpp"
 #include "LatticeBoltzmann.hpp"
 #include "LatticeSite.hpp"
 #include "LBInit.hpp"
@@ -82,6 +83,7 @@ namespace espressopp {
       GeneralizedLangevinThermostat::registerPython();
       DPDThermostat::registerPython();
       FixPositions::registerPython();
+      FixDistances::registerPython();
       LatticeBoltzmann::registerPython();
       LBInit::registerPython();
       LBInitConstForce::registerPython();
@@ -95,12 +97,11 @@ namespace espressopp {
       Settle::registerPython();
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
-      Reaction::registerPython();  // This is base class for reaction, has to be first.
-      SynthesisReaction::registerPython();
+      Reaction::registerPython();
       ChemicalReaction::registerPython();
       PostProcess::registerPython();
-      ChangesProperty::registerPython();
-      RemoveBonds::registerPython();
+      PostProcessChangesProperty::registerPython();
+
       EmptyExtension::registerPython();
     }
   }

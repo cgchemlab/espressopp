@@ -160,6 +160,15 @@ namespace espressopp {
       return true;
   }
   
+  python::list VerletList::getExList() {
+    python::list retval;
+
+    for (VerletList::ExcludeList::iterator it = exList.begin(); it != exList.end(); ++it) {
+      retval.append(python::make_tuple(it->first, it->second));
+    }
+
+    return retval;
+  }
 
   /*-------------------------------------------------------------*/
   
@@ -187,6 +196,7 @@ namespace espressopp {
       ("VerletList", init< shared_ptr<System>, real, bool >())
       .add_property("system", &SystemAccess::getSystem)
       .add_property("builds", &VerletList::getBuilds, &VerletList::setBuilds)
+      .add_property("exList", &VerletList::getExList)
       .def("totalSize", &VerletList::totalSize)
       .def("localSize", &VerletList::localSize)
       .def("getPair", &VerletList::getPair)

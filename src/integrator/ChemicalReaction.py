@@ -68,7 +68,7 @@ Example
 
 **Creates synthesis reaction**
 
->>> r_type_1 = espressopp.integrator.SynthesisReaction(
+>>> r_type_1 = espressopp.integrator.Reaction(
 >>>     type_a=ar_type_M,
 >>>     type_b=ar_type_B,
 >>>     delta_a=1,
@@ -98,7 +98,6 @@ from espressopp import pmi
 from espressopp.integrator.Extension import *  # NOQA
 from _espressopp import integrator_ChemicalReaction
 from _espressopp import integrator_Reaction
-from _espressopp import integrator_SynthesisReaction
 
 from _espressopp import integrator_PostProcess
 from _espressopp import integrator_PostProcessChangesProperty
@@ -158,7 +157,7 @@ class PostProcessChangesPropertyLocal(integrator_PostProcessChangesProperty,
             self.cxxclass.remove_change_property(self, type_id)
 
 
-class SynthesisReactionLocal(integrator_SynthesisReaction, integrator_Reaction):
+class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
     def __init__(self, type_a, type_b, delta_a, delta_b, min_state_a, min_state_b,
                  max_state_a, max_state_b, cutoff, rate, intramolecular=False):
@@ -166,7 +165,7 @@ class SynthesisReactionLocal(integrator_SynthesisReaction, integrator_Reaction):
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(
                 self,
-                integrator_SynthesisReaction,
+                integrator_Reaction,
                 type_a,
                 type_b,
                 delta_a,
@@ -205,10 +204,10 @@ if pmi.isController:
             pmicall=('add_change_property', 'remove_change_property')
         )
 
-    class SynthesisReaction:
+    class Reaction:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.integrator.SynthesisReactionLocal',
+            cls='espressopp.integrator.ReactionLocal',
             pmicall=(
                 'add_postprocess',
             ),

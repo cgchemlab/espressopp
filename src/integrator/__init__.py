@@ -42,6 +42,7 @@ from espressopp.integrator.GeneralizedLangevinThermostat import *
 from espressopp.integrator.DPDThermostat import *
 from espressopp.integrator.LangevinBarostat import *
 from espressopp.integrator.FixPositions import *
+from espressopp.integrator.FixDistances import *
 from espressopp.integrator.LatticeBoltzmann import *
 from espressopp.integrator.LBInit import *
 from espressopp.integrator.LBInitConstForce import *

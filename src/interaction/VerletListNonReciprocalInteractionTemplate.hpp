@@ -122,7 +122,7 @@ class VerletListNonReciprocalInteractionTemplate: public Interaction {
 template < typename _Potential > inline void
 VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
   LOG4ESPP_DEBUG(_Potential::theLogger, "loop over verlet list pairs and add forces");
-
+  
   for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
@@ -133,13 +133,17 @@ VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
 
     Real3D force(0.0);
     if (potential._computeForce(force, p1, p2)) {
-      if (type1 == active_type)
+      bool stat = false;
+      if (type1 == active_type) {
         p1.force() += force;
-      else if (type2 == active_type)
+        stat = true;
+      } else if (type2 == active_type) {
         p2.force() -= force;
-
-      LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id()
-          << " id2=" << p2.id() << " force=" << force);
+        stat = true;
+      }
+      if (stat)
+        LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id()
+                       << " id2=" << p2.id() << " force=" << force);
     }
   }
 }
@@ -147,22 +151,18 @@ VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
 template <typename _Potential>
 inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialX(
     std::vector<real> &p_xx_total, int bins) {
-  LOG4ESPP_WARN(_Potential::theLogger, "Warning! computeVirialX() is not yet implemented.");
 }
 
 template <typename _Potential>
 inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w) {
-  LOG4ESPP_WARN(_Potential::theLogger, "Warning! Does not make sens to compute it.");
 }
 
 template <typename _Potential>
 inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w, real z) {
-  LOG4ESPP_WARN(_Potential::theLogger, "Warning! Does not make sens to compute it.");
 }
 
 template <typename _Potential>
 inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor *w, int n) {
-  LOG4ESPP_WARN(_Potential::theLogger, "Warning! Does not make sens to compute it.");
 }
 
 template <typename _Potential>

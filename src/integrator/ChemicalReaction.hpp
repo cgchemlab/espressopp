@@ -73,7 +73,7 @@ class PostProcess {
 };
 
 
-class ChangesProperty : public integrator::PostProcess {
+class PostProcessChangesProperty : public integrator::PostProcess {
  public:
   bool operator()(Particle& p1, Particle& p2);
   void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
@@ -87,24 +87,7 @@ class ChangesProperty : public integrator::PostProcess {
 };
 
 
-class RemoveBonds : public integrator::PostProcess {
- public:
-  typedef std::pair<int, boost::shared_ptr<FixedPairList> > BondMapValue;
-  typedef boost::unordered_map<int, BondMapValue> TypeBondMap;
-
-  RemoveBonds(int src_type, int removed_type, boost::shared_ptr<FixedPairList> fpl);
-  bool operator()(Particle& p1, Particle& p2);
-
-  void add_bond_to_remove(int src_type, int removed_type, boost::shared_ptr<FixedPairList> fpl);
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- private:
-  TypeBondMap type_fpl_;
-};
-
-/** Abstract class for the chemical reactions. */
+/** Class for the chemical reactions. */
 class Reaction {
  public:
   Reaction()
@@ -181,7 +164,6 @@ class Reaction {
 
   void AddPostProcess(const shared_ptr<integrator::PostProcess> pp) {
     post_process_.push_back(pp);
-    post_process_->connect();
   }
 
   /** Checks if the pair is valid. */
@@ -226,7 +208,6 @@ class Reaction {
  * In addtion the residue id of A molecule is transfer to B molecule so that
  * they have the same residue id. Other properties of A and B molecules remain the same.
  *
- */
 class SynthesisReaction : public integrator::Reaction {
  public:
   SynthesisReaction(int type_a, int type_b, int delta_a, int delta_b,
@@ -239,6 +220,7 @@ class SynthesisReaction : public integrator::Reaction {
 
   static void registerPython();
 };
+ */
 
 typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
@@ -320,9 +302,6 @@ class ChemicalReaction : public Extension {
   integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
 
   ReactionList reaction_list_;  //<! Container for reactions.
-
-  boost::signals2::signal1 <void, class OutBuffer&> beforeSendUpdateGhost;
-  boost::signals2::signal1 <void, class InBuffer&> afterRecvUpdateGhost;
 
   void connect();
   void disconnect();

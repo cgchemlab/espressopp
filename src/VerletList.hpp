@@ -43,7 +43,7 @@ namespace espressopp {
   class VerletList : public SystemAccess {
 
   public:
-
+    typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
     /** Build a verlet list of all particle pairs in the storage
 	whose distance is less than a given cutoff.
 
@@ -59,6 +59,8 @@ namespace espressopp {
     PairList& getPairs() { return vlPairs; }
 
     python::tuple getPair(int i);
+
+    python::list getExList();
     
     real getVerletCutoff(); // returns cutoff + skin
 
@@ -90,7 +92,7 @@ namespace espressopp {
 
     void checkPair(Particle &pt1, Particle &pt2);
     PairList vlPairs;
-    boost::unordered_set<std::pair<longint, longint> > exList; // exclusion list
+    ExcludeList exList; // exclusion list
     
     real cutsq;
     real cut;
