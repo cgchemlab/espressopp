@@ -91,31 +91,31 @@ class PostProcessChangesProperty : public integrator::PostProcess {
 class Reaction {
  public:
   Reaction()
-      : type_a_(-1),
-        type_b_(-1),
-        delta_a_(-1),
-        delta_b_(-1),
-        min_state_a_(-1),
-        min_state_b_(-1),
-        max_state_a_(-1),
-        max_state_b_(-1),
+      : type_1_(-1),
+        type_2_(-1),
+        delta_1_(-1),
+        delta_2_(-1),
+        min_state_1_(-1),
+        max_state_1_(-1),
+        min_state_2_(-1),
+        max_state_2_(-1),
         rate_(0.0),
         intramolecular_(false) {
     cutoff_ = 0.0;
     cutoff_sqr_ = 0.0;
   }
 
-  Reaction(int type_a, int type_b, int delta_a, int delta_b, int min_state_a,
-           int min_state_b, int max_state_a, int max_state_b, real cutoff,
+  Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
+           int max_state_1, int min_state_2, int max_state_2, real cutoff,
            real rate, bool intramolecular = false)
-      : type_a_(type_a),
-        type_b_(type_b),
-        delta_a_(delta_a),
-        delta_b_(delta_b),
-        min_state_a_(min_state_a),
-        min_state_b_(min_state_b),
-        max_state_a_(max_state_a),
-        max_state_b_(max_state_b),
+      : type_1_(type_1),
+        type_2_(type_2),
+        delta_1_(delta_1),
+        delta_2_(delta_2),
+        min_state_1_(min_state_1),
+        max_state_1_(max_state_1),
+        min_state_2_(min_state_2),
+        max_state_2_(max_state_2),
         rate_(rate),
         intramolecular_(intramolecular) {
     set_cutoff(cutoff);
@@ -131,29 +131,29 @@ class Reaction {
   }
   real cutoff() { return cutoff_; }
 
-  void set_type_a(int type_a) { type_a_ = type_a; }
-  int type_a() { return type_a_; }
+  void set_type_1(int type_1) { type_1_ = type_1; }
+  int type_1() { return type_1_; }
 
-  void set_type_b(int type_b) { type_b_ = type_b; }
-  int type_b() { return type_b_; }
+  void set_type_2(int type_2) { type_2_ = type_2; }
+  int type_2() { return type_2_; }
 
-  void set_delta_a(int delta_a) { delta_a_ = delta_a; }
-  int delta_a() { return delta_a_; }
+  void set_delta_1(int delta_1) { delta_1_ = delta_1; }
+  int delta_1() { return delta_1_; }
 
-  void set_delta_b(int delta_b) { delta_b_ = delta_b; }
-  int delta_b() { return delta_b_; }
+  void set_delta_2(int delta_2) { delta_2_ = delta_2; }
+  int delta_2() { return delta_2_; }
 
-  void set_min_state_a(int min_state_a) { min_state_a_ = min_state_a; }
-  int min_state_a() { return min_state_a_; }
+  void set_min_state_1(int min_state_1) { min_state_1_ = min_state_1; }
+  int min_state_1() { return min_state_1_; }
 
-  void set_min_state_b(int min_state_b) { min_state_b_ = min_state_b; }
-  int min_state_b() { return min_state_b_; }
+  void set_min_state_2(int min_state_2) { min_state_2_ = min_state_2; }
+  int min_state_2() { return min_state_2_; }
 
-  void set_max_state_a(int max_state_a) { max_state_a_ = max_state_a; }
-  int max_state_a() { return max_state_a_; }
+  void set_max_state_1(int max_state_1) { max_state_1_ = max_state_1; }
+  int max_state_1() { return max_state_1_; }
 
-  void set_max_state_b(int max_state_b) { max_state_b_ = max_state_b; }
-  int max_state_b() { return max_state_b_; }
+  void set_max_state_2(int max_state_2) { max_state_2_ = max_state_2; }
+  int max_state_2() { return max_state_2_; }
 
   void set_intramolecular(bool intramolecular) { intramolecular_ = intramolecular; }
   bool intramolecular() { return intramolecular_; }
@@ -179,14 +179,14 @@ class Reaction {
  protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
-  int type_a_;  //!< type of reactant A
-  int type_b_;  //!< type of reactant B
-  int min_state_a_;  //!< min state of reactant A
-  int min_state_b_;  //!< min state of reactant B
-  int max_state_a_;  //!< max state of reactant A
-  int max_state_b_;  //!< max state of reactant B
-  int delta_a_;  //!< state change for reactant A
-  int delta_b_;  //!< state change for reactant B
+  int type_1_;  //!< type of reactant A
+  int type_2_;  //!< type of reactant B
+  int min_state_1_;  //!< min state of reactant A
+  int min_state_2_;  //!< min state of reactant B
+  int max_state_1_;  //!< max state of reactant A
+  int max_state_2_;  //!< max state of reactant B
+  int delta_1_;  //!< state change for reactant A
+  int delta_2_;  //!< state change for reactant B
   real rate_;  //!< reaction rate
   real cutoff_;  //!< reaction cutoff
   real cutoff_sqr_;  //!< reaction cutoff^2
@@ -210,12 +210,12 @@ class Reaction {
  *
 class SynthesisReaction : public integrator::Reaction {
  public:
-  SynthesisReaction(int type_a, int type_b, int delta_a, int delta_b,
-                    int min_state_a, int min_state_b, int max_state_a,
-                    int max_state_b, real cutoff, real rate,
+  SynthesisReaction(int type_1, int type_2, int delta_1, int delta_2,
+                    int min_state_1, int min_state_2, int max_state_1,
+                    int max_state_2, real cutoff, real rate,
                     bool intramolecular)
-      : Reaction(type_a, type_b, delta_a, delta_b, min_state_a, min_state_b,
-                 max_state_a, max_state_b, cutoff, rate, intramolecular) {
+      : Reaction(type_1, type_2, delta_1, delta_2, min_state_1, min_state_2,
+                 max_state_1, max_state_2, cutoff, rate, intramolecular) {
   }
 
   static void registerPython();
@@ -232,7 +232,7 @@ typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
  systems, either for chain growth of step growth, depending on the
  parameters.
 
- The variables type_a, type_b, min_state_a, min_state_b, max_state_a, max_state_b
+ The variables type_1, type_2, min_state_1, min_state_2, max_state_1, max_state_2
  control the particles that enter the curing reaction
  \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
  where A and B may possess additional bonds not shown.

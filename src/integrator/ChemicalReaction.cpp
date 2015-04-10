@@ -71,13 +71,13 @@ bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
 
   int p1_state = p1.state();
   int p2_state = p2.state();
-  if ((p1.type() == type_a_) && (p2.type() == type_b_)
-      && (p1_state >= min_state_a_ && p1_state < max_state_a_)
-      && (p2_state >= min_state_b_ && p2_state < max_state_b_)) {
+  if ((p1.type() == type_1_) && (p2.type() == type_2_)
+      && (p1_state >= min_state_1_ && p1_state < max_state_1_)
+      && (p2_state >= min_state_2_ && p2_state < max_state_2_)) {
     return true;
-  } else if ((p1.type() == type_b_) && (p2.type() == type_a_)
-      && (p1_state >= min_state_b_ && p1_state < max_state_b_)
-      && (p2_state >= min_state_a_ && p2_state < max_state_a_)) {
+  } else if ((p1.type() == type_2_) && (p2.type() == type_1_)
+      && (p1_state >= min_state_2_ && p1_state < max_state_2_)
+      && (p2_state >= min_state_1_ && p2_state < max_state_1_)) {
     return true;
   }
   return false;
@@ -99,14 +99,14 @@ void Reaction::registerPython() {
   class_<Reaction, shared_ptr<integrator::Reaction> >
     ("integrator_Reaction",
          init<int, int, int, int, int, int, int, int, real, real, bool>())
-      .add_property("type_a", &Reaction::type_a, &Reaction::set_type_a)
-      .add_property("type_b", &Reaction::type_b, &Reaction::set_type_b)
-      .add_property("delta_a", &Reaction::delta_a, &Reaction::set_delta_a)
-      .add_property("min_state_a", &Reaction::min_state_a, &Reaction::set_min_state_a)
-      .add_property("max_state_a", &Reaction::max_state_a, &Reaction::set_max_state_a)
-      .add_property("delta_b", &Reaction::delta_b, &Reaction::set_delta_b)
-      .add_property("min_state_b", &Reaction::min_state_b, &Reaction::set_min_state_b)
-      .add_property("max_state_b", &Reaction::max_state_b, &Reaction::set_max_state_b)
+      .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
+      .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
+      .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
+      .add_property("min_state_1", &Reaction::min_state_1, &Reaction::set_min_state_1)
+      .add_property("max_state_1", &Reaction::max_state_1, &Reaction::set_max_state_1)
+      .add_property("delta_2", &Reaction::delta_2, &Reaction::set_delta_2)
+      .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
+      .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .add_property("cutoff", &Reaction::cutoff, &Reaction::set_cutoff)
       .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
@@ -701,13 +701,13 @@ std::vector<Particle*> ChemicalReaction::ApplyAR() {
     pB = system.storage->lookupLocalParticle(it->second.first);
     if (pA != NULL && pB != NULL) {
       if (reaction->IsValidState(*pA, *pB)) {
-        if (pA->getType() == reaction->type_a()) {
-          pA->setState(pA->getState() + reaction->delta_a());
-          pB->setState(pB->getState() + reaction->delta_b());
+        if (pA->getType() == reaction->type_1()) {
+          pA->setState(pA->getState() + reaction->delta_1());
+          pB->setState(pB->getState() + reaction->delta_2());
           pB->setResId(pA->getResId());  // transfer the residue id
-        } else if (pA->getType() == reaction->type_b()) {  // This time the pA is of type_b
-          pA->setState(pA->getState() + reaction->delta_b());
-          pB->setState(pB->getState() + reaction->delta_a());
+        } else if (pA->getType() == reaction->type_2()) {  // This time the pA is of type_2
+          pA->setState(pA->getState() + reaction->delta_2());
+          pB->setState(pB->getState() + reaction->delta_1());
           pA->setResId(pB->getResId());  // transfer the residue id
         }
         // Do some postprocess modifications. Only on real particles.

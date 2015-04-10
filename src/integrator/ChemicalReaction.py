@@ -159,21 +159,21 @@ class PostProcessChangesPropertyLocal(integrator_PostProcessChangesProperty,
 
 class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
-    def __init__(self, type_a, type_b, delta_a, delta_b, min_state_a, min_state_b,
-                 max_state_a, max_state_b, cutoff, rate, intramolecular=False):
+    def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
+                 min_state_2, max_state_2, cutoff, rate, intramolecular=False):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             cxxinit(
                 self,
                 integrator_Reaction,
-                type_a,
-                type_b,
-                delta_a,
-                delta_b,
-                min_state_a,
-                min_state_b,
-                max_state_a,
-                max_state_b,
+                type_1,
+                type_2,
+                delta_1,
+                delta_2,
+                min_state_1,
+                max_state_1,
+                min_state_2,
+                max_state_2,
                 cutoff,
                 rate,
                 intramolecular
@@ -212,14 +212,14 @@ if pmi.isController:
                 'add_postprocess',
             ),
             pmiproperty=(
-                'type_a',
-                'type_b',
-                'delta_a',
-                'delta_b',
-                'min_state_a',
-                'max_state_a',
-                'min_state_b',
-                'max_state_b',
+                'type_1',
+                'type_2',
+                'delta_1',
+                'delta_2',
+                'min_state_1',
+                'max_state_1',
+                'min_state_2',
+                'max_state_2',
                 'rate',
                 'cutoff',
                 'intramolecular'
