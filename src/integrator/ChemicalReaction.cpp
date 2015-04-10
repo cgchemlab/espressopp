@@ -158,8 +158,8 @@ void PostProcessChangesProperty::RemoveChangeProperty(int type_id) {
  *
  * In this case method will update the properties of the particles.
  * */
-bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
-  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
+
+bool PostProcessChangesProperty::operator()(Particle &p1) {
   TypeParticlePropertiesMap::iterator it;
   // Process particle p1.
   bool modified = false;
@@ -172,18 +172,12 @@ bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
     LOG4ESPP_DEBUG(theLogger, "Modified particle A");
     LOG4ESPP_DEBUG(theLogger, p1.id());
   }
-  // Process particle p2.
-  it = type_properties_.find(p2.type());
-  if (it != type_properties_.end()) {
-    p2.setType(it->second->type);
-    p2.setMass(it->second->mass);
-    p2.setQ(it->second->q);
-    modified = true;
-    LOG4ESPP_DEBUG(theLogger, "Modified particle B");
-    LOG4ESPP_DEBUG(theLogger, p2.id());
-  }
-  LOG4ESPP_DEBUG(theLogger, "Leaving PostProcessChangesProperty::operator()");
   return modified;
+}
+
+bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
+  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
+  return operator()(p1) || operator()(p2);
 }
 
 

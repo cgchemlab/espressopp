@@ -23,6 +23,7 @@
 #define _INTEGRATOR_FIXDISTANCE_HPP
 
 #include <utility>
+#include <vector>
 #include "types.hpp"
 #include "logging.hpp"
 #include "Extension.hpp"
@@ -31,6 +32,7 @@
 #include "boost/unordered_map.hpp"
 #include "Real3D.hpp"
 #include "Particle.hpp"
+#include "ChemicalReaction.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -44,6 +46,10 @@ class FixDistances : public Extension {
 
   void add_triplet(longint anchor, longint target, real distance) {
     distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
+  }
+
+  void add_postprocess(const shared_ptr<integrator::PostProcessChangesProperty> pp) {
+    post_process_ = pp;
   }
 
   void restore_positions();
@@ -62,6 +68,8 @@ class FixDistances : public Extension {
   void disconnect();
 
   void onParticlesChanged();
+
+  shared_ptr<integrator::PostProcessChangesProperty> post_process_;
 
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);

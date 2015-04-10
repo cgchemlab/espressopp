@@ -76,6 +76,7 @@ class PostProcess {
 class PostProcessChangesProperty : public integrator::PostProcess {
  public:
   bool operator()(Particle& p1, Particle& p2);
+  bool operator()(Particle& p1);
   void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void RemoveChangeProperty(int type_id);
 

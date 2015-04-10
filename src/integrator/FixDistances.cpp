@@ -18,6 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <vector>
 #include "python.hpp"
 #include "FixDistances.hpp"
 
@@ -67,6 +68,7 @@ void FixDistances::connect() {
 void FixDistances::onParticlesChanged() {
   if (!has_types_)
     return;
+  std::vector<longint> affected_particles;
 
   System &system = getSystemRef();
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end();
@@ -74,8 +76,18 @@ void FixDistances::onParticlesChanged() {
     Particle *anchor = system.storage->lookupLocalParticle(it->first);
     Particle *dst = system.storage->lookupLocalParticle(it->second.first);
     if (anchor && dst) {
-      if (anchor->type() != anchor_type_ || dst->type() != target_type_)
+      if (anchor->type() != anchor_type_ || dst->type() != target_type_) {
         distance_triplets_.erase(it);
+        affected_particles.push_back(it->second.first);
+      }
+    }
+  }
+
+  if (affected_particles.size() > 0) {
+    LOG4ESPP_DEBUG(theLogger, "Affected particles " << affected_particles.size());
+    for (int i = 0; i < affected_particles.size(); i++) {
+      Particle *p1 = system.storage->lookupLocalParticle(affected_particles[i]);
+      post_process_->operator()(*p1);
     }
   }
 }
@@ -98,6 +110,7 @@ void FixDistances::restore_positions() {
       Real3D unit_trans = (1/trans.abs()) * trans;
       Real3D new_trans = dist*unit_trans;
       dst->setPos(anchor_pos + new_trans);
+      // Resets velocity.
       dst->setV(Real3D(0, 0, 0));
     }
   }
@@ -110,7 +123,8 @@ void FixDistances::registerPython() {
     .def(init<shared_ptr<System>, int, int>())
     .def("connect", &FixDistances::connect)
     .def("disconnect", &FixDistances::disconnect)
-    .def("add_triplet", &FixDistances::add_triplet);
+    .def("add_triplet", &FixDistances::add_triplet)
+    .def("add_postprocess", &FixDistances::add_postprocess);
 }
 
 }  // end namespace integrator
