@@ -47,17 +47,15 @@ namespace espressopp {
 
     void ExtAnalyze::connect(){
       // connection to end of integrator
-      _aftIntV  = integrator->aftIntV.connect( boost::bind(&ExtAnalyze::perform_action, this));
-      counter = 0;
+      _aftIntV  = integrator->aftIntV.connect( boost::bind(&ExtAnalyze::perform_action, this), boost::signals2::at_front);
     }
 
     //void ExtAnalyze::performMeasurement() {
     void ExtAnalyze::perform_action() {
       LOG4ESPP_INFO(theLogger, "performing measurement in integrator");
-      if (counter % interval == 0) {
+      if (integrator->getStep() % interval == 0) {
           particle_access->perform_action();
       }
-      counter++;
     }
 
     /****************************************************

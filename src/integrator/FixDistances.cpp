@@ -83,10 +83,11 @@ void FixDistances::onParticlesChanged() {
     }
   }
 
-  if (affected_particles.size() > 0) {
+  if (affected_particles.size() > 0 && post_process_) {
     LOG4ESPP_DEBUG(theLogger, "Affected particles " << affected_particles.size());
     for (int i = 0; i < affected_particles.size(); i++) {
       Particle *p1 = system.storage->lookupLocalParticle(affected_particles[i]);
+      LOG4ESPP_DEBUG(theLogger, "particle " << p1->id() << " ghost: " << p1->ghost());
       post_process_->operator()(*p1);
     }
   }
@@ -104,14 +105,15 @@ void FixDistances::restore_positions() {
     if (anchor != NULL && dst != NULL) {
       Real3D anchor_pos = anchor->position();
       Real3D dst_pos = dst->position();
-
       Real3D trans;
       bc.getMinimumImageVector(trans, dst_pos, anchor_pos);
       Real3D unit_trans = (1/trans.abs()) * trans;
       Real3D new_trans = dist*unit_trans;
+
       dst->setPos(anchor_pos + new_trans);
-      // Resets velocity.
-      dst->setV(Real3D(0, 0, 0));
+      // Sets the velocity of the anchor and reset the force from anchor.
+      dst->setV(anchor->velocity());
+      dst->setF((dst->mass()/anchor->mass())*anchor->force());
     }
   }
 }
@@ -121,6 +123,7 @@ void FixDistances::registerPython() {
   class_<FixDistances, shared_ptr<FixDistances>, bases<Extension> >
     ("integrator_FixDistances", init<shared_ptr<System> >())
     .def(init<shared_ptr<System>, int, int>())
+    .add_property("size", &FixDistances::size)
     .def("connect", &FixDistances::connect)
     .def("disconnect", &FixDistances::disconnect)
     .def("add_triplet", &FixDistances::add_triplet)

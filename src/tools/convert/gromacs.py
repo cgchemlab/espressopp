@@ -21,10 +21,10 @@
 
 # -*- coding: utf-8 -*-
 import math
+from collections import namedtuple
 import espressopp
 from topology_helper import *
 from operator import itemgetter # for sorting a dict
-
 
 """This Python module allows one to use GROMACS data files as the
    input to an ESPResSo++ simulation, set interactions for given
@@ -32,7 +32,27 @@ from operator import itemgetter # for sorting a dict
    ESPResSo++ tables.
    It containts functions: read(), setInteractions(), convertTable()
    """
-   
+
+GromacsSystem = namedtuple(
+    'GromacsSystem', [
+        'defaults',
+        'types',
+        'masses',
+        'charges',
+        'res_ids',
+        'atomtypeparams',
+        'bondtypes',
+        'bondtypeparams',
+        'angletypes',
+        'angletypeparams',
+        'dihedraltypes',
+        'dihedraltypeparams',
+        'exclusions',
+        'x', 'y', 'z',
+        'vx', 'vy', 'vz',
+        'Lx', 'Ly', 'Lz'
+    ])
+
 def read(gro_file, top_file="", doRegularExcl=True):
     """ Read GROMACS data files.
 
@@ -154,11 +174,13 @@ def read(gro_file, top_file="", doRegularExcl=True):
                 # sig, eps may be c6 and c12: this is specified in the defaults
                 # and converted later
                     if len(fields)==7:
-                        tmpprop={"atnum":int(fields[1]), "mass": float(fields[2]),
+                        tmpprop={
+                        "atnum":int(fields[1]), "mass": float(fields[2]),
                         "charge":float(fields[3]), "particletype":fields[4],
                         "sig":float(fields[5]), "eps":float(fields[6])}
                     else:
-                        tmpprop={"mass":float(fields[1]),
+                        tmpprop={
+                        "atname": fields[0], "mass":float(fields[1]),
                         "charge":float(fields[2]), "particletype":fields[3],
                         "sig":float(fields[4]), "eps":float(fields[5])}
                 
@@ -269,6 +291,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
               
         
         molstartindex=0 #this is the index of the first atom in the molecule being parsed
+        res_idx = 0  # index of molecule like single polymer chain.
         
         
         f.seek(0) # Now we search for bonds, angles definitions and start from the beginning of the file buffer
@@ -283,8 +306,9 @@ def read(gro_file, top_file="", doRegularExcl=True):
             # this does not what the name suggests....
             nrexcl = storeMolecules(f, molecules, mol)
             # find and store atom types
-            types,masses,charges, num_atoms_molecule = \
-            storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecule_copies)
+            types,masses,charges, num_atoms_molecule, res_ids = \
+            storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecule_copies, 
+                       res_idx)
 
             # find and store bonds
             bonds = storeBonds(f, types, bondtypes, bondtypeparams, bonds,
@@ -299,6 +323,7 @@ def read(gro_file, top_file="", doRegularExcl=True):
                                        num_atoms_molecule, num_molecule_copies, molstartindex)
 
             molstartindex+=num_molecule_copies*num_atoms_molecule
+            res_idx += num_molecule_copies
             
             
     
@@ -309,73 +334,28 @@ def read(gro_file, top_file="", doRegularExcl=True):
     # The data is packed into a touple, unpackvars contains a string which
     # tells the user which kind of data was read.
     
-    if len(defaults) != 0:
-        print "Found default values"
-        unpackvars.append("defaults")
-        params.append(defaults)
-    if len(types) != 0:
-        print "Found ", len(types), "types"
-        unpackvars.append("types")
-        params.append(types)
-    if len(masses) != 0:
-        print "Found ", len(masses), "masses"
-        unpackvars.append("masses")
-        params.append(masses)
-    if len(charges) != 0:
-        print "Found ", len(charges), "charges"
-        unpackvars.append("charges")
-        params.append(charges)
-    if len(atomtypeparams) !=0:
-        print "Found ", len(atomtypeparams), " atomtypeparameters" 
-        unpackvars.append("atomtypeparameters")
-        params.append(atomtypeparams)
-    if len(bonds) != 0:
-        print "Found ", len(bonds), " bond types"
-        unpackvars.append("bondtypes")
-        params.append(bonds)
-    if len(bondtypeparams) !=0:
-        print "Found ", len(bondtypeparams), " bondtypeparams" 
-        unpackvars.append("bondtypeparams")
-        params.append(bondtypeparams)        
-    if len(angles) != 0:
-        print "Found ", len(angles), " angle types"
-        unpackvars.append("angletypes")
-        params.append(angles)
-    if len(angletypeparams) != 0:
-        print "Found ", len(angletypeparams), " angle type parameters"
-        unpackvars.append("angletypeparams")
-        params.append(angletypeparams)      
-    if len(dihedrals) != 0:
-        unpackvars.append("dihedraltypes")
-        print "Found ", len(dihedrals), " dihedral types"
-        params.append(dihedrals)
-    if len(dihedraltypeparams) != 0:
-        print "Found ", len(dihedraltypeparams), " dihedral type parameters"
-        unpackvars.append("dihedraltypeparams")
-        params.append(dihedraltypeparams)       
-    if len(exclusions) != 0:
-        print "Found ", len(exclusions), "bond exclusions"
-        unpackvars.append("exclusions")
-        params.append(exclusions)  
-        
-    unpackvars.append("x, y, z")
-    params.extend([x, y, z])
-    print "Found Box:", [Lx, Ly, Lz]
-    if len(vx) != 0:
-        params.extend([vx, vy, vz])
-        print "Found ", len(vx), " velocities"
-        unpackvars.append("vx, vy, vz")
-        
-    params.extend([Lx, Ly, Lz])
-    unpackvars.append("Lx, Ly, Lz")
+    print 'Found default values'
+    print 'Found {} types'.format(len(types))
+    print 'Found {} masses'.format(len(masses))
+    print 'Found {} charges'.format(len(charges))
+    print 'Found {} atom type parameters'.format(len(atomtypeparams))
+    print 'Found {} bonds'.format(len(bonds))
+    print 'Found {} bond type parameters'.format(len(bondtypeparams))
+    print 'Found {} angles'.format(len(angles))
+    print 'Found {} angle type parameters'.format(len(angletypeparams))
+    print 'Found {} dihedrals'.format(len(dihedrals))
+    print 'Found {} dihedral type parameters'.format(len(dihedraltypeparams))
+    print 'Found {} bond exclusions'.format(len(exclusions))
+    print 'Found box: {}'.format([Lx, Ly, Lz])
+    print 'Found {} particles'.format(len(x))
     
-    print "USAGE: unpack as"
-    s=""
-    for i in range(len(unpackvars)):
-        s+=str(unpackvars[i])
-        if (i< len(unpackvars)-1): s+=", "
-    print s, "=gromacs.read( ... )"
-    return tuple(params)
+    gromacs_system = GromacsSystem(
+        defaults, types, masses, charges, res_ids, atomtypeparams,
+        bonds, bondtypeparams, angles, angletypeparams,
+        dihedrals, dihedraltypeparams, exclusions,
+        x, y, z, vx, vy, vz, Lz, Ly, Lz)
+
+    return gromacs_system
 
 
 def storeMolecules(f, molecules, mol=""):
@@ -398,11 +378,12 @@ def storeMolecules(f, molecules, mol=""):
     return nrexcl
 
 
-def storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecule_copies):
+def storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecule_copies, res_idx):
     line = ''
     types_tmp = []
     charge_tmp =[]
     mass_tmp=[]
+    molecule_index = []
     
     line=f.readlastline()
     while not 'atoms' in line:
@@ -436,8 +417,9 @@ def storeAtoms(f, types, atomtypes, atomtypeparams, masses, charges, num_molecul
         types.extend(types_tmp)
         charges.extend(charge_tmp)
         masses.extend(mass_tmp)
+        molecule_index.extend([res_idx+i]*num_atoms_molecule)
     
-    return types, masses, charges, num_atoms_molecule
+    return types, masses, charges, num_atoms_molecule, molecule_index
 
 def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
     num_molecule_copies, molstartindex, exclusions, nregxcl, doRegularExcl=True):

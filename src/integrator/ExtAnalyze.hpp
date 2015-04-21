@@ -53,7 +53,6 @@ namespace espressopp {
 
         shared_ptr< ParticleAccess > particle_access;
         int interval;
-        int counter;
 
         /** Logger */
         static LOG4ESPP_DECL_LOGGER(theLogger);

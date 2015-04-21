@@ -1,10 +1,6 @@
 /*
   Copyright (c) 2015
       Jakub Krajniak (jkrajniak at gmail.com)
-  Copyright (C) 2012,2013
-      Max Planck Institute for Polymer Research
-  Copyright (C) 2008,2009,2010,2011
-      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
 
   This file is part of ESPResSo++.
 
@@ -51,7 +47,7 @@
 
 namespace espressopp {
 namespace interaction {
-template < typename _Potential >
+template <typename _Potential>
 class VerletListNonReciprocalInteractionTemplate: public Interaction {
  protected:
   typedef _Potential Potential;
@@ -119,10 +115,13 @@ class VerletListNonReciprocalInteractionTemplate: public Interaction {
 
 
 /** Inline implementation of templated methods. */
-template < typename _Potential > inline void
-VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
+template < typename _Potential > inline
+void VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
   LOG4ESPP_DEBUG(_Potential::theLogger, "loop over verlet list pairs and add forces");
-  
+
+  if (potentialArray.empty())
+    return;
+
   for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
@@ -142,8 +141,8 @@ VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
         stat = true;
       }
       if (stat)
-        LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id()
-                       << " id2=" << p2.id() << " force=" << force);
+        LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id() << " id2=" << p2.id()
+            << " force=" << force);
     }
   }
 }
@@ -154,16 +153,13 @@ inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVi
 }
 
 template <typename _Potential>
-inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w) {
-}
+inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w) {}  //NOLINT
 
 template <typename _Potential>
-inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w, real z) {
-}
+inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w, real z) {}  //NOLINT
 
 template <typename _Potential>
-inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor *w, int n) {
-}
+inline void VerletListNonReciprocalInteractionTemplate < _Potential >::computeVirialTensor(Tensor *w, int n) {}  //NOLINT
 
 template <typename _Potential>
 inline real VerletListNonReciprocalInteractionTemplate< _Potential >::getMaxCutoff() {
@@ -176,6 +172,6 @@ inline real VerletListNonReciprocalInteractionTemplate< _Potential >::getMaxCuto
   return cutoff;
 }
 
-}  // namespace interaction
-}  // namespace espressopp
+}  // end namespace interaction
+}  // end namespace espressopp
 #endif

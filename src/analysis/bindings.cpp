@@ -65,6 +65,8 @@
 #include "LBOutputScreen.hpp"
 #include "LBOutputVzInTime.hpp"
 
+#include "SystemAnalysis.hpp"
+
 namespace espressopp {
   namespace analysis {
     void registerPython() {
@@ -110,6 +112,8 @@ namespace espressopp {
       LBOutputProfileVzOfX::registerPython();
       LBOutputScreen::registerPython();
       LBOutputVzInTime::registerPython();
+
+      SystemAnalysis::registerPython();
     }
   }
 }

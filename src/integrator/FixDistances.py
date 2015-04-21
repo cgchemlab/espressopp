@@ -50,4 +50,5 @@ if pmi.isController :
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.FixDistancesLocal',
             pmicall = ['addConstraints', 'add_postprocess'],
+            pmiproperty = ['size']
             )

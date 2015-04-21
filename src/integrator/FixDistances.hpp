@@ -52,6 +52,10 @@ class FixDistances : public Extension {
     post_process_ = pp;
   }
 
+  int size() { 
+    return distance_triplets_.size();
+  }
+
   void restore_positions();
 
   /** Register this class so it can be used from Python. */
