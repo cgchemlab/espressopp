@@ -119,7 +119,7 @@ namespace espressopp {
       }
 
       LOG4ESPP_INFO(theLogger, "starting main integration loop (nsteps=" << nsteps << ")");
-
+      
       for (int i = 0; i < nsteps; i++) {
         LOG4ESPP_INFO(theLogger, "Next step " << i << " of " << nsteps << " starts");
 
@@ -134,8 +134,7 @@ namespace espressopp {
         maxDist += integrate1();
         timeInt1 += timeIntegrate.getElapsedTime() - time;
 
-        /*
-        real cellsize = 1.4411685442;
+        /*real cellsize = 1.4411685442;
         if (maxDist > 1.4411685442){
           cout<<"WARNING!!!!!! huge jump: "<<maxDist<<endl;
           exit(1);

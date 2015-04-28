@@ -41,6 +41,7 @@
 #include "bc/BC.hpp"
 #include "storage/NodeGrid.hpp"
 #include "storage/DomainDecomposition.hpp"
+#include "FixDistances.hpp"
 
 #include "boost/make_shared.hpp"
 
@@ -84,13 +85,15 @@ bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
 }
 
 
-bool Reaction::PostProcess(Particle &pA, Particle &pB) {
-  bool modified = false;
+std::set<Particle*> Reaction::PostProcess(Particle &pA, Particle &pB) {
+  std::set<Particle*> output;
+  std::vector<Particle*> ret;
   for (std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_.begin();
       it != post_process_.end(); ++it) {
-    modified = modified || (*it)->operator()(pA, pB);
+    ret = (*it)->process(pA, pB);
+    output.insert(ret.begin(), ret.end());
   }
-  return modified;
+  return output;
 }
 
 
@@ -115,27 +118,14 @@ void Reaction::registerPython() {
       .def("add_postprocess", &Reaction::AddPostProcess);
 }
 
-
 void PostProcess::registerPython() {
   using namespace espressopp::python;  //NOLINT
   class_<PostProcess, shared_ptr<integrator::PostProcess>, boost::noncopyable>
-  ("integrator_PostProcess", no_init)
-      .def("__call__", pure_virtual(&PostProcess::operator()));
-}
-
-
-void PostProcessChangesProperty::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-
-  class_<PostProcessChangesProperty, bases<integrator::PostProcess>,
-      boost::shared_ptr<integrator::PostProcessChangesProperty> >
-  ("integrator_PostProcessChangesProperty", init<>())
-    .def("add_change_property", &PostProcessChangesProperty::AddChangeProperty)
-    .def("remove_change_property", &PostProcessChangesProperty::RemoveChangeProperty);
+  ("integrator_PostProcess", no_init);
 }
 
 /** Adds new change property definition. */
-void PostProcessChangesProperty::AddChangeProperty(
+void PostProcessChangeProperty::AddChangeProperty(
     int type_id,
     boost::shared_ptr<ParticleProperties> new_property) {
   std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
@@ -146,48 +136,93 @@ void PostProcessChangesProperty::AddChangeProperty(
 }
 
 /** Removes change property definition. */
-void PostProcessChangesProperty::RemoveChangeProperty(int type_id) {
+void PostProcessChangeProperty::RemoveChangeProperty(int type_id) {
   int remove_elements = type_properties_.erase(type_id);
   if (remove_elements == 0) {
     throw std::runtime_error("Invalid type.");
   }
 }
 
-
 /** Post process after pairs were added.
  *
  * In this case method will update the properties of the particles.
  * */
-
-bool PostProcessChangesProperty::operator()(Particle &p1) {
+bool PostProcessChangeProperty::process(Particle &p1) {
   TypeParticlePropertiesMap::iterator it;
-  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
+  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangeProperty::process()");
   // Process particle p1.
-  bool modified = false;
   it = type_properties_.find(p1.type());
+  bool mod = false;
   LOG4ESPP_DEBUG(theLogger, "type " << it->second->type);
   if (it != type_properties_.end()) {
     p1.setType(it->second->type);
     p1.setMass(it->second->mass);
     p1.setQ(it->second->q);
-    modified = true;
+    mod = true;
     LOG4ESPP_DEBUG(theLogger, "Modified particle A");
     LOG4ESPP_DEBUG(theLogger, p1.id());
   }
-  return modified;
+  return mod;
 }
 
-bool PostProcessChangesProperty::operator()(Particle& p1, Particle& p2) {
-  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangesProperty::operator()");
-  bool op1 = operator()(p1);
-  bool op2 = operator()(p2);
-  return op1 || op2; 
+std::vector<Particle*> PostProcessChangeProperty::process(Particle& p1, Particle& p2) {
+  std::vector<Particle*> mod_particles;
+  if (process(p1))
+    mod_particles.push_back(&p1);
+  if (process(p2))
+    mod_particles.push_back(&p2);
+  return mod_particles;
+}
+
+void PostProcessChangeProperty::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_<PostProcessChangeProperty, bases<integrator::PostProcess>,
+      boost::shared_ptr<integrator::PostProcessChangeProperty> >
+  ("integrator_PostProcessChangeProperty", init<>())
+    .def("add_change_property", &PostProcessChangeProperty::AddChangeProperty)
+    .def("remove_change_property", &PostProcessChangeProperty::RemoveChangeProperty);
 }
 
 
-//**
-//**  Integrator extension.
-//**
+/** Post process, update molecule id after performing reaction */
+std::vector<Particle*> PostProcessUpdateResId::process(Particle &p1, Particle &p2) {
+  // Transfer resid from p1 -> p2.
+  PostProcessUpdateResId::TypeMoleculeSize::iterator it;
+  it = type_molecule_.find(p2.type());
+  std::vector<Particle*> ret;
+  if (it != type_molecule_.end()) {
+    int molecule_size = it->second;
+    int p2_id = p2.id();
+
+    // Generating index for molecule. Very simple case so
+    // look out for more complicated systems.
+    int begin_id = ids_from_ + floor((p2_id - 1)/molecule_size)*molecule_size;
+    int end_id = ids_from_ + (floor((p2_id - 1)/molecule_size)+1)*molecule_size;
+    for (int i = begin_id; i <= end_id; i++) {
+      Particle *p = system_->storage->lookupLocalParticle(i);
+      if (p != NULL) {
+        p->setResId(p1.res_id());
+        ret.push_back(p);
+      }
+    }
+  }
+  return ret;
+}
+
+void PostProcessUpdateResId::add_molecule_size(int type_id, int molecule_size) {
+  type_molecule_.insert(std::pair<int, int>(type_id, molecule_size));
+}
+
+void PostProcessUpdateResId::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_<PostProcessUpdateResId, bases<integrator::PostProcess>,
+      boost::shared_ptr<integrator::PostProcessUpdateResId> >
+  ("integrator_PostProcessUpdateResId", init<shared_ptr<System>, int>())
+    .def("add_molecule_size", &PostProcessUpdateResId::add_molecule_size);
+}
+
 
 /** ChemicalReaction part*/
 ChemicalReaction::ChemicalReaction(
@@ -278,7 +313,7 @@ void ChemicalReaction::React() {
   UniqueB(potential_pairs_, effective_pairs_);
   SendMultiMap(effective_pairs_);
   // Use effective_pairs_ to apply the reaction.
-  std::vector<Particle*> modified_particles = ApplyAR();
+  std::set<Particle*> modified_particles = ApplyAR();
   // Update the ghost particles.
   if (modified_particles.size() > 0)
     UpdateGhost(modified_particles);
@@ -401,7 +436,7 @@ void ChemicalReaction::SendMultiMap(integrator::ReactionMap &mm) {  //NOLINT
  * The parallel scheme is taken from
  * storage::DomainDecomposition::doGhostCommunication
  */
-void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_particles) {  //NOLINT
+void ChemicalReaction::UpdateGhost(const std::set<Particle*>& modified_particles) {  //NOLINT
   LOG4ESPP_INFO(theLogger, "Entering UpdateGhost");
 
   System& system = getSystemRef();
@@ -418,20 +453,22 @@ void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_partic
 
   // Fill out_buffer from the particles properties.
   longint data_length = modified_particles.size();
-  longint p_id, p_type;
+  longint p_id, p_type, p_res_id;
   real p_mass, p_q;
   out_buffer.write(data_length);
-  for (std::vector<Particle*>::const_iterator it = modified_particles.begin();
+  for (std::set<Particle*>::const_iterator it = modified_particles.begin();
        it != modified_particles.end();
        ++it) {
     p_id = (*it)->id();
     p_type = (*it)->type();
     p_mass = (*it)->mass();
     p_q = (*it)->q();
+    p_res_id = (*it)->res_id();
     out_buffer.write(p_id);
     out_buffer.write(p_type);
     out_buffer.write(p_mass);
     out_buffer.write(p_q);
+    out_buffer.write(p_res_id);
   }
 
   // Temporary data.
@@ -506,19 +543,22 @@ void ChemicalReaction::UpdateGhost(const std::vector<Particle*>& modified_partic
           in_buffer_0.read(p_type);
           in_buffer_0.read(p_mass);
           in_buffer_0.read(p_q);
+          in_buffer_0.read(p_res_id);
         } else {
           in_buffer_1.read(p_id);
           in_buffer_1.read(p_type);
           in_buffer_1.read(p_mass);
           in_buffer_1.read(p_q);
+          in_buffer_1.read(p_res_id);
         }
         // Update the ghost particle data on neighbour CPUs.
         particle = system.storage->lookupLocalParticle(p_id);
-        if (particle != NULL && particle->ghost()) {
+        if (particle != NULL) {
           LOG4ESPP_DEBUG(theLogger, "Update particle data");
           particle->setType(p_type);
           particle->setMass(p_mass);
           particle->setQ(p_q);
+          particle->setResId(p_res_id);
         }
       }
     }
@@ -681,12 +721,13 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
 /** Use the (A,B) list "partners" to add bonds and change the state of the
  particles accordingly.
  */
-std::vector<Particle*> ChemicalReaction::ApplyAR() {
+std::set<Particle*> ChemicalReaction::ApplyAR() {
   Particle* pA = NULL;
   Particle* pB = NULL;
   System& system = getSystemRef();
 
-  std::vector<Particle*> modified_particles;
+  std::set<Particle*> modified_particles;
+  std::set<Particle*> tmp;
 
   LOG4ESPP_INFO(theLogger, "Entering applyAR");
 
@@ -702,17 +743,15 @@ std::vector<Particle*> ChemicalReaction::ApplyAR() {
         if (pA->getType() == reaction->type_1()) {
           pA->setState(pA->getState() + reaction->delta_1());
           pB->setState(pB->getState() + reaction->delta_2());
-          pB->setResId(pA->getResId());  // transfer the residue id
+          pB->setResId(pA->getResId());
         } else if (pA->getType() == reaction->type_2()) {  // This time the pA is of type_2
           pA->setState(pA->getState() + reaction->delta_2());
           pB->setState(pB->getState() + reaction->delta_1());
-          pA->setResId(pB->getResId());  // transfer the residue id
+          pA->setResId(pB->getResId());
         }
         // Do some postprocess modifications. Only on real particles.
-        if (reaction->PostProcess(*pA, *pB)) {
-          modified_particles.push_back(pA);
-          modified_particles.push_back(pB);
-        }
+        tmp = reaction->PostProcess(*pA, *pB);
+        modified_particles.insert(tmp.begin(), tmp.end());
 
         fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
         verlet_list_->exclude(it->first, it->second.first);

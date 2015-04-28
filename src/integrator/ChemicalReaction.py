@@ -100,7 +100,8 @@ from _espressopp import integrator_ChemicalReaction
 from _espressopp import integrator_Reaction
 
 from _espressopp import integrator_PostProcess
-from _espressopp import integrator_PostProcessChangesProperty
+from _espressopp import integrator_PostProcessChangeProperty
+from _espressopp import integrator_PostProcessUpdateResId
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -138,13 +139,13 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
             self.cxxclass.removeReaction(self, reaction_id)
 
 
-class PostProcessChangesPropertyLocal(integrator_PostProcessChangesProperty,
-                                      integrator_PostProcess):
+class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
+                                     integrator_PostProcess):
     """Post process of reaction that changes particle property."""
     def __init__(self):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self, integrator_PostProcessChangesProperty)
+            cxxinit(self, integrator_PostProcessChangeProperty)
 
     def add_change_property(self, type_id, prop):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
@@ -155,6 +156,19 @@ class PostProcessChangesPropertyLocal(integrator_PostProcessChangesProperty,
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             self.cxxclass.remove_change_property(self, type_id)
+
+
+class PostProcessUpdateResIdLocal(integrator_PostProcessUpdateResId,
+                                  integrator_PostProcess):
+    def __init__(self, system, ids_from=1):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            cxxinit(self, integrator_PostProcessUpdateResId, system, ids_from)
+
+    def add_molecule_size(self, type_id, molecule_size):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            self.cxxclass.add_molecule_size(self, type_id, molecule_size)
 
 
 class ReactionLocal(integrator_Reaction):
@@ -197,11 +211,18 @@ if pmi.isController:
                 )
             )
 
-    class PostProcessChangesProperty:
+    class PostProcessChangeProperty:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.integrator.PostProcessChangesPropertyLocal',
+            cls='espressopp.integrator.PostProcessChangePropertyLocal',
             pmicall=('add_change_property', 'remove_change_property')
+        )
+
+    class PostProcessUpdateResId:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.integrator.PostProcessUpdateResIdLocal',
+            pmicall=('add_molecule_size',)
         )
 
     class Reaction:

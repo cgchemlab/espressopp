@@ -346,6 +346,18 @@ namespace espressopp {
       ghost() = 1;
     }
 
+    bool operator<(Particle other) const {
+      return p.id < other.id();
+    }
+
+    bool operator<(const Particle &other) {
+      return p.id < other.id();
+    }
+
+    bool operator<(Particle *other) {
+      return p.id < other->id();
+    }
+
   private:
     ParticleProperties p;
     ParticlePosition r;

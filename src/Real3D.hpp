@@ -24,6 +24,7 @@
 #ifndef _REAL3D_HPP
 #define _REAL3D_HPP
 
+#include <math.h>
 #include "types.hpp"
 
 namespace espressopp {
@@ -61,6 +62,11 @@ namespace espressopp {
 
     void setItem(int i, real v);
     real getItem(int i) const;
+
+    // error checking
+    bool isNaN() const;
+    bool isInf() const;
+    bool isNaNInf() const;
 
     // unary operators
     Real3D& operator+=(const Real3D& v);
@@ -158,6 +164,19 @@ namespace espressopp {
   
   inline real Real3D::getItem(int i) const
   { return this->at(i); }
+
+  // error check
+  inline bool Real3D::isNaN() const {
+    return (data[0] != data[0] || data[1] != data[1] || data[2] != data[2]);
+  }
+
+  inline bool Real3D::isInf() const {
+    return (std::isinf(data[0]) || std::isinf(data[1]) || std::isinf(data[2]));
+  }
+
+  inline bool Real3D::isNaNInf() const {
+    return (this->isNaN() || this->isInf());
+  }
 
   // unary operators
   inline Real3D& Real3D::operator+=(const Real3D &v)

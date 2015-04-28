@@ -48,15 +48,13 @@ class FixDistances : public Extension {
     distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
   }
 
-  void add_postprocess(const shared_ptr<integrator::PostProcessChangesProperty> pp) {
+  void add_postprocess(const shared_ptr<integrator::PostProcessChangeProperty> pp) {
     post_process_ = pp;
   }
 
-  int size() { 
-    return distance_triplets_.size();
-  }
-
+  int size() { return distance_triplets_.size(); }
   void restore_positions();
+  std::vector<Particle*> release_particle(longint anchor_id);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -73,8 +71,21 @@ class FixDistances : public Extension {
 
   void onParticlesChanged();
 
-  shared_ptr<integrator::PostProcessChangesProperty> post_process_;
+  shared_ptr<integrator::PostProcessChangeProperty> post_process_;
+  /** Logger */
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
 
+
+class PostProcessReleaseParticles : public integrator::PostProcess {
+ public:
+  PostProcessReleaseParticles(shared_ptr<FixDistances> fd, int nr) : fd_(fd), nr_(nr) {}
+  std::vector<Particle*> process(Particle &p1, Particle &p2);
+
+  static void registerPython();
+ private:
+  int nr_;
+  shared_ptr<integrator::FixDistances> fd_;
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };

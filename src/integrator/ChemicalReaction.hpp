@@ -32,6 +32,7 @@
 
 #include <utility>
 #include <map>
+#include <set>
 #include <vector>
 
 #include "types.hpp"
@@ -62,7 +63,7 @@ class PostProcess {
  public:
   PostProcess() { }
   virtual ~PostProcess() { }
-  virtual bool operator()(Particle& p1, Particle& p2) = 0;
+  virtual std::vector<Particle*> process(Particle& p1, Particle& p2) = 0;
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -73,10 +74,10 @@ class PostProcess {
 };
 
 
-class PostProcessChangesProperty : public integrator::PostProcess {
+class PostProcessChangeProperty : public integrator::PostProcess {
  public:
-  bool operator()(Particle& p1, Particle& p2);
-  bool operator()(Particle& p1);
+  std::vector<Particle*> process(Particle& p1, Particle& p2);
+  bool process(Particle& p1);
   void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void RemoveChangeProperty(int type_id);
 
@@ -87,6 +88,22 @@ class PostProcessChangesProperty : public integrator::PostProcess {
   TypeParticlePropertiesMap type_properties_;
 };
 
+class PostProcessUpdateResId : public integrator::PostProcess {
+ public:
+  typedef std::map<int, int> TypeMoleculeSize;
+  explicit PostProcessUpdateResId(shared_ptr<System> system, int ids_from)
+      : system_(system), ids_from_(ids_from) {}
+  std::vector<Particle*> process(Particle &p1, Particle &p2);
+  void add_molecule_size(int type_id, int molecule_size);
+
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+ private:
+  TypeMoleculeSize type_molecule_;
+  int ids_from_;
+  shared_ptr<System> system_;
+};
 
 /** Class for the chemical reactions. */
 class Reaction {
@@ -172,7 +189,7 @@ class Reaction {
   /** Checks if the pair has valid state. */
   virtual bool IsValidState(const Particle& p1, const Particle& p2);
 
-  bool PostProcess(Particle &pA, Particle &pB);
+  std::set<Particle*> PostProcess(Particle &pA, Particle &pB);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -276,14 +293,14 @@ class ChemicalReaction : public Extension {
   void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
   void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
       integrator::ReactionMap& effective_candidates);  //NOLINT
-  std::vector<Particle*> ApplyAR();
+  std::set<Particle*> ApplyAR();
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
  private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
-  void UpdateGhost(const std::vector<Particle*>& modified_particles);
+  void UpdateGhost(const std::set<Particle*>& modified_particles);
 
   real current_cutoff_;
 

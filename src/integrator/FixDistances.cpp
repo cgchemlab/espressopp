@@ -18,11 +18,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <utility>
 #include <vector>
 #include "python.hpp"
 #include "FixDistances.hpp"
 
 #include "bc/BC.hpp"
+#include "esutil/RNG.hpp"
 #include "types.hpp"
 #include "System.hpp"
 #include "storage/Storage.hpp"
@@ -44,10 +46,6 @@ FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longi
     : Extension(system), anchor_type_(anchor_type), target_type_(target_type), has_types_(true) {
   LOG4ESPP_INFO(theLogger, "FixDistances");
   type = Extension::Constraint;
-
-  // In theory we would like to observe the type of particles but only if types are provided.
-  sigOnParticlesChanged = system->storage->onParticlesChanged.connect
-      (boost::bind(&FixDistances::onParticlesChanged, this));
 }
 
 void FixDistances::disconnect() {
@@ -83,12 +81,13 @@ void FixDistances::onParticlesChanged() {
     }
   }
 
+  // We can do something with the particles that are right now free like chaning the type.
   if (affected_particles.size() > 0 && post_process_) {
     LOG4ESPP_DEBUG(theLogger, "Affected particles " << affected_particles.size());
     for (int i = 0; i < affected_particles.size(); i++) {
       Particle *p1 = system.storage->lookupLocalParticle(affected_particles[i]);
       LOG4ESPP_DEBUG(theLogger, "particle " << p1->id() << " ghost: " << p1->ghost());
-      post_process_->operator()(*p1);
+      post_process_->process(*p1);
     }
   }
 }
@@ -105,17 +104,65 @@ void FixDistances::restore_positions() {
     if (anchor != NULL && dst != NULL) {
       Real3D anchor_pos = anchor->position();
       Real3D dst_pos = dst->position();
-      Real3D trans;
-      bc.getMinimumImageVector(trans, dst_pos, anchor_pos);
-      Real3D unit_trans = (1/trans.abs()) * trans;
+      Real3D unit_trans;
+      if (dst_pos.isNaNInf()) {
+        // Problem with position. Reset it by picking random point on sphere
+        LOG4ESPP_DEBUG(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
+            << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos);
+        std::cout << "Problem with position of point " << dst->id() << std::endl;
+        unit_trans = system.rng->uniformOnSphere();
+      } else {
+        Real3D trans;
+        bc.getMinimumImageVector(trans, dst_pos, anchor_pos);
+        unit_trans = (1/trans.abs()) * trans;
+      }
       Real3D new_trans = dist*unit_trans;
-
+      LOG4ESPP_DEBUG(theLogger, "update particle " << dst->id()
+          << " new pos: " << anchor_pos + new_trans
+          << " unit_trans " << unit_trans
+          << " dist " << dist
+          << " new_force " << (dst->mass()/anchor->mass())*anchor->force());
+      // Sets position of the anchor + new translation and reset the force
+      // to the same as is acting on the anchor with scaled valued.
       dst->setPos(anchor_pos + new_trans);
-      // Sets the velocity of the anchor and reset the force from anchor.
-      dst->setV(anchor->velocity());
       dst->setF((dst->mass()/anchor->mass())*anchor->force());
+      dst->setV(Real3D(0.0, 0.0, 0.0));
     }
   }
+}
+
+std::vector<Particle*> FixDistances::release_particle(longint anchor_id) {
+  std::pair<Triplets::iterator, Triplets::iterator> equal_range = \
+      distance_triplets_.equal_range(anchor_id);
+  std::vector<Particle*> released_particles;
+  std::vector<Particle*> mod_particles;
+
+  System &system = getSystemRef();
+  for (Triplets::iterator it = equal_range.first; it != equal_range.second; ++it) {
+    Particle *p1 = system.storage->lookupLocalParticle(it->second.first);
+    if (p1 != NULL) {
+      std::cout << "release particle " << p1->id() << std::endl;
+      released_particles.push_back(p1);
+    }
+  }
+  distance_triplets_.erase(equal_range.first, equal_range.second);
+
+  if (post_process_ && released_particles.size() > 0) {
+    LOG4ESPP_DEBUG(theLogger, "Affected particles " << released_particles.size());
+    for (int i = 0; i < released_particles.size(); i++) {
+      Particle *p1 = released_particles[i];
+      if (p1 != NULL) {
+        LOG4ESPP_DEBUG(theLogger, "particle " << p1->id() << "ghost: " << p1->ghost());
+        if (post_process_->process(*p1))
+          mod_particles.push_back(p1);
+
+        // Reset velocity and force on copartner
+        p1->setV(Real3D(0.0, 0.0, 0.0));
+        p1->setF(Real3D(0.0, 0.0, 0.0));
+      }
+    }
+  }
+  return mod_particles;
 }
 
 void FixDistances::registerPython() {
@@ -128,6 +175,28 @@ void FixDistances::registerPython() {
     .def("disconnect", &FixDistances::disconnect)
     .def("add_triplet", &FixDistances::add_triplet)
     .def("add_postprocess", &FixDistances::add_postprocess);
+}
+
+/** Post process after pairs were added.
+ *
+ * After the reaction is performed, the constraint is removed and dummy particle
+ * is released.
+ */
+LOG4ESPP_LOGGER(PostProcessReleaseParticles::theLogger, "PostProcessReleaseParticles");
+
+std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p1, Particle &p2) {
+  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessReleaseParticles::operator()");
+  if (nr_ == 1)
+    return fd_->release_particle(p1.id());
+  return std::vector<Particle*>();
+}
+
+void PostProcessReleaseParticles::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_<PostProcessReleaseParticles, bases<integrator::PostProcess>,
+      boost::shared_ptr<integrator::PostProcessReleaseParticles> >
+  ("integrator_PostProcessReleaseParticles", init<shared_ptr<integrator::FixDistances>, int>());
 }
 
 }  // end namespace integrator
