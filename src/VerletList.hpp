@@ -91,6 +91,8 @@ namespace espressopp {
   protected:
 
     void checkPair(Particle &pt1, Particle &pt2);
+    void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
+    void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
     PairList vlPairs;
     ExcludeList exList; // exclusion list
     
@@ -99,7 +101,7 @@ namespace espressopp {
     real cutVerlet;
     
     int builds;
-    boost::signals2::connection connectionResort;
+    boost::signals2::connection connectionResort, sigBeforeSend, sigAfterRecv;
 
     static LOG4ESPP_DECL_LOGGER(theLogger);
   };

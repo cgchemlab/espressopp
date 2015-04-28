@@ -53,11 +53,7 @@ namespace espressopp {
     builds = 0;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
-
   
-    // make a connection to System to invoke rebuild on resort
-    connectionResort = system->storage->onParticlesChanged.connect(
-        boost::bind(&VerletList::rebuild, this));
   }
   
   real VerletList::getVerletCutoff(){
@@ -66,10 +62,16 @@ namespace espressopp {
   
   void VerletList::connect()
   {
-
+  System &system = getSystemRef();
   // make a connection to System to invoke rebuild on resort
-  connectionResort = getSystem()->storage->onParticlesChanged.connect(
+  connectionResort = system.storage->onParticlesChanged.connect(
       boost::bind(&VerletList::rebuild, this));
+  
+  sigBeforeSend = system.storage->beforeSendParticles.connect
+    (boost::bind(&VerletList::beforeSendParticles, this, _1, _2));
+  sigAfterRecv = system.storage->afterRecvParticles.connect
+    (boost::bind(&VerletList::afterRecvParticles, this, _1, _2));
+
   }
 
   void VerletList::disconnect()
@@ -81,6 +83,8 @@ namespace espressopp {
 
   /*-------------------------------------------------------------*/
   
+
+
   void VerletList::rebuild()
   {
     //real cutVerlet = cut + getSystem() -> getSkin();
@@ -154,10 +158,20 @@ namespace espressopp {
 
 
   bool VerletList::exclude(longint pid1, longint pid2) {
+      System &system = getSystemRef();
+      Particle *p1 = system.storage->lookupLocalParticle(pid1);
+      Particle *p2 = system.storage->lookupLocalParticle(pid2);
 
-      exList.insert(std::make_pair(pid1, pid2));
+      bool return_val = true;
+      if (!p1 || !p2) {
+        return_val = false;
+      }
 
-      return true;
+      if (return_val) {
+        exList.insert(std::make_pair(pid1, pid2));
+      }
+
+      return return_val;
   }
   
   python::list VerletList::getExList() {
