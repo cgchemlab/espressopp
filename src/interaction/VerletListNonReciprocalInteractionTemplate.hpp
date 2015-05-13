@@ -59,7 +59,9 @@ class VerletListNonReciprocalInteractionTemplate: public Interaction {
     ntypes = 0;
     LOG4ESPP_WARN(_Potential::theLogger,
         "Warning! You are using non-reciprocal force with this potential"
-        << " that will only acts on particles with type " << _active_type);
+        << " that will only acts on particles with type " << _active_type
+        << " Keep in mind that this vioalete 3rd Newton's law."
+        );
   }
 
   virtual ~VerletListNonReciprocalInteractionTemplate() {}

@@ -66,6 +66,8 @@
 #include "LBOutputVzInTime.hpp"
 
 #include "SystemAnalysis.hpp"
+#include "PotentialEnergy.hpp"
+#include "KineticEnergy.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -114,6 +116,8 @@ namespace espressopp {
       LBOutputVzInTime::registerPython();
 
       SystemAnalysis::registerPython();
+      PotentialEnergy::registerPython();
+      KineticEnergy::registerPython();
     }
   }
 }

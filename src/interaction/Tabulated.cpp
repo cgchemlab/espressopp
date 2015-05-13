@@ -26,6 +26,7 @@
 #include "InterpolationAkima.hpp"
 #include "InterpolationCubic.hpp"
 #include "VerletListInteractionTemplate.hpp"
+#include "VerletListNonReciprocalInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
@@ -56,6 +57,7 @@ namespace espressopp {
     }
 
     typedef class VerletListInteractionTemplate <Tabulated> VerletListTabulated;
+    typedef class VerletListNonReciprocalInteractionTemplate <Tabulated> VerletListNonReciprocalTabulated;
     typedef class VerletListAdressInteractionTemplate <Tabulated, Tabulated> VerletListAdressTabulated;
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
@@ -77,6 +79,12 @@ namespace espressopp {
         ("interaction_VerletListTabulated", init <shared_ptr<VerletList> >())
             .def("setPotential", &VerletListTabulated::setPotential)
             .def("getPotential", &VerletListTabulated::getPotentialPtr)
+        ;
+
+      class_ <VerletListNonReciprocalTabulated, bases <Interaction> > 
+        ("interaction_VerletListNonReciprocalTabulated", init <shared_ptr<VerletList>, int >())
+            .def("setPotential", &VerletListNonReciprocalTabulated::setPotential)
+            .def("getPotential", &VerletListNonReciprocalTabulated::getPotentialPtr)
         ;
 
       class_ <VerletListAdressTabulated, bases <Interaction> >

@@ -32,22 +32,21 @@ from _espressopp import analysis_SystemAnalysis
 class SystemAnalysisLocal(analysis_SystemAnalysis):
     'The (local) compute of temperature.'
     def __init__(self, system, integrator, file_name, delimiter="\t"):
-        if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, analysis_SystemAnalysis, system, integrator, file_name, delimiter)
+        cxxinit(self, analysis_SystemAnalysis, system, integrator, file_name, delimiter)
 
-    def add_observable(self, name, observable):
-        if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.add_observable(self, name, observable)
+    def add_observable(self, name, observable, is_visible=True):
+        self.cxxclass.add_observable(self, name, observable, is_visible)
 
     def info(self):
-        if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.info(self)
+        self.cxxclass.info(self)
 
+    def dump(self):
+        self.cxxclass.dump(self)
 
 if pmi.isController:
     class SystemAnalysis():
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.SystemAnalysisLocal',
-            pmicall=['add_observable', 'info']
+            pmicall=['add_observable', 'info', 'dump']
             )

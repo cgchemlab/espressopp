@@ -47,6 +47,7 @@ namespace analysis {
 
 class SystemAnalysis : public ParticleAccess {
  public:
+  typedef std::vector<std::pair<std::string, shared_ptr<Observable> > > ObservableList;
   SystemAnalysis(shared_ptr< System > system,
                shared_ptr<integrator::MDIntegrator> integrator,
                std::string file_name,
@@ -59,9 +60,12 @@ class SystemAnalysis : public ParticleAccess {
     temp_ = shared_ptr<Temperature>(new Temperature(system));
     npart_ = shared_ptr<NPart>(new NPart(system));
 
+    header_written_ = false;
+    header_shown_ = false;
     if (system->comm->rank() == 0) {
       FileBackup filebackup(file_name);
-      header_written_ = false;
+      header_.push_back("step");
+      visible_observables_.push_back(1);
     }
   }
 
@@ -74,29 +78,24 @@ class SystemAnalysis : public ParticleAccess {
 
  private:
   void write();
-  void compute_potential_energy();
+  void compute_observables();
   void compute_kinetic_energy();
 
-  void add_observable(std::string name, shared_ptr<Observable> obs);
-
-  std::string prepare_line();
-  std::string prepare_header();
+  void add_observable(std::string name, shared_ptr<Observable> obs, bool is_visible);
 
   int current_step_;
   bool header_written_;
-  bool show_header_;
-  std::string last_line_;
-  real T_;
-  real ekin_;
-  real epot_;
-  std::vector<real> pot_energy_;
+  bool header_shown_;
+  std::vector<real> values_;
+  std::vector<std::string> header_;
+  std::vector<int> visible_observables_;
   shared_ptr<System> system_;
   shared_ptr<integrator::MDIntegrator> integrator_;
   shared_ptr<Temperature> temp_;
   shared_ptr<NPart> npart_;
   std::string file_name_;
 
-  std::vector<std::pair<std::string, shared_ptr<Observable> > > observables_;
+  ObservableList observables_;
 
   std::string delimiter_;
 };

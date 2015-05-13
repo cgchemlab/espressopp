@@ -25,116 +25,101 @@
 #include "SystemAnalysis.hpp"
 #include "integrator/MDIntegrator.hpp"
 
-namespace espressopp {
+namespace espressopp{
 namespace analysis {
 
 void SystemAnalysis::perform_action() {
-  current_step_ = integrator_->getStep();
-  compute_potential_energy();
-  compute_kinetic_energy();
-  write();
+    current_step_ = integrator_->getStep();
+    values_.clear();
+    values_.push_back(current_step_);
+
+    compute_observables();
+
+    write();
 }
 
-void SystemAnalysis::compute_potential_energy() {
-  pot_energy_.clear();
-  real e = 0.0;
-  epot_ = 0.0;
-  for (int i = 0; i < system_->getNumberOfInteractions(); i++) {
-    e = system_->getInteraction(i)->computeEnergy();
-    epot_ += e;
-    pot_energy_.push_back(e);
+void SystemAnalysis::compute_observables() {
+  for (ObservableList::iterator it = observables_.begin(); it != observables_.end(); ++it) {
+    values_.push_back(it->second->compute_real());
   }
 }
 
 void SystemAnalysis::compute_kinetic_energy() {
-  T_ = temp_->computeRaw();
-  ekin_ = (3.0/2.0) * npart_->compute_real() * T_;
+  real T = temp_->computeRaw();
+  real ekin = (3.0/2.0) * npart_->compute_real() * T;
+  values_.push_back(T);
+  values_.push_back(ekin);
 }
 
 void SystemAnalysis::write() {
   // That's a text file, let's only write on one node.
   if (system_->comm->rank() == 0) {
     std::ofstream output_file;
-    if (!header_written_) {
+    std::stringstream ss;
+    // First run, write header.
+    if (!header_written_) {  // First run;
       output_file.open(file_name_.c_str(), std::fstream::out);
-      last_line_ = prepare_line();
+      for (std::vector<std::string>::iterator it = header_.begin(); it != header_.end(); ++it) {
+        ss << *it;
+        if (it != header_.end()-1)
+            ss << delimiter_;
+      }
+      ss << std::endl;;
       header_written_ = true;
     } else {
       output_file.open(file_name_.c_str(), std::ofstream::out | std::ofstream::app);
-      last_line_ = prepare_line();
     }
-    output_file << last_line_ << std::endl;
-    output_file.close();
-  }
-}
-
-std::string SystemAnalysis::prepare_header() {
-  std::stringstream line;
-  int size_observables = observables_.size();
-  line << "#step" << delimiter_
-              << "T" << delimiter_ << "Ek" << delimiter_ << "Epot"
-              << delimiter_;
-  // Write columns for interactions.
-  for (int i = 0; i < system_->getNumberOfInteractions(); i++)
-    line << "e" << i << delimiter_;
-
-  // Write columns for additional observables.
-  for (int i = 0; i < size_observables - 1; i++) {
-    line << observables_[i].first << delimiter_;
-  }
-  if (size_observables - 1 >= 0)
-    line << observables_[size_observables-1].first;
-
-  // Close wile.
-  line << "\n";
-
-  return line.str();
-}
-
-std::string SystemAnalysis::prepare_line() {
-  if (system_->comm->rank() == 0) {
-    std::stringstream line;
-    int size_observables = observables_.size();
-    if (!header_written_) {  // First run;
-      line << prepare_header();
-      header_written_ = true;
+    
+    for (std::vector<real>::iterator it = values_.begin(); it != values_.end(); ++it) {
+      ss << *it;
+      if (it != values_.end()-1)
+        ss << delimiter_;
     }
-
-    line << current_step_ << delimiter_
-      << T_ << delimiter_
-      << ekin_ << delimiter_
-      << epot_ << delimiter_;
-    int number_of_interactions = pot_energy_.size();
-    for (int i = 0; i < number_of_interactions; i++) {
-      line << pot_energy_[i];
-      if (i != number_of_interactions - 1 || size_observables > 0)
-        line << delimiter_;
-    }
-    // Add columns from observable.
-    for (int i = 0; i < size_observables - 1; i++) {
-      line << observables_[i].second->compute_real() << delimiter_;
-    }
-    if (size_observables - 1 >= 0)
-      line << observables_[size_observables-1].second->compute_real();
+    ss << std::endl;
 
     // Close file.
-    return line.str();
+    output_file << ss.str();
+    output_file.close();
   }
 }
 
 void SystemAnalysis::info() {
   if (system_->comm->rank() == 0) {
-    if (!show_header_) {
-      std::cout << prepare_header();
-      show_header_ = true;
+    int idx = 0;
+    if (!header_shown_) {
+      for (std::vector<std::string>::iterator it = header_.begin(); it != header_.end(); ++it) {
+        if (visible_observables_[idx] == 1) {
+          std::cout << *it;
+          if (it != header_.end()-1)
+              std::cout << "\t";
+        }
+        idx++;
+      }
+      std::cout << std::endl;
+      header_shown_ = true;
     }
-    std::cout << last_line_ << std::endl;
+    // Print data
+    idx = 0;
+    for (std::vector<real>::iterator it = values_.begin(); it != values_.end(); ++it) {
+      if (visible_observables_[idx] == 1) {
+        std::cout << *it;
+        if (it != values_.end()-1)
+          std::cout << "\t";
+      }
+      idx++;
+    }
+    std::cout << std::endl;
   }
 }
 
-void SystemAnalysis::add_observable(std::string name, shared_ptr<Observable> obs) {
-  std::cout << "adding observable " << name;
+void SystemAnalysis::add_observable(std::string name, shared_ptr<Observable> obs, 
+    bool is_visible) {
   observables_.push_back(std::make_pair(name, obs));
+  header_.push_back(name);
+  if (is_visible)
+    visible_observables_.push_back(1);
+  else
+    visible_observables_.push_back(0);
 }
 
 void SystemAnalysis::registerPython() {
@@ -147,8 +132,9 @@ void SystemAnalysis::registerPython() {
           std::string
           >())
       .def("add_observable", &SystemAnalysis::add_observable)
-      .def("info", &SystemAnalysis::info);
+      .def("info", &SystemAnalysis::info)
+      .def("dump", &SystemAnalysis::perform_action);
 }
 
 }  // end namespace analysis
-}  // end namespace espressopp
+}  // end namespace espresso
