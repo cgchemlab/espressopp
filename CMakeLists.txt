@@ -10,6 +10,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 enable_language(C)
 enable_language(CXX)
 
+enable_testing()
+
 ######################################################################
 # compiler tests
 # these need ot be done early (before further tests).
@@ -23,9 +25,6 @@ include(CheckCXXCompilerFlag)
 ########################################################################
 option(EXTERNAL_BOOST "Use external boost" ON)
 option(BUILD_SHARED_LIBS "Build shared libs" ON)
-if (NOT DEFINED LIB)
-  set(LIB "lib")
-endif(NOT DEFINED LIB)
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -124,6 +123,7 @@ if (EXTERNAL_BOOST)
   include_directories(${Boost_INCLUDE_DIRS})
 else(EXTERNAL_BOOST)
   include_directories(${CMAKE_SOURCE_DIR}/contrib/boost)
+  set(Boost_LIBRARIES espressopp_boost)
 endif(EXTERNAL_BOOST)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
@@ -151,10 +151,11 @@ endif()
 ######################################
 add_subdirectory(src)
 add_subdirectory(contrib)
+add_subdirectory(testsuite)
 
 add_custom_target(symlink ALL COMMENT "Creating symlink")
 add_custom_command(TARGET symlink COMMAND ${CMAKE_COMMAND} -E create_symlink
-  src espresso)
+  ${CMAKE_SOURCE_DIR}/src espressopp)
 
 ######################################
 # System documentation (Doxygen)     # 
