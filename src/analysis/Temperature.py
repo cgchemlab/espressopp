@@ -28,18 +28,25 @@
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 
-from espressopp.analysis.AnalysisBase import *
+from espressopp.analysis.Observable import *
 from _espressopp import analysis_Temperature
 
-class TemperatureLocal(AnalysisBaseLocal, analysis_Temperature):
+class TemperatureLocal(ObservableLocal, analysis_Temperature):
     'The (local) compute of temperature.'
-    def __init__(self, system):
+    def __init__(self, system, particle_type=None):
         if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, analysis_Temperature, system)
+            if particle_type is not None:
+                self.add_particle_type(particle_type)
+
+    def add_particle_type(self, particle_type):
+        if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.add_particle_type(self, particle_type)
 
 if pmi.isController :
-    class Temperature(AnalysisBase):
+    class Temperature(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.analysis.TemperatureLocal'
+            cls =  'espressopp.analysis.TemperatureLocal',
+            pmicall = ['add_particle_type']
             )

@@ -132,28 +132,43 @@ void FixDistances::restore_positions() {
 }
 
 std::vector<Particle*> FixDistances::release_particle(longint anchor_id) {
-  std::pair<Triplets::iterator, Triplets::iterator> equal_range = \
-      distance_triplets_.equal_range(anchor_id);
-  std::vector<Particle*> released_particles;
-  std::vector<Particle*> mod_particles;
+  Triplets::iterator fparticle = distance_triplets_.find(anchor_id);
 
-  System &system = getSystemRef();
+  std::vector<Particle*> mod_particles;
+  if (fparticle != distance_triplets_.end()) {
+    System &system = getSystemRef();
+    Particle *p1 = system.storage->lookupLocalParticle(fparticle->second.first);
+    if (p1 != NULL) {
+      std::cout << "release particle " << p1->id() << std::endl;
+    }
+    if (post_process_ && post_process_->process(*p1))
+      mod_particles.push_back(p1);
+    p1->setV(Real3D(0.0, 0.0, 0.0));
+    p1->setF(Real3D(0.0, 0.0, 0.0));
+  }
+
+  return mod_particles;
+
+  /*
+  std::vector<Particle*> released_particles;
+
   for (Triplets::iterator it = equal_range.first; it != equal_range.second; ++it) {
     Particle *p1 = system.storage->lookupLocalParticle(it->second.first);
     if (p1 != NULL) {
       std::cout << "release particle " << p1->id() << std::endl;
       released_particles.push_back(p1);
+      break;  // release only one at the time;
     }
   }
   distance_triplets_.erase(equal_range.first, equal_range.second);
 
-  if (post_process_ && released_particles.size() > 0) {
+  if (released_particles.size() > 0) {
     LOG4ESPP_DEBUG(theLogger, "Affected particles " << released_particles.size());
     for (int i = 0; i < released_particles.size(); i++) {
       Particle *p1 = released_particles[i];
       if (p1 != NULL) {
         LOG4ESPP_DEBUG(theLogger, "particle " << p1->id() << "ghost: " << p1->ghost());
-        if (post_process_->process(*p1))
+        if (post_process_ && post_process_->process(*p1))
           mod_particles.push_back(p1);
 
         // Reset velocity and force on copartner
@@ -162,7 +177,7 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id) {
       }
     }
   }
-  return mod_particles;
+  return mod_particles;*/
 }
 
 void FixDistances::registerPython() {

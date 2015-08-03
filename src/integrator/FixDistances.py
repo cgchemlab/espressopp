@@ -48,7 +48,7 @@ class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
             self.cxxclass.add_triplet(self, anchor_id, target_id, dist)
 
 
-class PostProcessRelaseParticlesLocal(integrator_PostProcessReleaseParticles,
+class PostProcessReleaseParticlesLocal(integrator_PostProcessReleaseParticles,
                                       integrator_PostProcess):
     """Post process of reaction that changes particle property."""
     def __init__(self, fix_distance_ext, nr=1):
@@ -66,8 +66,8 @@ if pmi.isController:
             pmiproperty=['size']
             )
 
-    class PostProcessRelaseParticles:
+    class PostProcessReleaseParticles:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.integrator.PostProcessRelaseParticlesLocal'
+            cls='espressopp.integrator.PostProcessReleaseParticlesLocal'
             )
