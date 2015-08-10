@@ -123,8 +123,8 @@ namespace espressopp {
     if (distsq > cutsq) return;
 
     // see if it's in the exclusion list (both directions)
-    if (exList.count(std::make_pair(pt1.id(), pt2.id())) == 1) return;
-    if (exList.count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
+    if (exList.count(pt1.id()) == 1 || exList.count(pt2.id()) == 1)
+      return;
 
     vlPairs.add(pt1, pt2); // add pair to Verlet List
   }
@@ -168,7 +168,10 @@ namespace espressopp {
       }
 
       if (return_val) {
+        if (pid1 > pid2)
+          std::swap(pid1, pid2);
         exList.insert(std::make_pair(pid1, pid2));
+        exList.insert(std::make_pair(pid2, pid1));
       }
 
       return return_val;

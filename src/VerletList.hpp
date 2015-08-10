@@ -43,7 +43,7 @@ namespace espressopp {
   class VerletList : public SystemAccess {
 
   public:
-    typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
+    typedef std::multimap<longint, longint> ExcludeList;
     /** Build a verlet list of all particle pairs in the storage
 	whose distance is less than a given cutoff.
 
