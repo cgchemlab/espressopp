@@ -6,7 +6,7 @@ from _espressopp import integrator_AssociationReaction
 
 
 class AssociationReactionLocal(ExtensionLocal, integrator_AssociationReaction):
-    """Association Reaction scheme."""
+
     def __init__(self, system, vl, fpl, domdec):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, integrator_AssociationReaction, system, vl, fpl, domdec)

@@ -19,34 +19,32 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
 
-"""
-*********************************
+r"""
+***********************************
 **espressopp.analysis.Temperature**
-*********************************
+***********************************
 
+
+.. function:: espressopp.analysis.Temperature(system)
+
+		:param system: 
+		:type system: 
 """
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 
-from espressopp.analysis.Observable import *
+from espressopp.analysis.AnalysisBase import *
 from _espressopp import analysis_Temperature
 
-class TemperatureLocal(ObservableLocal, analysis_Temperature):
-    'The (local) compute of temperature.'
-    def __init__(self, system, particle_type=None):
-        if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, analysis_Temperature, system)
-            if particle_type is not None:
-                self.add_particle_type(particle_type)
+class TemperatureLocal(AnalysisBaseLocal, analysis_Temperature):
 
-    def add_particle_type(self, particle_type):
-        if not pmi._PMIComm or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.add_particle_type(self, particle_type)
+    def __init__(self, system):
+	if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, analysis_Temperature, system)
 
 if pmi.isController :
-    class Temperature(Observable):
+    class Temperature(AnalysisBase):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.analysis.TemperatureLocal',
-            pmicall = ['add_particle_type']
+            cls =  'espressopp.analysis.TemperatureLocal'
             )

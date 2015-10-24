@@ -61,13 +61,9 @@
 #include "OrderParameter.hpp"
 
 #include "LBOutput.hpp"
-#include "LBOutputProfileVzOfX.hpp"
 #include "LBOutputScreen.hpp"
 #include "LBOutputVzInTime.hpp"
-
-#include "SystemAnalysis.hpp"
-#include "PotentialEnergy.hpp"
-#include "KineticEnergy.hpp"
+#include "LBOutputVzOfX.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -111,13 +107,9 @@ namespace espressopp {
       Viscosity::registerPython();
 
       LBOutput::registerPython();
-      LBOutputProfileVzOfX::registerPython();
       LBOutputScreen::registerPython();
       LBOutputVzInTime::registerPython();
-
-      SystemAnalysis::registerPython();
-      PotentialEnergy::registerPython();
-      KineticEnergy::registerPython();
+      LBOutputVzOfX::registerPython();
     }
   }
 }

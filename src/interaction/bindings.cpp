@@ -67,6 +67,7 @@
 #include "DihedralHarmonicCos.hpp"
 #include "DihedralHarmonicUniqueCos.hpp"
 #include "DihedralHarmonicNCos.hpp"
+#include "DihedralRB.hpp"
 #include "CoulombKSpaceEwald.hpp"
 #include "CoulombRSpace.hpp"
 #include "StillingerWeberPairTerm.hpp"
@@ -131,6 +132,7 @@ namespace espressopp {
       DihedralHarmonicCos::registerPython();
       DihedralHarmonicUniqueCos::registerPython();
       DihedralHarmonicNCos::registerPython();
+      DihedralRB::registerPython();
       
       CoulombKSpaceEwald::registerPython();
       CoulombRSpace::registerPython();

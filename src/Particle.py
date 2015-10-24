@@ -19,11 +19,18 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""
-*********************
+r"""
+***********************
 **espressopp.Particle**
-*********************
+***********************
 
+
+.. function:: espressopp.Particle(pid, storage)
+
+		:param pid: 
+		:param storage: 
+		:type pid: 
+		:type storage: 
 """
 import _espressopp
 from espressopp.esutil import cxxinit
