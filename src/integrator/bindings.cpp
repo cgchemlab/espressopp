@@ -70,6 +70,7 @@ namespace espressopp {
       VelocityVerletOnGroup::registerPython();
       Extension::registerPython();
       Adress::registerPython();
+      DynamicResolution::registerPython();
       BerendsenBarostat::registerPython();
       BerendsenBarostatAnisotropic::registerPython();
       BerendsenThermostat::registerPython();

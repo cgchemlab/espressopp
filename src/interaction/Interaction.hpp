@@ -26,6 +26,7 @@
 
 #include "types.hpp"
 #include "logging.hpp"
+#include "Tensor.hpp"
 #include "esutil/ESPPIterator.hpp"
 
 namespace espressopp {
@@ -55,9 +56,19 @@ namespace espressopp {
       /** This method returns the maximal cutoff defined for one type pair. */
       virtual real getMaxCutoff() = 0;
       virtual int bondType() = 0;
+      
+      bool precompute_pressure() { return precompute_pressure_; }
+      void set_precompute_pressure(bool _s) { precompute_pressure_ = _s; }
+      bool precompute_energy() { return precompute_energy_; }
+      void set_precompute_energy(bool _s) { precompute_energy_ = _s; }
 
       static void registerPython();
-
+      // Cache some already computed value.
+      bool precompute_energy_, precompute_pressure_;
+      real w_virial;
+      real e_local;
+      Tensor w_wlocal;
+    
     protected:
       /** Logger */
       static LOG4ESPP_DECL_LOGGER(theLogger);
