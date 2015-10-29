@@ -28,11 +28,38 @@
 #include "types.hpp"
 #include "python.hpp"
 #include "Particle.hpp"
+#include "Buffer.hpp"
 #include "SystemAccess.hpp"
+#include "integrator/MDIntegrator.hpp"
 #include "boost/signals2.hpp"
 #include "boost/unordered_set.hpp"
 
 namespace espressopp {
+
+class DynamicExcludeList {
+public:
+    typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
+    DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator);
+    ~DynamicExcludeList();
+    void exclude(longint pid1, longint pid2);
+    void unexclude(longint pid1, longint pid2);
+    void connect();
+    void disconnect();
+    shared_ptr<ExcludeList> getExList { return exList; }
+
+    static void registerPython();
+private:
+    shared_ptr<integrator::MDIntegrator> integrator_;
+    shared_ptr<ExcludeList> exList;
+    // Helper lists.
+    ExcludeList exList_add;
+    ExcludeList exList_remove;
+    bool exListDirty;
+    void updateList();
+
+    boost::signals2::connection aftIntV;
+    static LOG4ESPP_DECL_LOGGER(theLogger);
+};
 
 /** Class that builds and stores verlet lists.
 
@@ -43,7 +70,7 @@ namespace espressopp {
   class VerletList : public SystemAccess {
 
   public:
-    typedef std::multimap<longint, longint> ExcludeList;
+    typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
     /** Build a verlet list of all particle pairs in the storage
 	whose distance is less than a given cutoff.
 
@@ -53,6 +80,7 @@ namespace espressopp {
     */
 
     VerletList(shared_ptr< System >, real cut, bool rebuildVL);
+    VerletList(shared_ptr< System >, real cut, shared_ptr<DynamicExcludeList>, bool rebuildVL);
 
     ~VerletList();
 
@@ -60,8 +88,6 @@ namespace espressopp {
 
     python::tuple getPair(int i);
 
-    python::list getExList();
-    
     real getVerletCutoff(); // returns cutoff + skin
 
     void connect();
@@ -95,20 +121,15 @@ namespace espressopp {
     void checkPair(Particle &pt1, Particle &pt2);
     void afterRecvParticles(ParticleList &unused_pl, InBuffer &unused_buf);
     PairList vlPairs;
-    ExcludeList exList; // exclusion list
+    shared_ptr<ExcludeList> exList; // exclusion list
+    bool dynamicExList;
 
-    // Helper lists, only to communication
-    ExcludeList exList_add;
-    ExcludeList exList_remove;
-
-    bool exListDirty;
-    
     real cutsq;
     real cut;
     real cutVerlet;
     
     int builds;
-    boost::signals2::connection connectionResort, sigBeforeSend, sigAfterRecv;
+    boost::signals2::connection connectionResort;
 
     static LOG4ESPP_DECL_LOGGER(theLogger);
 
