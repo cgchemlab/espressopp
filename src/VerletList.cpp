@@ -46,12 +46,14 @@ namespace espressopp {
   void DynamicExcludeList::exclude(longint pid1, longint pid2) {
     exList->insert(std::make_pair(pid1, pid2));
 
-    exList_add.insert(std::make_pair(pid1, pid2));
+    exList_add.push_back(pid1);
+    exList_add.push_back(pid2);
     exListDirty = true;
   }
 
   void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
-    exList_remove.insert(std::make_pair(pid1, pid2));
+    exList_remove.push_back(pid1);
+    exList_remove.push_back(pid2);
 
     exList->erase(std::make_pair(pid1, pid2));
     exListDirty = true;
@@ -66,21 +68,48 @@ namespace espressopp {
   }
 
   void DynamicExcludeList::registerPython() {
+    using namespace espressopp::python;
 
+    class_<DynamicExcludeList, shared_ptr<DynamicExcludeList> >
+        ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
+         .add_property("is_dirty", &DynamicExcludeList::getExListDirty, &DynamicExcludeList::setExListDirty)
+         .def("exclude", &DynamicExcludeList::exclude)
+         .def("unexclude", &DynamicExcludeList::unexclude)
+         .def("connect", &DynamicExcludeList::connect)
+         .def("disconnect", &DynamicExcludeList::disconnect);
   }
 
   void DynamicExcludeList::updateList() {
     LOG4ESPP_INFO(theLogger, "Update dynamic list.");
-    // Collect state from all cpus. If somewhere list is dirty then gatter and scatter.
+    // Collect state from all CPUs. If somewhere list is dirty then gather and scatter.
     bool global_exListDirty;
-    boost::mpi::all_reduce(*mpiWorld, exListDirty, global_exListDirty, std::logical_or<bool>());
+    mpi::all_reduce(*(integrator_->getSystem()->comm), exListDirty,
+                    global_exListDirty, std::logical_or<bool>());
     if (global_exListDirty) {
-      if (integrator_->getSystem()->comm->rank() == 0) {
+      std::vector<longint> out_buffer;
+      std::vector<std::vector<longint> > in_buffer;
 
-      } else {
-
+      // Prepare output.
+      out_buffer.push_back(2*exList_remove.size());
+      out_buffer.insert(out_buffer.end(), exList_remove.begin(), exList_remove.end());
+      out_buffer.push_back(2*exList_add.size());
+      out_buffer.insert(out_buffer.end(), exList_add.begin(), exList_add.end());
+      // Gather everywhere everything.
+      mpi::all_gather(*(integrator_->getSystem()->comm), out_buffer, in_buffer);
+      //Update list.
+      for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin();
+           it != in_buffer.end(); ++it) {
+        for (int i = 1; i < (it->at(0)+1); i=i+2) {
+          exList->erase(std::make_pair(it->at(i), it->at(i+1)));
+          exList->erase(std::make_pair(it->at(i+1), it->at(i)));
+        }
+        for (int i = (it->at(0)+2); i < it->size(); i=i+2) {
+          exList->insert(std::make_pair(it->at(i), it->at(i+1)));
+        }
       }
     }
+    exList_remove.clear();
+    exList_add.clear();
     exListDirty = false;
   }
 
@@ -123,7 +152,7 @@ namespace espressopp {
     cutsq = cutVerlet * cutVerlet;
     builds = 0;
 
-    exList = exList_->getExList;
+    exList = exList_->getExList();
     dynamicExList = true;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided

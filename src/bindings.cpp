@@ -98,5 +98,7 @@ void espressopp::registerPython() {
   espressopp::analysis::registerPython();
   espressopp::io::registerPython();
 
+  espressopp::DynamicExcludeList::registerPython();
+
   log4espp::PyLogger::registerPython();
 }

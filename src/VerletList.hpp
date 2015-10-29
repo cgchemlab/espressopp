@@ -45,15 +45,18 @@ public:
     void unexclude(longint pid1, longint pid2);
     void connect();
     void disconnect();
-    shared_ptr<ExcludeList> getExList { return exList; }
+    shared_ptr<ExcludeList> getExList() { return exList; };
+
+    bool getExListDirty() { return exListDirty; }
+    void setExListDirty(bool val) { exListDirty = val; }
 
     static void registerPython();
 private:
     shared_ptr<integrator::MDIntegrator> integrator_;
     shared_ptr<ExcludeList> exList;
     // Helper lists.
-    ExcludeList exList_add;
-    ExcludeList exList_remove;
+    std::vector<longint> exList_add;
+    std::vector<longint> exList_remove;
     bool exListDirty;
     void updateList();
 
