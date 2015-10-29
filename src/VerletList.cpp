@@ -53,7 +53,8 @@ namespace espressopp {
     builds = 0;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
-  
+
+    exListDirty = false;
   }
   
   real VerletList::getVerletCutoff(){
@@ -66,9 +67,7 @@ namespace espressopp {
   // make a connection to System to invoke rebuild on resort
   connectionResort = system.storage->onParticlesChanged.connect(
       boost::bind(&VerletList::rebuild, this));
-  
-  sigBeforeSend = system.storage->beforeSendParticles.connect
-    (boost::bind(&VerletList::beforeSendParticles, this, _1, _2));
+
   sigAfterRecv = system.storage->afterRecvParticles.connect
     (boost::bind(&VerletList::afterRecvParticles, this, _1, _2));
 
@@ -158,23 +157,34 @@ namespace espressopp {
 
 
   bool VerletList::exclude(longint pid1, longint pid2) {
-      System &system = getSystemRef();
-      Particle *p1 = system.storage->lookupLocalParticle(pid1);
-      Particle *p2 = system.storage->lookupLocalParticle(pid2);
+      exList.insert(std::make_pair(pid1, pid2));
+      exList.insert(std::make_pair(pid2, pid1));
 
-      bool return_val = true;
-      if (!p1 || !p2) {
-        return_val = false;
+      exList_add.insert(std::make_pair(pid1, pid2));
+
+      exListDirty = true;
+
+      return true;
+  }
+
+  void VerletList::unexclude(longint pid1, longint pid2) {
+    typedef ExcludeList::iterator iterator;
+    std::pair<iterator, iterator> iterpair = exList.equal_range(pid1);
+    iterator it = iterpair.first;
+    for (; it != iterpair.second; ++it) {
+      if (it->second == pid2) {
+        exList_remove.insert(std::make_pair(pid1, pid2));
+        exList.erase(it);
       }
-
-      if (return_val) {
-        if (pid1 > pid2)
-          std::swap(pid1, pid2);
-        exList.insert(std::make_pair(pid1, pid2));
-        exList.insert(std::make_pair(pid2, pid1));
+    }
+    iterpair = exList.equal_range(pid2);
+    it = iterpair.first;
+    for (; it != iterpair.second; ++it) {
+      if (it->second == pid1) {
+        exList.erase(it);
       }
-
-      return return_val;
+    }
+    exListDirty = true;
   }
   
   python::list VerletList::getExList() {
@@ -187,6 +197,17 @@ namespace espressopp {
     return retval;
   }
 
+  void VerletList::afterRecvParticles(ParticleList &unused_pl, InBuffer &unused_buf) {
+    bool global_exListDirty;
+    boost::mpi::all_reduce(*mpiWorld, exListDirty, global_exListDirty, std::logical_or<bool>());
+    if (global_exListDirty) {
+
+    }
+    exList_add.clear();
+    exList_remove.clear();
+    exListDirty = false;
+  }
+
   /*-------------------------------------------------------------*/
   
   VerletList::~VerletList()
@@ -197,6 +218,9 @@ namespace espressopp {
       connectionResort.disconnect();
     }
   }
+
+
+
   
   /****************************************************
   ** REGISTRATION WITH PYTHON
@@ -225,5 +249,6 @@ namespace espressopp {
       .def("getVerletCutoff", &VerletList::getVerletCutoff)
       ;
   }
+
 
 }

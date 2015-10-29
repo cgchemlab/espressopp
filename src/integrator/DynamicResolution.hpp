@@ -38,7 +38,27 @@
 namespace espressopp {
 namespace integrator {
 
-/*
+/**
+ * Simple extension that change only lambda parameter (0.0 - 1.0)
+ * depends on the particle type.
+ */
+class BasicDynamicResolutionType : public Extension {
+ public:
+  BasicDynamicResolutionType(shared_ptr<System> _system);
+  ~BasicDynamicResolutionType();
+
+  void SetTypeRate(longint type, real rate) { rate_type_[type] = rate; }
+
+  static void registerPython();
+ private:
+  void connect();
+  void disconnect();
+  boost::unordered_map<longint, real> rate_type_;
+  void UpdateWeights();
+  boost::signals2::connection _aftIntV;
+};
+
+/**
  * This module implement dynamic resolution extension.
  */
 class DynamicResolution : public Extension {
@@ -53,9 +73,7 @@ class DynamicResolution : public Extension {
   void set_resolution(real resolution) { resolution_ = resolution;}
 
   real rate() { return rate_; }
-  void set_rate(real rate) { rate_ = rate; }
-
-  void set_rate_by_type(longint type_id, real rate) { rate_type_[type_id] = rate; }
+  void set_rate(real val) { rate_ = val; }
 
   bool active() { return active_; }
   void set_active(bool active);
@@ -74,10 +92,8 @@ class DynamicResolution : public Extension {
 
   void ChangeResolution();
   real rate_;
-  boost::unordered_map<longint, real> rate_type_;
   bool active_;
 
-  shared_ptr<VerletListAdress> verletList;
   shared_ptr<TupleList> fixedtupleList;
 
   real resolution_;  /// Current value of resolution, between 0.0 - 1.0

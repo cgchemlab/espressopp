@@ -59,6 +59,7 @@
 #include "VelocityVerletOnRadius.hpp"
 #include "AssociationReaction.hpp"
 #include "ChemicalReaction.hpp"
+#include "DynamicResolution.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -70,6 +71,7 @@ namespace espressopp {
       VelocityVerletOnGroup::registerPython();
       Extension::registerPython();
       Adress::registerPython();
+      BasicDynamicResolutionType::registerPython();
       DynamicResolution::registerPython();
       BerendsenBarostat::registerPython();
       BerendsenBarostatAnisotropic::registerPython();

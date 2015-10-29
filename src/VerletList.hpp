@@ -79,6 +79,8 @@ namespace espressopp {
     /** Add pairs to exclusion list */
     bool exclude(longint pid1, longint pid2);
 
+    void unexclude(longint pid1, longint pid2);
+
     /** Get the number of times the Verlet list has been rebuilt */
     int getBuilds() const { return builds; }
 
@@ -91,10 +93,15 @@ namespace espressopp {
   protected:
 
     void checkPair(Particle &pt1, Particle &pt2);
-    void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
-    void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
+    void afterRecvParticles(ParticleList &unused_pl, InBuffer &unused_buf);
     PairList vlPairs;
     ExcludeList exList; // exclusion list
+
+    // Helper lists, only to communication
+    ExcludeList exList_add;
+    ExcludeList exList_remove;
+
+    bool exListDirty;
     
     real cutsq;
     real cut;
@@ -104,6 +111,7 @@ namespace espressopp {
     boost::signals2::connection connectionResort, sigBeforeSend, sigAfterRecv;
 
     static LOG4ESPP_DECL_LOGGER(theLogger);
+
   };
 
 }

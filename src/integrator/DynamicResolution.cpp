@@ -43,10 +43,9 @@ DynamicResolution::DynamicResolution(
     shared_ptr<TupleList> _fixedtupleList,
     real _rate) : Extension(_system),
                   fixedtupleList(_fixedtupleList) {
-
   LOG4ESPP_INFO(theLogger, "construct DynamicResolution");
 
-  type = Extension::DynamicResolution;
+  type = Extension::Adress;
 
   resolution_ = 0.0;
 }
@@ -77,6 +76,7 @@ void DynamicResolution::connect() {
   // connection to after aftIntV()
   _aftIntV2 = integrator->aftIntV.connect(
       boost::bind(&DynamicResolution::SetVel, this), boost::signals2::at_front);
+}
 
 void DynamicResolution::disconnect() {
   _SetPosVel.disconnect();
@@ -168,6 +168,7 @@ real DynamicResolution::SetPosVel() {
         cmp += at.mass() * at.position();
         cmv += at.mass() * at.velocity();
         at.lambdaDeriv() = 0.0;
+        at.lambda() = resolution_;
       }
 
       cmp /= vp.mass();
@@ -185,12 +186,6 @@ real DynamicResolution::SetPosVel() {
       vp.lambda() = resolution_;
       vp.lambdaDeriv() = 0.0;
     }
-//    } else {
-//      std::stringstream msg;
-//      msg << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-//      msg << " (" << vp.position() << ")";
-//      throw std::runtime_error(msg.str());
-//    }
   }
   return sqDist;
 }
@@ -201,11 +196,8 @@ void DynamicResolution::updateWeights() {
     Particle &vp = *cit;
     FixedTupleListAdress::iterator it3;
     it3 = fixedtupleList->find(&vp);
-    
-    real new_lambda = vp.lambda() + rate_type_[vp.type()];
-    if (new_lambda < 0.0) new_lambda = 0.0
-    else if (new_lambda > 1.0) new_lambda = 1.0;
-    vp.lambda() += std::abs(new_lambda);
+
+    vp.lambda() = resolution_;
     vp.lambdaDeriv() = 0.0;
 
     if (it3 != fixedtupleList->end()) {
@@ -215,15 +207,10 @@ void DynamicResolution::updateWeights() {
       // Propagate lambda/lambdaDeriv downstream to underlying atoms
       for (std::vector<Particle *>::iterator it2 = atList.begin(); it2 != atList.end(); ++it2) {
         Particle &at = **it2;
-        at.lambda() += rate_type_[at.type()];
+        at.lambda() = resolution_;
         at.lambdaDeriv() = 0.0;
       }
-    }/* else {
-      std::stringstream msg;
-      msg << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-      msg << " (" << vp.position() << ")";
-      throw std::runtime_error(msg.str());
-    }*/
+    }
   }
 }
 
@@ -246,8 +233,6 @@ void DynamicResolution::aftCalcF() {
 
         at.force() += at.mass() * vpfm;
       }
-    } else { // this should not happen
-      //throw std::runtime_error("VP not found.");
     }
   }
 }
@@ -267,9 +252,52 @@ void DynamicResolution::registerPython() {
                     &DynamicResolution::set_resolution)
       .add_property("rate", &DynamicResolution::rate, &DynamicResolution::set_rate)
       .def("connect", &DynamicResolution::connect)
-      .def("set_rate_by_type", &DynamicResolution::set_rate_by_type)
       .def("disconnect", &DynamicResolution::disconnect)
       .def("SetPosVel", &DynamicResolution::SetPosVel);
+}
+
+
+BasicDynamicResolutionType::BasicDynamicResolutionType(shared_ptr<System> system):
+    Extension(system) {
+  type = Extension::Adress;
+}
+
+BasicDynamicResolutionType::~BasicDynamicResolutionType() {
+  LOG4ESPP_INFO(theLogger, "~DynamicResolution");
+  disconnect();
+}
+
+void BasicDynamicResolutionType::connect() {
+  _aftIntV = integrator->aftIntV.connect(
+      boost::bind(&BasicDynamicResolutionType::UpdateWeights, this),
+      boost::signals2::at_back);
+}
+
+void BasicDynamicResolutionType::disconnect() {
+  _aftIntV.disconnect();
+}
+
+void BasicDynamicResolutionType::registerPython() {
+  using namespace espressopp::python;  // NOLINT
+  class_<BasicDynamicResolutionType, shared_ptr<BasicDynamicResolutionType>, bases<Extension> >
+      ("integrator_BasicDynamicResolutionType", init<shared_ptr<System> >())
+       .def("set_type_rate", &BasicDynamicResolutionType::SetTypeRate)
+       .def("connect", &BasicDynamicResolutionType::connect)
+       .def("disconnect", &BasicDynamicResolutionType::disconnect);
+}
+
+void BasicDynamicResolutionType::UpdateWeights() {
+  System &system = getSystemRef();
+  for (CellListIterator cit(system.storage->getLocalCells()); !cit.isDone(); ++cit) {
+    Particle &vp = *cit;
+
+    real new_lambda = vp.lambda() + rate_type_[vp.type()];
+    if (new_lambda < 0.0) new_lambda = 0.0;
+    else if (new_lambda > 1.0) new_lambda = 1.0;
+
+    vp.lambda() = new_lambda;
+    vp.lambdaDeriv() = 0.0;
+  }
 }
 }  // end namespace integrator
 }  // end namespace espressopp
