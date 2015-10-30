@@ -26,7 +26,6 @@
 
 #include "types.hpp"
 #include "AnalysisBase.hpp"
-#include "Observable.hpp"
 //#include "storage/DomainDecomposition.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -36,18 +35,14 @@ namespace espressopp {
   namespace analysis {
     using namespace iterator;
     /** Class to compute the temperature. */
-    class Temperature : public Observable {
+    class Temperature : public AnalysisBaseTemplate< real > {
     public:
       static void registerPython();
 
-      Temperature(shared_ptr< System > system) : has_particle_types_(false), Observable(system) {}
+      Temperature(shared_ptr< System > system) : AnalysisBaseTemplate< real >(system) {}
       virtual ~Temperature() {}
-      
-      real computeRaw() {
-        return compute_real();
-      }
 
-      real compute_real() const {
+      real computeRaw() {
       int myN, systemN;
       real sumT = 0.0;
       real v2sum = 0.0;
@@ -67,13 +62,10 @@ namespace espressopp {
                   atList = it2->second;
                   for (std::vector<Particle*>::iterator it3 = atList.begin();
                                        it3 != atList.end(); ++it3) {
-                    Particle &at = **it3;
-                    /// Calculate velocity only for declared particle types.
-                    if (has_particle_types_ && particle_types_.count(at.type()) ==  0)
-                      continue;
-                    Real3D vel = at.velocity();
-                    v2sum += at.mass() * (vel * vel);
-                    count += 1;
+                      Particle &at = **it3;
+                      Real3D vel = at.velocity();
+                      v2sum += at.mass() * (vel * vel);
+                      count += 1;
                   }  
             }
             
@@ -113,10 +105,53 @@ namespace espressopp {
       }
 
 
-    private:
-      void add_particle_type(longint type) {
-        particle_types_.insert(type);
+      python::list compute() {
+        python::list ret;
+        real res = computeRaw();
+        ret.append(res);
+        return ret;
+      }
+
+      python::list getAverageValue() {
+        python::list ret;
+        real res;
+        res = nMeasurements>0 ? newAverage : 0;
+        ret.append(res);
+        res = nMeasurements>0 ? newVariance : 0;
+        ret.append(sqrt(res/(nMeasurements-1)));
+        return ret;
+      }
+
+      void resetAverage() {
+        newAverage   = 0;
+        lastAverage  = 0;
+        newVariance  = 0;
+        lastVariance = 0;
+      }
+
+      void updateAverage(real res) {
+    	if (nMeasurements > 0) {
+    	  if (nMeasurements == 1) {
+              newAverage     = res;
+              lastAverage    = newAverage;
+          } else {
+              newAverage   = lastAverage  + (res - lastAverage) / nMeasurements;
+              newVariance  = lastVariance + (res - lastAverage) * (res - newAverage);
+              lastAverage  = newAverage;
+              lastVariance = newVariance;
+          }
+    	}
+        return;
+      }
+
+     private:
+      void addParticleType(longint type_id) {
+        particle_types_.insert(type_id);
         has_particle_types_ = true;
+      }
+      void removeParticleType(longint type_id) {
+        particle_types_.erase(type_id);
+        has_particle_types_ = particle_types_.size() > 0;
       }
       boost::unordered_set<longint> particle_types_;
       bool has_particle_types_;

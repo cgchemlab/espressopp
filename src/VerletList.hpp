@@ -125,7 +125,7 @@ private:
     void checkPair(Particle &pt1, Particle &pt2);
     void afterRecvParticles(ParticleList &unused_pl, InBuffer &unused_buf);
     PairList vlPairs;
-    shared_ptr<ExcludeList> exList; // exclusion list
+    ExcludeList exList; // exclusion list
     bool dynamicExList;
 
     real cutsq;

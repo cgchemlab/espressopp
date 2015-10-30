@@ -39,7 +39,7 @@ import espressopp
 ########################################################################
 
 # number of particles
-Npart              = 32768
+Npart              = 327
 # density of particles
 rho                = 0.8442
 # length of simulation box

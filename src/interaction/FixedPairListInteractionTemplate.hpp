@@ -56,8 +56,6 @@ namespace espressopp {
         if (! potential) {
           LOG4ESPP_ERROR(theLogger, "NULL potential");
         }
-        precompute_pressure_ = false;
-        precompute_energy_ = false;
       }
 
       virtual ~FixedPairListInteractionTemplate() {};
@@ -110,20 +108,11 @@ namespace espressopp {
       LOG4ESPP_INFO(_Potential::theLogger, "adding forces of FixedPairList");
       const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
       real ltMaxBondSqr = fixedpairList->getLongtimeMaxBondSqr();
-      
-      if (precompute_energy_) {
-        e_local = 0.0;
-      }
-      if (precompute_pressure_) {
-        w_virial = 0.0;
-        w_wlocal = 0.0;
-      }
-
       for (FixedPairList::PairList::Iterator it(*fixedpairList); it.isValid(); ++it) {
         Particle &p1 = *it->first;
         Particle &p2 = *it->second;
         Real3D dist;
-        bc.getMinimumImageVector(dist, p1.position(), p2.position());
+        bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
         Real3D force;
         real d = dist.sqr();
         if (d > ltMaxBondSqr) {
@@ -131,47 +120,34 @@ namespace espressopp {
         	ltMaxBondSqr = d;
         }
         if(potential->_computeForce(force, dist)) {
-          /*if (force.isNaNInf()) {
-            std::cout << " f: " << force
-              << " p1 " << p1.id() << "p1.pos=" << p1.position()
-              << " p2 " << p2.id() << " p2.pos=" << p2.position()
-              << " d=" << d
-              << std::endl;
-            exit(1);
-          }*/
           p1.force() += force;
           p2.force() -= force;
-        }
-        // Precompute local value of energy.
-        if (precompute_energy_)
-          e_local += potential->_computeEnergy(dist);
-        // Precompute local value of 
-        if (precompute_pressure_) {
-          w_virial += dist * force;
-          w_wlocal += Tensor(dist, force);
+          LOG4ESPP_DEBUG(_Potential::theLogger, "p" << p1.id() << "(" << p1.position()[0] << "," << p1.position()[1] << "," << p1.position()[2] << ") "
+        		                             << "p" << p2.id() << "(" << p2.position()[0] << "," << p2.position()[1] << "," << p2.position()[2] << ") "
+        		                             << "dist=" << sqrt(dist*dist) << " "
+        		                             << "force=(" << force[0] << "," << force[1] << "," << force[2] << ")" );
         }
       }
     }
     
     template < typename _Potential > inline real
-    FixedPairListInteractionTemplate < _Potential >::computeEnergy() {
+    FixedPairListInteractionTemplate < _Potential >::
+    computeEnergy() {
 
       LOG4ESPP_INFO(theLogger, "compute energy of the FixedPairList pairs");
 
-      if (!precompute_energy_) {
-        e_local = 0.0;
-        const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-        for (FixedPairList::PairList::Iterator it(*fixedpairList); it.isValid(); ++it) {
-          const Particle &p1 = *it->first;
-          const Particle &p2 = *it->second;
-          Real3D r21;
-          bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-          e_local += potential->_computeEnergy(r21);
-        }
+      real e = 0.0;
+      const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+      for (FixedPairList::PairList::Iterator it(*fixedpairList);
+	   it.isValid(); ++it) {
+        const Particle &p1 = *it->first;
+        const Particle &p2 = *it->second;
+        Real3D r21;
+        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+        e += potential->_computeEnergy(r21);
       }
-
       real esum;
-      boost::mpi::all_reduce(*mpiWorld, e_local, esum, std::plus<real>());
+      boost::mpi::all_reduce(*mpiWorld, e, esum, std::plus<real>());
       return esum;
     }
     
@@ -194,6 +170,88 @@ namespace espressopp {
     FixedPairListInteractionTemplate < _Potential >::
     computeVirialX(std::vector<real> &p_xx_total, int bins) {
               LOG4ESPP_INFO(theLogger, "compute virial p_xx of the pressure tensor slabwise");
+              //std::cout << "Warning! At the moment computeVirialX in FixedPairListInteractionTemplate does not work." << std::endl << "Therefore, the corresponding interactions won't be included in calculation." << std::endl;
+
+       /*int i = 0;
+       int bin1 = 0;
+       int bin2 = 0;
+       
+       const bc::BC& bc = *getSystemRef().bc;
+       Real3D Li = bc.getBoxL();
+       real Delta_x = Li[0] / (real)bins;
+       real Volume = Li[1] * Li[2] * Delta_x;
+ 
+       size_t size = bins;
+       std::vector <real> p_xx_local(size);
+       for (i = 0; i < bins; ++i)
+       {
+          p_xx_local.at(i) = 0.0;
+       }      
+       
+       for (FixedPairList::PairList::Iterator it(*fixedpairList);
+           it.isValid(); ++it) {                                         
+         const Particle &p1 = *it->first;                                       
+         const Particle &p2 = *it->second;           
+         Real3D dist(0.0,0.0,0.0);
+         Real3D force(0.0,0.0,0.0);
+         if(potential->_computeForce(force, p1, p2)) {
+             Real3D dist = p1.position() - p2.position();
+             real vir_temp = 0.5 * dist[0] * force[0];
+         
+             if (p1.position()[0] > Li[0])
+             {
+                  real p1_wrap = p1.position()[0] - Li[0];
+                  bin1 = floor (p1_wrap / Delta_x);    
+             }         
+             else if (p1.position()[0] < 0.0)
+             {
+                  real p1_wrap = p1.position()[0] + Li[0];
+                  bin1 = floor (p1_wrap / Delta_x);    
+             }
+             else
+             {
+                  bin1 = floor (p1.position()[0] / Delta_x);          
+             }
+
+             if (p2.position()[0] > Li[0])
+             {
+                  real p2_wrap = p2.position()[0] - Li[0];
+                  bin2 = floor (p2_wrap / Delta_x);     
+             }         
+             else if (p2.position()[0] < 0.0)
+             {
+                  real p2_wrap = p2.position()[0] + Li[0];
+                  bin2 = floor (p2_wrap / Delta_x);     
+             }
+             else
+             {
+                  bin2 = floor (p2.position()[0] / Delta_x);          
+             }
+
+             if (bin1 >= p_xx_local.size() || bin2 >= p_xx_local.size()){
+                  std::cout << "p_xx_local.size() " << p_xx_local.size() << "\n";
+                  std::cout << "bin1 " << bin1 << " bin2 " << bin2 << "\n";
+                  std::cout << "p1.position()[0] " << p1.position()[0] << " p2.position()[0]" << p2.position()[0] << "\n";
+                  std::cout << "FATAL ERROR: computeVirialX error" << "\n";
+                  exit(0);
+             }         
+             p_xx_local.at(bin1) += vir_temp;
+             p_xx_local.at(bin2) += vir_temp;
+         }
+       }
+         
+       std::vector <real> p_xx_sum(size);
+       for (i = 0; i < bins; ++i)
+       {
+           p_xx_sum.at(i) = 0.0;         
+           boost::mpi::all_reduce(*mpiWorld, p_xx_local.at(i), p_xx_sum.at(i), std::plus<real>());
+       }
+   
+       std::transform(p_xx_sum.begin(), p_xx_sum.end(), p_xx_sum.begin(),std::bind2nd(std::divides<real>(),Volume));     
+       for (i = 0; i < bins; ++i)
+       {
+          p_xx_total.at(i) += p_xx_sum.at(i);         // TO EXCLUDE THEM
+       }*/       
     }
 
        
@@ -201,52 +259,48 @@ namespace espressopp {
     FixedPairListInteractionTemplate < _Potential >::
     computeVirial() {
       LOG4ESPP_INFO(theLogger, "compute the virial for the FixedPair List");
-     
-      if (!precompute_pressure_) {
-        w_virial = 0.0;
-        const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-        for (FixedPairList::PairList::Iterator it(*fixedpairList);
-             it.isValid(); ++it) {                                         
-          const Particle &p1 = *it->first;                                       
-          const Particle &p2 = *it->second;                                      
+      
+      real w = 0.0;
+      const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+      for (FixedPairList::PairList::Iterator it(*fixedpairList);
+           it.isValid(); ++it) {                                         
+        const Particle &p1 = *it->first;                                       
+        const Particle &p2 = *it->second;                                      
 
-          Real3D r21;
-          bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-          Real3D force;
-          if(potential->_computeForce(force, r21)) {
-            w_virial += r21 * force;
-          }
+        Real3D r21;
+        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+        Real3D force;
+        if(potential->_computeForce(force, r21)) {
+          w += r21 * force;
         }
       }
       
       real wsum;
-      boost::mpi::all_reduce(*mpiWorld, w_virial, wsum, std::plus<real>());
+      boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
       return wsum;
     }
 
     template < typename _Potential > inline void
     FixedPairListInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w){
       LOG4ESPP_INFO(theLogger, "compute the virial tensor for the FixedPair List");
-      
-      if (!precompute_pressure_) {
-        w_wlocal = 0.0;
-        const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-        for (FixedPairList::PairList::Iterator it(*fixedpairList);
-             it.isValid(); ++it) {
-          const Particle &p1 = *it->first;
-          const Particle &p2 = *it->second;
-          Real3D r21;
-          bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-          Real3D force;
-          if(potential->_computeForce(force, r21)) { 
-            w_wlocal += Tensor(r21, force);
-          }
+
+      Tensor wlocal(0.0);
+      const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+      for (FixedPairList::PairList::Iterator it(*fixedpairList);
+           it.isValid(); ++it) {
+        const Particle &p1 = *it->first;
+        const Particle &p2 = *it->second;
+        Real3D r21;
+        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+        Real3D force;
+        if(potential->_computeForce(force, r21)) { 
+          wlocal += Tensor(r21, force);
         }
       }
       
       // reduce over all CPUs
       Tensor wsum(0.0);
-      boost::mpi::all_reduce(*mpiWorld, (double*)&w_wlocal, 6, (double*)&wsum, std::plus<double>());
+      boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, 6, (double*)&wsum, std::plus<double>());
       w += wsum;
     }
 

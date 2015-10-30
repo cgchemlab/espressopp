@@ -113,12 +113,6 @@ inline void FixedPairListAdressInteractionTemplate < _Potential >::addForces() {
   LOG4ESPP_INFO(_Potential::theLogger, "Adding forces of FixedPairListAdress");
   const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
   real ltMaxBondSqr = fixedpairList->getLongtimeMaxBondSqr();
-  if (precompute_energy_) 
-    e_local = 0.0;
-  if (precompute_pressure_) {
-    w_virial = 0.0;
-    w_wlocal = 0.0;
-  }
   for (FixedPairList::PairList::Iterator it(*fixedpairList); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
@@ -143,23 +137,8 @@ inline void FixedPairListAdressInteractionTemplate < _Potential >::addForces() {
 
     if (forcescale12 > 0.0) {
       if (potential->_computeForce(force, dist)) {
-        /*if (force.isNaNInf()) {
-            std::cout << " f: " << force
-            << " p1 " << p1.id() << "p1.pos=" << p1.position()
-            << " p2 " << p2.id() << " p2.pos=" << p2.position()
-            << " d=" << d
-            << " w12=" << w12
-            << std::endl;
-          exit(1);
-        }*/
         p1.force() += forcescale12 * force;
         p2.force() -= forcescale12 * force;
-      }
-      if (precompute_energy_)
-        e_local += forcescale12*potential->_computeEnergy(dist);
-      if (precompute_pressure_) {
-        w_virial += dist *  forcescale12 * force;
-        w_wlocal += Tensor(dist, forcescale12 * force);
       }
     }
   }
@@ -169,22 +148,20 @@ template < typename _Potential >
 inline real FixedPairListAdressInteractionTemplate < _Potential >::computeEnergy() {
   LOG4ESPP_INFO(theLogger, "compute energy of the FixedPairListAdress pairs");
 
-  if (!precompute_energy_) {
-    e_local = 0.0;
-    const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-    for (FixedPairList::PairList::Iterator it(*fixedpairList); it.isValid(); ++it) {
-      const Particle &p1 = *it->first;
-      const Particle &p2 = *it->second;
-      real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
-      real energyscale12 = w12;
-      if (cgPotential)
-        energyscale12 = 1.0-w12;
+  real e_local = 0.0;
+  const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+  for (FixedPairList::PairList::Iterator it(*fixedpairList); it.isValid(); ++it) {
+    const Particle &p1 = *it->first;
+    const Particle &p2 = *it->second;
+    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real energyscale12 = w12;
+    if (cgPotential)
+      energyscale12 = 1.0-w12;
 
-      if (energyscale12 > 0.0) {
-        Real3D r21;
-        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-        e_local += energyscale12*potential->_computeEnergy(r21);
-      }
+    if (energyscale12 > 0.0) {
+      Real3D r21;
+      bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+      e_local += energyscale12*potential->_computeEnergy(r21);
     }
   }
   real esum;
@@ -219,26 +196,24 @@ template < typename _Potential >
 inline real FixedPairListAdressInteractionTemplate < _Potential >::computeVirial() {
   LOG4ESPP_INFO(theLogger, "compute the virial for the FixedPair List");
 
-  if (!precompute_pressure_) {
-    w_virial = 0.0;
-    const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-    for (FixedPairList::PairList::Iterator it(*fixedpairList);
-         it.isValid(); ++it) {
-      const Particle &p1 = *it->first;
-      const Particle &p2 = *it->second;
+  real w_virial = 0.0;
+  const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+  for (FixedPairList::PairList::Iterator it(*fixedpairList);
+       it.isValid(); ++it) {
+    const Particle &p1 = *it->first;
+    const Particle &p2 = *it->second;
 
-      real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
-      real forcescale = w12;
-      if (cgPotential) {
-        forcescale = (1-w12);
-      }
-      if (forcescale > 0.0) {
-        Real3D r21;
-        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-        Real3D force;
-        if (potential->_computeForce(force, r21)) {
-          w_virial += r21 * forcescale*force;
-        }
+    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real forcescale = w12;
+    if (cgPotential) {
+      forcescale = (1-w12);
+    }
+    if (forcescale > 0.0) {
+      Real3D r21;
+      bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+      Real3D force;
+      if (potential->_computeForce(force, r21)) {
+        w_virial += r21 * forcescale*force;
       }
     }
   }
@@ -252,25 +227,23 @@ template < typename _Potential >
 inline void FixedPairListAdressInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w) {
   LOG4ESPP_INFO(theLogger, "compute the virial tensor for the FixedPair List");
 
-  if (!precompute_pressure_) {
-    w_wlocal = 0.0;
-    const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-    for (FixedPairList::PairList::Iterator it(*fixedpairList);
-         it.isValid(); ++it) {
-      const Particle &p1 = *it->first;
-      const Particle &p2 = *it->second;
-      real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
-      real forcescale = w12;
-      if (cgPotential) {
-        forcescale = (1-w12);
-      }
-      if (forcescale > 0.0) {
-        Real3D r21;
-        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-        Real3D force;
-        if (potential->_computeForce(force, r21)) {
-          w_wlocal += Tensor(r21, forcescale*force);
-        }
+  real w_wlocal = 0.0;
+  const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+  for (FixedPairList::PairList::Iterator it(*fixedpairList);
+       it.isValid(); ++it) {
+    const Particle &p1 = *it->first;
+    const Particle &p2 = *it->second;
+    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real forcescale = w12;
+    if (cgPotential) {
+      forcescale = (1-w12);
+    }
+    if (forcescale > 0.0) {
+      Real3D r21;
+      bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+      Real3D force;
+      if (potential->_computeForce(force, r21)) {
+        w_wlocal += Tensor(r21, forcescale*force);
       }
     }
   }

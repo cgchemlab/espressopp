@@ -88,6 +88,7 @@ namespace espressopp {
     mpi::all_reduce(*(integrator_->getSystem()->comm), exListDirty,
                     global_exListDirty, std::logical_or<bool>());
     if (global_exListDirty) {
+      LOG4ESPP_INFO(theLogger, "Exclude dynamic list is dirty, exchange it.");
       std::vector<longint> out_buffer;
       std::vector<std::vector<longint> > in_buffer;
 
@@ -140,7 +141,7 @@ namespace espressopp {
   // cut is a cutoff (without skin)
   VerletList::VerletList(shared_ptr<System> system, real _cut, bool rebuildVL) : SystemAccess(system)
   {
-    LOG4ESPP_INFO(theLogger, "construct VerletList, cut = " << _cut);
+    LOG4ESPP_INFO(theLogger, "construct VerletList with static exclusion list, cut = " << _cut);
   
     if (!system->storage) {
        throw std::runtime_error("system has no storage");
@@ -153,14 +154,14 @@ namespace espressopp {
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
 
-    exList = boost::make_shared<ExcludeList>();
+    //exList = boost::make_shared<ExcludeList>();
     dynamicExList = false;
   }
 
   VerletList::VerletList(shared_ptr<System> system, real _cut,
                          shared_ptr<DynamicExcludeList> exList_, bool rebuildVL):
       SystemAccess(system) {
-    LOG4ESPP_INFO(theLogger, "construct VerletList, cut = " << _cut);
+    LOG4ESPP_INFO(theLogger, "construct VerletList with dynamic exclusion list, cut = " << _cut);
 
     if (!system->storage) {
       throw std::runtime_error("system has no storage");
@@ -171,7 +172,7 @@ namespace espressopp {
     cutsq = cutVerlet * cutVerlet;
     builds = 0;
 
-    exList = exList_->getExList();
+    //exList = exList_->getExList();
     dynamicExList = true;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
@@ -238,8 +239,10 @@ namespace espressopp {
     if (distsq > cutsq) return;
 
     // see if it's in the exclusion list (both directions)
-    if (exList->count(std::make_pair(pt1.id(), pt2.id())) == 1) return;
-    if (exList->count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
+    //if (!exList)
+    //  std::cout << "EXList is Null???" << std::endl;
+    if (exList.count(std::make_pair(pt1.id(), pt2.id())) == 1) return;
+    if (exList.count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
 
     vlPairs.add(pt1, pt2); // add pair to Verlet List
   }
@@ -273,9 +276,10 @@ namespace espressopp {
 
 
   bool VerletList::exclude(longint pid1, longint pid2) {
+    LOG4ESPP_DEBUG(theLogger, "VL:exclude " << pid1 << "-" << pid2);
     if (dynamicExList)
       throw std::runtime_error("Cannot change directly excluded list.");
-    exList->insert(std::make_pair(pid1, pid2));
+    exList.insert(std::make_pair(pid1, pid2));
 
     return true;
   }

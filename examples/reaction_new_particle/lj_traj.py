@@ -43,8 +43,8 @@ def main():  # NOQA
     # A:D + B -> C + D
     args = _args()
 
-    enable_debug(args, 'ChemicalReaction')
-    enable_debug(args, 'Reaction')
+    # enable_debug(args, 'ChemicalReaction')
+    # enable_debug(args, 'Reaction')
 
     print('Box={}'.format(conf.box))
 
@@ -65,7 +65,7 @@ def main():  # NOQA
 
     # Build the configuration.
     particles_list = []
-    last_pid = 0
+    last_pid = 1
 
     bonds_a_d_tmp = []
 
@@ -88,14 +88,14 @@ def main():  # NOQA
             conf.type_a.type_id,
             conf.type_a.mass,
             1,
-            pid_a])
+            ])
         last_pid += 1
         # Create co-partner D
         pid_d = last_pid
         pos_d = pos + espressopp.Real3D(conf.bond_a_d_tmp, 0, 0)
         particles_list.append([
             pid_d, pos_d, vel, conf.type_d_tmp.type_id,
-            conf.type_d_tmp.mass, 1, pid_d])
+            conf.type_d_tmp.mass, 1])
         last_pid += 1
         bonds_a_d_tmp.append((pid_a, pid_d))
         v_idx += 1
@@ -105,7 +105,7 @@ def main():  # NOQA
         pos = system.bc.getRandomPos()
         vel = espressopp.Real3D(vx[v_idx], vy[v_idx], vz[v_idx])
         pid_b = last_pid
-        particles_list.append([pid_b, pos, vel, conf.type_b.type_id, conf.type_b.mass, 0, pid_b])
+        particles_list.append([pid_b, pos, vel, conf.type_b.type_id, conf.type_b.mass, 0])
         last_pid += 1
         v_idx += 1
 
@@ -116,14 +116,13 @@ def main():  # NOQA
         'v',
         'type',
         'mass',
-        'state',
-        'res_id')
+        'state')
     print("Decompose...")
     system.storage.decompose()
 
     ex_list = bonds_a_d_tmp[:]
 
-    logging.getLogger('FixDistances').setLevel(logging.DEBUG)
+    # logging.getLogger('FixDistances').setLevel(logging.DEBUG)
     fix_list = [(x[0], x[1], conf.bond_a_d_tmp) for x in bonds_a_d_tmp]
     fix_distance = espressopp.integrator.FixDistances(
         system, fix_list, conf.type_a.type_id, conf.type_d_tmp.type_id)
@@ -133,22 +132,23 @@ def main():  # NOQA
         espressopp.ParticleProperties(conf.type_d.type_id, conf.type_d.mass, 0.0))
     fix_distance.add_postprocess(fx_1_post_process)
 
-    integrator.addExtension(fix_distance)
+    #integrator.addExtension(fix_distance)
 
     print('Setup interactions...')
-    dynamic_ex_list = espressopp.DynamicExcludeList(integrator, ex_list)
+    # logging.getLogger('DynamicExcludeList').setLevel(logging.DEBUG)
+    # logging.getLogger('VerletList').setLevel(logging.DEBUG)
+    # dynamic_ex_list = espressopp.DynamicExcludeList(integrator, ex_list)
     verletList = espressopp.VerletList(
         system,
         cutoff=conf.rc,
-        exclusionlist=dynamic_ex_list)
+        exclusionlist=ex_list)
 
     # Chemical bond C = A-A.
     fpl_a_a = espressopp.FixedPairList(system.storage)
     potHarmonic = espressopp.interaction.Harmonic(
         K=conf.K_ac,
         r0=conf.bond_a_c,
-        cutoff=conf.rc
-    )
+        cutoff=conf.rc)
     interHarmonic = espressopp.interaction.FixedPairListHarmonic(
         system,
         fpl_a_a,
@@ -166,24 +166,33 @@ def main():  # NOQA
         (sigma - eps_delta)/args.warmup_loops
         for _, _, sigma, _ in conf.lj_potential_matrix
         ]
+    potential_matrix = {
+        (type_1, type_2): espressopp.interaction.LennardJones()
+        for type_1, type_2, _, _ in conf.lj_potential_matrix
+    }
     for s in range(args.warmup_loops):
+        integrator.run(1)
         espressopp.tools.analyse.info(system, integrator, per_atom=True)
         for i, (type_1, type_2, sigma_12, epsilon_12) in enumerate(conf.lj_potential_matrix):
+            sigma = eps_delta + s*eq_delta[i]
+            cutoff = sigma * conf.rc_lj
+            print type_1, type_2, sigma, cutoff
+            pot = potential_matrix[(type_1, type_2)]
+            pot.sigma=sigma
+            pot.epsilon = epsilon_12
+            pot.cutoff = cutoff
             interEqLJ.setPotential(
                 type1=type_1,
                 type2=type_2,
-                potential=espressopp.interaction.LennardJones(
-                    sigma=eps_delta + s*eq_delta[i],
-                    epsilon=epsilon_12,
-                    cutoff=(eps_delta+s*eq_delta[i])*conf.rc_lj
-                ))
-        integrator.run(100)
+                potential=pot)
 
     system.removeInteraction(1)
     print('Finished equilibration...')
+    integrator.run(100)
 
     # Lennard-Jones potential
     interLJ = espressopp.interaction.VerletListLennardJones(verletList)
+    ljpot = espressopp.interaction.LennardJones()
     for type_1, type_2, sigma_12, epsilon_12 in lj_potential_matrix:
         interLJ.setPotential(
             type1=type_1,
@@ -193,7 +202,7 @@ def main():  # NOQA
                 epsilon=epsilon_12,
                 cutoff=sigma_12*rc_lj
             ))
-    system.addInteraction(interLJ, 'lj')
+    system.addInteraction(interLJ)
 
     interLJNon = espressopp.interaction.VerletListNonReciprocalLennardJones(verletList, type_d_tmp)
     for type_1, type_2, sigma_12, epsilon_12 in lj_potential_non_reciprocal:

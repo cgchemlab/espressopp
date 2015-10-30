@@ -79,7 +79,6 @@ class VerletListLocal(_espressopp.VerletList):
     def __init__(self, system, cutoff, exclusionlist=None):
 
         if pmi.workerIsActive():
-            print type(exclusionlist)
             if exclusionlist is None:
                 # rebuild list in constructor
                 cxxinit(self, _espressopp.VerletList, system, cutoff, True)
