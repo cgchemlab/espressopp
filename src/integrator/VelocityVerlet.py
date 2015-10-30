@@ -33,8 +33,8 @@ r"""
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 
-from espresso.integrator.MDIntegrator import *
-from _espresso import integrator_VelocityVerlet 
+from espressopp.integrator.MDIntegrator import *
+from _espressopp import integrator_VelocityVerlet 
 
 class VelocityVerletLocal(MDIntegratorLocal, integrator_VelocityVerlet):
 
