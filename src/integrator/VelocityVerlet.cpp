@@ -129,7 +129,6 @@ namespace espressopp {
         befIntP();
         timeBefIntPS += timeIntegrate.getElapsedTime() - time;
 
-        time = timeIntegrate.getElapsedTime();
         LOG4ESPP_INFO(theLogger, "updating positions and velocities")
         maxDist += integrate1();
         timeInt1 += timeIntegrate.getElapsedTime() - time;
