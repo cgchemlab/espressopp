@@ -46,9 +46,10 @@ public:
     void connect();
     void disconnect();
     shared_ptr<ExcludeList> getExList() { return exList; };
+    python::list getList();
 
     bool getExListDirty() { return exListDirty; }
-    void setExListDirty(bool val) { exListDirty = val; }
+    void setExListDirty(bool val);
 
     static void registerPython();
 private:

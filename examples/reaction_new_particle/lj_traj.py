@@ -1,7 +1,5 @@
 """Test case for releasing new particle."""
 
-from __future__ import print_function
-
 import espressopp  # pylint:disable=F0401
 import argparse
 
@@ -12,12 +10,9 @@ except ImportError:
 # import numpy
 
 import logging
-import math
 import time
 
-import serial_h5md
-
-import tools
+import conf
 
 
 def _args():
@@ -30,14 +25,6 @@ def _args():
     parser.add_argument('--noinfo', action='store_true', default=False)
 
     return parser.parse_args()
-
-
-def _lb_rule_sigma(sigma_a, sigma_b):
-    return 0.5*(sigma_a + sigma_b)
-
-
-def _lb_rule_epsilon(epsilon_a, epsilon_b):
-    return math.sqrt(epsilon_a * epsilon_b)
 
 
 def enable_debug(args, logger=None):
@@ -59,79 +46,38 @@ def main():  # NOQA
     enable_debug(args, 'ChemicalReaction')
     enable_debug(args, 'Reaction')
 
-    epsilon = 1.0
-    rc = 2.5  # 2.0**(1./6.)
-    rc_lj = 2.0**(1.0/6.0)
-
-    type_a = 1
-    type_b = 2
-    type_c = 3
-    type_d = 4
-    type_d_tmp = 5
-
-    sigma_a = sigma_b = 1.0
-    sigma_c = 1.0
-    sigma_d = 0.5
-
-    mass_a = mass_b = 1.0
-    mass_c = 1.5
-    mass_d = 0.5
-
-    # Bonds
-    # Keep the special particle D by stiff bond inside the A bead
-    bond_len_ad = 1.0*sigma_a
-
-    # Newly created bond
-    K_ac = 0.1 * epsilon
-    bond_len_ac = 0.1
-
-    # Number of particles.
-    N_a = 50
-    N_b = 50
-
-    TotN = N_a*2 + N_b
-    rho = 0.85
-
-    temperature = 1.0
-
-    skin = 0.2
-    print("skin = %s" % skin)
-
-    L = pow(TotN/rho, 1.0/3.0)
-    box = (L, L, L)
-    print('Box={}'.format(box))
+    print('Box={}'.format(conf.box))
 
     # Initialize the espressopp system
-    system = tools.System()
+    system = espressopp.System()
     system.kb = 1.0
     system.rng = espressopp.esutil.RNG()
-    system.bc = espressopp.bc.OrthorhombicBC(system.rng, box)
-    system.skin = skin
+    system.bc = espressopp.bc.OrthorhombicBC(system.rng, conf.box)
+    system.skin = conf.skin
 
     nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
-    cellGrid = espressopp.tools.decomp.cellGrid(box, nodeGrid, rc, skin)
+    cellGrid = espressopp.tools.decomp.cellGrid(conf.box, nodeGrid, conf.rc, conf.skin)
     print(nodeGrid, cellGrid)
     system.storage = espressopp.storage.DomainDecomposition(system, nodeGrid, cellGrid)
 
     integrator = espressopp.integrator.VelocityVerlet(system)
     integrator.dt = args.dt
 
-    # Build the configuration
+    # Build the configuration.
     particles_list = []
-    ex_list = []
     last_pid = 0
 
-    bonds_a_d = []
+    bonds_a_d_tmp = []
 
     vx, vy, vz = espressopp.tools.init_cfg.velocities.gaussian(
-        temperature,
-        N_a + N_b,
-        [mass_a for _ in range(N_a)] + [mass_b for _ in range(N_b)]
+        conf.temperature,
+        conf.N_a + conf.N_b,
+        [conf.type_a.mass for _ in range(conf.N_a)] + [conf.type_b.mass for _ in range(conf.N_b)]
     )
 
     v_idx = 0
     # Adds A with particle with copartner D.
-    for i in range(N_a):
+    for i in range(conf.N_a):
         pos = system.bc.getRandomPos()
         pid_a = last_pid
         vel = espressopp.Real3D(vx[v_idx], vy[v_idx], vz[v_idx])
@@ -139,25 +85,27 @@ def main():  # NOQA
             pid_a,
             pos,
             vel,
-            type_a,
-            mass_a,
+            conf.type_a.type_id,
+            conf.type_a.mass,
             1,
             pid_a])
         last_pid += 1
-        # Create copartner D
+        # Create co-partner D
         pid_d = last_pid
-        pos_d = pos + espressopp.Real3D(bond_len_ad, 0, 0)
-        particles_list.append([pid_d, pos_d, vel, type_d_tmp, mass_d, 1, pid_a])
+        pos_d = pos + espressopp.Real3D(conf.bond_a_d_tmp, 0, 0)
+        particles_list.append([
+            pid_d, pos_d, vel, conf.type_d_tmp.type_id,
+            conf.type_d_tmp.mass, 1, pid_d])
         last_pid += 1
-        bonds_a_d.append((pid_a, pid_d))
+        bonds_a_d_tmp.append((pid_a, pid_d))
         v_idx += 1
 
     # Adds B
-    for i in range(N_b):
+    for i in range(conf.N_b):
         pos = system.bc.getRandomPos()
         vel = espressopp.Real3D(vx[v_idx], vy[v_idx], vz[v_idx])
         pid_b = last_pid
-        particles_list.append([pid_b, pos, vel, type_b, mass_b, 0, pid_b])
+        particles_list.append([pid_b, pos, vel, conf.type_b.type_id, conf.type_b.mass, 0, pid_b])
         last_pid += 1
         v_idx += 1
 
@@ -169,84 +117,69 @@ def main():  # NOQA
         'type',
         'mass',
         'state',
-        'res_id'
-        )
+        'res_id')
     print("Decompose...")
     system.storage.decompose()
 
-    ex_list = bonds_a_d[:]
+    ex_list = bonds_a_d_tmp[:]
 
     logging.getLogger('FixDistances').setLevel(logging.DEBUG)
-    fix_list = [(x[0], x[1], bond_len_ad) for x in bonds_a_d]
-    fix_distance = espressopp.integrator.FixDistances(system, fix_list, type_a, type_d_tmp)
-    fx_1_post_process = espressopp.integrator.PostProcessChangesProperty()
+    fix_list = [(x[0], x[1], conf.bond_a_d_tmp) for x in bonds_a_d_tmp]
+    fix_distance = espressopp.integrator.FixDistances(
+        system, fix_list, conf.type_a.type_id, conf.type_d_tmp.type_id)
+    fx_1_post_process = espressopp.integrator.PostProcessChangeProperty()
     fx_1_post_process.add_change_property(
-        type_d_tmp,
-        espressopp.ParticleProperties(type_d, mass_d, 0.0))
+        conf.type_d_tmp.type_id,
+        espressopp.ParticleProperties(conf.type_d.type_id, conf.type_d.mass, 0.0))
     fix_distance.add_postprocess(fx_1_post_process)
 
     integrator.addExtension(fix_distance)
 
     print('Setup interactions...')
+    dynamic_ex_list = espressopp.DynamicExcludeList(integrator, ex_list)
     verletList = espressopp.VerletList(
         system,
-        cutoff=rc,
-        exclusionlist=ex_list)
+        cutoff=conf.rc,
+        exclusionlist=dynamic_ex_list)
 
+    # Chemical bond C = A-A.
     fpl_a_a = espressopp.FixedPairList(system.storage)
     potHarmonic = espressopp.interaction.Harmonic(
-        K=K_ac,
-        r0=bond_len_ac,
-        cutoff=rc
+        K=conf.K_ac,
+        r0=conf.bond_a_c,
+        cutoff=conf.rc
     )
     interHarmonic = espressopp.interaction.FixedPairListHarmonic(
         system,
         fpl_a_a,
         potHarmonic)
     fpl_a_a.addBonds([])
-    system.addInteraction(interHarmonic, 'reaction_a_b')
+    system.addInteraction(interHarmonic)
 
-    # Setup h5md
-    h5dump = serial_h5md.DumpH5MD('lj.h5', system, integrator, '', edges=box)
-    h5topo = serial_h5md.DumpTopo(
-        h5dump,
-        system,
-        integrator,
-        fpl_a_a,
-        [x[0] for x in particles_list],
-        time=True)
-
-    # Dump existing bonds
-    # serial_h5md.save_bonds(h5dump, bond_lists_a + bond_list)
-    h5dump.dump()
-    h5topo.dump()
-    h5dump.f.flush()
-
-    # equilibration
+    # Equilibration.
     print('Equilibration...')
-
     integrator.step = 0
     interEqLJ = espressopp.interaction.VerletListLennardJones(verletList)
-    system.addInteraction(interEqLJ, 'lj-warmup')
+    system.addInteraction(interEqLJ)
     eps_delta = 0.0001
     eq_delta = [
         (sigma - eps_delta)/args.warmup_loops
-        for _, _, sigma, _ in lj_potential_matrix
+        for _, _, sigma, _ in conf.lj_potential_matrix
         ]
     for s in range(args.warmup_loops):
         espressopp.tools.analyse.info(system, integrator, per_atom=True)
-        for i, (type_1, type_2, sigma_12, epsilon_12) in enumerate(lj_potential_matrix):
+        for i, (type_1, type_2, sigma_12, epsilon_12) in enumerate(conf.lj_potential_matrix):
             interEqLJ.setPotential(
                 type1=type_1,
                 type2=type_2,
                 potential=espressopp.interaction.LennardJones(
                     sigma=eps_delta + s*eq_delta[i],
                     epsilon=epsilon_12,
-                    cutoff=(eps_delta+s*eq_delta[i])*rc_lj
+                    cutoff=(eps_delta+s*eq_delta[i])*conf.rc_lj
                 ))
         integrator.run(100)
 
-    system.removeInteractionByLabel('lj-warmup')
+    system.removeInteraction(1)
     print('Finished equilibration...')
 
     # Lennard-Jones potential

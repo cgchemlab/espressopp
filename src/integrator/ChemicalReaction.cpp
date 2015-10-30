@@ -155,12 +155,19 @@ bool PostProcessChangeProperty::process(Particle &p1) {
   bool mod = false;
   LOG4ESPP_DEBUG(theLogger, "type " << it->second->type);
   if (it != type_properties_.end()) {
-    p1.setType(it->second->type);
-    p1.setMass(it->second->mass);
-    p1.setQ(it->second->q);
-    mod = true;
-    LOG4ESPP_DEBUG(theLogger, "Modified particle A");
-    LOG4ESPP_DEBUG(theLogger, p1.id());
+    if (it->second->type != NULL) {
+      p1.setType(it->second->type);
+      mod = true;
+    }
+    if (it->second->mass != NULL) {
+      p1.setMass(it->second->mass);
+      mod = true;
+    }
+    if (it->second->q != NULL) {
+      p1.setQ(it->second->q);
+      mod = true;
+    }
+    LOG4ESPP_DEBUG(theLogger, "Modified particle A: " << p1.id());
   }
   return mod;
 }
@@ -221,6 +228,21 @@ void PostProcessUpdateResId::registerPython() {
       boost::shared_ptr<integrator::PostProcessUpdateResId> >
   ("integrator_PostProcessUpdateResId", init<shared_ptr<System>, int>())
     .def("add_molecule_size", &PostProcessUpdateResId::add_molecule_size);
+}
+
+/** Post Process, update exclude list. */
+std::vector<Particle *> PostProcessUpdateExcludeList::process(Particle &p1, Particle &p2) {
+  dynamicExcludeList_->exclude(p1.id(), p2.id());
+
+  return std::vector<Particle *>();
+}
+
+void PostProcessUpdateExcludeList::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_<PostProcessUpdateExcludeList, bases<integrator::PostProcess>,
+         boost::shared_ptr<integrator::PostProcessUpdateExcludeList> >
+      ("integrator_PostProcessUpdateExcludeList", init<shared_ptr<DynamicExcludeList> >());
 }
 
 
@@ -796,6 +818,7 @@ void ChemicalReaction::registerPython() {
           &ChemicalReaction::interval,
           &ChemicalReaction::set_interval);
   }
+
 }  // namespace integrator
 }  // namespace espressopp
 

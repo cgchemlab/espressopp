@@ -57,8 +57,8 @@ typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticleProper
 
 const int kCrCommTag = 0xad;
 
-/** PostProcess **/
 
+/** PostProcess **/
 class PostProcess {
  public:
   PostProcess() { }
@@ -71,6 +71,18 @@ class PostProcess {
  protected:
   shared_ptr<System> system_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
+
+class PostProcessUpdateExcludeList : public PostProcess {
+ public:
+  PostProcessUpdateExcludeList(shared_ptr<DynamicExcludeList> dynamicExcludeList):
+      dynamicExcludeList_(dynamicExcludeList) {}
+  std::vector<Particle*> process(Particle &p1, Particle &p2);
+
+  static void registerPython();
+ private:
+  shared_ptr<DynamicExcludeList> dynamicExcludeList_;
 };
 
 

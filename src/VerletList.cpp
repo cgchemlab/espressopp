@@ -72,9 +72,11 @@ namespace espressopp {
 
     class_<DynamicExcludeList, shared_ptr<DynamicExcludeList> >
         ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
-         .add_property("is_dirty", &DynamicExcludeList::getExListDirty, &DynamicExcludeList::setExListDirty)
+         .add_property("is_dirty", &DynamicExcludeList::getExListDirty,
+                       &DynamicExcludeList::setExListDirty)
          .def("exclude", &DynamicExcludeList::exclude)
          .def("unexclude", &DynamicExcludeList::unexclude)
+         .def("get_list", &DynamicExcludeList::getList)
          .def("connect", &DynamicExcludeList::connect)
          .def("disconnect", &DynamicExcludeList::disconnect);
   }
@@ -111,6 +113,23 @@ namespace espressopp {
     exList_remove.clear();
     exList_add.clear();
     exListDirty = false;
+  }
+
+
+  void DynamicExcludeList::setExListDirty(bool val) {
+    if (!val) {
+      exList_remove.clear();
+      exList_add.clear();
+    }
+    exListDirty = val;
+  }
+
+  python::list DynamicExcludeList::getList() {
+    python::list return_list;
+    for (ExcludeList::iterator it = exList->begin(); it != exList->end(); ++it) {
+      return_list.append(python::make_tuple(it->first, it->second));
+    }
+    return return_list;
   }
 
   LOG4ESPP_LOGGER(DynamicExcludeList::theLogger, "DynamicExcludeList");
@@ -302,5 +321,4 @@ namespace espressopp {
       .def("getVerletCutoff", &VerletList::getVerletCutoff)
       ;
   }
-
 }

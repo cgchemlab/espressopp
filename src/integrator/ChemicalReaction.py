@@ -102,6 +102,7 @@ from _espressopp import integrator_Reaction
 from _espressopp import integrator_PostProcess
 from _espressopp import integrator_PostProcessChangeProperty
 from _espressopp import integrator_PostProcessUpdateResId
+from _espressopp import integrator_PostProcessUpdateExcludeList
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -170,6 +171,12 @@ class PostProcessUpdateResIdLocal(integrator_PostProcessUpdateResId,
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             self.cxxclass.add_molecule_size(self, type_id, molecule_size)
 
+class PostProcessUpdateExcludeListLocal(integrator_PostProcessUpdateExcludeList,
+                                        integrator_PostProcess):
+    def __init__(self, dynamic_exclude_list):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_PostProcessUpdateExcludeListLocal, dynamic_exclude_list)
+
 
 class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
@@ -224,6 +231,12 @@ if pmi.isController:
             cls='espressopp.integrator.PostProcessUpdateResIdLocal',
             pmicall=('add_molecule_size',)
         )
+
+    class PostProcessUpdateExcludeList:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = {
+            'cls': 'espressopp.integrator.PostProcessUpdateExcludeListLocal'
+        }
 
     class Reaction:
         __metaclass__ = pmi.Proxy
