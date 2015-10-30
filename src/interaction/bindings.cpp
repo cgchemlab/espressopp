@@ -34,6 +34,7 @@
 #include "LennardJonesForceCapped.hpp"
 #include "LJcos.hpp"
 #include "Morse.hpp"
+#include "CoulombTruncatedUniqueCharge.hpp"
 #include "CoulombTruncated.hpp"
 #include "GravityTruncated.hpp"
 #include "ReactionFieldGeneralized.hpp"
@@ -67,6 +68,7 @@
 #include "DihedralHarmonicCos.hpp"
 #include "DihedralHarmonicUniqueCos.hpp"
 #include "DihedralHarmonicNCos.hpp"
+#include "DihedralRB.hpp"
 #include "CoulombKSpaceEwald.hpp"
 #include "CoulombRSpace.hpp"
 #include "StillingerWeberPairTerm.hpp"
@@ -99,6 +101,7 @@ namespace espressopp {
       LennardJonesGromacs::registerPython();
       LennardJonesGeneric::registerPython();
       Morse::registerPython();
+      CoulombTruncatedUniqueCharge::registerPython();
       CoulombTruncated::registerPython();
       GravityTruncated::registerPython();
       ReactionFieldGeneralized::registerPython();
@@ -131,6 +134,7 @@ namespace espressopp {
       DihedralHarmonicCos::registerPython();
       DihedralHarmonicUniqueCos::registerPython();
       DihedralHarmonicNCos::registerPython();
+      DihedralRB::registerPython();
       
       CoulombKSpaceEwald::registerPython();
       CoulombRSpace::registerPython();

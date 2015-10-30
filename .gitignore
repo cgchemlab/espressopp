@@ -1,6 +1,8 @@
+*~
+Makefile
+*.o
+*.so
 *.pyc
-<<<<<<< HEAD
-=======
 COPYING
 INSTALL
 ESPRC
@@ -14,4 +16,5 @@ CMakeCache.txt
 CPack*.cmake
 install_manifest.txt
 doc/dg/html/
->>>>>>> upstream/master
+CTestTestfile.cmake
+contrib/boost/libespressopp_boost.a

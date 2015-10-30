@@ -151,6 +151,7 @@ class TabulatedAngleInteractionType(InteractionType):
         potTab = espressopp.interaction.TabulatedAngular(itype=spline, filename=fe)
         interb = espressopp.interaction.FixedTripleListTabulatedAngular(system, fpl, potTab)
         return interb  
+
 class TabulatedDihedralInteractionType(InteractionType):
     def createEspressoInteraction(self, system, fpl):
         spline = 3
@@ -170,6 +171,15 @@ class TabulatedDihedralInteractionType(InteractionType):
         pot = espressopp.interaction.DihedralHarmonicCos(K=self.parameters['k']/2.0, phi0=self.parameters['phi']*2*math.pi/360)
         interb = espressopp.interaction.FixedQuadrupleListDihedralHarmonicCos(system, fpl, pot)
         return interb          """
+
+class HarmonicNCosDihedralInteractionType(InteractionType):
+    def createEspressoInteraction(self, system, fpl):
+        # DihedralHarmonicNCos coded such that k = gromacs spring constant. Convert degrees to rad 
+        pot = espressopp.interaction.DihedralHarmonicNCos(self.parameters['K'], self.parameters['phi0']*2*math.pi/360, self.parameters['multiplicity'])
+        interb = espressopp.interaction.FixedQuadrupleListDihedralHarmonicNCos(system, fpl, pot)
+        return interb
+    def automaticExclusion(self):
+        return True
     
 def ParseBondTypeParam(line):
     tmp = line.split() 
@@ -211,13 +221,24 @@ def ParseDihedralTypeParam(line):
     type= int(tmp[4])
     if type == 8:
         p=TabulatedDihedralInteractionType({"tablenr":int(tmp[5]), "k":float(tmp[6])})
+    elif (type == 1) or (type == 9): 
+        p=HarmonicNCosDihedralInteractionType({"K":float(tmp[6]), "phi0":float(tmp[5]), "multiplicity":int(tmp[7])})
     else:
         print "Unsupported dihedral type", type, "in line:"
         print line
         exit()
     return p    
 
-
+def ParseImproperTypeParam(line):
+    tmp = line.split()
+    type= int(tmp[4])
+    if type == 4:
+        p=HarmonicNCosDihedralInteractionType({"K":float(tmp[6]), "phi0":float(tmp[5]), "multiplicity":int(tmp[7])})
+    else:
+        print "Unsupported improper type", type, "in line:"
+        print line
+        exit()
+    return p
 
 # Usefull code for generating the regular exclusions
 
