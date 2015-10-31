@@ -29,16 +29,40 @@
 #include "python.hpp"
 #include "Particle.hpp"
 #include "SystemAccess.hpp"
+#include "integrator/MDIntegrator.hpp"
 #include "boost/signals2.hpp"
 #include "boost/unordered_set.hpp"
 
 namespace espressopp {
+typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
 
-/** Class that builds and stores verlet lists.
+class DynamicExcludeList {
+ public:
+  DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator);
+  ~DynamicExcludeList();
+  void exclude(longint pid1, longint pid2);
+  void unexclude(longint pid1, longint pid2);
+  void connect();
+  void disconnect();
+  shared_ptr<ExcludeList> getExList() { return exList; };
+  python::list getList();
 
-    ToDo: register at system for rebuild
+  bool getExListDirty() { return exListDirty; }
+  void setExListDirty(bool val);
 
-*/
+  static void registerPython();
+ private:
+  shared_ptr<integrator::MDIntegrator> integrator_;
+  shared_ptr<ExcludeList> exList;
+  // Helper lists.
+  std::vector<longint> exList_add;
+  std::vector<longint> exList_remove;
+  bool exListDirty;
+  void updateList();
+
+  boost::signals2::connection aftIntV;
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
 
   class VerletList : public SystemAccess {
 
@@ -53,6 +77,8 @@ namespace espressopp {
     */
 
     VerletList(shared_ptr< System >, real cut, bool rebuildVL);
+    VerletList(shared_ptr< System >, real cut,
+        shared_ptr<DynamicExcludeList> dynamic_ex_list, bool rebuildVL);
 
     ~VerletList();
 
@@ -90,7 +116,8 @@ namespace espressopp {
 
     void checkPair(Particle &pt1, Particle &pt2);
     PairList vlPairs;
-    boost::unordered_set<std::pair<longint, longint> > exList; // exclusion list
+    shared_ptr<ExcludeList> exList; // exclusion list
+    bool dynamicExList;
     
     real cutsq;
     real cut;

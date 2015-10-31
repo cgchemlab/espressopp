@@ -57,15 +57,33 @@ import _espressopp
 import espressopp
 from espressopp.esutil import cxxinit
 
+
+class DynamicExcludeListLocal(_espressopp.DynamicExcludeList):
+    def __init__(self, integrator, exclusionlist=[]):
+        if pmi.workerIsActive():
+            cxxinit(self, _espressopp.DynamicExcludeList, integrator)
+            for pid1, pid2 in exclusionlist:
+                self.cxxclass.exclude(self, pid1, pid2)
+            self.cxxclass.is_dirty = False
+
+    def exclude(self, pid1, pid2):
+        self.cxxclass.exclude(self, pid1, pid2)
+
+    def unexclude(self, pid1, pid2):
+        self.cxxclass.unexclude(self, pid1, pid2)
+
+
 class VerletListLocal(_espressopp.VerletList):
 
 
-    def __init__(self, system, cutoff, exclusionlist=[]):
+    def __init__(self, system, cutoff, exclusionlist=None):
 
         if pmi.workerIsActive():
-            if (exclusionlist == []):
+            if exclusionlist is None:
                 # rebuild list in constructor
                 cxxinit(self, _espressopp.VerletList, system, cutoff, True)
+            elif isinstance(exclusionlist, DynamicExcludeListLocal):
+                cxxinit(self, _espressopp.VerletList, system, cutoff, exclusionlist, True)
             else:
                 # do not rebuild list in constructor
                 cxxinit(self, _espressopp.VerletList, system, cutoff, False)
@@ -111,6 +129,15 @@ class VerletListLocal(_espressopp.VerletList):
 
 
 if pmi.isController:
+  class DynamicExcludeList(object):
+    __metaclass__ = pmi.Proxy
+    pmiproxydefs = dict(
+        cls='espressopp.DynamicExcludeListLocal',
+        pmiproperty=['is_dirty'],
+        pmicall=['exclude', 'unexclude', 'connect', 'disconnect'],
+        pmiinvoke=['get_list']
+    )
+
   class VerletList(object):
     __metaclass__ = pmi.Proxy
     pmiproxydefs = dict(

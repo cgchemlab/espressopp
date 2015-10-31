@@ -39,11 +39,11 @@ import espressopp
 ########################################################################
 
 # number of particles
-Npart              = 32768
+Npart              = 32
 # density of particles
 rho                = 0.8442
 # length of simulation box
-L                  = pow(Npart/rho, 1.0/3.0)
+L                  = 10.0 # pow(Npart/rho, 1.0/3.0)
 # cubic simulation box of size L
 box                = (L, L, L)
 # cutoff of the short range potential
