@@ -28,53 +28,46 @@
 #include "types.hpp"
 #include "python.hpp"
 #include "Particle.hpp"
-#include "Buffer.hpp"
 #include "SystemAccess.hpp"
 #include "integrator/MDIntegrator.hpp"
 #include "boost/signals2.hpp"
 #include "boost/unordered_set.hpp"
 
 namespace espressopp {
+typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
 
 class DynamicExcludeList {
-public:
-    typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
-    DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator);
-    ~DynamicExcludeList();
-    void exclude(longint pid1, longint pid2);
-    void unexclude(longint pid1, longint pid2);
-    void connect();
-    void disconnect();
-    shared_ptr<ExcludeList> getExList() { return exList; };
-    python::list getList();
+ public:
+  DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator);
+  ~DynamicExcludeList();
+  void exclude(longint pid1, longint pid2);
+  void unexclude(longint pid1, longint pid2);
+  void connect();
+  void disconnect();
+  shared_ptr<ExcludeList> getExList() { return exList; };
+  python::list getList();
 
-    bool getExListDirty() { return exListDirty; }
-    void setExListDirty(bool val);
+  bool getExListDirty() { return exListDirty; }
+  void setExListDirty(bool val);
 
-    static void registerPython();
-private:
-    shared_ptr<integrator::MDIntegrator> integrator_;
-    shared_ptr<ExcludeList> exList;
-    // Helper lists.
-    std::vector<longint> exList_add;
-    std::vector<longint> exList_remove;
-    bool exListDirty;
-    void updateList();
+  static void registerPython();
+ private:
+  shared_ptr<integrator::MDIntegrator> integrator_;
+  shared_ptr<ExcludeList> exList;
+  // Helper lists.
+  std::vector<longint> exList_add;
+  std::vector<longint> exList_remove;
+  bool exListDirty;
+  void updateList();
 
-    boost::signals2::connection aftIntV;
-    static LOG4ESPP_DECL_LOGGER(theLogger);
+  boost::signals2::connection aftIntV;
+  static LOG4ESPP_DECL_LOGGER(theLogger);
 };
-
-/** Class that builds and stores verlet lists.
-
-    ToDo: register at system for rebuild
-
-*/
 
   class VerletList : public SystemAccess {
 
   public:
-    typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
+
     /** Build a verlet list of all particle pairs in the storage
 	whose distance is less than a given cutoff.
 
@@ -84,14 +77,15 @@ private:
     */
 
     VerletList(shared_ptr< System >, real cut, bool rebuildVL);
-    VerletList(shared_ptr< System >, real cut, shared_ptr<DynamicExcludeList>, bool rebuildVL);
+    VerletList(shared_ptr< System >, real cut,
+        shared_ptr<DynamicExcludeList> dynamic_ex_list, bool rebuildVL);
 
     ~VerletList();
 
     PairList& getPairs() { return vlPairs; }
 
     python::tuple getPair(int i);
-
+    
     real getVerletCutoff(); // returns cutoff + skin
 
     void connect();
@@ -109,8 +103,6 @@ private:
     /** Add pairs to exclusion list */
     bool exclude(longint pid1, longint pid2);
 
-    void unexclude(longint pid1, longint pid2);
-
     /** Get the number of times the Verlet list has been rebuilt */
     int getBuilds() const { return builds; }
 
@@ -123,11 +115,10 @@ private:
   protected:
 
     void checkPair(Particle &pt1, Particle &pt2);
-    void afterRecvParticles(ParticleList &unused_pl, InBuffer &unused_buf);
     PairList vlPairs;
-    ExcludeList exList; // exclusion list
+    shared_ptr<ExcludeList> exList; // exclusion list
     bool dynamicExList;
-
+    
     real cutsq;
     real cut;
     real cutVerlet;
@@ -136,7 +127,6 @@ private:
     boost::signals2::connection connectionResort;
 
     static LOG4ESPP_DECL_LOGGER(theLogger);
-
   };
 
 }

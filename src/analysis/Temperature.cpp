@@ -25,12 +25,11 @@
 
 namespace espressopp {
   namespace analysis {
-    
+
     void Temperature::registerPython() {
       using namespace espressopp::python;
-      class_<Temperature, bases<AnalysisBase> >
-          ("analysis_Temperature", init< shared_ptr< System > >())
-      .def("add_particle_type", &Temperature::addParticleType)
+      class_<Temperature, bases< AnalysisBase > >
+        ("analysis_Temperature", init< shared_ptr< System > >())
       ;
     }
   }

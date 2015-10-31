@@ -31,117 +31,117 @@
 #include "iterator/CellListAllPairsIterator.hpp"
 
 namespace espressopp {
+using namespace espressopp::iterator;
 
-  using namespace espressopp::iterator;
-  DynamicExcludeList::DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator):
-          integrator_(integrator) {
-    LOG4ESPP_INFO(theLogger, "construct of DynamicExcludeList");
-    exListDirty = true;
-    exList = boost::make_shared<ExcludeList>();
-  }
+LOG4ESPP_LOGGER(DynamicExcludeList::theLogger, "VerletList");
 
-  DynamicExcludeList::~DynamicExcludeList() {
+DynamicExcludeList::DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator):
+    integrator_(integrator) {
+  LOG4ESPP_INFO(theLogger, "construct of DynamicExcludeList");
+  exListDirty = true;
+  exList = boost::make_shared<ExcludeList>();
+}
 
-  }
-  void DynamicExcludeList::exclude(longint pid1, longint pid2) {
-    exList->insert(std::make_pair(pid1, pid2));
+DynamicExcludeList::~DynamicExcludeList() {
+  disconnect();
+}
 
-    exList_add.push_back(pid1);
-    exList_add.push_back(pid2);
-    exListDirty = true;
-  }
+void DynamicExcludeList::connect() {
+  std::cout << "dynconn" << std::endl;
+  aftIntV = integrator_->aftIntV.connect(boost::bind(&DynamicExcludeList::updateList, this));
+}
 
-  void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
-    exList_remove.push_back(pid1);
-    exList_remove.push_back(pid2);
+void DynamicExcludeList::disconnect() {
+  aftIntV.disconnect();
+}
 
-    exList->erase(std::make_pair(pid1, pid2));
-    exListDirty = true;
-  }
+void DynamicExcludeList::updateList() {
+  LOG4ESPP_INFO(theLogger, "Update dynamic list.");
+  // Collect state from all CPUs. If somewhere list is dirty then gather and scatter.
+  bool global_exListDirty;
+  mpi::all_reduce(*(integrator_->getSystem()->comm), exListDirty,
+                  global_exListDirty, std::logical_or<bool>());
+  if (global_exListDirty) {
+    LOG4ESPP_INFO(theLogger, "Exclude dynamic list is dirty, exchange it.");
+    std::vector<longint> out_buffer;
+    std::vector<std::vector<longint> > in_buffer;
 
-  void DynamicExcludeList::connect() {
-    aftIntV = integrator_->aftIntV.connect(boost::bind(&DynamicExcludeList::updateList, this));
-  }
-
-  void DynamicExcludeList::disconnect() {
-    aftIntV.disconnect();
-  }
-
-  void DynamicExcludeList::registerPython() {
-    using namespace espressopp::python;
-
-    class_<DynamicExcludeList, shared_ptr<DynamicExcludeList> >
-        ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
-         .add_property("is_dirty", &DynamicExcludeList::getExListDirty,
-                       &DynamicExcludeList::setExListDirty)
-         .def("exclude", &DynamicExcludeList::exclude)
-         .def("unexclude", &DynamicExcludeList::unexclude)
-         .def("get_list", &DynamicExcludeList::getList)
-         .def("connect", &DynamicExcludeList::connect)
-         .def("disconnect", &DynamicExcludeList::disconnect);
-  }
-
-  void DynamicExcludeList::updateList() {
-    LOG4ESPP_INFO(theLogger, "Update dynamic list.");
-    // Collect state from all CPUs. If somewhere list is dirty then gather and scatter.
-    bool global_exListDirty;
-    mpi::all_reduce(*(integrator_->getSystem()->comm), exListDirty,
-                    global_exListDirty, std::logical_or<bool>());
-    if (global_exListDirty) {
-      LOG4ESPP_INFO(theLogger, "Exclude dynamic list is dirty, exchange it.");
-      std::vector<longint> out_buffer;
-      std::vector<std::vector<longint> > in_buffer;
-
-      // Prepare output.
-      out_buffer.push_back(2*exList_remove.size());
-      out_buffer.insert(out_buffer.end(), exList_remove.begin(), exList_remove.end());
-      out_buffer.push_back(2*exList_add.size());
-      out_buffer.insert(out_buffer.end(), exList_add.begin(), exList_add.end());
-      // Gather everywhere everything.
-      mpi::all_gather(*(integrator_->getSystem()->comm), out_buffer, in_buffer);
-      //Update list.
-      for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin();
-           it != in_buffer.end(); ++it) {
-        for (int i = 1; i < (it->at(0)+1); i=i+2) {
-          exList->erase(std::make_pair(it->at(i), it->at(i+1)));
-          exList->erase(std::make_pair(it->at(i+1), it->at(i)));
-        }
-        for (int i = (it->at(0)+2); i < it->size(); i=i+2) {
-          exList->insert(std::make_pair(it->at(i), it->at(i+1)));
-        }
+    // Prepare output.
+    out_buffer.push_back(2*exList_remove.size());
+    out_buffer.insert(out_buffer.end(), exList_remove.begin(), exList_remove.end());
+    out_buffer.push_back(2*exList_add.size());
+    out_buffer.insert(out_buffer.end(), exList_add.begin(), exList_add.end());
+    // Gather everywhere everything.
+    mpi::all_gather(*(integrator_->getSystem()->comm), out_buffer, in_buffer);
+    //Update list.
+    for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin();
+         it != in_buffer.end(); ++it) {
+      for (int i = 1; i < (it->at(0)+1); i=i+2) {
+        exList->erase(std::make_pair(it->at(i), it->at(i+1)));
+        exList->erase(std::make_pair(it->at(i+1), it->at(i)));
+      }
+      for (int i = (it->at(0)+2); i < it->size(); i=i+2) {
+        exList->insert(std::make_pair(it->at(i), it->at(i+1)));
       }
     }
+  }
+  exList_remove.clear();
+  exList_add.clear();
+  exListDirty = false;
+}
+void DynamicExcludeList::setExListDirty(bool val) {
+  if (!val) {
     exList_remove.clear();
     exList_add.clear();
-    exListDirty = false;
   }
+  exListDirty = val;
+}
 
-
-  void DynamicExcludeList::setExListDirty(bool val) {
-    if (!val) {
-      exList_remove.clear();
-      exList_add.clear();
-    }
-    exListDirty = val;
+python::list DynamicExcludeList::getList() {
+  python::list return_list;
+  for (ExcludeList::iterator it = exList->begin(); it != exList->end(); ++it) {
+    return_list.append(python::make_tuple(it->first, it->second));
   }
+  return return_list;
+}
 
-  python::list DynamicExcludeList::getList() {
-    python::list return_list;
-    for (ExcludeList::iterator it = exList->begin(); it != exList->end(); ++it) {
-      return_list.append(python::make_tuple(it->first, it->second));
-    }
-    return return_list;
-  }
+void DynamicExcludeList::exclude(longint pid1, longint pid2) {
+  exList->insert(std::make_pair(pid1, pid2));
 
-  LOG4ESPP_LOGGER(DynamicExcludeList::theLogger, "DynamicExcludeList");
+  exList_add.push_back(pid1);
+  exList_add.push_back(pid2);
+  exListDirty = true;
+}
+
+void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
+  exList_remove.push_back(pid1);
+  exList_remove.push_back(pid2);
+
+  exList->erase(std::make_pair(pid1, pid2));
+  exListDirty = true;
+}
+
+void DynamicExcludeList::registerPython() {
+  using namespace espressopp::python;
+
+  class_<DynamicExcludeList, shared_ptr<DynamicExcludeList> >
+      ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
+       .add_property("is_dirty", &DynamicExcludeList::getExListDirty,
+                     &DynamicExcludeList::setExListDirty)
+       .def("exclude", &DynamicExcludeList::exclude)
+       .def("unexclude", &DynamicExcludeList::unexclude)
+       .def("get_list", &DynamicExcludeList::getList)
+       .def("connect", &DynamicExcludeList::connect)
+       .def("disconnect", &DynamicExcludeList::disconnect);
+}
+
+/** Implementation of VerletList **/
+
   LOG4ESPP_LOGGER(VerletList::theLogger, "VerletList");
-
-/*-------------------------------------------------------------*/
-
   // cut is a cutoff (without skin)
   VerletList::VerletList(shared_ptr<System> system, real _cut, bool rebuildVL) : SystemAccess(system)
   {
-    LOG4ESPP_INFO(theLogger, "construct VerletList with static exclusion list, cut = " << _cut);
+    LOG4ESPP_INFO(theLogger, "construct VerletList, cut = " << _cut);
   
     if (!system->storage) {
        throw std::runtime_error("system has no storage");
@@ -152,12 +152,17 @@ namespace espressopp {
     cutsq = cutVerlet * cutVerlet;
     builds = 0;
 
+    exList = boost::make_shared<ExcludeList>();
+    dynamicExList = false;
+
     if (rebuildVL) rebuild(); // not called if exclutions are provided
 
-    //exList = boost::make_shared<ExcludeList>();
-    dynamicExList = false;
+  
+    // make a connection to System to invoke rebuild on resort
+    connectionResort = system->storage->onParticlesChanged.connect(
+        boost::bind(&VerletList::rebuild, this));
   }
-
+  
   VerletList::VerletList(shared_ptr<System> system, real _cut,
                          shared_ptr<DynamicExcludeList> exList_, bool rebuildVL):
       SystemAccess(system) {
@@ -172,7 +177,7 @@ namespace espressopp {
     cutsq = cutVerlet * cutVerlet;
     builds = 0;
 
-    //exList = exList_->getExList();
+    exList = exList_->getExList();
     dynamicExList = true;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
@@ -184,9 +189,9 @@ namespace espressopp {
   
   void VerletList::connect()
   {
-  System &system = getSystemRef();
+
   // make a connection to System to invoke rebuild on resort
-  connectionResort = system.storage->onParticlesChanged.connect(
+  connectionResort = getSystem()->storage->onParticlesChanged.connect(
       boost::bind(&VerletList::rebuild, this));
   }
 
@@ -199,8 +204,6 @@ namespace espressopp {
 
   /*-------------------------------------------------------------*/
   
-
-
   void VerletList::rebuild()
   {
     //real cutVerlet = cut + getSystem() -> getSkin();
@@ -239,10 +242,8 @@ namespace espressopp {
     if (distsq > cutsq) return;
 
     // see if it's in the exclusion list (both directions)
-    //if (!exList)
-    //  std::cout << "EXList is Null???" << std::endl;
-    if (exList.count(std::make_pair(pt1.id(), pt2.id())) == 1) return;
-    if (exList.count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
+    if (exList->count(std::make_pair(pt1.id(), pt2.id())) == 1) return;
+    if (exList->count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
 
     vlPairs.add(pt1, pt2); // add pair to Verlet List
   }
@@ -276,13 +277,12 @@ namespace espressopp {
 
 
   bool VerletList::exclude(longint pid1, longint pid2) {
-    LOG4ESPP_DEBUG(theLogger, "VL:exclude " << pid1 << "-" << pid2);
-    if (dynamicExList)
-      throw std::runtime_error("Cannot change directly excluded list.");
-    exList.insert(std::make_pair(pid1, pid2));
 
-    return true;
+      exList->insert(std::make_pair(pid1, pid2));
+
+      return true;
   }
+  
 
   /*-------------------------------------------------------------*/
   
@@ -294,9 +294,6 @@ namespace espressopp {
       connectionResort.disconnect();
     }
   }
-
-
-
   
   /****************************************************
   ** REGISTRATION WITH PYTHON
@@ -311,7 +308,6 @@ namespace espressopp {
 
     class_<VerletList, shared_ptr<VerletList> >
       ("VerletList", init< shared_ptr<System>, real, bool >())
-      .def(init<shared_ptr<System>, real, shared_ptr<DynamicExcludeList>, bool>())
       .add_property("system", &SystemAccess::getSystem)
       .add_property("builds", &VerletList::getBuilds, &VerletList::setBuilds)
       .def("totalSize", &VerletList::totalSize)
@@ -325,4 +321,5 @@ namespace espressopp {
       .def("getVerletCutoff", &VerletList::getVerletCutoff)
       ;
   }
+
 }

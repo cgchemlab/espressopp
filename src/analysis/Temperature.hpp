@@ -29,7 +29,6 @@
 //#include "storage/DomainDecomposition.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
-#include "boost/unordered_set.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -70,8 +69,6 @@ namespace espressopp {
             }
             
             else{   // If not, use CG particle itself for calculation.
-                  if (has_particle_types_ && particle_types_.count(cit->type()) == 0)
-                    continue;
                   Real3D vel = cit->velocity();
                   v2sum += cit->mass() * (vel * vel);
                   count += 1;
@@ -86,8 +83,6 @@ namespace espressopp {
       else{  // No AdResS - just iterate over all particles          
           CellList realCells = system.storage->getRealCells();
           for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-            if (has_particle_types_ && particle_types_.count(cit->type()) == 0)
-              continue;
             Real3D vel = cit->velocity();
             v2sum += cit->mass() * (vel * vel);
           }
@@ -143,18 +138,6 @@ namespace espressopp {
     	}
         return;
       }
-
-     private:
-      void addParticleType(longint type_id) {
-        particle_types_.insert(type_id);
-        has_particle_types_ = true;
-      }
-      void removeParticleType(longint type_id) {
-        particle_types_.erase(type_id);
-        has_particle_types_ = particle_types_.size() > 0;
-      }
-      boost::unordered_set<longint> particle_types_;
-      bool has_particle_types_;
     };
   }
 }

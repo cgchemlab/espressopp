@@ -502,7 +502,7 @@ namespace espressopp {
                                     << " is not inside node domain after neighbor exchange");
                             const Real3D& pos = part.position();
                             // isnan function is C99 only, x != x is only true if x == nan
-                            if (pos.isNaNInf()) {
+                            if (pos[0] != pos[0] || pos[1] != pos[1] || pos[2] != pos[2]) {
                               std::stringstream ss;
                               ss << "Particle " << part.id() << " has moved to outer "
                                  << "space (one or more coordinates are nan)";
