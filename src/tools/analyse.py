@@ -24,11 +24,13 @@ import sys
 import espressopp
 
 def info(system, integrator, per_atom=False, valid_types=None):
-  NPart  = espressopp.analysis.NPart(system).compute()
+  NPart_comp  = espressopp.analysis.NPart(system)
   T_comp = espressopp.analysis.Temperature(system)
   if valid_types is not None:
       for type_id in valid_types:
-          T_comp.set_type_id(type_id)
+          T_comp.add_type(type_id)
+          NPart_comp.add_type(type_id)
+  NPart = NPart_comp.compute()
   T      = T_comp.compute()
   P      = espressopp.analysis.Pressure(system).compute()
   Pij    = espressopp.analysis.PressureTensor(system).compute()
@@ -61,9 +63,9 @@ def info(system, integrator, per_atom=False, valid_types=None):
   tt  += '    boxL     \n'
   if step == 0:
     if per_atom:
-      sys.stdout.write(' step      T          P        Pxy         ekin/N  ' + tt)
+      sys.stdout.write(' step      T          P        Pxy         ekin/N  N    ' + tt)
     else:
-      sys.stdout.write(' step      T          P        Pxy          ekin   ' + tt)        
+      sys.stdout.write(' step      T          P        Pxy          ekin   N    ' + tt)        
   sys.stdout.write(tot)
 
 def final_info(system, integrator, vl, start_time, end_time):

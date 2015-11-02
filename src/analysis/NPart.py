@@ -39,12 +39,21 @@ from _espressopp import analysis_NPart
 class NPartLocal(ObservableLocal, analysis_NPart):
 
     def __init__(self, system):
-	if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             cxxinit(self, analysis_NPart, system)
+
+    def add_type(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.add_type(self, type_id)
+
+    def remove_type(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.remove_type(self, type_id)
 
 if pmi.isController :
     class NPart(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.analysis.NPartLocal'
+            cls =  'espressopp.analysis.NPartLocal',
+            pmicall = ['add_type', 'remove_type']
         )

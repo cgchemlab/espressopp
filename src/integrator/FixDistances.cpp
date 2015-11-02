@@ -123,7 +123,7 @@ void FixDistances::restore_positions() {
       Real3D unit_trans;
       if (dst_pos.isNaNInf()) {
         // Problem with position. Reset it by picking random point on sphere
-        LOG4ESPP_INFO(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
+        LOG4ESPP_ERROR(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
             << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos);
         exit(1);
       }
@@ -141,7 +141,8 @@ void FixDistances::restore_positions() {
           << " new_force " << (2*new_trans*(dst->mass())/dt2));
 
       dst->setF(2*new_trans*(dst->mass())/dt2);
-      dst->setV(Real3D(0.0, 0.0, 0.0));
+      //dst->setV(anchor->velocity());
+      dst->setV(0.0);
     }
   }
 }

@@ -25,13 +25,16 @@ rc = 2.5*sigma
 rc_lj = pow(2.0, 1.0/6.0)
 dt = 0.0025
 T = 0.5
+gamma = 5.0
 
 # Bond A-B
 kF = 30.0
-R0 = 0.2*sigma
+R0 = 0.5*sigma
+
+# Size of system.
 rho = 0.8
 N_a = 100
-L = pow(N_a*type_a.mass/rho, 1.0/3.0)
+L = 10.0 # pow(N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
 
 # Co-partner C
@@ -50,5 +53,7 @@ potential_matrix = [
 
 # Chemical reaction setup
 ar_interval = 100
-ar_rate = 0.5
+ar_rate = 0.8
 ar_cutoff = rc_lj
+
+print('kA = {}'.format(ar_rate*dt*ar_interval))

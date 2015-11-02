@@ -57,8 +57,7 @@ def main():  # NOQA
     system.skin = conf.skin
 
     def info():
-        espressopp.tools.analyse.info(system, integrator, per_atom=True,
-                                      valid_types=conf.type_ids)
+        espressopp.tools.analyse.info(system, integrator, per_atom=True, valid_types=[conf.type_a.type_id])
 
     nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
     cellGrid = espressopp.tools.decomp.cellGrid(conf.box, nodeGrid, conf.rc, conf.skin)
@@ -68,10 +67,19 @@ def main():  # NOQA
     integrator = espressopp.integrator.VelocityVerlet(system)
     integrator.dt = conf.dt
 
+    print('Setup integrator, T={}, gamma={}'.format(conf.T, conf.gamma))
+    thermostat = espressopp.integrator.StochasticVelocityRescaling(system)
+    thermostat.temperature = conf.T
+    thermostat.coupling = conf.gamma
+    thermostat.add_valid_types(conf.type_ids)
+    thermostat.add_valid_type_id(conf.type_c.type_id)
+    integrator.addExtension(thermostat)
+
+    # Prepares system.
     bonds_a_c_tmp, particle_ids = tools.prepare_system(conf, system)
 
-    ex_list = bonds_a_c_tmp[:]
     # Co-partner C is keep on certain distance.
+    ex_list = bonds_a_c_tmp[:]
     fix_list = [(x[0], x[1], conf.R_ac) for x in bonds_a_c_tmp]
     fix_distance = espressopp.integrator.FixDistances(
         system, fix_list, conf.type_a.type_id, conf.type_c_tmp.type_id)
@@ -127,7 +135,7 @@ def main():  # NOQA
         potential=espressopp.interaction.LennardJones(
             sigma=conf.type_c.sigma,
             epsilon=conf.type_c.epsilon,
-            cutoff=conf.sigma*conf.rc_lj))
+            cutoff=conf.type_c.sigma*conf.rc_lj))
     for type_id, _, sigma, epsilon in conf.types:
         interDynamicResLJ.setPotential(
             type1=conf.type_c.type_id,
@@ -135,7 +143,7 @@ def main():  # NOQA
             potential=espressopp.interaction.LennardJones(
                 sigma=tools.lb_sigma(conf.type_c.sigma, sigma),
                 epsilon=tools.lb_epsilon(conf.type_c.epsilon, epsilon),
-                cutoff=conf.sigma*conf.rc_lj))
+                cutoff=tools.lb_sigma(conf.type_c.sigma, sigma)*conf.rc_lj))
     system.addInteraction(interDynamicResLJ)
 
     total_velocity = espressopp.analysis.TotalVelocity(system)
@@ -174,13 +182,13 @@ def main():  # NOQA
         min_state_2=1,
         max_state_2=3,
         rate=conf.ar_rate,
-        cutoff=conf.ar_cutoff)
+        cutoff=conf.rc_lj*conf.type_a.sigma)
     # Change type: A -> B
-    r_1_post_process = espressopp.integrator.PostProcessChangeProperty()
-    r_1_post_process.add_change_property(
-        conf.type_a.type_id,
-        espressopp.ParticleProperties(conf.type_b.type_id, conf.type_b.mass, 0.0))
-    r_type_1.add_postprocess(r_1_post_process)
+    # r_1_post_process = espressopp.integrator.PostProcessChangeProperty()
+    # r_1_post_process.add_change_property(
+    #     conf.type_a.type_id,
+    #     espressopp.ParticleProperties(conf.type_b.type_id, conf.type_b.mass, 0.0))
+    # r_type_1.add_postprocess(r_1_post_process)
 
     # Reaction: A + B:B -> B:B:B + C
     r_type_2 = espressopp.integrator.Reaction(
@@ -193,7 +201,8 @@ def main():  # NOQA
         min_state_2=1,
         max_state_2=2,
         rate=conf.ar_rate,
-        cutoff=conf.ar_cutoff)
+        cutoff=conf.rc_lj*tools.lb_sigma(conf.type_a.sigma, conf.type_b.sigma)
+    )
     # Change type: A -> B
     r_2_post_process = espressopp.integrator.PostProcessChangeProperty()
     r_2_post_process.add_change_property(
@@ -212,13 +221,14 @@ def main():  # NOQA
         min_state_2=1,
         max_state_2=2,
         rate=conf.ar_rate,
-        cutoff=conf.ar_cutoff)
+        cutoff=conf.rc_lj*conf.type_b.sigma
+    )
 
     ar.add_reaction(r_type_1)
-    ar.add_reaction(r_type_2)
-    ar.add_reaction(r_type_3)
+    # ar.add_reaction(r_type_2)
+    # ar.add_reaction(r_type_3)
 
-    integrator.addExtension(ar)
+    # integrator.addExtension(ar)
     print('Chemical reaction with the rate={}, dt={}, interval={}'.format(
         conf.ar_rate, conf.dt, conf.ar_interval))
 
@@ -227,14 +237,8 @@ def main():  # NOQA
         system, {conf.type_c.type_id: 0.0001})
     integrator.addExtension(basic_dynamic_res)
 
-    thermostat = espressopp.integrator.StochasticVelocityRescaling(system)
-    thermostat.temperature = conf.T
-    thermostat.coupling = 0.5
-    integrator.addExtension(thermostat)
-
     dump_gro = espressopp.io.DumpGRO(
-        system, integrator, filename='trajectory.gro', append=True
-        )
+        system, integrator, filename='trajectory.gro', append=True)
     ext_dump_gro = espressopp.integrator.ExtAnalyze(dump_gro, 10)
     integrator.addExtension(ext_dump_gro)
 
@@ -247,8 +251,8 @@ def main():  # NOQA
 
     ps.dump(0, 0)
 
-    # ext_total_vel = espressopp.integrator.ExtAnalyze(total_velocity, 10)
-    # integrator.addExtension(ext_total_vel)
+    ext_total_vel = espressopp.integrator.ExtAnalyze(total_velocity, 100)
+    integrator.addExtension(ext_total_vel)
 
     if args.vis:
         import networkx as nx
@@ -266,12 +270,15 @@ def main():  # NOQA
         args.loops*args.steps, 'steps', conf.T))
     time0 = time.time()
     import sys
-    print [system.storage.getParticle(x).lambda_adr for x in particle_ids].count(0.0)
     for k in range(args.loops):
         integrator.run(args.steps)
-        print [system.storage.getParticle(x).lambda_adr for x in particle_ids].count(0.0)
         sys.stdout.write('[ {} ] '.format(len(fpl_a_a.getBonds()[0])))
-        sys.stdout.write('~ {} ~ '.format(fix_distance.size))
+        sys.stdout.write(
+            '~ {}:{} ~ '.format(
+                fix_distance.totalSize(),
+                [system.storage.getParticle(x).type for x in particle_ids
+                 ].count(conf.type_c_tmp.type_id)
+            ))
         sys.stdout.write('+ {} + '.format(dynamic_ex_list.size))
         info()
         ps.dump(k*args.steps, k*args.steps*conf.dt)

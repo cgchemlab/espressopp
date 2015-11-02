@@ -68,8 +68,8 @@ namespace espressopp {
                   for (std::vector<Particle*>::iterator it3 = atList.begin();
                                        it3 != atList.end(); ++it3) {
                       Particle &at = **it3;
-                      Real3D vel = at.velocity();
                       if (!has_types || valid_type_ids.count(at.type())) {
+                          Real3D vel = at.velocity();
                           v2sum += at.mass() * (vel * vel);
                           count += 1;
                       }
@@ -77,8 +77,8 @@ namespace espressopp {
             }
             
             else{   // If not, use CG particle itself for calculation.
-                  Real3D vel = cit->velocity();
                   if (!has_types || valid_type_ids.count(cit->type())) {
+                      Real3D vel = cit->velocity();
                       v2sum += cit->mass() * (vel * vel);
                       count += 1;
                   }
@@ -152,11 +152,14 @@ namespace espressopp {
         return;
       }
     private:
-     void setTypeId(longint type_id) {
+     void addType(longint type_id) {
        valid_type_ids.insert(type_id);
+       has_types = true;
      }
-     bool unsetTypeId(longint type_id) {
-      return valid_type_ids.erase(type_id);
+     bool removeType(longint type_id) {
+      bool ret_val =  valid_type_ids.erase(type_id);
+      has_types = valid_type_ids.size() > 0;
+      return ret_val;
      }
     };
   }

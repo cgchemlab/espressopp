@@ -27,16 +27,26 @@
 #include "types.hpp"
 #include "Observable.hpp"
 
+#include <boost/unordered_set.hpp>
+
 namespace espressopp {
   namespace analysis {
     /** Class to get the number of particles in the system. */
     class NPart : public Observable {
     public:
-      NPart(shared_ptr< System > system) : Observable(system) {result_type=real_scalar;}
+      NPart(shared_ptr< System > system) : Observable(system) {
+        result_type=real_scalar;
+        has_types=false;
+      }
       virtual ~NPart() {}
       virtual real compute_real() const;
 
       static void registerPython();
+    private:
+      boost::unordered_set<longint> valid_type_ids;
+      bool has_types;
+      void addType(longint type_id);
+      bool removeType(longint type_id);
     };
   }
 }

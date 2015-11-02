@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2014
+ Copyright (C) 2014-2015
    Pierre de Buyl
    Jakub Krajniak (jkrajniak at gmail.com)
  Copyright (C) 2012,2013
@@ -760,6 +760,10 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     // Change the state of A and B.
     pA = system.storage->lookupLocalParticle(it->first);
     pB = system.storage->lookupLocalParticle(it->second.first);
+//    if (!pA || !pB) {
+//      LOG4ESPP_ERROR(theLogger, "pA: " << it->first << " or pB: "
+//          << it->second.first << "do not exists. Internal error. exit(1)");
+//    }
     LOG4ESPP_DEBUG(theLogger, "Checking pair: " << pA->id() << "(" << pA->state() << "-" << pB->id()
         << "(" << pB->state() << ") A.type=" << pA->type() << " B.type=" << pB->type());
     if (pA != NULL && pB != NULL) {
@@ -778,7 +782,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
         modified_particles.insert(tmp.begin(), tmp.end());
 
         // Add bond to fixed_pair_list.
-        fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
+        fixed_pair_list_->add(it->first, it->second.first);
         verlet_list_->exclude(it->first, it->second.first);
         LOG4ESPP_DEBUG(theLogger, "Created pair.");
       }

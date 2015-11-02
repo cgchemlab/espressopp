@@ -59,7 +59,8 @@ StochasticVelocityRescaling::StochasticVelocityRescaling(
 	//gammaDist = new GammaDistributionNR2nd(rng);
 	//gammaDist = new GammaDistributionNR3rd(rng);
 	//TODO benchmark those distributions! a first dirty benchmark did not show any significant difference in computational time
-
+  
+  has_types = false;
 	LOG4ESPP_INFO(theLogger, "StochasticVelocityRescaling constructed");
 }
 
@@ -70,6 +71,8 @@ StochasticVelocityRescaling::~StochasticVelocityRescaling() {
 void StochasticVelocityRescaling::disconnect(){
   _runInit.disconnect();
   _aftIntV.disconnect();
+  if (has_types)
+    _aftIntV2.disconnect();
 }
 
 void StochasticVelocityRescaling::connect(){
@@ -77,6 +80,11 @@ void StochasticVelocityRescaling::connect(){
   _runInit = integrator->runInit.connect( boost::bind(&StochasticVelocityRescaling::initialize, this));
   // connection to the signal at the end of the run
   _aftIntV = integrator->aftIntV.connect( boost::bind(&StochasticVelocityRescaling::rescaleVelocities, this));
+  // Whenever there are types them connect also initialize to aftIntV to update NPart numbers because
+  // types of particles can be changed.
+  if (has_types) {
+    _aftIntV2 = integrator->aftIntV.connect(boost::bind(&StochasticVelocityRescaling::initialize, this));
+  }
 }
 
 void StochasticVelocityRescaling::setTemperature(real _temperature) {
@@ -95,6 +103,17 @@ real StochasticVelocityRescaling::getCoupling() {
 	return coupling;
 }
 
+void StochasticVelocityRescaling::setTypeId(longint type_id) {
+  valid_type_ids.insert(type_id);
+  has_types = true;
+}
+
+bool StochasticVelocityRescaling::unsetTypeId(longint type_id) {
+  bool val = valid_type_ids.erase(type_id);
+  has_types = valid_type_ids.size() > 0;
+  return val;
+}
+
 void StochasticVelocityRescaling::initialize() {
   LOG4ESPP_INFO(theLogger, "init, coupling = " << coupling << 
                                 ", external temperature = " << temperature);
@@ -102,9 +121,19 @@ void StochasticVelocityRescaling::initialize() {
   pref = coupling / dt;
 
 	System& system = getSystemRef();
-	NPart_local = system.storage->getNRealParticles();
+  if (has_types) {
+    NPart_local = 0;
+    CellList realCells = system.storage->getRealCells();
+    for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+      if (valid_type_ids.count(cit->type()))
+        NPart_local++;
+    }
+  } else {
+    NPart_local = system.storage->getNRealParticles();
+  }
 	boost::mpi::all_reduce(*getSystem()->comm, NPart_local, NPart,
 			std::plus<int>());
+  LOG4ESPP_DEBUG(theLogger, "has_type: " << has_types << " NPart: " << NPart);
 	DegreesOfFreedom = 3.0 * NPart; //TODO this is _only_ true for simple system without any constraints
 	//calculate the reference kinetic energy based on reference temperature 'temperature'
 	EKin_ref = 0.5 * temperature * BOLTZMANN * DegreesOfFreedom;
@@ -122,8 +151,10 @@ void StochasticVelocityRescaling::rescaleVelocities() {
 	CellList realCells = system.storage->getRealCells();
 
 	for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-		Real3D vel = cit->velocity();
-		EKin_local += 0.5 * cit->mass() * (vel * vel); //FIXME do not forget that his is only correct for velocity-verlet; leap-frog would require adjustments
+    if (!has_types || valid_type_ids.count(cit->type()) == 1) {
+      Real3D vel = cit->velocity();
+      EKin_local += 0.5 * cit->mass() * (vel * vel); //FIXME do not forget that his is only correct for velocity-verlet; leap-frog would require adjustments
+    }
 	}
 
 	boost::mpi::all_reduce(*getSystem()->comm, EKin_local, EKin,
@@ -143,7 +174,9 @@ void StochasticVelocityRescaling::rescaleVelocities() {
   boost::mpi::broadcast(*getSystem()->comm, ScalingFactor, 0);
     
 	for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-		cit->velocity() *= ScalingFactor;
+    if (!has_types || valid_type_ids.count(cit->type()) == 1) {
+      cit->velocity() *= ScalingFactor;
+    }
 	}
 
 }
@@ -269,6 +302,8 @@ void StochasticVelocityRescaling::registerPython() {
     
    .def("connect", &StochasticVelocityRescaling::connect)
    .def("disconnect", &StochasticVelocityRescaling::disconnect)
+   .def("add_valid_type_id", &StochasticVelocityRescaling::setTypeId)
+   .def("remove_valid_type_id", &StochasticVelocityRescaling::unsetTypeId);
     ;
 }
 

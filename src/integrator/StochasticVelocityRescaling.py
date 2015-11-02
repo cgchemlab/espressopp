@@ -42,10 +42,24 @@ class StochasticVelocityRescalingLocal(ExtensionLocal, integrator_StochasticVelo
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, integrator_StochasticVelocityRescaling, system)
 
+    def add_valid_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.add_valid_type_id(self, type_id)
+
+    def add_valid_types(self, types):
+        if pmi.workerIsActive():
+            for type_id in types:
+                self.cxxclass.add_valid_type_id(self, type_id)
+
+    def remove_valid_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.remove_valid_type_id(self, type_id)
+
 if pmi.isController :
     class StochasticVelocityRescaling(Extension):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.StochasticVelocityRescalingLocal',
-            pmiproperty = [ 'temperature', 'coupling' ]
+            pmiproperty = [ 'temperature', 'coupling' ],
+            pmicall = ['add_valid_type_id', 'remove_valid_type_id', 'add_valid_types']
         )

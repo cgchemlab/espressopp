@@ -31,6 +31,7 @@
 #include "VelocityVerlet.hpp"
 
 #include "boost/signals2.hpp"
+#include "boost/unordered_set.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -84,6 +85,9 @@ public:
 
 	void setTemperature(real temperature);
 
+  void setTypeId(longint type_id);
+  bool unsetTypeId(longint type_id);
+
 	real getTemperature();
 
 	void setCoupling(real coupling);
@@ -109,7 +113,9 @@ public:
 	static void registerPython();
 
 private:
-    boost::signals2::connection _runInit, _aftIntV;
+    boost::unordered_set<longint> valid_type_ids;
+    bool has_types;
+    boost::signals2::connection _runInit, _aftIntV, _aftIntV2;
     
 	real temperature; //!< desired user temperature
 	real coupling; // how strong is the coupling, i.e., tau_t coupling time
