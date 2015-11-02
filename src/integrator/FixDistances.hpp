@@ -1,5 +1,5 @@
 /*
-  Copyright (C)
+  Copyright (C) 2015
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -37,6 +37,15 @@
 namespace espressopp {
 namespace integrator {
 
+/**
+ * Distance constraint on particles. The target particle will always be kept on certain
+ * distance from anchor particle. Optional it can observer also types of particles, whenever
+ * anchor particle or target particle changes the type, the constraint will be released.
+ *
+ * @param System: The espressopp.System object.
+ * @param anchor_type: The type of anchor particle.
+ * @param target_type: The type of target particle.
+ */
 class FixDistances : public Extension {
  public:
   typedef boost::unordered_multimap<longint, std::pair<longint, real> > Triplets;
@@ -44,15 +53,20 @@ class FixDistances : public Extension {
   explicit FixDistances(shared_ptr<System> _system);
   FixDistances(shared_ptr<System> _system, longint anchor_type, longint target_type);
 
-  void add_triplet(longint anchor, longint target, real distance) {
-    distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
-  }
+  /**
+   *  Adds triplets of anchor, target and distance.
+   *
+   *  @param anchor: The id of anchor particle.
+   *  @param target: The id of target particle.
+   *  @param distance: The distance on which particles will be kept.
+   */
+  void add_triplet(longint anchor, longint target, real distance);
 
   void add_postprocess(const shared_ptr<integrator::PostProcessChangeProperty> pp) {
     post_process_ = pp;
   }
 
-  int size() { return distance_triplets_.size(); }
+  int totalSize();
   void restore_positions();
   std::vector<Particle*> release_particle(longint anchor_id);
 
@@ -60,7 +74,8 @@ class FixDistances : public Extension {
   static void registerPython();
 
  private:
-  boost::signals2::connection befIntP_, aftIntP_, sigOnParticlesChanged;
+  boost::signals2::connection aftInitF_, sigOnParticlesChanged, aftIntV_;
+  boost::signals2::connection sigBeforeSend, sigAfterRecv;
   Triplets distance_triplets_;
 
   longint anchor_type_, target_type_;
@@ -70,13 +85,16 @@ class FixDistances : public Extension {
   void disconnect();
 
   void onParticlesChanged();
-
+  void beforeSendParticles(ParticleList& pl, OutBuffer& buf);
+  void afterRecvParticles(ParticleList &pl, InBuffer& buf);
   shared_ptr<integrator::PostProcessChangeProperty> post_process_;
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
-
+/**
+ * PostProcess action. Invoked when target particle is realesd from the contraint.
+ */
 class PostProcessReleaseParticles : public integrator::PostProcess {
  public:
   PostProcessReleaseParticles(shared_ptr<FixDistances> fd, int nr) : fd_(fd), nr_(nr) {}
@@ -89,7 +107,6 @@ class PostProcessReleaseParticles : public integrator::PostProcess {
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
-
 }  // end namespace integrator
 }  // end namespace espressopp
 #endif

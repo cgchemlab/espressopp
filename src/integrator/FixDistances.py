@@ -44,12 +44,17 @@ class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
                 self.addConstraints(cs_list)
 
     def addConstraints(self, cs_list):
-        for anchor_id, target_id, dist in cs_list:
-            self.cxxclass.add_triplet(self, anchor_id, target_id, dist)
+        if pmi.workerIsActive():
+            for anchor_id, target_id, dist in cs_list:
+                self.cxxclass.add_triplet(self, anchor_id, target_id, dist)
+
+    def totalSize(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.get_size(self)
 
 
 class PostProcessReleaseParticlesLocal(integrator_PostProcessReleaseParticles,
-                                      integrator_PostProcess):
+                                       integrator_PostProcess):
     """Post process of reaction that changes particle property."""
     def __init__(self, fix_distance_ext, nr=1):
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
@@ -62,8 +67,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.FixDistancesLocal',
-            pmicall=['addConstraints', 'add_postprocess'],
-            pmiproperty=['size']
+            pmicall=['addConstraints', 'add_postprocess', 'totalSize'],
             )
 
     class PostProcessReleaseParticles:
