@@ -64,3 +64,8 @@ from espressopp.analysis.ParticleRadiusDistribution import *
 
 from espressopp.analysis.SystemMonitor import *
 from espressopp.analysis.PotentialEnergy import *
+
+try:
+    from espressopp.analysis.PyStore import *
+except ImportError as ex:
+    print('PyStore not supported: {}'.format(ex))

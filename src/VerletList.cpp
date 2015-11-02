@@ -40,6 +40,7 @@ DynamicExcludeList::DynamicExcludeList(shared_ptr<integrator::MDIntegrator> inte
   LOG4ESPP_INFO(theLogger, "construct of DynamicExcludeList");
   exListDirty = true;
   exList = boost::make_shared<ExcludeList>();
+  connect();
 }
 
 DynamicExcludeList::~DynamicExcludeList() {
@@ -47,11 +48,12 @@ DynamicExcludeList::~DynamicExcludeList() {
 }
 
 void DynamicExcludeList::connect() {
-  std::cout << "dynconn" << std::endl;
+  LOG4ESPP_INFO(theLogger, "Connected to integrator");
   aftIntV = integrator_->aftIntV.connect(boost::bind(&DynamicExcludeList::updateList, this));
 }
 
 void DynamicExcludeList::disconnect() {
+  LOG4ESPP_INFO(theLogger, "Disconnected from integrator");
   aftIntV.disconnect();
 }
 
@@ -79,9 +81,12 @@ void DynamicExcludeList::updateList() {
       for (int i = 1; i < (it->at(0)+1); i=i+2) {
         exList->erase(std::make_pair(it->at(i), it->at(i+1)));
         exList->erase(std::make_pair(it->at(i+1), it->at(i)));
+        LOG4ESPP_DEBUG(theLogger, "removed pair: " << it->at(i) << "-" << it->at(i+1));
       }
       for (int i = (it->at(0)+2); i < it->size(); i=i+2) {
+        LOG4ESPP_DEBUG(theLogger, "add pair: " << it->at(i) << "-" << it->at(i+1));
         exList->insert(std::make_pair(it->at(i), it->at(i+1)));
+        exList->insert(std::make_pair(it->at(i+1), it->at(i)));
       }
     }
   }
@@ -118,6 +123,7 @@ void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
   exList_remove.push_back(pid2);
 
   exList->erase(std::make_pair(pid1, pid2));
+  exList->erase(std::make_pair(pid2, pid1));
   exListDirty = true;
 }
 
@@ -128,6 +134,7 @@ void DynamicExcludeList::registerPython() {
       ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
        .add_property("is_dirty", &DynamicExcludeList::getExListDirty,
                      &DynamicExcludeList::setExListDirty)
+       .add_property("size", &DynamicExcludeList::getSize)
        .def("exclude", &DynamicExcludeList::exclude)
        .def("unexclude", &DynamicExcludeList::unexclude)
        .def("get_list", &DynamicExcludeList::getList)
@@ -153,19 +160,17 @@ void DynamicExcludeList::registerPython() {
     builds = 0;
 
     exList = boost::make_shared<ExcludeList>();
-    dynamicExList = false;
+    isDynamicExList = false;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
 
-  
     // make a connection to System to invoke rebuild on resort
-    connectionResort = system->storage->onParticlesChanged.connect(
-        boost::bind(&VerletList::rebuild, this));
+    connect();
   }
   
   VerletList::VerletList(shared_ptr<System> system, real _cut,
-                         shared_ptr<DynamicExcludeList> exList_, bool rebuildVL):
-      SystemAccess(system) {
+                         shared_ptr<DynamicExcludeList> dynamicExList_, bool rebuildVL):
+      SystemAccess(system), dynamicExcludeList(dynamicExList_) {
     LOG4ESPP_INFO(theLogger, "construct VerletList with dynamic exclusion list, cut = " << _cut);
 
     if (!system->storage) {
@@ -177,10 +182,14 @@ void DynamicExcludeList::registerPython() {
     cutsq = cutVerlet * cutVerlet;
     builds = 0;
 
-    exList = exList_->getExList();
-    dynamicExList = true;
+    exList = dynamicExList_->getExList();
+
+    isDynamicExList = true;
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
+
+    // make a connection to System to invoke rebuild on resort
+    connect();
   }
 
   real VerletList::getVerletCutoff(){
@@ -189,7 +198,6 @@ void DynamicExcludeList::registerPython() {
   
   void VerletList::connect()
   {
-
   // make a connection to System to invoke rebuild on resort
   connectionResort = getSystem()->storage->onParticlesChanged.connect(
       boost::bind(&VerletList::rebuild, this));
@@ -277,10 +285,21 @@ void DynamicExcludeList::registerPython() {
 
 
   bool VerletList::exclude(longint pid1, longint pid2) {
-
-      exList->insert(std::make_pair(pid1, pid2));
-
+      if (isDynamicExList) {
+        dynamicExcludeList->exclude(pid1, pid2);
+      } else {
+        exList->insert(std::make_pair(pid1, pid2));
+      }
       return true;
+  }
+
+  bool VerletList::unexclude(longint pid1, longint pid2) {
+    if (isDynamicExList) {
+      dynamicExcludeList->unexclude(pid1, pid2);
+    } else {
+      exList->erase(std::make_pair(pid1, pid2));
+      exList->erase(std::make_pair(pid2, pid1));
+    }
   }
   
 
@@ -308,6 +327,7 @@ void DynamicExcludeList::registerPython() {
 
     class_<VerletList, shared_ptr<VerletList> >
       ("VerletList", init< shared_ptr<System>, real, bool >())
+      .def(init<shared_ptr<System>, real, shared_ptr<DynamicExcludeList>, bool>())
       .add_property("system", &SystemAccess::getSystem)
       .add_property("builds", &VerletList::getBuilds, &VerletList::setBuilds)
       .def("totalSize", &VerletList::totalSize)

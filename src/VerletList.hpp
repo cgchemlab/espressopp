@@ -46,11 +46,13 @@ class DynamicExcludeList {
   void disconnect();
   shared_ptr<ExcludeList> getExList() { return exList; };
   python::list getList();
+  int getSize() { return exList->size(); }
 
   bool getExListDirty() { return exListDirty; }
   void setExListDirty(bool val);
 
   static void registerPython();
+
  private:
   shared_ptr<integrator::MDIntegrator> integrator_;
   shared_ptr<ExcludeList> exList;
@@ -62,6 +64,7 @@ class DynamicExcludeList {
 
   boost::signals2::connection aftIntV;
   static LOG4ESPP_DECL_LOGGER(theLogger);
+
 };
 
   class VerletList : public SystemAccess {
@@ -78,7 +81,7 @@ class DynamicExcludeList {
 
     VerletList(shared_ptr< System >, real cut, bool rebuildVL);
     VerletList(shared_ptr< System >, real cut,
-        shared_ptr<DynamicExcludeList> dynamic_ex_list, bool rebuildVL);
+        shared_ptr<DynamicExcludeList> dynamicExList, bool rebuildVL);
 
     ~VerletList();
 
@@ -103,6 +106,9 @@ class DynamicExcludeList {
     /** Add pairs to exclusion list */
     bool exclude(longint pid1, longint pid2);
 
+    /** Remove pairs from exclusion list. */
+    bool unexclude(longint pid1, longint pid2);
+
     /** Get the number of times the Verlet list has been rebuilt */
     int getBuilds() const { return builds; }
 
@@ -117,7 +123,8 @@ class DynamicExcludeList {
     void checkPair(Particle &pt1, Particle &pt2);
     PairList vlPairs;
     shared_ptr<ExcludeList> exList; // exclusion list
-    bool dynamicExList;
+    shared_ptr<DynamicExcludeList> dynamicExcludeList;
+    bool isDynamicExList;
     
     real cutsq;
     real cut;

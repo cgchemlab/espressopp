@@ -80,12 +80,28 @@ namespace espressopp {
     void TotalVelocity::reset() {
       System& system = getSystemRef();
 
+      shared_ptr<FixedTupleListAdress> fixedtuplelist = system.storage->getFixedTuples();
+      bool is_adress = (bool)fixedtuplelist;
+      FixedTupleListAdress::iterator it2;
+      std::vector<Particle*> atlist;
+      std::vector<Particle*>::iterator it3;
+
       compute();
       CellList realCells = system.storage->getRealCells();
       for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-	cit->velocity() -= v;
-      }
+        cit->velocity() -= v;
+        // For AdResS - set velocity of at particles to the velocity of com
+        if (is_adress) {
+          Particle &pt = *cit;
+          it2 = fixedtuplelist->find(&pt);
+          if (it2 != fixedtuplelist->end()) {
+            atlist = it2->second;
+            for (it3 = atlist.begin(); it3 != atlist.end(); ++it3) 
+              (*it3)->velocity() = cit->velocity();
+          }
+        }
 
+      }
     }
 
     // Python wrapping
@@ -94,8 +110,8 @@ namespace espressopp {
 
       using namespace espressopp::python;
 
-      class_<TotalVelocity>
-        ("analysis_TotalVelocity", init< shared_ptr< System > >())
+      class_<TotalVelocity, bases<ParticleAccess> >
+        ("analysis_TotalVelocity", init<shared_ptr<System> >())
       .add_property("v", &TotalVelocity::getV)
       .def("compute", &TotalVelocity::compute)
       .def("reset", &TotalVelocity::reset)

@@ -760,6 +760,8 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     // Change the state of A and B.
     pA = system.storage->lookupLocalParticle(it->first);
     pB = system.storage->lookupLocalParticle(it->second.first);
+    LOG4ESPP_DEBUG(theLogger, "Checking pair: " << pA->id() << "(" << pA->state() << "-" << pB->id()
+        << "(" << pB->state() << ") A.type=" << pA->type() << " B.type=" << pB->type());
     if (pA != NULL && pB != NULL) {
       if (reaction->IsValidState(*pA, *pB)) {
         if (pA->getType() == reaction->type_1()) {
@@ -775,6 +777,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
         tmp = reaction->PostProcess(*pA, *pB);
         modified_particles.insert(tmp.begin(), tmp.end());
 
+        // Add bond to fixed_pair_list.
         fixed_pair_list_->add(it->first, it->second.first);  // The order does not matter.
         verlet_list_->exclude(it->first, it->second.first);
         LOG4ESPP_DEBUG(theLogger, "Created pair.");

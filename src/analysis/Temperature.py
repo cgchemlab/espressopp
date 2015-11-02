@@ -39,12 +39,24 @@ from _espressopp import analysis_Temperature
 class TemperatureLocal(AnalysisBaseLocal, analysis_Temperature):
 
     def __init__(self, system):
-	if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, analysis_Temperature, system)
+    
+    def set_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.set_type_id(self, type_id)
+
+    def unset_type_id(self, type_id):
+        if pmi.workerIsActive():
+            ret_val = self.cxxclass.unset_type_id(self, type_id)
+            if not ret_val:
+                print('Warning, type {} not found'.format(type_id))
+
 
 if pmi.isController :
     class Temperature(AnalysisBase):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.analysis.TemperatureLocal'
+            cls =  'espressopp.analysis.TemperatureLocal',
+            pmicall = ['set_type_id', 'unset_type_id']
             )

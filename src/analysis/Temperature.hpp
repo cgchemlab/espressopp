@@ -26,19 +26,25 @@
 
 #include "types.hpp"
 #include "AnalysisBase.hpp"
-//#include "storage/DomainDecomposition.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
+#include <boost/unordered_set.hpp>
 
 namespace espressopp {
   namespace analysis {
     using namespace iterator;
     /** Class to compute the temperature. */
     class Temperature : public AnalysisBaseTemplate< real > {
+    private:
+     boost::unordered_set<longint> valid_type_ids;
+     bool has_types;
+
     public:
       static void registerPython();
 
-      Temperature(shared_ptr< System > system) : AnalysisBaseTemplate< real >(system) {}
+      Temperature(shared_ptr< System > system) : AnalysisBaseTemplate< real >(system) {
+        has_types = false;
+      }
       virtual ~Temperature() {}
 
       real computeRaw() {
@@ -46,9 +52,9 @@ namespace espressopp {
       real sumT = 0.0;
       real v2sum = 0.0;
       System& system = getSystemRef();
+      int count = 0;
         
       if (system.storage->getFixedTuples()){  // AdResS - hence, need to distinguish between CG and AT particles.     
-          int count = 0;
           shared_ptr<FixedTupleListAdress> fixedtupleList=system.storage->getFixedTuples();
           CellList realCells = system.storage->getRealCells();
           for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {  // Iterate over all (CG) particles.              
@@ -63,15 +69,19 @@ namespace espressopp {
                                        it3 != atList.end(); ++it3) {
                       Particle &at = **it3;
                       Real3D vel = at.velocity();
-                      v2sum += at.mass() * (vel * vel);
-                      count += 1;
+                      if (!has_types || valid_type_ids.count(at.type())) {
+                          v2sum += at.mass() * (vel * vel);
+                          count += 1;
+                      }
                   }  
             }
             
             else{   // If not, use CG particle itself for calculation.
                   Real3D vel = cit->velocity();
-                  v2sum += cit->mass() * (vel * vel);
-                  count += 1;
+                  if (!has_types || valid_type_ids.count(cit->type())) {
+                      v2sum += cit->mass() * (vel * vel);
+                      count += 1;
+                  }
             }
             
           }
@@ -84,10 +94,13 @@ namespace espressopp {
           CellList realCells = system.storage->getRealCells();
           for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
             Real3D vel = cit->velocity();
-            v2sum += cit->mass() * (vel * vel);
+            if (!has_types || valid_type_ids.count(cit->type())) {
+                v2sum += cit->mass() * (vel * vel);
+                count += 1;
+            }
           }
           
-          myN = system.storage->getNRealParticles();
+          myN = count;
       }
       
       mpi::all_reduce(*getSystem()->comm, v2sum, sumT, std::plus<real>());
@@ -138,6 +151,13 @@ namespace espressopp {
     	}
         return;
       }
+    private:
+     void setTypeId(longint type_id) {
+       valid_type_ids.insert(type_id);
+     }
+     bool unsetTypeId(longint type_id) {
+      return valid_type_ids.erase(type_id);
+     }
     };
   }
 }

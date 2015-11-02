@@ -27,6 +27,7 @@
 #include "VerletListNonReciprocalInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
+#include "VerletListDynamicResolutionInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
@@ -36,6 +37,8 @@ namespace espressopp {
 
     typedef class VerletListInteractionTemplate <LennardJones>
         VerletListLennardJones;
+    typedef class VerletListDynamicResolutionInteractionTemplate<LennardJones>
+        VerletListDynamicResolutionLennardJones;
     typedef class VerletListNonReciprocalInteractionTemplate <LennardJones>
         VerletListNonReciprocalLennardJones;
     typedef class VerletListAdressInteractionTemplate <LennardJones, Tabulated>
@@ -75,6 +78,13 @@ namespace espressopp {
         .def("getVerletList", &VerletListLennardJones::getVerletList)
         .def("setPotential", &VerletListLennardJones::setPotential)
         .def("getPotential", &VerletListLennardJones::getPotentialPtr)
+      ;
+
+      class_< VerletListDynamicResolutionLennardJones, bases< Interaction > >
+        ("interaction_VerletListDynamicResolutionLennardJones", init< shared_ptr<VerletList>, bool >())
+        .def("getVerletList", &VerletListDynamicResolutionLennardJones::getVerletList)
+        .def("setPotential", &VerletListDynamicResolutionLennardJones::setPotential)
+        .def("getPotential", &VerletListDynamicResolutionLennardJones::getPotentialPtr)
       ;
 
       class_< VerletListNonReciprocalLennardJones, bases< Interaction > >

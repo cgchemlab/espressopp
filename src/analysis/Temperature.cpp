@@ -30,6 +30,8 @@ namespace espressopp {
       using namespace espressopp::python;
       class_<Temperature, bases< AnalysisBase > >
         ("analysis_Temperature", init< shared_ptr< System > >())
+        .def("set_type_id", &Temperature::setTypeId)
+        .def("unset_type_id", &Temperature::unsetTypeId)
       ;
     }
   }

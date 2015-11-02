@@ -133,7 +133,7 @@ if pmi.isController:
     __metaclass__ = pmi.Proxy
     pmiproxydefs = dict(
         cls='espressopp.DynamicExcludeListLocal',
-        pmiproperty=['is_dirty'],
+        pmiproperty=['is_dirty', 'size'],
         pmicall=['exclude', 'unexclude', 'connect', 'disconnect'],
         pmiinvoke=['get_list']
     )

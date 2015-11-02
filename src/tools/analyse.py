@@ -23,9 +23,13 @@ import datetime
 import sys
 import espressopp
 
-def info(system, integrator, per_atom=False):
+def info(system, integrator, per_atom=False, valid_types=None):
   NPart  = espressopp.analysis.NPart(system).compute()
-  T      = espressopp.analysis.Temperature(system).compute()
+  T_comp = espressopp.analysis.Temperature(system)
+  if valid_types is not None:
+      for type_id in valid_types:
+          T_comp.set_type_id(type_id)
+  T      = T_comp.compute()
   P      = espressopp.analysis.Pressure(system).compute()
   Pij    = espressopp.analysis.PressureTensor(system).compute()
   step   = integrator.step

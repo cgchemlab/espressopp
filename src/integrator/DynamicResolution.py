@@ -35,13 +35,13 @@ class BasicDynamicResolutionLocal(ExtensionLocal, integrator_BasicDynamicResolut
     def __init__(self, system, type_rate):
         'Local constructor'
         if pmi.workerIsActive():
-            cxxinit(self, integrator_BasicDynamicResolution)
+            cxxinit(self, integrator_BasicDynamicResolutionType, system)
             for type_id, rate in type_rate.iteritems():
-                self.cxxclass.set_type_rate(type_id, rate)
+                self.cxxclass.set_type_rate(self, type_id, rate)
 
     def set_type_rate(type_id, rate):
         if pmi.workerIsActive():
-            self.cxxclass.set_type_rate(type_id, rate)
+            self.cxxclass.set_type_rate(self, type_id, rate)
 
 
 class DynamicResolutionLocal(ExtensionLocal, integrator_DynamicResolution):

@@ -59,3 +59,5 @@ from espressopp.integrator.VelocityVerletOnRadius import *
 from espressopp.integrator.AssociationReaction import *
 from espressopp.integrator.ChemicalReaction import *
 from espressopp.integrator.EmptyExtension import *
+
+from espressopp.integrator.DynamicResolution import *

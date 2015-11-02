@@ -31,7 +31,8 @@
 #include "Real3D.hpp"
 #include "Tensor.hpp"
 #include "Particle.hpp"
-#include "VerletListType.hpp"
+#include "VerletList.hpp"
+#include "integrator/DynamicResolution.hpp"
 #include "esutil/Array2D.hpp"
 #include "bc/BC.hpp"
 
@@ -48,7 +49,7 @@ protected:
 
 public:
   VerletListDynamicResolutionInteractionTemplate(
-      shared_ptr<VerletListType> _verletList, bool _cg_potential):
+      shared_ptr<VerletList> _verletList, bool _cg_potential):
           verletList(_verletList), cgPotential(_cg_potential) {
     potentialArray = esutil::Array2D<Potential, esutil::enlarge>(0, 0, Potential());
     ntypes = 0;
@@ -56,11 +57,11 @@ public:
 
   virtual ~VerletListDynamicResolutionInteractionTemplate() {};
 
-  void setVerletList(shared_ptr<VerletListType> _verletList) {
+  void setVerletList(shared_ptr<VerletList> _verletList) {
     verletList = _verletList;
   }
 
-  shared_ptr<VerletListType> getVerletList() {
+  shared_ptr<VerletList> getVerletList() {
     return verletList;
   }
 
@@ -103,7 +104,7 @@ public:
 
 protected:
   int ntypes;
-  shared_ptr<VerletListType> verletList;
+  shared_ptr<VerletList> verletList;
   esutil::Array2D<Potential, esutil::enlarge> potentialArray;
   bool cgPotential;
 };
@@ -121,23 +122,24 @@ addForces() {
     Particle &p2 = *it->second;
     int type1 = p1.type();
     int type2 = p2.type();
-    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
-    real forcescale12 = w12;
+    real forcescale12 = p1.lambda() * p2.lambda();
     if (cgPotential) {
-      forcescale12 = (1-w12);
+      forcescale12 = (1-forcescale12);
     }
-    const Potential &potential = getPotential(type1, type2);
-    // shared_ptr<Potential> potential = getPotential(type1, type2);
+    if (forcescale12 > 0.0) {
+      const Potential &potential = getPotential(type1, type2);
+      // shared_ptr<Potential> potential = getPotential(type1, type2);
 
-    Real3D force(0.0);
-    if(potential._computeForce(force, p1, p2)) {
-      p1.force() += forcescale12*force;
-      p2.force() -= forcescale12*force;
-      LOG4ESPP_TRACE(
-          _Potential::theLogger,
-          "id1=" << p1.id() << " id2=" << p2.id() << " force=" << force
-          << " scale=" << forcescale12;
-      );
+      Real3D force(0.0);
+      if(potential._computeForce(force, p1, p2)) {
+        p1.force() += forcescale12*force;
+        p2.force() -= forcescale12*force;
+        LOG4ESPP_TRACE(
+            _Potential::theLogger,
+            "id1=" << p1.id() << " id2=" << p2.id() << " force=" << force
+            << " scale=" << forcescale12;
+        );
+      }
     }
   }
 }
@@ -154,7 +156,7 @@ computeEnergy() {
     Particle &p2 = *it->second;
     int type1 = p1.type();
     int type2 = p2.type();
-    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real w12 = integrator::DynamicResolution::ComputeWeight(p1.lambda(), p2.lambda());
     real forcescale12 = w12;
     if (cgPotential) {
       forcescale12 = (1-w12);
@@ -207,7 +209,7 @@ computeVirial() {
     Particle &p2 = *it->second;
     int type1 = p1.type();
     int type2 = p2.type();
-    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real w12 = integrator::DynamicResolution::ComputeWeight(p1.lambda(), p2.lambda());
     real forcescale12 = w12;
     if (cgPotential) {
       forcescale12 = (1-w12);
@@ -241,7 +243,7 @@ computeVirialTensor(Tensor& w) {
     Particle &p2 = *it->second;
     int type1 = p1.type();
     int type2 = p2.type();
-    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real w12 = integrator::DynamicResolution::ComputeWeight(p1.lambda(), p2.lambda());
     real forcescale12 = w12;
     if (cgPotential) {
       forcescale12 = (1-w12);
@@ -303,7 +305,7 @@ computeVirialTensor(Tensor& w, real z) {
         ){
       int type1 = p1.type();
       int type2 = p2.type();
-      real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+      real w12 = integrator::DynamicResolution::ComputeWeight(p1.lambda(), p2.lambda());
       real forcescale12 = w12;
       if (cgPotential) {
         forcescale12 = (1-w12);
@@ -342,7 +344,7 @@ computeVirialTensor(Tensor *w, int n) {
     Particle &p2 = *it->second;
     int type1 = p1.type();
     int type2 = p2.type();
-    real w12 = integrator::ComputeWeight(p1.lambda(), p2.lambda());
+    real w12 = integrator::DynamicResolution::ComputeWeight(p1.lambda(), p2.lambda());
     real forcescale12 = w12;
     if (cgPotential) {
       forcescale12 = (1-w12);

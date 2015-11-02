@@ -36,6 +36,7 @@ from espressopp.interaction.Interaction import *
 from _espressopp import interaction_LennardJones, \
                       interaction_VerletListLennardJones, \
                       interaction_VerletListNonReciprocalLennardJones, \
+                      interaction_VerletListDynamicResolutionLennardJones, \
                       interaction_VerletListAdressLennardJones, \
                       interaction_VerletListAdressLennardJones2, \
                       interaction_VerletListHadressLennardJones, \
@@ -73,6 +74,24 @@ class VerletListLennardJonesLocal(InteractionLocal, interaction_VerletListLennar
 
     def getVerletListLocal(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getVerletList(self)
+
+class VerletListDynamicResolutionLennardJonesLocal(InteractionLocal, interaction_VerletListDynamicResolutionLennardJones):
+
+    def __init__(self, vl, cg_form):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_VerletListDynamicResolutionLennardJones, vl, cg_form)
+
+    def setPotential(self, type1, type2, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if pmi.workerIsActive():
+            return self.cxxclass.getPotential(self, type1, type2)
+
+    def getVerletListLocal(self):
+        if pmi.workerIsActive():
             return self.cxxclass.getVerletList(self)
 
 class VerletListNonReciprocalLennardJonesLocal(InteractionLocal, interaction_VerletListNonReciprocalLennardJones):
@@ -209,6 +228,13 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.interaction.LennardJonesLocal',
             pmiproperty = ['epsilon', 'sigma']
+            )
+
+    class VerletListDynamicResolutionLennardJones(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListDynamicResolutionLennardJonesLocal',
+            pmicall = ['setPotential', 'getPotential', 'getVerletList']
             )
 
     class VerletListLennardJones(Interaction):
