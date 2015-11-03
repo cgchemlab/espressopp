@@ -1,5 +1,4 @@
-#  Copyright (C) 2014
-#    Pierre de Buyl
+#  Copyright (C) 2014-2015
 #    Jakub Krajniak (jkrajniak@gmail.com)
 #  Copyright (C) 2012,2013
 #    Max Planck Institute for Polymer Research

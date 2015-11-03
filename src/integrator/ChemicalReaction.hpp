@@ -53,7 +53,7 @@ namespace integrator {
 
 /** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
 typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
-// First: source particle type, second: int of target type, tuple with bond
+typedef std::pair<Particle*, Particle*> ParticlePair;
 
 const int kCrCommTag = 0xad;
 
@@ -197,9 +197,9 @@ class Reaction {
   }
 
   /** Checks if the pair is valid. */
-  virtual bool IsValidPair(const Particle& p1, const Particle& p2);
+  virtual bool IsValidPair(Particle& p1, Particle& p2);
   /** Checks if the pair has valid state. */
-  virtual bool IsValidState(const Particle& p1, const Particle& p2);
+  virtual bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
 
   std::set<Particle*> PostProcess(Particle &pA, Particle &pB);
 

@@ -53,8 +53,9 @@ LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 LOG4ESPP_LOGGER(PostProcess::theLogger, "PostProcess");
 
 /** Checks if the particles pair is valid. */
-bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
-  if (IsValidState(p1, p2)) {
+bool Reaction::IsValidPair(Particle& p1, Particle& p2) {
+  ParticlePair unused_order;
+  if (IsValidState(p1, p2, unused_order)) {
     Real3D distance = p1.position() - p2.position();
     real distance_2 = distance.sqr();
 
@@ -66,7 +67,7 @@ bool Reaction::IsValidPair(const Particle& p1, const Particle& p2) {
 
 
 /** Checks if the particles has correct state. */
-bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
+bool Reaction::IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order) {
   if ((p1.res_id() == p2.res_id()) && !intramolecular_)
     return false;
 
@@ -75,10 +76,14 @@ bool Reaction::IsValidState(const Particle& p1, const Particle& p2) {
   if ((p1.type() == type_1_) && (p2.type() == type_2_)
       && (p1_state >= min_state_1_ && p1_state < max_state_1_)
       && (p2_state >= min_state_2_ && p2_state < max_state_2_)) {
+    correct_order.first = &p1;
+    correct_order.second = &p2;
     return true;
   } else if ((p1.type() == type_2_) && (p2.type() == type_1_)
       && (p1_state >= min_state_2_ && p1_state < max_state_2_)
       && (p2_state >= min_state_1_ && p2_state < max_state_1_)) {
+    correct_order.first = &p2;
+    correct_order.second = &p1;
     return true;
   }
   return false;
@@ -768,16 +773,11 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     LOG4ESPP_DEBUG(theLogger, "Checking pair: " << pA->id() << "(" << pA->state() << "-" << pB->id()
         << "(" << pB->state() << ") A.type=" << pA->type() << " B.type=" << pB->type());
     if (pA != NULL && pB != NULL) {
-      if (reaction->IsValidState(*pA, *pB)) {
-        if (pA->getType() == reaction->type_1()) {
-          pA->setState(pA->getState() + reaction->delta_1());
-          pB->setState(pB->getState() + reaction->delta_2());
-          pB->setResId(pA->getResId());
-        } else if (pA->getType() == reaction->type_2()) {  // This time the pA is of type_2
-          pA->setState(pA->getState() + reaction->delta_2());
-          pB->setState(pB->getState() + reaction->delta_1());
-          pA->setResId(pB->getResId());
-        }
+      ParticlePair pairs_1_2;
+      if (reaction->IsValidState(*pA, *pB, pairs_1_2)) {
+        pairs_1_2.first->setState(pA->getState() + reaction->delta_1());
+        pairs_1_2.second->setState(pB->getState() + reaction->delta_2());
+        pairs_1_2.second->setResId(pairs_1_2.first->getResId());
         // Do some postprocess modifications. Only on real particles.
         tmp = reaction->PostProcess(*pA, *pB);
         modified_particles.insert(tmp.begin(), tmp.end());
