@@ -57,7 +57,8 @@ def main():  # NOQA
     system.skin = conf.skin
 
     def info():
-        espressopp.tools.analyse.info(system, integrator, per_atom=True, valid_types=[conf.type_a.type_id])
+        espressopp.tools.analyse.info(system, integrator, per_atom=True,
+                                      valid_types=conf.type_ids+[conf.type_c.type_id])
 
     nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
     cellGrid = espressopp.tools.decomp.cellGrid(conf.box, nodeGrid, conf.rc, conf.skin)
@@ -152,6 +153,7 @@ def main():  # NOQA
     if args.eq_conf:
         tools.load_conf(system, args.eq_conf)
     else:
+        integrator.step = 0
         print('Equilibratin...')
         for i in range(args.warmup_loops):
             integrator.run(100)
@@ -163,8 +165,8 @@ def main():  # NOQA
     # Define chemical reaction. fpl_a_a stores new bonds.
     print('Setup chemical reactions...')
 
-    print('AR interval: {}, AR rate: {}, AR cutoff: {}'.format(
-        conf.ar_interval, conf.ar_rate, conf.ar_cutoff))
+    print('AR interval: {}, AR rate: {}'.format(
+        conf.ar_interval, conf.ar_rate))
     ar = espressopp.integrator.ChemicalReaction(
         system,
         verletList,
@@ -184,11 +186,11 @@ def main():  # NOQA
         rate=conf.ar_rate,
         cutoff=conf.rc_lj*conf.type_a.sigma)
     # Change type: A -> B
-    # r_1_post_process = espressopp.integrator.PostProcessChangeProperty()
-    # r_1_post_process.add_change_property(
-    #     conf.type_a.type_id,
-    #     espressopp.ParticleProperties(conf.type_b.type_id, conf.type_b.mass, 0.0))
-    # r_type_1.add_postprocess(r_1_post_process)
+    r_1_post_process = espressopp.integrator.PostProcessChangeProperty()
+    r_1_post_process.add_change_property(
+        conf.type_a.type_id,
+        espressopp.ParticleProperties(conf.type_b.type_id, conf.type_b.mass, 0.0))
+    r_type_1.add_postprocess(r_1_post_process)
 
     # Reaction: A + B:B -> B:B:B + C
     r_type_2 = espressopp.integrator.Reaction(
@@ -225,16 +227,16 @@ def main():  # NOQA
     )
 
     ar.add_reaction(r_type_1)
-    # ar.add_reaction(r_type_2)
-    # ar.add_reaction(r_type_3)
+    ar.add_reaction(r_type_2)
+    ar.add_reaction(r_type_3)
 
-    # integrator.addExtension(ar)
+    integrator.addExtension(ar)
     print('Chemical reaction with the rate={}, dt={}, interval={}'.format(
         conf.ar_rate, conf.dt, conf.ar_interval))
 
     # Dynamic resolution
     basic_dynamic_res = espressopp.integrator.BasicDynamicResolution(
-        system, {conf.type_c.type_id: 0.0001})
+        system, {conf.type_c.type_id: 0.00001})
     integrator.addExtension(basic_dynamic_res)
 
     dump_gro = espressopp.io.DumpGRO(
@@ -251,9 +253,6 @@ def main():  # NOQA
 
     ps.dump(0, 0)
 
-    ext_total_vel = espressopp.integrator.ExtAnalyze(total_velocity, 100)
-    integrator.addExtension(ext_total_vel)
-
     if args.vis:
         import networkx as nx
         from matplotlib import pyplot as plt
@@ -269,10 +268,15 @@ def main():  # NOQA
     print('Running serious simulation %s %s in T=%s' % (
         args.loops*args.steps, 'steps', conf.T))
     time0 = time.time()
+    T_comp = espressopp.analysis.Temperature(system)
+    T_comp.add_type(conf.type_c.type_id)
     import sys
+    # logging.getLogger().setLevel(logging.DEBUG)
+    # logging.getLogger("VerletList").setLevel(logging.INFO)
+    # logging.getLogger("ChemicalReaction").setLevel(logging.DEBUG)
     for k in range(args.loops):
         integrator.run(args.steps)
-        sys.stdout.write('[ {} ] '.format(len(fpl_a_a.getBonds()[0])))
+        sys.stdout.write('[ {} ] '.format(fpl_a_a.totalSize()))
         sys.stdout.write(
             '~ {}:{} ~ '.format(
                 fix_distance.totalSize(),
