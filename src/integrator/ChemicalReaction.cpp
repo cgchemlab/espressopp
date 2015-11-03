@@ -796,12 +796,11 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
 
         pairs_1_2.second->setResId(pairs_1_2.first->getResId());
         // Do some postprocess modifications. Only on real particles.
-        tmp = reaction->PostProcess(*pA, *pB);
+        tmp = reaction->PostProcess(*pairs_1_2.first, *pairs_1_2.second);
         modified_particles.insert(tmp.begin(), tmp.end());
 
         // Add bond to fixed_pair_list.
-        fixed_pair_list_->add(it->first, it->second.first);
-        verlet_list_->exclude(it->first, it->second.first);
+        fixed_pair_list_->add(pairs_1_2.first->getId(), pairs_1_2.second->getId());
         LOG4ESPP_DEBUG(theLogger, "Created pair #A " << pA->getId() << "(" << old_state_a
                        << ":" << pairs_1_2.first->getState() << ") d=" << reaction->delta_1()
                        << " #B " << pB->getId() << "(" << old_state_b
