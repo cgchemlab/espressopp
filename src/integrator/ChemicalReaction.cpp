@@ -789,8 +789,11 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     if (pA != NULL && pB != NULL) {
       ParticlePair pairs_1_2;
       if (reaction->IsValidState(*pA, *pB, pairs_1_2)) {
-        pairs_1_2.first->setState(pA->getState() + reaction->delta_1());
-        pairs_1_2.second->setState(pB->getState() + reaction->delta_2());
+        longint old_state_a = pairs_1_2.first->getState();
+        longint old_state_b = pairs_1_2.second->getState();
+        pairs_1_2.first->setState(old_state_a + reaction->delta_1());
+        pairs_1_2.second->setState(old_state_b + reaction->delta_2());
+
         pairs_1_2.second->setResId(pairs_1_2.first->getResId());
         // Do some postprocess modifications. Only on real particles.
         tmp = reaction->PostProcess(*pA, *pB);
@@ -799,7 +802,11 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
         // Add bond to fixed_pair_list.
         fixed_pair_list_->add(it->first, it->second.first);
         verlet_list_->exclude(it->first, it->second.first);
-        LOG4ESPP_DEBUG(theLogger, "Created pair.");
+        LOG4ESPP_DEBUG(theLogger, "Created pair #A " << pA->getId() << "(" << old_state_a
+                       << ":" << pairs_1_2.first->getState() << ") d=" << reaction->delta_1()
+                       << " #B " << pB->getId() << "(" << old_state_b
+                       << ":" << pairs_1_2.second->getState() << ") d=" << reaction->delta_2()
+        );
       }
     }
   }
