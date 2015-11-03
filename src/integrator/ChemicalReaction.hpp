@@ -197,7 +197,7 @@ class Reaction {
   }
 
   /** Checks if the pair is valid. */
-  bool IsValidPair(Particle& p1, Particle& p2);
+  bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
   /** Checks if the pair has valid state. */
   bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
 

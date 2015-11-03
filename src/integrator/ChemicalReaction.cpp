@@ -53,9 +53,8 @@ LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 LOG4ESPP_LOGGER(PostProcess::theLogger, "PostProcess");
 
 /** Checks if the particles pair is valid. */
-bool Reaction::IsValidPair(Particle& p1, Particle& p2) {
-  ParticlePair unused_order;
-  if (IsValidState(p1, p2, unused_order)) {
+bool Reaction::IsValidPair(Particle& p1, Particle& p2, ParticlePair &particle_order) {
+  if (IsValidState(p1, p2, particle_order)) {
     Real3D distance = p1.position() - p2.position();
     real distance_2 = distance.sqr();
 
@@ -338,9 +337,10 @@ void ChemicalReaction::React() {
 
     for (ReactionList::iterator it = reaction_list_.begin();
          it != reaction_list_.end(); ++it, ++reaction_idx_) {
-      if ((*it)->IsValidPair(p1, p2)) {
+      ParticlePair p;
+      if ((*it)->IsValidPair(p1, p2, p)) {
         potential_pairs_.insert(
-            std::make_pair(p1.id(), std::make_pair(p2.id(), reaction_idx_)));
+            std::make_pair(p.first->id(), std::make_pair(p.second->id(), reaction_idx_)));
       }
     }
   }
@@ -780,35 +780,43 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     // Change the state of A and B.
     pA = system.storage->lookupLocalParticle(it->first);
     pB = system.storage->lookupLocalParticle(it->second.first);
-//    if (!pA || !pB) {
-//      LOG4ESPP_ERROR(theLogger, "pA: " << it->first << " or pB: "
-//          << it->second.first << "do not exists. Internal error. exit(1)");
-//    }
     LOG4ESPP_DEBUG(theLogger, "Checking pair: " << pA->id() << "(" << pA->state() << "-" << pB->id()
         << "(" << pB->state() << ") A.type=" << pA->type() << " B.type=" << pB->type());
-    if (pA != NULL && pB != NULL) {
-      ParticlePair pairs_1_2;
-      if (reaction->IsValidState(*pA, *pB, pairs_1_2)) {
-        longint old_state_a = pairs_1_2.first->getState();
-        longint old_state_b = pairs_1_2.second->getState();
-        pairs_1_2.first->setState(old_state_a + reaction->delta_1());
-        pairs_1_2.second->setState(old_state_b + reaction->delta_2());
-
-        pairs_1_2.second->setResId(pairs_1_2.first->getResId());
-
-        // Do some postprocess modifications. Only on real particles.
-        tmp = reaction->PostProcess(*pairs_1_2.first, *pairs_1_2.second);
-        modified_particles.insert(tmp.begin(), tmp.end());
-
-        // Add bond to fixed_pair_list.
-        fixed_pair_list_->add(pairs_1_2.first->getId(), pairs_1_2.second->getId());
-        LOG4ESPP_DEBUG(theLogger, "Created pair #A " << pA->getId() << "(" << old_state_a
-                       << ":" << pairs_1_2.first->getState() << ") d=" << reaction->delta_1()
-                       << " #B " << pB->getId() << "(" << old_state_b
-                       << ":" << pairs_1_2.second->getState() << ") d=" << reaction->delta_2()
-        );
-      }
+    if (pA != NULL) {
+      pA->setState(pA->getState()+reaction->delta_1());
     }
+    if (pB != NULL) {
+      pB->setState(pB->getState()+reaction->delta_2());
+    }
+    if (pA && pB) {
+      pB->setResId(pA->getResId());
+    }
+    tmp = reaction->PostProcess(*pA, *pB);
+    modified_particles.insert(tmp.begin(), tmp.end());
+    fixed_pair_list_->add(it->first, it->second.first);
+//    if (pA != NULL && pB != NULL) {
+//      ParticlePair pairs_1_2;
+//      if (reaction->IsValidState(*pA, *pB, pairs_1_2)) {
+//        longint old_state_a = pairs_1_2.first->getState();
+//        longint old_state_b = pairs_1_2.second->getState();
+//        pairs_1_2.first->setState(old_state_a + reaction->delta_1());
+//        pairs_1_2.second->setState(old_state_b + reaction->delta_2());
+//
+//        pairs_1_2.second->setResId(pairs_1_2.first->getResId());
+//
+//        // Do some postprocess modifications. Only on real particles.
+//        tmp = reaction->PostProcess(*pairs_1_2.first, *pairs_1_2.second);
+//        modified_particles.insert(tmp.begin(), tmp.end());
+//
+//        // Add bond to fixed_pair_list.
+//        fixed_pair_list_->add(pairs_1_2.first->getId(), pairs_1_2.second->getId());
+//        LOG4ESPP_DEBUG(theLogger, "Created pair #A " << pA->getId() << "(" << old_state_a
+//                       << ":" << pairs_1_2.first->getState() << ") d=" << reaction->delta_1()
+//                       << " #B " << pB->getId() << "(" << old_state_b
+//                       << ":" << pairs_1_2.second->getState() << ") d=" << reaction->delta_2()
+//        );
+//      }
+//    }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
   LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
