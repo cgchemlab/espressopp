@@ -197,9 +197,9 @@ class Reaction {
   }
 
   /** Checks if the pair is valid. */
-  virtual bool IsValidPair(Particle& p1, Particle& p2);
+  bool IsValidPair(Particle& p1, Particle& p2);
   /** Checks if the pair has valid state. */
-  virtual bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
 
   std::set<Particle*> PostProcess(Particle &pA, Particle &pB);
 

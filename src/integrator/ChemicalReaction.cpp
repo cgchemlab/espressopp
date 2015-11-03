@@ -134,8 +134,6 @@ void Reaction::registerPython() {
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .add_property("cutoff", &Reaction::cutoff, &Reaction::set_cutoff)
       .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
-      .def("is_valid_state", pure_virtual(&Reaction::IsValidState))
-      .def("is_valid_pair", pure_virtual(&Reaction::IsValidPair))
       .def("add_postprocess", &Reaction::AddPostProcess);
 }
 
