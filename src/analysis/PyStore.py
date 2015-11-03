@@ -40,6 +40,8 @@ class PyStoreLocal(analysis_PyStore):
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 256)
         """
+        if not pmi.workerIsActive():
+            return
         cxxinit(self, analysis_PyStore, system, is_adress)
 
         self.group_name = group_name
@@ -122,7 +124,8 @@ class PyStoreLocal(analysis_PyStore):
             sys_group.attrs['dt'] = self.system.integrator.dt
 
     def update(self):
-        self.cxxclass.update(self)
+        if pmi.workerIsActive():
+            self.cxxclass.update(self)
 
     def clear_buffers(self):
         self.cxxclass.clear_buffers(self)
@@ -161,6 +164,8 @@ class PyStoreLocal(analysis_PyStore):
         return self.cxxclass.getLambda(self)
 
     def dump(self, step, time):
+        if not pmi.workerIsActive():
+            return
         self.update()
         NLocal = np.array(self.NLocal, 'i')
         NMaxLocal = np.array(0, 'i')
@@ -244,16 +249,28 @@ class PyStoreLocal(analysis_PyStore):
                 self.lambda_adr.value.resize(total_size, axis=1)
             self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1))
 
-        # store connectivity.
-        for name, fl, g_ in self.connectivity_map:
-            items = fl.getBonds()
-            g_.append(items, step, time)
-
     def add_connectivity(self, fixed_list, name, fixed_list_rank=2):
-        g_fixed_list = pyh5md.base.TimeData(
-            self.connectivity_g, name, shape=(0, fixed_list_rank),
-            dtype=np.int)
-        self.connectivity_map.append((name, fixed_list, g_fixed_list))
+        if pmi.workerIsActive():
+            g_fixed_list = pyh5md.base.TimeData(
+                self.connectivity_g, name, shape=(0, fixed_list_rank),
+                dtype=np.int)
+            self.connectivity_map.append((name, fixed_list, g_fixed_list))
+
+    def dump_connectivity(self):
+        if pmi.workerIsActive():
+            # store connectivity.
+            for name, fl, g_ in self.connectivity_map:
+                NLocal = np.array(fl.size(), 'i')
+                NMaxLocal = np.array(0, 'i')
+                MPI.COMM_WORLD.Allreduce(NLocal, NMaxLocal, op=MPI.MAX)
+                cpu_size = ((NMaxLocal//self.chunk_size)+1)*self.chunk_size
+                total_size = MPI.COMM_WORLD.size*cpu_size
+                idx_0 = MPI.COMM_WORLD.rank*cpu_size
+                idx_1 = idx_0+NLocal
+                items = fl.getBonds()
+                if total_size > g_.value.shape[1]:
+                    g_.value.resize(total_size, axis=1)
+                g_.append(items, step, time, region=(idx_0, idx_1))
 
     def close_file(self):
         self.file.close()
@@ -272,7 +289,7 @@ if pmi.isController:
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge',
                      'close_file', 'dump', 'clear_buffers', 'flush', 'close',
-                     'add_connectivity'],
+                     'add_connectivity', 'dump_connectivity'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
                          'store_charge']
         )

@@ -337,8 +337,9 @@ void ChemicalReaction::React() {
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle*> modified_particles = ApplyAR();
   // Update the ghost particles.
-  if (modified_particles.size() > 0)
-    UpdateGhost(modified_particles);
+  LOG4ESPP_INFO(theLogger, "Update ghost, some particles were modified.");
+  UpdateGhost(modified_particles);
+  LOG4ESPP_INFO(theLogger, "Finished react()");
 }
 
 /** Performs two-way parallel communication to consolidate mm between
@@ -789,21 +790,22 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
+  LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
   return modified_particles;
 }
 
 void ChemicalReaction::disconnect() {
-  initialize_.disconnect();
+  //initialize_.disconnect();
   react_.disconnect();
 }
 
 void ChemicalReaction::connect() {
   // connect to initialization inside run()
-  initialize_ = integrator->runInit.connect(
-      boost::bind(&ChemicalReaction::Initialize, this));
+  /*initialize_ = integrator->runInit.connect(
+      boost::bind(&ChemicalReaction::Initialize, this));*/
 
   react_ = integrator->aftIntV.connect(
-      boost::bind(&ChemicalReaction::React, this));
+      boost::bind(&ChemicalReaction::React, this), boost::signals2::at_front);
 }
 
 

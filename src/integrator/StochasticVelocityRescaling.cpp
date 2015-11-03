@@ -78,13 +78,14 @@ void StochasticVelocityRescaling::disconnect(){
 void StochasticVelocityRescaling::connect(){
   // connection to initialization
   _runInit = integrator->runInit.connect( boost::bind(&StochasticVelocityRescaling::initialize, this));
-  // connection to the signal at the end of the run
-  _aftIntV = integrator->aftIntV.connect( boost::bind(&StochasticVelocityRescaling::rescaleVelocities, this));
   // Whenever there are types them connect also initialize to aftIntV to update NPart numbers because
   // types of particles can be changed.
   if (has_types) {
+    std::cout << "connect because has_types" << std::endl;
     _aftIntV2 = integrator->aftIntV.connect(boost::bind(&StochasticVelocityRescaling::initialize, this));
   }
+  // connection to the signal at the end of the run
+  _aftIntV = integrator->aftIntV.connect( boost::bind(&StochasticVelocityRescaling::rescaleVelocities, this));
 }
 
 void StochasticVelocityRescaling::setTemperature(real _temperature) {
