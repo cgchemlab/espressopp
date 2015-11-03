@@ -66,12 +66,15 @@ namespace espressopp {
 		virtual void onParticlesChanged();
 
 	    python::list getBonds();
+	    python::list getAllBonds();
 	    GlobalPairs* getGlobalPairs() {return &globalPairs;};
 
 	    /** Get the number of bonds in the GlobalPairs list */
 	    int size() {
 	    	return globalPairs.size();
 	    }
+
+	    int totalSize();
 
 	    static void registerPython();
 
