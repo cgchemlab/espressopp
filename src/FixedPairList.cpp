@@ -135,6 +135,7 @@ namespace espressopp {
         }
         // if not, insert the new pair
         globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
+        onTupleAdded(pid1, pid2);
       }
       LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
     }
@@ -305,7 +306,7 @@ namespace espressopp {
       = &FixedPairList::add;
     //bool (FixedPairList::*pyAdd)(pvec pids) = &FixedPairList::add;
 
-    class_<FixedPairList, shared_ptr<FixedPairList> >
+    class_<FixedPairList, shared_ptr<FixedPairList>, boost::noncopyable >
       ("FixedPairList", init <shared_ptr<storage::Storage> >())
       .def("add", pyAdd)
       .def("size", &FixedPairList::size)

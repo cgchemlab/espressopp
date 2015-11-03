@@ -795,6 +795,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
         pairs_1_2.second->setState(old_state_b + reaction->delta_2());
 
         pairs_1_2.second->setResId(pairs_1_2.first->getResId());
+
         // Do some postprocess modifications. Only on real particles.
         tmp = reaction->PostProcess(*pairs_1_2.first, *pairs_1_2.second);
         modified_particles.insert(tmp.begin(), tmp.end());

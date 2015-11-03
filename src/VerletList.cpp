@@ -57,6 +57,14 @@ void DynamicExcludeList::disconnect() {
   aftIntV.disconnect();
 }
 
+void DynamicExcludeList::observe(shared_ptr<FixedPairList> fpl) {
+  fpl->onTupleAdded.connect(
+      boost::bind(&DynamicExcludeList::exclude, this, _1, _2));
+
+  // TODO: Handle when bond is removed from observerd  fixed pair list. Currently this is not
+  // implemented there.
+}
+
 void DynamicExcludeList::updateList() {
   LOG4ESPP_INFO(theLogger, "Update dynamic list.");
   // Collect state from all CPUs. If somewhere list is dirty then gather and scatter.
@@ -136,6 +144,7 @@ void DynamicExcludeList::registerPython() {
                      &DynamicExcludeList::setExListDirty)
        .add_property("size", &DynamicExcludeList::getSize)
        .def("exclude", &DynamicExcludeList::exclude)
+       .def("observe", &DynamicExcludeList::observe)
        .def("unexclude", &DynamicExcludeList::unexclude)
        .def("get_list", &DynamicExcludeList::getList)
        .def("connect", &DynamicExcludeList::connect)

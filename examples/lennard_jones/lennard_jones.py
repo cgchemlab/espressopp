@@ -39,11 +39,11 @@ import espressopp
 ########################################################################
 
 # number of particles
-Npart              = 327
+Npart              = 32
 # density of particles
 rho                = 0.8442
 # length of simulation box
-L                  = pow(Npart/rho, 1.0/3.0)
+L                  = 10.0 # pow(Npart/rho, 1.0/3.0)
 # cubic simulation box of size L
 box                = (L, L, L)
 # cutoff of the short range potential
@@ -155,7 +155,7 @@ if (temperature != None):
 # 4. adding the particles                                              #
 ########################################################################
 
-print "adding ", Npart, " particles to the system ..."
+print "adding ", Npart, " particles to the system ..." 
 for pid in range(Npart):
   # get a 3D random coordinate within the box
   pos = system.bc.getRandomPos()
@@ -164,7 +164,7 @@ for pid in range(Npart):
   # the following default values are set for each particle:
   # (type=0, mass=1.0, velocity=(0,0,0), charge=0.0)
   system.storage.addParticle(pid, pos)
-# distribute the particles to parallel CPUs
+# distribute the particles to parallel CPUs 
 system.storage.decompose()
 
 ########################################################################

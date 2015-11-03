@@ -67,10 +67,16 @@ class DynamicExcludeListLocal(_espressopp.DynamicExcludeList):
             self.cxxclass.is_dirty = False
 
     def exclude(self, pid1, pid2):
-        self.cxxclass.exclude(self, pid1, pid2)
+        if pmi.workerIsActive():
+            self.cxxclass.exclude(self, pid1, pid2)
 
     def unexclude(self, pid1, pid2):
-        self.cxxclass.unexclude(self, pid1, pid2)
+        if pmi.workerIsActive():
+            self.cxxclass.unexclude(self, pid1, pid2)
+
+    def observe(self, fpl):
+        if pmi.workerIsActive():
+            self.cxxclass.observe(self, fpl)
 
 
 class VerletListLocal(_espressopp.VerletList):
@@ -134,7 +140,7 @@ if pmi.isController:
     pmiproxydefs = dict(
         cls='espressopp.DynamicExcludeListLocal',
         pmiproperty=['is_dirty', 'size'],
-        pmicall=['exclude', 'unexclude', 'connect', 'disconnect'],
+        pmicall=['exclude', 'unexclude', 'connect', 'disconnect', 'observe'],
         pmiinvoke=['get_list']
     )
 

@@ -41,7 +41,6 @@ from espressopp.VerletListTriple import *
 from espressopp.VerletListAdress import *
 from espressopp.FixedSingleList import *
 from espressopp.FixedPairList import *
-from espressopp.FixedPairListType import *
 from espressopp.FixedPairDistList import *
 from espressopp.FixedPairListAdress import *
 from espressopp.FixedTripleList import *

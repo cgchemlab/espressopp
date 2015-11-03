@@ -29,9 +29,8 @@
 #include "types.hpp"
 #include "Particle.hpp"
 #include "esutil/ESPPIterator.hpp"
-#include <boost/unordered_map.hpp>
-#include <boost/signals2.hpp>
-
+#include "boost/unordered_map.hpp"
+#include "boost/signals2.hpp"
 //#include "FixedListComm.hpp"
 
 namespace espressopp {
@@ -61,7 +60,7 @@ namespace espressopp {
 		\return whether the particle was inserted on this processor.
 		*/
 		virtual bool add(longint pid1, longint pid2);
-    		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
+	    virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
 		void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
 		virtual void onParticlesChanged();
 
@@ -75,6 +74,9 @@ namespace espressopp {
 	    }
 
 	    int totalSize();
+
+	  	boost::signals2::signal2 <void, longint, longint> onTupleAdded;
+	    // TODO: Handle also removing bonds from the list.
 
 	    static void registerPython();
 

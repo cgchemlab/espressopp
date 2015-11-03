@@ -32,6 +32,7 @@
 #include "integrator/MDIntegrator.hpp"
 #include "boost/signals2.hpp"
 #include "boost/unordered_set.hpp"
+#include "FixedPairList.hpp"
 
 namespace espressopp {
 typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
@@ -51,6 +52,8 @@ class DynamicExcludeList {
   bool getExListDirty() { return exListDirty; }
   void setExListDirty(bool val);
 
+  void observe(shared_ptr<FixedPairList> fpl);
+  
   static void registerPython();
 
  private:
