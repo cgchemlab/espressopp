@@ -96,13 +96,16 @@ void FixDistances::onParticlesChanged() {
     }
   }
 
-  // We can do something with the particles that are right now free like chaning the type.
+  // We can do something with the particles that are right now free like changing the type.
   if (affected_particles.size() > 0 && post_process_) {
     LOG4ESPP_DEBUG(theLogger, "Affected particles " << affected_particles.size());
     for (int i = 0; i < affected_particles.size(); i++) {
       Particle *p1 = affected_particles[i];
       LOG4ESPP_DEBUG(theLogger, "particle " << p1->id() << " ghost: " << p1->ghost());
       post_process_->process(*p1);
+      // reset force and velocity of released particle.
+      p1->setV(Real3D(0.0, 0.0, 0.0));
+      p1->setF(Real3D(0.0, 0.0, 0.0));
     }
   }
 }
@@ -141,7 +144,7 @@ void FixDistances::restore_positions() {
           << " new_force " << (2*new_trans*(dst->mass())/dt2));
 
       dst->setF(2*new_trans*(dst->mass())/dt2);
-      //dst->setV(anchor->velocity());
+      // dst->setV(anchor->velocity());
       dst->setV(0.0);
     }
   }
