@@ -790,6 +790,8 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     }
     if (pA && pB) {
       pB->setResId(pA->getResId());
+    } else {
+      std::cout << "Both particles does not exists here." << std::endl;
     }
     tmp = reaction->PostProcess(*pA, *pB);
     modified_particles.insert(tmp.begin(), tmp.end());
