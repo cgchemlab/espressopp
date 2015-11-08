@@ -118,23 +118,20 @@ namespace espressopp {
       this->add(p1, p2);
       // ADD THE GLOBAL PAIR
       // see whether the particle already has pairs
-      std::pair<GlobalPairs::const_iterator,
-        GlobalPairs::const_iterator> equalRange
-        = globalPairs.equal_range(pid1);
-      if (equalRange.first == globalPairs.end()) {
-        // if it hasn't, insert the new pair
-        globalPairs.insert(std::make_pair(pid1, pid2));
-      }
-      else {
+      bool found = false;
+      std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange =
+          globalPairs.equal_range(pid1);
+      if (equalRange.first != globalPairs.end()) {
         // otherwise test whether the pair already exists
-        for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
-  	    if (it->second == pid2) {
-  	      // TODO: Pair already exists, generate error!
-  	      ;
-  	    }
+        for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+          if (it->second == pid2)
+            found = true;
         }
         // if not, insert the new pair
+      }
+      if (!found) {
         globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
+        // Throw signal onTupleAdded.
         onTupleAdded(pid1, pid2);
       }
       LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
