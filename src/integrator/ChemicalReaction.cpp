@@ -104,6 +104,20 @@ bool Reaction::IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_or
   return false;
 }
 
+bool Reaction::IsValidStateT_1(Particle &p) {
+  if (p.type() != type_1_)
+    throw std::runtime_error("Particle has wrong type.");
+
+  return (p.state() >= min_state_1_ && p.state() < max_state_1_);
+}
+
+bool Reaction::IsValidStateT_2(Particle &p) {
+  if (p.type() != type_2_)
+    throw std::runtime_error("Particle has wrong type.");
+
+  return (p.state() >= min_state_2_ && p.state() < max_state_2_);
+}
+
 
 std::set<Particle*> Reaction::PostProcess(Particle &pA, Particle &pB) {
   std::set<Particle*> output;
@@ -764,8 +778,8 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
  particles accordingly.
  */
 std::set<Particle*> ChemicalReaction::ApplyAR() {
-  Particle* pA = NULL;
-  Particle* pB = NULL;
+  Particle* p1 = NULL;
+  Particle* p2 = NULL;
   System& system = getSystemRef();
 
   std::set<Particle*> modified_particles;
@@ -778,22 +792,21 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second);
 
     // Change the state of A and B.
-    pA = system.storage->lookupLocalParticle(it->first);
-    pB = system.storage->lookupLocalParticle(it->second.first);
-    LOG4ESPP_DEBUG(theLogger, "Checking pair: " << pA->id() << "(" << pA->state() << "-" << pB->id()
-        << "(" << pB->state() << ") A.type=" << pA->type() << " B.type=" << pB->type());
-    if (pA != NULL) {
-      pA->setState(pA->getState()+reaction->delta_1());
+    p1 = system.storage->lookupLocalParticle(it->first);
+    p2 = system.storage->lookupLocalParticle(it->second.first);
+    LOG4ESPP_DEBUG(
+        theLogger,
+        "Checking pair: " << p1->id() << "(" << p1->state() << "-"
+            << p2->id() << "(" << p2->state() << ") A.type="
+            << p2->type() << " B.type=" << p2->type());
+    if (p1 != NULL && reaction->IsValidStateT_1(*p1)) {
+      p1->setState(p1->getState()+reaction->delta_1());
     }
-    if (pB != NULL) {
-      pB->setState(pB->getState()+reaction->delta_2());
+    if (p2 != NULL && reaction->IsValidStateT_2(*p2)) {
+      p2->setState(p2->getState()+reaction->delta_2());
     }
-    if (pA && pB) {
-      pB->setResId(pA->getResId());
-    } else {
-      std::cout << "Both particles does not exists here." << std::endl;
-    }
-    tmp = reaction->PostProcess(*pA, *pB);
+
+    tmp = reaction->PostProcess(*p1, *p2);
     modified_particles.insert(tmp.begin(), tmp.end());
     fixed_pair_list_->add(it->first, it->second.first);
 //    if (pA != NULL && pB != NULL) {

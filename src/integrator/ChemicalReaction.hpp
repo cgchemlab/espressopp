@@ -201,6 +201,9 @@ class Reaction {
   /** Checks if the pair has valid state. */
   bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
 
+  bool IsValidStateT_1(Particle &p);
+  bool IsValidStateT_2(Particle &p);
+
   std::set<Particle*> PostProcess(Particle &pA, Particle &pB);
 
   /** Register this class so it can be used from Python. */
