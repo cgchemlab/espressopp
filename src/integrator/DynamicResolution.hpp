@@ -81,19 +81,6 @@ class DynamicResolution : public Extension {
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
-  /** Static method for compute weights. */
-  static real ComputeWeight(real w1, real w2) {
-    return w1*w1;
-  }
-
-  static real ComputeWeight(real w1, real w2, real w3) {
-    return pow(w1*w2*w3, 2.0/3.0);
-  }
-
-  static real ComputeWeight(real w1, real w2, real w3, real w4) {
-    return pow(w1*w2*w3*w4, 1.0/2.0);
-  }
-
  private:
   real weight(real) { return resolution_; }
   real weightderivative(real) { return 0.0; }

@@ -45,6 +45,7 @@ namespace espressopp {
       temperature = 0.0;
       
       adress = false;
+      has_types = false;
 
       if (!system->rng) {
         throw std::runtime_error("system has no RNG");
@@ -132,7 +133,9 @@ namespace espressopp {
       CellList cells = system.storage->getRealCells();
 
       for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
-        frictionThermo(*cit);
+        if (!has_types || valid_type_ids.count(cit->type())) { 
+          frictionThermo(*cit);
+        }
       }
     }
 
@@ -155,7 +158,8 @@ namespace espressopp {
       ParticleList& adrATparticles = system.storage->getAdrATParticles();
       for (std::vector<Particle>::iterator it = adrATparticles.begin();
               it != adrATparticles.end(); it++) {
-            frictionThermo(*it);
+            if (!has_types || valid_type_ids.count(it->type()))
+              frictionThermo(*it);
             
         // Only in hybrid region!          
         /*Particle &at = *it;
@@ -224,6 +228,18 @@ namespace espressopp {
       pref2 = pref2buffer;
     }
 
+    /** Add valid type id. */
+    void LangevinThermostat::setTypeId(longint type_id) {
+      valid_type_ids.insert(type_id);
+      has_types = true; 
+    }
+
+    bool LangevinThermostat::unsetTypeId(longint type_id) {
+      bool val = valid_type_ids.erase(type_id);
+      has_types = valid_type_ids.size() > 0;
+      return val;
+    }
+
     /****************************************************
     ** REGISTRATION WITH PYTHON
     ****************************************************/
@@ -238,6 +254,8 @@ namespace espressopp {
         ("integrator_LangevinThermostat", init<shared_ptr<System> >())
         .def("connect", &LangevinThermostat::connect)
         .def("disconnect", &LangevinThermostat::disconnect)
+        .def("add_valid_type_id", &LangevinThermostat::setTypeId)
+        .def("remove_valid_type_id", &LangevinThermostat::unsetTypeId)
         .add_property("adress", &LangevinThermostat::getAdress, &LangevinThermostat::setAdress)
         .add_property("gamma", &LangevinThermostat::getGamma, &LangevinThermostat::setGamma)
         .add_property("temperature", &LangevinThermostat::getTemperature, &LangevinThermostat::setTemperature)

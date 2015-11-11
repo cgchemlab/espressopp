@@ -121,23 +121,20 @@ void StochasticVelocityRescaling::initialize() {
   real dt = integrator->getTimeStep();
   pref = coupling / dt;
 
-	System& system = getSystemRef();
-  if (has_types) {
-    NPart_local = 0;
-    CellList realCells = system.storage->getRealCells();
-    for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-      if (valid_type_ids.count(cit->type()))
-        NPart_local++;
-    }
-  } else {
-    NPart_local = system.storage->getNRealParticles();
+  System& system = getSystemRef();
+  // Take into account lambda_adr
+  NPart_local = 0.0;
+  CellList realCells = system.storage->getRealCells();
+  for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+    if (!has_types || valid_type_ids.count(cit->type())) {
+      NPart_local++;
+    }	
   }
-	boost::mpi::all_reduce(*getSystem()->comm, NPart_local, NPart,
-			std::plus<int>());
+  boost::mpi::all_reduce(*getSystem()->comm, NPart_local, NPart, std::plus<real>());
   LOG4ESPP_DEBUG(theLogger, "has_type: " << has_types << " NPart: " << NPart);
-	DegreesOfFreedom = 3.0 * NPart; //TODO this is _only_ true for simple system without any constraints
-	//calculate the reference kinetic energy based on reference temperature 'temperature'
-	EKin_ref = 0.5 * temperature * BOLTZMANN * DegreesOfFreedom;
+  DegreesOfFreedom = 3.0 * NPart; //TODO this is _only_ true for simple system without any constraints
+  //calculate the reference kinetic energy based on reference temperature 'temperature'
+  EKin_ref = 0.5 * temperature * BOLTZMANN * DegreesOfFreedom;
 }
 
 void StochasticVelocityRescaling::rescaleVelocities() {

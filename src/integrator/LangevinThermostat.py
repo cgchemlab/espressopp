@@ -42,6 +42,18 @@ class LangevinThermostatLocal(ExtensionLocal, integrator_LangevinThermostat):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, integrator_LangevinThermostat, system)
 
+    def add_valid_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.add_valid_type_id(self, type_id)
+
+    def add_valid_types(self, types):
+        if pmi.workerIsActive():
+            for type_id in types:
+                self.cxxclass.add_valid_type_id(self, type_id)
+
+    def remove_valid_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.remove_valid_type_id(self, type_id)
     #def enableAdress(self):
     #    if pmi.workerIsActive():
     #        self.cxxclass.enableAdress(self);
@@ -51,5 +63,6 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.LangevinThermostatLocal',
-            pmiproperty = [ 'gamma', 'temperature', 'adress' ]
+            pmiproperty = [ 'gamma', 'temperature', 'adress' ],
+            pmicall = ['add_valid_type_id', 'remove_valid_type_id', 'add_valid_types']
             )

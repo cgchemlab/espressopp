@@ -34,6 +34,7 @@
 
 
 #include "boost/signals2.hpp"
+#include "boost/unordered_set.hpp"
 
 
 namespace espressopp {
@@ -75,6 +76,10 @@ namespace espressopp {
         /** Opposite to heatUp */
         void coolDown();
 
+        /** set valid particle type. */
+        void setTypeId(longint type_id);
+        bool unsetTypeId(longint type_id);
+
         /** Register this class so it can be used from Python. */
         static void registerPython();
 
@@ -82,6 +87,8 @@ namespace espressopp {
 
         boost::signals2::connection _initialize, _heatUp, _coolDown,
                                        _thermalize, _thermalizeAdr;
+        boost::unordered_set<longint> valid_type_ids;
+        bool has_types;
 
         void frictionThermo(class Particle&);
 
