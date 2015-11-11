@@ -63,7 +63,7 @@ class PostProcess {
  public:
   PostProcess() { }
   virtual ~PostProcess() { }
-  virtual std::vector<Particle*> process(Particle& p1, Particle& p2) = 0;
+  virtual std::vector<Particle*> process(Particle& p) = 0;
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -74,22 +74,9 @@ class PostProcess {
 };
 
 
-class PostProcessUpdateExcludeList : public PostProcess {
- public:
-  PostProcessUpdateExcludeList(shared_ptr<DynamicExcludeList> dynamicExcludeList):
-      dynamicExcludeList_(dynamicExcludeList) {}
-  std::vector<Particle*> process(Particle &p1, Particle &p2);
-
-  static void registerPython();
- private:
-  shared_ptr<DynamicExcludeList> dynamicExcludeList_;
-};
-
-
 class PostProcessChangeProperty : public integrator::PostProcess {
  public:
-  std::vector<Particle*> process(Particle& p1, Particle& p2);
-  bool process(Particle& p1);
+  std::vector<Particle*> process(Particle& p);
   void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void RemoveChangeProperty(int type_id);
 
@@ -98,23 +85,6 @@ class PostProcessChangeProperty : public integrator::PostProcess {
 
  private:
   TypeParticlePropertiesMap type_properties_;
-};
-
-class PostProcessUpdateResId : public integrator::PostProcess {
- public:
-  typedef std::map<int, int> TypeMoleculeSize;
-  explicit PostProcessUpdateResId(shared_ptr<System> system, int ids_from)
-      : system_(system), ids_from_(ids_from) {}
-  std::vector<Particle*> process(Particle &p1, Particle &p2);
-  void add_molecule_size(int type_id, int molecule_size);
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- private:
-  TypeMoleculeSize type_molecule_;
-  int ids_from_;
-  shared_ptr<System> system_;
 };
 
 /** Class for the chemical reactions. */
@@ -204,7 +174,7 @@ class Reaction {
   bool IsValidStateT_1(Particle &p);
   bool IsValidStateT_2(Particle &p);
 
-  std::set<Particle*> PostProcess(Particle &pA, Particle &pB);
+  std::set<Particle*> PostProcess(Particle &p);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();

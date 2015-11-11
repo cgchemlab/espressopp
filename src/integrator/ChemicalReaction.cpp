@@ -73,6 +73,9 @@ bool Reaction::IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_or
   int p1_state = p1.state();
   int p2_state = p2.state();
 
+  // States has to be always positive or zero.
+  assert (p1_state >= 0 && p2_state >= 0);
+
   // Case when both types are the same.
   if (type_1_ == type_2_ && p1.type() == type_1_ && p1.type() == p2.type()) {
     if (p1_state >= min_state_1_ && p1_state < max_state_1_ &&
@@ -108,23 +111,29 @@ bool Reaction::IsValidStateT_1(Particle &p) {
   if (p.type() != type_1_)
     throw std::runtime_error("Particle has wrong type.");
 
-  return (p.state() >= min_state_1_ && p.state() < max_state_1_);
+  // States has to be always positive or zero.
+  int p_state = p.state();
+  assert (p_state >= 0);
+  return (p_state >= min_state_1_ && p_state < max_state_1_);
 }
 
 bool Reaction::IsValidStateT_2(Particle &p) {
   if (p.type() != type_2_)
     throw std::runtime_error("Particle has wrong type.");
 
-  return (p.state() >= min_state_2_ && p.state() < max_state_2_);
+  // States has to be always positive or zero.
+  int p_state = p.state();
+  assert (p_state >= 0);
+  return (p_state >= min_state_2_ && p_state < max_state_2_);
 }
 
 
-std::set<Particle*> Reaction::PostProcess(Particle &pA, Particle &pB) {
+std::set<Particle*> Reaction::PostProcess(Particle &p) {
   std::set<Particle*> output;
   std::vector<Particle*> ret;
   for (std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_.begin();
       it != post_process_.end(); ++it) {
-    ret = (*it)->process(pA, pB);
+    ret = (*it)->process(p);
     output.insert(ret.begin(), ret.end());
   }
   return output;
@@ -179,8 +188,9 @@ void PostProcessChangeProperty::RemoveChangeProperty(int type_id) {
  *
  * In this case method will update the properties of the particles.
  * */
-bool PostProcessChangeProperty::process(Particle &p1) {
+std::vector<Particle*> PostProcessChangeProperty::process(Particle &p1) {
   TypeParticlePropertiesMap::iterator it;
+  std::vector<Particle*> mod_particles;
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangeProperty::process()");
   // Process particle p1.
   it = type_properties_.find(p1.type());
@@ -201,15 +211,8 @@ bool PostProcessChangeProperty::process(Particle &p1) {
     }
     LOG4ESPP_DEBUG(theLogger, "Modified particle A: " << p1.id());
   }
-  return mod;
-}
-
-std::vector<Particle*> PostProcessChangeProperty::process(Particle& p1, Particle& p2) {
-  std::vector<Particle*> mod_particles;
-  if (process(p1))
-    mod_particles.push_back(&p1);
-  if (process(p2))
-    mod_particles.push_back(&p2);
+  if (mod)
+    mod_particles.push_back(&(p1));
   return mod_particles;
 }
 
@@ -221,60 +224,6 @@ void PostProcessChangeProperty::registerPython() {
   ("integrator_PostProcessChangeProperty", init<>())
     .def("add_change_property", &PostProcessChangeProperty::AddChangeProperty)
     .def("remove_change_property", &PostProcessChangeProperty::RemoveChangeProperty);
-}
-
-
-/** Post process, update molecule id after performing reaction */
-std::vector<Particle*> PostProcessUpdateResId::process(Particle &p1, Particle &p2) {
-  // Transfer resid from p1 -> p2.
-  PostProcessUpdateResId::TypeMoleculeSize::iterator it;
-  it = type_molecule_.find(p2.type());
-  std::vector<Particle*> ret;
-  if (it != type_molecule_.end()) {
-    int molecule_size = it->second;
-    int p2_id = p2.id();
-
-    // Generating index for molecule. Very simple case so
-    // look out for more complicated systems.
-    int begin_id = ids_from_ + floor((p2_id - 1)/molecule_size)*molecule_size;
-    int end_id = ids_from_ + (floor((p2_id - 1)/molecule_size)+1)*molecule_size;
-    for (int i = begin_id; i <= end_id; i++) {
-      Particle *p = system_->storage->lookupLocalParticle(i);
-      if (p != NULL) {
-        p->setResId(p1.res_id());
-        ret.push_back(p);
-      }
-    }
-  }
-  return ret;
-}
-
-void PostProcessUpdateResId::add_molecule_size(int type_id, int molecule_size) {
-  type_molecule_.insert(std::pair<int, int>(type_id, molecule_size));
-}
-
-void PostProcessUpdateResId::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-
-  class_<PostProcessUpdateResId, bases<integrator::PostProcess>,
-      boost::shared_ptr<integrator::PostProcessUpdateResId> >
-  ("integrator_PostProcessUpdateResId", init<shared_ptr<System>, int>())
-    .def("add_molecule_size", &PostProcessUpdateResId::add_molecule_size);
-}
-
-/** Post Process, update exclude list. */
-std::vector<Particle *> PostProcessUpdateExcludeList::process(Particle &p1, Particle &p2) {
-  dynamicExcludeList_->exclude(p1.id(), p2.id());
-
-  return std::vector<Particle *>();
-}
-
-void PostProcessUpdateExcludeList::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-
-  class_<PostProcessUpdateExcludeList, bases<integrator::PostProcess>,
-         boost::shared_ptr<integrator::PostProcessUpdateExcludeList> >
-      ("integrator_PostProcessUpdateExcludeList", init<shared_ptr<DynamicExcludeList> >());
 }
 
 
@@ -778,8 +727,6 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap& potential_candidates,  /
  particles accordingly.
  */
 std::set<Particle*> ChemicalReaction::ApplyAR() {
-  Particle* p1 = NULL;
-  Particle* p2 = NULL;
   System& system = getSystemRef();
 
   std::set<Particle*> modified_particles;
@@ -790,48 +737,40 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
       it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second);
-
     // Change the state of A and B.
-    p1 = system.storage->lookupLocalParticle(it->first);
-    p2 = system.storage->lookupLocalParticle(it->second.first);
+    Particle *p1 = system.storage->lookupLocalParticle(it->first);
+    Particle *p2 = system.storage->lookupLocalParticle(it->second.first);
     LOG4ESPP_DEBUG(
         theLogger,
         "Checking pair: " << p1->id() << "(" << p1->state() << "-"
             << p2->id() << "(" << p2->state() << ") A.type="
             << p2->type() << " B.type=" << p2->type());
-    if (p1 != NULL && reaction->IsValidStateT_1(*p1)) {
-      p1->setState(p1->getState()+reaction->delta_1());
-    }
-    if (p2 != NULL && reaction->IsValidStateT_2(*p2)) {
-      p2->setState(p2->getState()+reaction->delta_2());
-    }
 
-    tmp = reaction->PostProcess(*p1, *p2);
-    modified_particles.insert(tmp.begin(), tmp.end());
-    fixed_pair_list_->add(it->first, it->second.first);
-//    if (pA != NULL && pB != NULL) {
-//      ParticlePair pairs_1_2;
-//      if (reaction->IsValidState(*pA, *pB, pairs_1_2)) {
-//        longint old_state_a = pairs_1_2.first->getState();
-//        longint old_state_b = pairs_1_2.second->getState();
-//        pairs_1_2.first->setState(old_state_a + reaction->delta_1());
-//        pairs_1_2.second->setState(old_state_b + reaction->delta_2());
-//
-//        pairs_1_2.second->setResId(pairs_1_2.first->getResId());
-//
-//        // Do some postprocess modifications. Only on real particles.
-//        tmp = reaction->PostProcess(*pairs_1_2.first, *pairs_1_2.second);
-//        modified_particles.insert(tmp.begin(), tmp.end());
-//
-//        // Add bond to fixed_pair_list.
-//        fixed_pair_list_->add(pairs_1_2.first->getId(), pairs_1_2.second->getId());
-//        LOG4ESPP_DEBUG(theLogger, "Created pair #A " << pA->getId() << "(" << old_state_a
-//                       << ":" << pairs_1_2.first->getState() << ") d=" << reaction->delta_1()
-//                       << " #B " << pB->getId() << "(" << old_state_b
-//                       << ":" << pairs_1_2.second->getState() << ") d=" << reaction->delta_2()
-//        );
-//      }
-//    }
+    bool valid_state = true;
+    if (p1 != NULL) {
+      if (reaction->IsValidStateT_1(*p1)) {
+        p1->setState(p1->getState() + reaction->delta_1());
+        tmp = reaction->PostProcess(*p1);
+        for (std::set<Particle*>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
+      }
+    }
+    if (p2 != NULL) {
+      if (reaction->IsValidStateT_2(*p2)) {
+        p2->setState(p2->getState() + reaction->delta_2());
+        tmp = reaction->PostProcess(*p2);
+        for (std::set<Particle*>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
+      }
+    }
+    /** Make sense only if both particles exists here, otherwise waste of CPU time. */
+    if (p1 != NULL && p2 != NULL && valid_state) {
+      fixed_pair_list_->add(it->first, it->second.first);
+    }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
   LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
@@ -839,15 +778,10 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
 }
 
 void ChemicalReaction::disconnect() {
-  //initialize_.disconnect();
   react_.disconnect();
 }
 
 void ChemicalReaction::connect() {
-  // connect to initialization inside run()
-  /*initialize_ = integrator->runInit.connect(
-      boost::bind(&ChemicalReaction::Initialize, this));*/
-
   react_ = integrator->aftIntV.connect(
       boost::bind(&ChemicalReaction::React, this), boost::signals2::at_front);
 }

@@ -154,12 +154,16 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id) {
   Triplets::iterator fparticle = distance_triplets_.find(anchor_id);
 
   std::vector<Particle*> mod_particles;
+  std::vector<Particle*> tmp;
   if (fparticle != distance_triplets_.end()) {
     System &system = getSystemRef();
     Particle *p1 = system.storage->lookupRealParticle(fparticle->second.first);
     if (p1 != NULL) {
-      if (post_process_ && post_process_->process(*p1))
-        mod_particles.push_back(p1);
+      if (post_process_) {
+        tmp = post_process_->process(*p1);
+        for (std::vector<Particle*>::iterator it = tmp.begin(); it != tmp.end(); ++it)
+          mod_particles.push_back(*it);
+      }
       p1->setV(Real3D(0.0, 0.0, 0.0));
       p1->setF(Real3D(0.0, 0.0, 0.0));
     }
@@ -265,10 +269,10 @@ void FixDistances::registerPython() {
  */
 LOG4ESPP_LOGGER(PostProcessReleaseParticles::theLogger, "PostProcessReleaseParticles");
 
-std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p1, Particle &p2) {
+std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p) {
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessReleaseParticles::operator()");
   if (nr_ == 1)
-    return fd_->release_particle(p1.id());
+    return fd_->release_particle(p.id());
   return std::vector<Particle*>();
 }
 

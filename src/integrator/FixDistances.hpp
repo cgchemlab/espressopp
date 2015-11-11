@@ -98,7 +98,7 @@ class FixDistances : public Extension {
 class PostProcessReleaseParticles : public integrator::PostProcess {
  public:
   PostProcessReleaseParticles(shared_ptr<FixDistances> fd, int nr) : fd_(fd), nr_(nr) {}
-  std::vector<Particle*> process(Particle &p1, Particle &p2);
+  std::vector<Particle*> process(Particle &p);
 
   static void registerPython();
  private:

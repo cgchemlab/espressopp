@@ -100,8 +100,6 @@ from _espressopp import integrator_Reaction
 
 from _espressopp import integrator_PostProcess
 from _espressopp import integrator_PostProcessChangeProperty
-from _espressopp import integrator_PostProcessUpdateResId
-from _espressopp import integrator_PostProcessUpdateExcludeList
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -156,25 +154,6 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
             self.cxxclass.remove_change_property(self, type_id)
-
-
-class PostProcessUpdateResIdLocal(integrator_PostProcessUpdateResId,
-                                  integrator_PostProcess):
-    def __init__(self, system, ids_from=1):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self, integrator_PostProcessUpdateResId, system, ids_from)
-
-    def add_molecule_size(self, type_id, molecule_size):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            self.cxxclass.add_molecule_size(self, type_id, molecule_size)
-
-class PostProcessUpdateExcludeListLocal(integrator_PostProcessUpdateExcludeList,
-                                        integrator_PostProcess):
-    def __init__(self, dynamic_exclude_list):
-        if pmi.workerIsActive():
-            cxxinit(self, integrator_PostProcessUpdateExcludeListLocal, dynamic_exclude_list)
 
 
 class ReactionLocal(integrator_Reaction):

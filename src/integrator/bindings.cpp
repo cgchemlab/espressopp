@@ -107,8 +107,6 @@ namespace espressopp {
       PostProcess::registerPython();
       PostProcessChangeProperty::registerPython();
       PostProcessReleaseParticles::registerPython();
-      PostProcessUpdateResId::registerPython();
-      PostProcessUpdateExcludeList::registerPython();
 
       EmptyExtension::registerPython();
     }
