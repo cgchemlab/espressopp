@@ -60,6 +60,7 @@
 #include "AssociationReaction.hpp"
 #include "ChemicalReaction.hpp"
 #include "DynamicResolution.hpp"
+#include "TopologyManager.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -108,6 +109,7 @@ namespace espressopp {
       PostProcessChangeProperty::registerPython();
       PostProcessReleaseParticles::registerPython();
 
+      TopologyManager::registerPython();
       EmptyExtension::registerPython();
     }
   }

@@ -22,6 +22,7 @@
 #define _INTEGRATOR_TOPOLOGYMANAGER_H
 
 #include <vector>
+#include <map>
 
 #include "types.hpp"
 #include "logging.hpp"
@@ -30,28 +31,43 @@
 #include "FixedPairList.hpp"
 #include "System.hpp"
 
-#include "boost/unordered_map.hpp"
-
 namespace espressopp {
 namespace integrator {
 
 class TopologyManager : public Extension {
-  /// Defines map that stores res_id -> particle_id
-  typedef boost::unordered_multimap<longint, longint> ResParticleIds;
  public:
   TopologyManager(shared_ptr<System> system);
+  ~TopologyManager();
 
+  /**
+   * Observe fixed pair list against chages.
+   * @param fpl FixedPairList
+   */
   void observeTuple(shared_ptr<FixedPairList> fpl);
 
-  void rebuild();
+  /** Rebuild map res_id -> particle_id */
+  void Rebuild();
+
+  static void registerPython();
+
+  /// Defines map that stores res_id -> particle_id
+  typedef std::set<longint> PSet;
+  typedef std::map<longint, PSet*> ResParticleIds;
+
  private:
+  /** Handle local tuple update. */
   void onTupleAdded(longint pid1, longint pid2);
+  void exchangeData();
+  void mergeResIdSets(longint res_id_a, longint res_id_b);
   void connect();
   void disconnect();
 
   shared_ptr<System> system_;
   ResParticleIds res_particle_ids_;
-  bool is_dirty_;
+  std::vector<longint> merge_sets_;
+
+  boost::signals2::connection aftIntV_;
+
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
