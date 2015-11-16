@@ -8,6 +8,7 @@
 from collections import namedtuple
 
 import tools
+import numpy as np
 
 AtomType = namedtuple('AtomType', ['type_id', 'mass', 'sigma', 'epsilon'])
 
@@ -15,30 +16,35 @@ epsilon = 1.0
 sigma = 1.0
 mass = 1.0
 
+
+def get_r(mass):
+    return pow((3.0/4.0) * (mass/np.pi), 1.0/3.0)
+
 type_a = AtomType(1, 1.0*mass, 1.0*sigma, epsilon)
-type_b = AtomType(2, 0.8*mass, pow(7.0/8.0, 1.0/3.0)*sigma, epsilon)
-type_c = AtomType(3, 0.2*mass, pow(1.0/8.0, 1.0/3.0)*sigma, epsilon)
-type_c_tmp = AtomType(4, 0.2*mass, pow(1.0/8.0, 1.0/3.0)*sigma, epsilon)
+type_b = AtomType(2, 0.8*mass, get_r(0.8*mass)*sigma, epsilon)
+type_c = AtomType(3, 0.2*mass, get_r(0.2*mass)*sigma, epsilon)
+type_c_tmp = AtomType(4, type_c.mass, type_c.sigma, type_c.epsilon)
 
 skin = 0.16*sigma
 rc = 2.5*sigma
 rc_lj = pow(2.0, 1.0/6.0)
 dt = 0.0025
 T = 0.5
-gamma = 0.5
+gamma = 5.0
 
 # Bond A-B
 kF = 30.0
 R0 = 0.5*sigma
 
 # Size of system.
-rho = 0.8
+rho = 0.74
 N_a = 100
 L = pow(N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
 
 # Co-partner, fixed distance A-C_tmp
-R_ac = 0.2*type_a.sigma
+R_ac = tools.lb_sigma(type_a.sigma, type_c.sigma)*rc_lj+0.01*sigma
+print('R_ac={}'.format(R_ac))
 
 types = [type_a, type_b]
 type_ids = [x.type_id for x in types]
@@ -51,9 +57,13 @@ potential_matrix = [
     for i2 in range(i1, len(types))
     ]
 
-# Chemical reaction setup
-ar_interval = 100
-ar_rate = 0.1
-ar_cutoff = rc_lj
+warmup_potential_matrix = potential_matrix[:]
+warmup_potential_matrix.extend([
+    (type_c.type_id, types[i].type_id,
+     tools.lb_sigma(type_c.sigma, types[i].sigma),
+     tools.lb_epsilon(type_c.epsilon, types[i].epsilon))
+    for i in range(len(types))])
+warmup_potential_matrix.append([type_c.type_id, type_c.type_id, type_c.sigma, type_c.epsilon])
 
-print('kA = {}'.format(ar_rate*dt*ar_interval))
+print potential_matrix
+print warmup_potential_matrix

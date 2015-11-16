@@ -6,6 +6,7 @@
 #
 
 import cPickle
+import random
 import espressopp
 
 
@@ -42,10 +43,10 @@ def load_conf(system, input_file):
                     system.storage.modifyParticle(pid, prop, val)
 
 
-def prepare_system(conf, system):
+def prepare_system(conf, system, active_sites=1):
     # Build the configuration.
     particles_list = []
-    last_pid = 1
+    last_pid = 0
 
     bonds_a_c_tmp = []
 
@@ -56,7 +57,8 @@ def prepare_system(conf, system):
     )
 
     v_idx = 0
-    # Adds A with particle with copartner D.
+    pids = []
+    # Adds M molecules
     for i in range(conf.N_a):
         pos = system.bc.getRandomPos()
         pid_a = last_pid
@@ -67,17 +69,34 @@ def prepare_system(conf, system):
             vel,
             conf.type_a.type_id,
             conf.type_a.mass,
-            2, pid_a, 1.0])
+            2,
+            pid_a,
+            1.0])
+        pids.append(i)
         last_pid += 1
         # Create co-partner C
         pid_c = last_pid
         pos_c = pos + espressopp.Real3D(conf.R_ac, 0, 0)
         particles_list.append([
-            pid_c, pos_c, vel, conf.type_c_tmp.type_id,
-            conf.type_c_tmp.mass, 1, pid_c, 0.0])
+            pid_c,
+            pos_c,
+            vel,
+            conf.type_c_tmp.type_id,
+            conf.type_c_tmp.mass,
+            4,
+            pid_c,
+            0.0])
         last_pid += 1
         bonds_a_c_tmp.append((pid_a, pid_c))
         v_idx += 1
+    # Create some active sites for a chain by chining type of some random particles.
+    pids_b = random.sample(pids, active_sites)
+    for pid_b in pids_b:
+        particles_list[pid_b][3] = conf.type_b.type_id
+        particles_list[pid_b][5] = 1
+        particles_list[pid_b+1][3] = conf.type_c.type_id
+        particles_list[pid_b+1][5] = 4
+        particles_list[pid_b+1][7] = 1.0
     part_prop = ['id', 'pos', 'v', 'type', 'mass', 'state', 'res_id', 'lambda_adr']
     system.storage.addParticles(particles_list, *part_prop)
     print("Decompose...")
@@ -94,15 +113,37 @@ def warmup(system, integrator, verletList, args, conf):
     eps_delta = 0.0001
     eq_delta = [
         (sigma - eps_delta)/args.warmup_loops
-        for _, _, sigma, _ in conf.potential_matrix
+        for _, _, sigma, _ in conf.warmup_potential_matrix
         ]
     potential_matrix = {
         (type_1, type_2): espressopp.interaction.LennardJones()
-        for type_1, type_2, _, _ in conf.potential_matrix
+        for type_1, type_2, _, _ in conf.warmup_potential_matrix
     }
+    """
+    interNonRecpLJ = espressopp.interaction.VerletListNonReciprocalLennardJones(
+        verletList, conf.type_c_tmp.type_id)
+    interNonRecpLJ.setPotential(
+        type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id,
+        potential=espressopp.interaction.LennardJones(
+            sigma=conf.type_c_tmp.sigma,
+            epsilon=conf.type_c_tmp.epsilon,
+            cutoff=conf.type_c_tmp.sigma*conf.rc_lj))
+    for type_id, _, sigma, epsilon in conf.types:
+        sigma_12 = lb_sigma(conf.type_c.sigma, sigma)
+        epsilon_12 = lb_epsilon(conf.type_c.epsilon, epsilon)
+        interNonRecpLJ.setPotential(
+            type1=conf.type_c_tmp.type_id,
+            type2=type_id,
+            potential=espressopp.interaction.LennardJones(
+                sigma=sigma_12, epsilon=epsilon_12, cutoff=sigma_12*conf.rc_lj))
+    system.addInteraction(interNonRecpLJ)
+    """
+
+    espressopp.tools.analyse.info(system, integrator, per_atom=True, valid_types=conf.type_ids)
     for s in range(args.warmup_loops):
         integrator.run(100)
-        for i, (type_1, type_2, sigma_12, epsilon_12) in enumerate(conf.potential_matrix):
+        espressopp.tools.analyse.info(system, integrator, per_atom=True, valid_types=conf.type_ids)
+        for i, (type_1, type_2, sigma_12, epsilon_12) in enumerate(conf.warmup_potential_matrix):
             sigma = eps_delta + s*eq_delta[i]
             cutoff = sigma * conf.rc_lj
             pot = potential_matrix[(type_1, type_2)]

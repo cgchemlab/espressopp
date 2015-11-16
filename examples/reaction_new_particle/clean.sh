@@ -7,4 +7,4 @@
 #
 
 
-rm -vf trajectory.gro *.h5 *.pyc
+rm -vf trajectory.gro *.h5 *.pyc *.log
