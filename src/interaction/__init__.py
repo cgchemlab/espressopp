@@ -38,6 +38,7 @@ from espressopp.interaction.LennardJonesForceCapped import *
 from espressopp.interaction.LennardJonesExpand import *
 from espressopp.interaction.LennardJonesGromacs import *
 from espressopp.interaction.LennardJonesGeneric import *
+from espressopp.interaction.LennardJonesLambda import *
 from espressopp.interaction.LJcos import *
 from espressopp.interaction.Morse import *
 from espressopp.interaction.CoulombTruncatedUniqueCharge import *

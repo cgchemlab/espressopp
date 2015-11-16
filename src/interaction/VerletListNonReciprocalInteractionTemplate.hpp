@@ -42,7 +42,7 @@
  * The aim of this potential is to bring defined particles into local equilibrium but on the other
  * hand those particles should not effect other particles.
  *
- * Warning: This potential violate third Newton law and can produce unwanted results.
+ * Warning: This potential violates third Newton law and can produce unwanted results.
  */
 
 namespace espressopp {
@@ -134,17 +134,27 @@ void VerletListNonReciprocalInteractionTemplate < _Potential >::addForces() {
 
     Real3D force(0.0);
     if (potential._computeForce(force, p1, p2)) {
-      bool stat = false;
-      if (type1 == active_type) {
-        p1.force() += force;
-        stat = true;
-      } else if (type2 == active_type) {
-        p2.force() -= force;
-        stat = true;
+      if (force.isNaNInf()) {
+        LOG4ESPP_ERROR(_Potential::theLogger,"id1=" << p1.id() << " id2=" << p2.id()
+                       << " force=" << force
+                       << " p1.pos=" << p1.position()
+                       << " p2.pos=" << p2.position()
+                       << " p1.type=" << p1.type()
+                       << " p2.type=" << p2.type()
+        );
       }
-      if (stat)
-        LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id() << " id2=" << p2.id()
-            << " force=" << force);
+      if (type1 == type2 == active_type) {
+        p1.force() += force;
+        p2.force() -= force;
+      } else {
+        if (type1 == active_type) {
+          p1.force() += force;
+        } else if (type2 == active_type) {
+          p2.force() += force;
+        }
+      }
+      LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id() << " id2=" << p2.id()
+          << " force=" << force);
     }
   }
 }
