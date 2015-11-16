@@ -29,11 +29,6 @@ This class provides methods to compute forces and energies ofthe SoftCosine pote
 	V(r) = A \varepsilon \left[ \left( \frac{\sigma}{r} \right)^{12} -
 	\left( \frac{\sigma}{r} \right)^{6} \right]
 
-
-
-
-
-
 .. function:: espressopp.interaction.SoftCosine(A, cutoff, shift)
 
 		:param A: (default: 1.0)
@@ -92,6 +87,7 @@ from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_SoftCosine, \
                       interaction_VerletListSoftCosine, \
+                      interaction_VerletListDynamicResolutionSoftCosine, \
                       interaction_CellListSoftCosine, \
                       interaction_FixedPairListSoftCosine
 
@@ -119,15 +115,19 @@ class VerletListSoftCosineLocal(InteractionLocal, interaction_VerletListSoftCosi
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getPotential(self, type1, type2)
 
-class VerletListSoftCosineLocal(InteractionLocal, interaction_VerletListSoftCosine):
-
-    def __init__(self, stor):
+class VerletListDynamicResolutionSoftCosineLocal(InteractionLocal, interaction_VerletListDynamicResolutionSoftCosine):
+    'The (local) SoftCosine interaction using Verlet lists.'
+    def __init__(self, vl, cg_potential=False):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_VerletListSoftCosine, stor)
+            cxxinit(self, interaction_VerletListDynamicResolutionSoftCosine, vl, cg_potential)
 
     def setPotential(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPotential(self, type1, type2)
 
 class CellListSoftCosineLocal(InteractionLocal, interaction_CellListSoftCosine):
 
@@ -160,6 +160,12 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListSoftCosineLocal',
+            pmicall = ['setPotential','getPotential']
+            )
+    class VerletListDynamicResolutionSoftCosine(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListDynamicResolutionSoftCosineLocal',
             pmicall = ['setPotential','getPotential']
             )
     class CellListSoftCosine(Interaction):

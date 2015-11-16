@@ -25,11 +25,14 @@
 #include "VerletListInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
+#include "VerletListDynamicResolutionInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
     typedef class VerletListInteractionTemplate< SoftCosine > 
     VerletListSoftCosine;
+    typedef class VerletListDynamicResolutionInteractionTemplate<SoftCosine>
+    VerletListDynamicResolutionSoftCosine;
     typedef class CellListAllPairsInteractionTemplate< SoftCosine > 
     CellListSoftCosine;
     typedef class FixedPairListInteractionTemplate< SoftCosine > 
@@ -54,6 +57,12 @@ namespace espressopp {
         .def("setPotential", &VerletListSoftCosine::setPotential, return_value_policy< reference_existing_object >())
         .def("getPotential", &VerletListSoftCosine::getPotential, return_value_policy< reference_existing_object >())
         ;
+
+      class_< VerletListDynamicResolutionSoftCosine, bases< Interaction > >
+          ("interaction_VerletListDynamicResolutionSoftCosine", init< shared_ptr<VerletList>, bool >())
+          .def("setPotential", &VerletListDynamicResolutionSoftCosine::setPotential, return_value_policy< reference_existing_object >())
+          .def("getPotential", &VerletListDynamicResolutionSoftCosine::getPotential, return_value_policy< reference_existing_object >())
+          ;
 
       class_< CellListSoftCosine, bases< Interaction > > 
         ("interaction_CellListSoftCosine", init< shared_ptr< storage::Storage > >())

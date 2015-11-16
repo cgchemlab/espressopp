@@ -244,6 +244,13 @@ if pmi.isController:
             pmicall = ['setPotential', 'getPotential', 'getVerletList']
             )
 
+    class VerletListNonReciprocalLennardJones(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListNonReciprocalLennardJonesLocal',
+            pmicall = ['setPotential', 'getPotential', 'getVerletList']
+            )
+
     class VerletListAdressLennardJones(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(

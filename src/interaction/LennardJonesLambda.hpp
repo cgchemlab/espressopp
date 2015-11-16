@@ -21,8 +21,8 @@
 */
 
 // ESPP_CLASS
-#ifndef _INTERACTION_LENNARDJONES_HPP
-#define _INTERACTION_LENNARDJONES_HPP
+#ifndef _INTERACTION_LENNARDJONESLAMBDA_HPP
+#define _INTERACTION_LENNARDJONESLAMBDA_HPP
 
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
@@ -38,7 +38,7 @@ namespace espressopp {
 	\f]
 
     */
-    class LennardJones : public PotentialTemplate< LennardJones > {
+    class LennardJonesLambda : public PotentialTemplate< LennardJonesLambda > {
     private:
       real epsilon;
       real sigma;
@@ -48,14 +48,14 @@ namespace espressopp {
     public:
       static void registerPython();
 
-      LennardJones()
+      LennardJonesLambda()
 	: epsilon(0.0), sigma(0.0) {
         setShift(0.0);
         setCutoff(infinity);
         preset();
       }
 
-      LennardJones(real _epsilon, real _sigma, 
+      LennardJonesLambda(real _epsilon, real _sigma,
 		   real _cutoff, real _shift) 
 	: epsilon(_epsilon), sigma(_sigma) {
         setShift(_shift);
@@ -63,7 +63,7 @@ namespace espressopp {
         preset();
       }
 
-      LennardJones(real _epsilon, real _sigma, 
+      LennardJonesLambda(real _epsilon, real _sigma,
 		   real _cutoff)
 	: epsilon(_epsilon), sigma(_sigma) {	
         autoShift = false;
@@ -72,7 +72,7 @@ namespace espressopp {
         setAutoShift(); 
       }
 
-      virtual ~LennardJones() {};
+      virtual ~LennardJonesLambda() {};
 
       void preset() {
         real sig2 = sigma * sigma;
@@ -101,6 +101,23 @@ namespace espressopp {
       }
       real getSigma() const { return sigma; }
 
+      real _computeEnergy(const Particle& p1, const Particle& p2) const {
+        real p1_lambda = p1.lambda();
+        real p2_lambda = p2.lambda();
+        real lambda_sqr = p1_lambda * p2_lambda;
+        if (lambda_sqr == 0.0)
+          return 0.0;
+
+        Real3D dist = p1.position() - p2.position();
+        real distSqr = dist.sqr();
+        if (distSqr > cutoffSqr)
+          return 0.0;
+        real frac2 = sigma*sigma*lambda_sqr / dist.sqr();
+        real frac6 = frac2 * frac2 * frac2;
+        real energy = 4.0 * epsilon * (frac6 * frac6 - frac6);
+        return energy - shift;
+      }
+
       real _computeEnergySqrRaw(real distSqr) const {
         real frac2 = sigma*sigma / distSqr;
         real frac6 = frac2 * frac2 * frac2;
@@ -108,25 +125,41 @@ namespace espressopp {
         return energy;
       }
 
-      bool _computeForceRaw(Real3D& force,
-                            const Real3D& dist,
-                            real distSqr) const {
+      bool _computeForce(Real3D& force, const Particle &p1, const Particle &p2) const {
+        real p1_lambda = p1.lambda();
+        real p2_lambda = p2.lambda();
+        real lambda_sqr = p1_lambda * p2_lambda;
+        if (lambda_sqr == 0.0)
+          return false;
+        Real3D dist = p1.position() - p2.position();
+        real sig2 = sigma * sigma * lambda_sqr;
+        real sig6 = sig2 * sig2 * sig2;
+        real ff1_ = 48.0 * epsilon * sig6 * sig6;
+        real ff2_ = 24.0 * epsilon * sig6;
 
-        real frac2 = 1.0 / distSqr;
+        real frac2 = 1.0 / dist.sqr();
         real frac6 = frac2 * frac2 * frac2;
-        real ffactor = frac6 * (ff1 * frac6 - ff2) * frac2;
+        real ffactor = frac6 * (ff1_ * frac6 - ff2_) * frac2;
         force = dist * ffactor;
         return true;
       }
+
+
+      bool _computeForceRaw(Real3D& force,
+                            const Real3D& dist,
+                            real distSqr) const {
+        throw std::runtime_error("_computeForceRaw Not implemented!");
+      }
+
       static LOG4ESPP_DECL_LOGGER(theLogger);
     };
 
     // provide pickle support
-    struct LennardJones_pickle : boost::python::pickle_suite
+    struct LennardJonesLambda_pickle : boost::python::pickle_suite
     {
       static
       boost::python::tuple
-      getinitargs(LennardJones const& pot)
+      getinitargs(LennardJonesLambda const& pot)
       {
     	  real eps;
           real sig;
