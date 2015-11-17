@@ -107,6 +107,16 @@ class SystemLocal(_espressopp.System):
         else :
             cxxinit(self, _espressopp.System, pmi._MPIcomm)
 
+        self._integrator = None
+
+    @property
+    def integrator(self):
+        return self._integrator
+
+    @integrator.setter
+    def integrator(self, _integrator):
+        self._integrator = _integrator
+
     def addInteraction(self, interaction):
 
         if pmi.workerIsActive():
@@ -170,7 +180,7 @@ if pmi.isController:
     __metaclass__ = pmi.Proxy
     pmiproxydefs = dict(
       cls = 'espressopp.SystemLocal',
-      pmiproperty = ['storage', 'bc', 'rng', 'skin', 'maxCutoff'],
+      pmiproperty = ['storage', 'bc', 'rng', 'skin', 'maxCutoff', 'integrator'],
       pmicall = ['addInteraction','removeInteraction','getInteraction',
             'getNumberOfInteractions','scaleVolume', 'setTrace']
     )
