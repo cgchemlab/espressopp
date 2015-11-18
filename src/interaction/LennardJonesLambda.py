@@ -36,22 +36,19 @@ from espressopp.esutil import *
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_LennardJonesLambda, \
-                      interaction_VerletListLennardJonesLambda
+                        interaction_VerletListLennardJonesLambda
 
 class LennardJonesLambdaLocal(PotentialLocal, interaction_LennardJonesLambda):
-
-    def __init__(self, epsilon=1.0, sigma=1.0, 
-                 cutoff=infinity, shift="auto", max_force=None):
+    def __init__(self, epsilon=1.0, sigma=1.0, cutoff=infinity, shift="auto"):
         """Initialize the local Lennard Jones object."""
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             if shift =="auto":
                 cxxinit(self, interaction_LennardJonesLambda,
                         epsilon, sigma, cutoff)
             else:
                 cxxinit(self, interaction_LennardJonesLambda,
                         epsilon, sigma, cutoff, shift)
-            if max_force is not None:
-                self.cxxclass.max_force = max_force
+
 
 class VerletListLennardJonesLambdaLocal(InteractionLocal, interaction_VerletListLennardJonesLambda):
 
@@ -77,7 +74,7 @@ if pmi.isController:
         'The Lennard-Jones potential.'
         pmiproxydefs = dict(
             cls = 'espressopp.interaction.LennardJonesLambdaLocal',
-            pmiproperty = ['epsilon', 'sigma']
+            pmiproperty = ['epsilon', 'sigma', 'max_force']
             )
 
     class VerletListLennardJonesLambda(Interaction):

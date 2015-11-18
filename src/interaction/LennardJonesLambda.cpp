@@ -26,12 +26,6 @@
 #include "LennardJonesLambda.hpp"
 #include "Tabulated.hpp"
 #include "VerletListInteractionTemplate.hpp"
-#include "VerletListNonReciprocalInteractionTemplate.hpp"
-#include "VerletListAdressInteractionTemplate.hpp"
-#include "VerletListHadressInteractionTemplate.hpp"
-#include "VerletListDynamicResolutionInteractionTemplate.hpp"
-#include "CellListAllPairsInteractionTemplate.hpp"
-#include "FixedPairListInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -39,17 +33,17 @@ namespace espressopp {
     typedef class VerletListInteractionTemplate <LennardJonesLambda> VerletListLennardJonesLambda;
 
     LOG4ESPP_LOGGER(LennardJonesLambda::theLogger, "LennardJonesLambda");
+    LOG4ESPP_LOGGER(LennardJonesLambda::theLogger2, "LennardJonesLambdaForce");
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
     //////////////////////////////////////////////////
-    void
-    LennardJonesLambda::registerPython() {
+    void LennardJonesLambda::registerPython() {
       using namespace espressopp::python;
 
-      class_< LennardJonesLambda, bases<Potential> >
+      class_<LennardJonesLambda, bases<Potential> >
     	("interaction_LennardJonesLambda", init<real, real, real>())
-	    .def(init<real, real, real, real>())
+	.def(init<real, real, real, real>())
     	.add_property("sigma", &LennardJonesLambda::getSigma, &LennardJonesLambda::setSigma)
     	.add_property("epsilon", &LennardJonesLambda::getEpsilon, &LennardJonesLambda::setEpsilon)
         .add_property("max_force", &LennardJonesLambda::getMaxForce, &LennardJonesLambda::setMaxForce)

@@ -50,24 +50,22 @@ namespace espressopp {
     public:
       static void registerPython();
 
-      LennardJonesLambda() : epsilon(0.0), sigma(0.0) {
+      LennardJonesLambda() : epsilon(0.0), sigma(0.0), has_max_force(false), max_force(-1) {
         setShift(0.0);
         setCutoff(infinity);
       }
 
       LennardJonesLambda(real _epsilon, real _sigma, real _cutoff, real _shift)
-          : epsilon(_epsilon), sigma(_sigma) {
+          : epsilon(_epsilon), sigma(_sigma), max_force(-1), has_max_force(false) {
         setShift(_shift);
         setCutoff(_cutoff);
-        has_max_force = false;
       }
 
       LennardJonesLambda(real _epsilon, real _sigma, real _cutoff)
-          : epsilon(_epsilon), sigma(_sigma) {
+          : epsilon(_epsilon), sigma(_sigma), max_force(-1), has_max_force(false) {
         autoShift = false;
         setCutoff(_cutoff);
         setAutoShift();
-        has_max_force = false;
       }
 
       virtual ~LennardJonesLambda() {};
@@ -91,7 +89,10 @@ namespace espressopp {
       real getMaxForce() const { return max_force; }
       void setMaxForce(real _maxForce) {
         max_force = _maxForce;
-        has_max_force = _maxForce != -1;
+        LOG4ESPP_INFO(theLogger2, "set max force to=" << max_force);
+        if (max_force != -1)
+            has_max_force = true;
+        std::cout << "setMaxForce: " << _maxForce << " has_max_force=" << has_max_force << std::endl;
       }
 
       real _computeEnergy(const Particle& p1, const Particle& p2) const {
@@ -138,10 +139,13 @@ namespace espressopp {
 
         if (lambda_sqr != 1.0 && has_max_force) {
           if (force.isNaNInf()) {  // Force is inf.
+            LOG4ESPP_INFO(theLogger2, "force is inf, set to:" << dist*max_force);
             force = dist * max_force;
           } else {
             real abs_force = force.abs();
             if (abs_force > max_force) {
+              LOG4ESPP_INFO(theLogger2, "force " << abs_force << 
+                  "is large, set to:" << dist*max_force);
               force = dist * max_force;
             }
           }
@@ -158,6 +162,7 @@ namespace espressopp {
       }
 
       static LOG4ESPP_DECL_LOGGER(theLogger);
+      static LOG4ESPP_DECL_LOGGER(theLogger2);
     };
 
     // provide pickle support
