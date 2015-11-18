@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2015
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -33,8 +35,8 @@ namespace espressopp {
     /** This class provides methods to compute forces and energies of
 	the Lennard Jones potential.
 
-	\f[ V(r) = 4 \varepsilon \left[ \left( \frac{\sigma}{r} \right)^{12} -
-	\left( \frac{\sigma}{r} \right)^{6} \right]
+	\f[ V(r) = 4 \varepsilon \left[ \left( \frac{\lambda \sigma}{r} \right)^{12} -
+	\left( \frac{\lambda \sigma}{r} \right)^{6} \right]
 	\f]
 
     */
@@ -42,53 +44,39 @@ namespace espressopp {
     private:
       real epsilon;
       real sigma;
-      real ff1, ff2;
-      real ef1, ef2;
+      real max_force;
+      bool has_max_force;
 
     public:
       static void registerPython();
 
-      LennardJonesLambda()
-	: epsilon(0.0), sigma(0.0) {
+      LennardJonesLambda() : epsilon(0.0), sigma(0.0) {
         setShift(0.0);
         setCutoff(infinity);
-        preset();
       }
 
-      LennardJonesLambda(real _epsilon, real _sigma,
-		   real _cutoff, real _shift) 
-	: epsilon(_epsilon), sigma(_sigma) {
+      LennardJonesLambda(real _epsilon, real _sigma, real _cutoff, real _shift)
+          : epsilon(_epsilon), sigma(_sigma) {
         setShift(_shift);
         setCutoff(_cutoff);
-        preset();
+        has_max_force = false;
       }
 
-      LennardJonesLambda(real _epsilon, real _sigma,
-		   real _cutoff)
-	: epsilon(_epsilon), sigma(_sigma) {	
+      LennardJonesLambda(real _epsilon, real _sigma, real _cutoff)
+          : epsilon(_epsilon), sigma(_sigma) {
         autoShift = false;
         setCutoff(_cutoff);
-        preset();
-        setAutoShift(); 
+        setAutoShift();
+        has_max_force = false;
       }
 
       virtual ~LennardJonesLambda() {};
-
-      void preset() {
-        real sig2 = sigma * sigma;
-        real sig6 = sig2 * sig2 * sig2;
-        ff1 = 48.0 * epsilon * sig6 * sig6;
-        ff2 = 24.0 * epsilon * sig6;
-        ef1 =  4.0 * epsilon * sig6 * sig6;
-        ef2 =  4.0 * epsilon * sig6;
-      }
 
       // Setter and getter
       void setEpsilon(real _epsilon) {
         epsilon = _epsilon;
         LOG4ESPP_INFO(theLogger, "epsilon=" << epsilon);
         updateAutoShift();
-        preset();
       }
       
       real getEpsilon() const { return epsilon; }
@@ -97,9 +85,14 @@ namespace espressopp {
         sigma = _sigma; 
         LOG4ESPP_INFO(theLogger, "sigma=" << sigma);
         updateAutoShift();
-        preset();
       }
       real getSigma() const { return sigma; }
+
+      real getMaxForce() const { return max_force; }
+      void setMaxForce(real _maxForce) {
+        max_force = _maxForce;
+        has_max_force = _maxForce != -1;
+      }
 
       real _computeEnergy(const Particle& p1, const Particle& p2) const {
         real p1_lambda = p1.lambda();
@@ -131,6 +124,7 @@ namespace espressopp {
         real lambda_sqr = p1_lambda * p2_lambda;
         if (lambda_sqr == 0.0)
           return false;
+
         Real3D dist = p1.position() - p2.position();
         real sig2 = sigma * sigma * lambda_sqr;
         real sig6 = sig2 * sig2 * sig2;
@@ -141,6 +135,18 @@ namespace espressopp {
         real frac6 = frac2 * frac2 * frac2;
         real ffactor = frac6 * (ff1_ * frac6 - ff2_) * frac2;
         force = dist * ffactor;
+
+        if (lambda_sqr != 1.0 && has_max_force) {
+          if (force.isNaNInf()) {  // Force is inf.
+            force = dist * max_force;
+          } else {
+            real abs_force = force.abs();
+            if (abs_force > max_force) {
+              force = dist * max_force;
+            }
+          }
+        }
+
         return true;
       }
 
@@ -155,25 +161,16 @@ namespace espressopp {
     };
 
     // provide pickle support
-    struct LennardJonesLambda_pickle : boost::python::pickle_suite
-    {
-      static
-      boost::python::tuple
-      getinitargs(LennardJonesLambda const& pot)
-      {
-    	  real eps;
-          real sig;
-          real rc;
-          real sh;
-          eps=pot.getEpsilon();
-          sig=pot.getSigma();
-          rc =pot.getCutoff();
-          sh =pot.getShift();
-          return boost::python::make_tuple(eps, sig, rc, sh);
+    struct LennardJonesLambda_pickle : boost::python::pickle_suite {
+      static boost::python::tuple getinitargs(LennardJonesLambda const& pot) {
+    	  real eps = pot.getEpsilon();
+          real sig = pot.getSigma();
+          real rc = pot.getCutoff();
+          real sh = pot.getShift();
+          real max_force = pot.getMaxForce();
+          return boost::python::make_tuple(eps, sig, rc, sh, max_force);
       }
     };
-
-
   }
 }
 

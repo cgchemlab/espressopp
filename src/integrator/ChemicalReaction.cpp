@@ -266,9 +266,11 @@ void ChemicalReaction::AddReaction(boost::shared_ptr<integrator::Reaction> react
   reaction->set_interval(interval_);
   reaction->set_rng(rng_);
 
-  // The cutoff of the reaction shouldn't be larger than the cutoff of verletlist.
-  if (reaction->cutoff() > current_cutoff_)
-    reaction->set_cutoff(current_cutoff_);
+  // If VL cutoff is smaller than reaction, increase it.
+  if (reaction->cutoff() > current_cutoff_) {
+    LOG4ESPP_INFO(theLogger, "VL cutoff is extended to match with reaction cutoff");
+    verlet_list_->setVerletCutoff(reaction->cutoff());
+  }
 
   LOG4ESPP_INFO(theLogger, "Add reaction");
   reaction_list_.push_back(reaction);

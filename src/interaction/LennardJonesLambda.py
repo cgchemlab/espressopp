@@ -1,3 +1,5 @@
+#  Copyright (C) 2015
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #  Copyright (C) 2012,2013
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
@@ -24,8 +26,8 @@ r"""
 **espressopp.interaction.LennardJonesLambda**
 *************************************************
 .. math::
-	V(r) = 4 \varepsilon \left[ \left( \frac{\sigma}{r} \right)^{12} -
-	\left( \frac{\sigma}{r} \right)^{6} \right]
+	V(r) = 4 \varepsilon \left[ \left( \frac{\lambda \sigma}{r} \right)^{12} -
+	\left( \frac{\lambda \sigma}{r} \right)^{6} \right]
 
 """
 from espressopp import pmi, infinity
@@ -39,7 +41,7 @@ from _espressopp import interaction_LennardJonesLambda, \
 class LennardJonesLambdaLocal(PotentialLocal, interaction_LennardJonesLambda):
 
     def __init__(self, epsilon=1.0, sigma=1.0, 
-                 cutoff=infinity, shift="auto"):
+                 cutoff=infinity, shift="auto", max_force=None):
         """Initialize the local Lennard Jones object."""
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             if shift =="auto":
@@ -48,6 +50,8 @@ class LennardJonesLambdaLocal(PotentialLocal, interaction_LennardJonesLambda):
             else:
                 cxxinit(self, interaction_LennardJonesLambda,
                         epsilon, sigma, cutoff, shift)
+            if max_force is not None:
+                self.cxxclass.max_force = max_force
 
 class VerletListLennardJonesLambdaLocal(InteractionLocal, interaction_VerletListLennardJonesLambda):
 

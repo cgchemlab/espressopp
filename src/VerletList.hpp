@@ -94,6 +94,8 @@ class DynamicExcludeList {
     
     real getVerletCutoff(); // returns cutoff + skin
 
+    void setVerletCutoff(real _cut); // set cutoff
+
     void connect();
 
     void disconnect();
