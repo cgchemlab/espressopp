@@ -26,6 +26,7 @@
 #include "VerletListInteractionTemplate.hpp"
 #include "VerletListNonReciprocalInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
+#include "VerletListDynamicResolutionInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
@@ -45,6 +46,8 @@ namespace espressopp {
         CellListLennardJonesForceCapped;
     typedef class FixedPairListInteractionTemplate <LennardJonesForceCapped>
         FixedPairListLennardJonesForceCapped;
+    typedef class VerletListDynamicResolutionInteractionTemplate<LennardJonesForceCapped>
+        VerletListDynamicResolutionLennardJonesForceCapped;
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
@@ -66,6 +69,12 @@ namespace espressopp {
         ("interaction_VerletListLennardJonesForceCapped", init< shared_ptr<VerletList> >())
         .def("setPotential", &VerletListLennardJonesForceCapped::setPotential, return_value_policy< reference_existing_object >())
         .def("getPotential", &VerletListLennardJonesForceCapped::getPotential, return_value_policy< reference_existing_object >())
+      ;
+
+      class_< VerletListDynamicResolutionLennardJonesForceCapped, bases< Interaction > >
+        ("interaction_VerletListLennardJonesForceCapped", init< shared_ptr<VerletList>, bool >())
+        .def("setPotential", &VerletListDynamicResolutionLennardJonesForceCapped::setPotential, return_value_policy< reference_existing_object >())
+        .def("getPotential", &VerletListDynamicResolutionLennardJonesForceCapped::getPotential, return_value_policy< reference_existing_object >())
       ;
 
       class_< VerletListNonReciprocalLennardJonesForceCapped, bases< Interaction > >

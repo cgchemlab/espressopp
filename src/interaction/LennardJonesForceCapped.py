@@ -36,7 +36,8 @@ from _espressopp import interaction_LennardJonesForceCapped, \
                         interaction_VerletListAdressLennardJonesForceCapped, \
                         interaction_VerletListHadressLennardJonesForceCapped, \
                         interaction_CellListLennardJonesForceCapped, \
-                        interaction_FixedPairListLennardJonesForceCapped
+                        interaction_FixedPairListLennardJonesForceCapped, \
+                        interaction_VerletListDynamicResolutionLennardJonesForceCapped
 
 class LennardJonesForceCappedLocal(PotentialLocal, interaction_LennardJonesForceCapped):
     'The (local) Lennard-Jones potential with energy capping.'
@@ -56,6 +57,20 @@ class VerletListLennardJonesForceCappedLocal(InteractionLocal, interaction_Verle
     def __init__(self, vl):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, interaction_VerletListLennardJonesForceCapped, vl)
+
+    def setPotential(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPotential(self, type1, type2)
+
+class VerletListDynamicResolutionLennardJonesForceCappedLocal(InteractionLocal, interaction_VerletListDynamicResolutionLennardJonesForceCapped):
+    'The (local) Lennard Jones interaction using Verlet lists.'
+    def __init__(self, vl, cg_potential=False):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListDynamicResolutionLennardJonesForceCapped, vl, cg_potential)
 
     def setPotential(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -164,6 +179,13 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListLennardJonesForceCappedLocal',
+            pmicall = ['setPotential', 'getPotential']
+            )
+
+    class VerletListDynamicResolutionLennardJonesForceCapped(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListDynamicResolutionLennardJonesForceCappedLocal',
             pmicall = ['setPotential', 'getPotential']
             )
 
