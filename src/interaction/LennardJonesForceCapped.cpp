@@ -72,7 +72,7 @@ namespace espressopp {
       ;
 
       class_< VerletListDynamicResolutionLennardJonesForceCapped, bases< Interaction > >
-        ("interaction_VerletListLennardJonesForceCapped", init< shared_ptr<VerletList>, bool >())
+        ("interaction_VerletListDynamicResolutionLennardJonesForceCapped", init< shared_ptr<VerletList>, bool >())
         .def("setPotential", &VerletListDynamicResolutionLennardJonesForceCapped::setPotential, return_value_policy< reference_existing_object >())
         .def("getPotential", &VerletListDynamicResolutionLennardJonesForceCapped::getPotential, return_value_policy< reference_existing_object >())
       ;
