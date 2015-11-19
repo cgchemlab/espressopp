@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2015
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -24,38 +26,32 @@
 #include "LennardJonesLambda.hpp"
 #include "Tabulated.hpp"
 #include "VerletListInteractionTemplate.hpp"
-#include "VerletListNonReciprocalInteractionTemplate.hpp"
-#include "VerletListAdressInteractionTemplate.hpp"
-#include "VerletListHadressInteractionTemplate.hpp"
-#include "VerletListDynamicResolutionInteractionTemplate.hpp"
-#include "CellListAllPairsInteractionTemplate.hpp"
-#include "FixedPairListInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
 
-    typedef class VerletListInteractionTemplate <LennardJonesLambda>
-        VerletListLennardJonesLambda;
+    typedef class VerletListInteractionTemplate <LennardJonesLambda> VerletListLennardJonesLambda;
 
     LOG4ESPP_LOGGER(LennardJonesLambda::theLogger, "LennardJonesLambda");
+    LOG4ESPP_LOGGER(LennardJonesLambda::theLogger2, "LennardJonesLambdaForce");
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
     //////////////////////////////////////////////////
-    void
-    LennardJonesLambda::registerPython() {
+    void LennardJonesLambda::registerPython() {
       using namespace espressopp::python;
 
-      class_< LennardJonesLambda, bases< Potential > >
-    	("interaction_LennardJonesLambda", init< real, real, real >())
-	    .def(init< real, real, real, real >())
+      class_<LennardJonesLambda, bases<Potential> >
+    	("interaction_LennardJonesLambda", init<real, real, real>())
+	.def(init<real, real, real, real>())
     	.add_property("sigma", &LennardJonesLambda::getSigma, &LennardJonesLambda::setSigma)
     	.add_property("epsilon", &LennardJonesLambda::getEpsilon, &LennardJonesLambda::setEpsilon)
+        .add_property("max_force", &LennardJonesLambda::getMaxForce, &LennardJonesLambda::setMaxForce)
         .def_pickle(LennardJonesLambda_pickle())
       ;
 
-      class_< VerletListLennardJonesLambda, bases< Interaction > >
-        ("interaction_VerletListLennardJonesLambda", init< shared_ptr<VerletList> >())
+      class_< VerletListLennardJonesLambda, bases<Interaction> >
+        ("interaction_VerletListLennardJonesLambda", init<shared_ptr<VerletList> >())
         .def("getVerletList", &VerletListLennardJonesLambda::getVerletList)
         .def("setPotential", &VerletListLennardJonesLambda::setPotential)
         .def("getPotential", &VerletListLennardJonesLambda::getPotentialPtr)

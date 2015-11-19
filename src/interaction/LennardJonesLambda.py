@@ -1,3 +1,5 @@
+#  Copyright (C) 2015
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #  Copyright (C) 2012,2013
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
@@ -24,8 +26,8 @@ r"""
 **espressopp.interaction.LennardJonesLambda**
 *************************************************
 .. math::
-	V(r) = 4 \varepsilon \left[ \left( \frac{\sigma}{r} \right)^{12} -
-	\left( \frac{\sigma}{r} \right)^{6} \right]
+	V(r) = 4 \varepsilon \left[ \left( \frac{\lambda \sigma}{r} \right)^{12} -
+	\left( \frac{\lambda \sigma}{r} \right)^{6} \right]
 
 """
 from espressopp import pmi, infinity
@@ -34,20 +36,19 @@ from espressopp.esutil import *
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_LennardJonesLambda, \
-                      interaction_VerletListLennardJonesLambda
+                        interaction_VerletListLennardJonesLambda
 
 class LennardJonesLambdaLocal(PotentialLocal, interaction_LennardJonesLambda):
-
-    def __init__(self, epsilon=1.0, sigma=1.0, 
-                 cutoff=infinity, shift="auto"):
+    def __init__(self, epsilon=1.0, sigma=1.0, cutoff=infinity, shift="auto"):
         """Initialize the local Lennard Jones object."""
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             if shift =="auto":
                 cxxinit(self, interaction_LennardJonesLambda,
                         epsilon, sigma, cutoff)
             else:
                 cxxinit(self, interaction_LennardJonesLambda,
                         epsilon, sigma, cutoff, shift)
+
 
 class VerletListLennardJonesLambdaLocal(InteractionLocal, interaction_VerletListLennardJonesLambda):
 
@@ -73,7 +74,7 @@ if pmi.isController:
         'The Lennard-Jones potential.'
         pmiproxydefs = dict(
             cls = 'espressopp.interaction.LennardJonesLambdaLocal',
-            pmiproperty = ['epsilon', 'sigma']
+            pmiproperty = ['epsilon', 'sigma', 'max_force']
             )
 
     class VerletListLennardJonesLambda(Interaction):

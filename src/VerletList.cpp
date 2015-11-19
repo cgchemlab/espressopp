@@ -204,6 +204,12 @@ void DynamicExcludeList::registerPython() {
   real VerletList::getVerletCutoff(){
     return cutVerlet;
   }
+
+  void VerletList::setVerletCutoff(real _cut) {
+    cut = _cut;
+    cutVerlet = cut + getSystem()->getSkin();
+    cutsq = cutVerlet * cutVerlet;
+  }
   
   void VerletList::connect()
   {
@@ -223,7 +229,6 @@ void DynamicExcludeList::registerPython() {
   
   void VerletList::rebuild()
   {
-    //real cutVerlet = cut + getSystem() -> getSkin();
     cutVerlet = cut + getSystem() -> getSkin();
     cutsq = cutVerlet * cutVerlet;
     
@@ -346,8 +351,8 @@ void DynamicExcludeList::registerPython() {
       .def("rebuild", &VerletList::rebuild)
       .def("connect", &VerletList::connect)
       .def("disconnect", &VerletList::disconnect)
-    
       .def("getVerletCutoff", &VerletList::getVerletCutoff)
+      .def("setVerletCutoff", &VerletList::setVerletCutoff)
       ;
   }
 
