@@ -207,33 +207,32 @@ template <typename _Potential> inline real
 VerletListDynamicResolutionInteractionTemplate<_Potential>::
 computeVirial() {
   LOG4ESPP_DEBUG(_Potential::theLogger, "loop over verlet list pairs and sum up virial");
-  return 0.0;
-//  real w = 0.0;
-//  for (PairList::Iterator it(verletList->getPairs());
-//       it.isValid(); ++it) {
-//    Particle &p1 = *it->first;
-//    Particle &p2 = *it->second;
-//    int type1 = p1.type();
-//    int type2 = p2.type();
-//    real w12 = p1.lambda() * p2.lambda();
-//    if (cgPotential) {
-//      w12 = (1.0 - w12);
-//    }
-//    const Potential &potential = getPotential(type1, type2);
-//    // shared_ptr<Potential> potential = getPotential(type1, type2);
-//
-//    Real3D force(0.0, 0.0, 0.0);
-//    if(potential._computeForce(force, p1, p2)) {
-//      // if(potential->_computeForce(force, p1, p2)) {
-//      Real3D r21 = p1.position() - p2.position();
-//      w = w + r21 * w12 * force;
-//    }
-//  }
-//
-//  // reduce over all CPUs
-//  real wsum;
-//  boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
-//  return wsum;
+  real w = 0.0;
+  for (PairList::Iterator it(verletList->getPairs());
+       it.isValid(); ++it) {
+    Particle &p1 = *it->first;
+    Particle &p2 = *it->second;
+    int type1 = p1.type();
+    int type2 = p2.type();
+    real w12 = p1.lambda() * p2.lambda();
+    if (cgPotential) {
+      w12 = (1.0 - w12);
+    }
+    const Potential &potential = getPotential(type1, type2);
+    // shared_ptr<Potential> potential = getPotential(type1, type2);
+
+    Real3D force(0.0, 0.0, 0.0);
+    if(potential._computeForce(force, p1, p2)) {
+      // if(potential->_computeForce(force, p1, p2)) {
+      Real3D r21 = p1.position() - p2.position();
+      w = w + w12 * r21 * force;
+    }
+  }
+
+  // reduce over all CPUs
+  real wsum;
+  boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
+  return wsum;
 }
 
 template <typename _Potential> inline void
@@ -241,32 +240,32 @@ VerletListDynamicResolutionInteractionTemplate<_Potential>::
 computeVirialTensor(Tensor& w) {
   LOG4ESPP_DEBUG(_Potential::theLogger, "loop over verlet list pairs and sum up virial tensor");
 
-//  Tensor wlocal(0.0);
-//  for (PairList::Iterator it(verletList->getPairs());
-//       it.isValid(); ++it) {
-//    Particle &p1 = *it->first;
-//    Particle &p2 = *it->second;
-//    int type1 = p1.type();
-//    int type2 = p2.type();
-//    real w12 = p1.lambda() * p2.lambda();
-//    if (cgPotential) {
-//      w12 = (1.0 - w12);
-//    }
-//    const Potential &potential = getPotential(type1, type2);
-//    // shared_ptr<Potential> potential = getPotential(type1, type2);
-//
-//    Real3D force(0.0, 0.0, 0.0);
-//    if(potential._computeForce(force, p1, p2)) {
-//      // if(potential->_computeForce(force, p1, p2)) {
-//      Real3D r21 = p1.position() - p2.position();
-//      wlocal += Tensor(r21, w12*force);
-//    }
-//  }
-//
-//  // reduce over all CPUs
-//  Tensor wsum(0.0);
-//  boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, 6, (double*)&wsum, std::plus<double>());
-//  w += wsum;
+  Tensor wlocal(0.0);
+  for (PairList::Iterator it(verletList->getPairs());
+       it.isValid(); ++it) {
+    Particle &p1 = *it->first;
+    Particle &p2 = *it->second;
+    int type1 = p1.type();
+    int type2 = p2.type();
+    real w12 = p1.lambda() * p2.lambda();
+    if (cgPotential) {
+      w12 = (1.0 - w12);
+    }
+    const Potential &potential = getPotential(type1, type2);
+    // shared_ptr<Potential> potential = getPotential(type1, type2);
+
+    Real3D force(0.0, 0.0, 0.0);
+    if(potential._computeForce(force, p1, p2)) {
+      // if(potential->_computeForce(force, p1, p2)) {
+      Real3D r21 = p1.position() - p2.position();
+      wlocal += Tensor(r21, w12*force);
+    }
+  }
+
+  // reduce over all CPUs
+  Tensor wsum(0.0);
+  boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, 6, (double*)&wsum, std::plus<double>());
+  w += wsum;
 }
 
 // local pressure tensor for layer, plane is defined by z coordinate
@@ -275,58 +274,58 @@ VerletListDynamicResolutionInteractionTemplate<_Potential>::
 computeVirialTensor(Tensor& w, real z) {
   LOG4ESPP_DEBUG(_Potential::theLogger, "loop over verlet list pairs and sum up virial tensor over one z-layer");
 
-//  System& system = verletList->getSystemRef();
-//  Real3D Li = system.bc->getBoxL();
-//
-//  real rc_cutoff = verletList->getVerletCutoff();
-//
-//  // boundaries should be taken into account
-//  bool ghost_layer = false;
-//  real zghost = -100.0;
-//  if(z<rc_cutoff){
-//    zghost = z + Li[2];
-//    ghost_layer = true;
-//  }
-//  else if(z>=Li[2]-rc_cutoff){
-//    zghost = z - Li[2];
-//    ghost_layer = true;
-//  }
-//
-//  Tensor wlocal(0.0);
-//  for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
-//    Particle &p1 = *it->first;
-//    Particle &p2 = *it->second;
-//    Real3D p1pos = p1.position();
-//    Real3D p2pos = p2.position();
-//
-//
-//    if( (p1pos[2]>z && p2pos[2]<z) ||
-//        (p1pos[2]<z && p2pos[2]>z) ||
-//        (ghost_layer &&
-//         ((p1pos[2]>zghost && p2pos[2]<zghost) ||
-//          (p1pos[2]<zghost && p2pos[2]>zghost))
-//        )
-//        ){
-//      int type1 = p1.type();
-//      int type2 = p2.type();
-//      real w12 = p1.lambda() * p2.lambda();
-//      if (cgPotential) {
-//        w12 = (1.0 - w12);
-//      }
-//      const Potential &potential = getPotential(type1, type2);
-//
-//      Real3D force(0.0, 0.0, 0.0);
-//      if(potential._computeForce(force, p1, p2)) {
-//        Real3D r21 = p1pos - p2pos;
-//        wlocal += Tensor(r21, w12*force) / fabs(r21[2]);
-//      }
-//    }
-//  }
-//
-//  // reduce over all CPUs
-//  Tensor wsum(0.0);
-//  boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, 6, (double*)&wsum, std::plus<double>());
-//  w += wsum;
+  System& system = verletList->getSystemRef();
+  Real3D Li = system.bc->getBoxL();
+
+  real rc_cutoff = verletList->getVerletCutoff();
+
+  // boundaries should be taken into account
+  bool ghost_layer = false;
+  real zghost = -100.0;
+  if(z<rc_cutoff){
+    zghost = z + Li[2];
+    ghost_layer = true;
+  }
+  else if(z>=Li[2]-rc_cutoff){
+    zghost = z - Li[2];
+    ghost_layer = true;
+  }
+
+  Tensor wlocal(0.0);
+  for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
+    Particle &p1 = *it->first;
+    Particle &p2 = *it->second;
+    Real3D p1pos = p1.position();
+    Real3D p2pos = p2.position();
+
+
+    if( (p1pos[2]>z && p2pos[2]<z) ||
+        (p1pos[2]<z && p2pos[2]>z) ||
+        (ghost_layer &&
+         ((p1pos[2]>zghost && p2pos[2]<zghost) ||
+          (p1pos[2]<zghost && p2pos[2]>zghost))
+        )
+        ){
+      int type1 = p1.type();
+      int type2 = p2.type();
+      real w12 = p1.lambda() * p2.lambda();
+      if (cgPotential) {
+        w12 = (1.0 - w12);
+      }
+      const Potential &potential = getPotential(type1, type2);
+
+      Real3D force(0.0, 0.0, 0.0);
+      if(potential._computeForce(force, p1, p2)) {
+        Real3D r21 = p1pos - p2pos;
+        wlocal += Tensor(r21, w12*force) / fabs(r21[2]);
+      }
+    }
+  }
+
+  // reduce over all CPUs
+  Tensor wsum(0.0);
+  boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, 6, (double*)&wsum, std::plus<double>());
+  w += wsum;
 }
 
 // it will calculate the pressure in 'n' layers along Z axis
@@ -336,76 +335,76 @@ VerletListDynamicResolutionInteractionTemplate<_Potential>::
 computeVirialTensor(Tensor *w, int n) {
   LOG4ESPP_DEBUG(_Potential::theLogger, "loop over verlet list pairs and sum up virial tensor in bins along z-direction");
 
-//  System& system = verletList->getSystemRef();
-//  Real3D Li = system.bc->getBoxL();
-//
-//  real z_dist = Li[2] / float(n);  // distance between two layers
-//  Tensor *wlocal = new Tensor[n];
-//  for(int i=0; i<n; i++) wlocal[i] = Tensor(0.0);
-//  for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
-//    Particle &p1 = *it->first;
-//    Particle &p2 = *it->second;
-//    int type1 = p1.type();
-//    int type2 = p2.type();
-//    real w12 = p1.lambda() * p2.lambda();
-//    if (cgPotential) {
-//      w12 = (1-w12);
-//    }
-//    Real3D p1pos = p1.position();
-//    Real3D p2pos = p2.position();
-//
-//    const Potential &potential = getPotential(type1, type2);
-//
-//    Real3D force(0.0, 0.0, 0.0);
-//    Tensor ww;
-//    if(potential._computeForce(force, p1, p2)) {
-//      Real3D r21 = p1pos - p2pos;
-//      ww = Tensor(r21, w12*force) / fabs(r21[2]);
-//
-//      int position1 = (int)( p1pos[2]/z_dist );
-//      int position2 = (int)( p2pos[2]/z_dist );
-//
-//      int maxpos = std::max(position1, position2);
-//      int minpos = std::min(position1, position2);
-//
-//      // boundaries should be taken into account
-//      bool boundaries1 = false;
-//      bool boundaries2 = false;
-//      if(minpos < 0){
-//        minpos += n;
-//        boundaries1 =true;
-//      }
-//      if(maxpos >=n){
-//        maxpos -= n;
-//        boundaries2 =true;
-//      }
-//
-//      if(boundaries1 || boundaries2){
-//        for(int i = 0; i<=maxpos; i++){
-//          wlocal[i] += ww;
-//        }
-//        for(int i = minpos+1; i<n; i++){
-//          wlocal[i] += ww;
-//        }
-//      }
-//      else{
-//        for(int i = minpos+1; i<=maxpos; i++){
-//          wlocal[i] += ww;
-//        }
-//      }
-//    }
-//  }
-//
-//  // reduce over all CPUs
-//  Tensor *wsum = new Tensor[n];
-//  boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, n, (double*)&wsum, std::plus<double>());
-//
-//  for(int j=0; j<n; j++){
-//    w[j] += wsum[j];
-//  }
-//
-//  delete [] wsum;
-//  delete [] wlocal;
+  System& system = verletList->getSystemRef();
+  Real3D Li = system.bc->getBoxL();
+
+  real z_dist = Li[2] / float(n);  // distance between two layers
+  Tensor *wlocal = new Tensor[n];
+  for(int i=0; i<n; i++) wlocal[i] = Tensor(0.0);
+  for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
+    Particle &p1 = *it->first;
+    Particle &p2 = *it->second;
+    int type1 = p1.type();
+    int type2 = p2.type();
+    real w12 = p1.lambda() * p2.lambda();
+    if (cgPotential) {
+      w12 = (1-w12);
+    }
+    Real3D p1pos = p1.position();
+    Real3D p2pos = p2.position();
+
+    const Potential &potential = getPotential(type1, type2);
+
+    Real3D force(0.0, 0.0, 0.0);
+    Tensor ww;
+    if(potential._computeForce(force, p1, p2)) {
+      Real3D r21 = p1pos - p2pos;
+      ww = Tensor(r21, w12*force) / fabs(r21[2]);
+
+      int position1 = (int)( p1pos[2]/z_dist );
+      int position2 = (int)( p2pos[2]/z_dist );
+
+      int maxpos = std::max(position1, position2);
+      int minpos = std::min(position1, position2);
+
+      // boundaries should be taken into account
+      bool boundaries1 = false;
+      bool boundaries2 = false;
+      if(minpos < 0){
+        minpos += n;
+        boundaries1 =true;
+      }
+      if(maxpos >=n){
+        maxpos -= n;
+        boundaries2 =true;
+      }
+
+      if(boundaries1 || boundaries2){
+        for(int i = 0; i<=maxpos; i++){
+          wlocal[i] += ww;
+        }
+        for(int i = minpos+1; i<n; i++){
+          wlocal[i] += ww;
+        }
+      }
+      else{
+        for(int i = minpos+1; i<=maxpos; i++){
+          wlocal[i] += ww;
+        }
+      }
+    }
+  }
+
+  // reduce over all CPUs
+  Tensor *wsum = new Tensor[n];
+  boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal, n, (double*)&wsum, std::plus<double>());
+
+  for(int j=0; j<n; j++){
+    w[j] += wsum[j];
+  }
+
+  delete [] wsum;
+  delete [] wlocal;
 }
 
 template <typename _Potential>
