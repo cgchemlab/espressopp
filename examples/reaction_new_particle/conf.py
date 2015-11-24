@@ -21,12 +21,12 @@ def get_r(mass):
     return pow((3.0/4.0) * (mass/np.pi), 1.0/3.0)
 
 type_a = AtomType(1, 1.0*mass, 1.0*sigma, epsilon)
-type_b = AtomType(2, 0.8*mass, get_r(0.8*mass)*sigma, epsilon)
-type_c = AtomType(3, 0.2*mass, get_r(0.2*mass)*sigma, epsilon)
+type_b = AtomType(2, 0.8*mass, pow(124/125.0, 1.0/3.0)*sigma, epsilon)
+type_c = AtomType(3, 0.2*mass, 0.2*sigma, epsilon)
 type_c_tmp = AtomType(4, type_c.mass, type_c.sigma, type_c.epsilon)
 
-skin = 0.16*sigma
-rc = 2.5*sigma
+skin = 0.3*sigma
+rc = 1.5*sigma
 rc_lj = pow(2.0, 1.0/6.0)
 dt = 0.0025
 T = 0.5
@@ -41,6 +41,8 @@ rho = 0.74
 N_a = 100
 L = pow(N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
+
+force_cap = 1000.0
 
 # Co-partner, fixed distance A-C_tmp
 R_ac = tools.lb_sigma(type_a.sigma, type_c.sigma)*rc_lj+0.01*sigma
@@ -65,5 +67,8 @@ warmup_potential_matrix.extend([
     for i in range(len(types))])
 warmup_potential_matrix.append([type_c.type_id, type_c.type_id, type_c.sigma, type_c.epsilon])
 
-print potential_matrix
-print warmup_potential_matrix
+for t1, t2, sig, eps in potential_matrix:
+  print('{}-{} sig={} eps={}'.format(t1, t2, sig, eps))
+
+for t1, t2, sig, eps in warmup_potential_matrix:
+  print('{}-{} sig={} eps={}'.format(t1, t2, sig, eps))
