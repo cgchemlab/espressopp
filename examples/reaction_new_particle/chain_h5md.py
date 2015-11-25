@@ -93,9 +93,8 @@ def DumpH5MD(filename, system, integrator, author, author_email=None, edges=None
         obs_dict['harmonic'].append(Harmonic, step, time)
         LJ = system.getInteraction(1).computeEnergy()
         obs_dict['lennard_jones'].append(LJ, step, time)
-        #DynLJ = system.getInteraction(2).computeEnergy()
-        #obs_dict['lennard_jones_dynamic'].append(DynLJ, step, time)
-        DynLJ = 0.0
+        DynLJ = system.getInteraction(2).computeEnergy()
+        obs_dict['lennard_jones_dynamic'].append(DynLJ, step, time)
         potential = LJ+DynLJ+Harmonic
         obs_dict['potential_energy'].append(potential, step, time)
         obs_dict['internal_energy'].append(Ek+potential, step, time)

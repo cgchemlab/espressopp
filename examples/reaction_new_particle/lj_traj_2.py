@@ -28,6 +28,7 @@ def _args():
     parser.add_argument('--interval', default=10, type=int)
     parser.add_argument('--alpha', default=0.00001, type=float)
     parser.add_argument('--warmup_loops', default=100, type=int)
+    parser.add_argument('--eq_loops', default=1000, type=int)
     parser.add_argument('--eq_conf', default=None)
     parser.add_argument('--prefix', default='dump')
     parser.add_argument('--seed', default=12345, type=int)
@@ -123,6 +124,7 @@ def main():  # NOQA
         tools.warmup(system, integrator, verletList, args, conf)
 
     # Lennard-Jones potential
+    vl_cutoffs = []
     interLJ = espressopp.interaction.VerletListLennardJones(verletList)
     for type_1, type_2, sigma_12, epsilon_12 in conf.potential_matrix:
         print('LJ {}-{}'.format(type_1, type_2))
@@ -134,29 +136,38 @@ def main():  # NOQA
                 epsilon=epsilon_12,
                 cutoff=sigma_12*conf.rc_lj
             ))
+        vl_cutoffs.append(sigma_12*conf.rc_lj)
     system.addInteraction(interLJ)
 
     # DynamicResolution of Lennard-Jones potential
-    interDynamicResLJ = espressopp.interaction.VerletListLennardJonesLambda(
-        verletList)
+    interDynamicResLJ = espressopp.interaction.VerletListDynamicResolutionLennardJones(
+        verletList, False)
     # Adds C-C interaction.
-    interDynamicResLJ.setPotential(
-        type1=conf.type_c.type_id, type2=conf.type_c.type_id,
-        potential=espressopp.interaction.LennardJonesLambda(
+    pot = espressopp.interaction.LennardJones(
             sigma=conf.type_c.sigma,
             epsilon=conf.type_c.epsilon,
-            cutoff=conf.type_c.sigma*conf.rc_lj))
+            cutoff=conf.type_c.sigma*conf.rc_lj)
+    interDynamicResLJ.setPotential(
+        type1=conf.type_c.type_id, type2=conf.type_c.type_id,
+        potential=pot)
+    vl_cutoffs.append(conf.type_c.sigma*conf.rc_lj)
 
     # Adds C - type_ interaction
     for type_id, _, sigma, epsilon in conf.types:
         sigma_12 = tools.lb_sigma(conf.type_c.sigma, sigma)
         epsilon_12 = tools.lb_epsilon(conf.type_c.epsilon, epsilon)
+        pot = espressopp.interaction.LennardJones(
+	    sigma=sigma_12, epsilon=epsilon_12, cutoff=sigma_12*conf.rc_lj)
         interDynamicResLJ.setPotential(
             type1=conf.type_c.type_id,
             type2=type_id,
-            potential=espressopp.interaction.LennardJonesLambda(
-                sigma=sigma_12, epsilon=epsilon_12, cutoff=sigma_12*conf.rc_lj))
-    #system.addInteraction(interDynamicResLJ)
+            potential=pot)
+        vl_cutoffs.append(sigma_12*conf.rc_lj)
+    system.addInteraction(interDynamicResLJ)
+    
+    print('Set max VL cutoff to: {}'.format(max(vl_cutoffs)))
+    verletList.setVerletCutoff(max(vl_cutoffs))
+    print(verletList.getVerletCutoff())
 
     total_velocity = espressopp.analysis.TotalVelocity(system)
     total_velocity.reset()
@@ -166,8 +177,8 @@ def main():  # NOQA
     else:
         integrator.step = 0
         print('Equilibratin...')
-        for i in range(args.warmup_loops):
-            integrator.run(100)
+        for i in range(args.eq_loops):
+            integrator.run(500)
             info()
         # Save position and velocity of equlibrated configuration
         print('Saving to equlibrated_conf.pck')
@@ -193,7 +204,7 @@ def main():  # NOQA
         min_state_2=2,
         max_state_2=3,
         rate=args.rate,
-        cutoff=conf.type_a.sigma)
+        cutoff=1.1*conf.type_a.sigma)
     # conf.rc_lj*tools.lb_sigma(conf.type_a.sigma, conf.type_b.sigma))
     print('Adding reaction 1, rate={}, cutoff={}, P={}'.format(args.rate, r_type_1.cutoff,
                                                                args.rate*args.interval*conf.dt))
@@ -217,7 +228,7 @@ def main():  # NOQA
     topology_manager.observe(fpl_a_a)
     integrator.addExtension(topology_manager)
 
-    output_file = '{}_{}_{:.5f}_{}.h5'.format(args.prefix, args.rate, args.alpha, args.seed)
+    output_file = '{}_{}_{}_{}_{}.h5'.format(args.prefix, args.rate, args.alpha, r_type_1.cutoff, args.seed)
     traj_file = chain_h5md.DumpH5MD(
         output_file,
         system,
@@ -231,11 +242,14 @@ def main():  # NOQA
 
     # Save parameters of the simulation
     traj_file.parameters.attrs['dt'] = conf.dt
+    traj_file.parameters.attrs['skin'] = conf.skin
     traj_file.parameters.attrs['temperature'] = conf.T
     traj_file.parameters.attrs['thermostat-gamma'] = conf.gamma
     traj_file.parameters.attrs['th'] = args.interval
     traj_file.parameters.attrs['rate'] = args.rate
+    traj_file.parameters.attrs['force-cap'] = conf.force_cap
     traj_file.parameters.attrs['alpha'] = args.alpha
+    traj_file.parameters.attrs['ar-cutoff'] = r_type_1.cutoff
     traj_file.parameters.attrs['rng-seed'] = args.seed
     traj_file.parameters.attrs['steps'] = args.steps
     traj_file.parameters.attrs['loops'] = args.loops
@@ -251,35 +265,15 @@ def main():  # NOQA
     T_comp.add_type(conf.type_c.type_id)
     import sys
     # logging.getLogger().setLevel(logging.DEBUG)
-    # logging.getLogger("VerletList").setLevel(logging.INFO)
     # logging.getLogger("ChemicalReaction").setLevel(logging.DEBUG)
     traj_file.analyse()
     traj_file.dump()
     topo_file.dump()
 
-    print system.storage.getParticle(170).type
+    logging.getLogger('LennardJonesLambdaForce').setLevel(logging.DEBUG)
 
     for k in range(args.loops):
-        try:
-            integrator.run(args.steps)
-        except RuntimeError as ex:
-            import re
-            g = re.match(r'Particle (\d+).*', str(ex))
-            if g:
-                pid = int(g.groups()[0])
-                pp = system.storage.getParticle(pid)
-                print('ID={}, TYPE={}, LAMBDA={}'.format(pp.id, pp.type, pp.lambda_adr))
-            raise ex
-        sys.stdout.write('[ {} ] '.format(fpl_a_a.totalSize()))
-        sys.stdout.write(
-            '~ {}:{}:{} ~ '.format(
-                fix_distance.totalSize(),
-                [system.storage.getParticle(x).type for x in particle_ids
-                 ].count(conf.type_c_tmp.type_id),
-                [system.storage.getParticle(x).type for x in particle_ids
-                 ].count(conf.type_c.type_id)
-            ))
-        sys.stdout.write('+ {} + '.format(dynamic_ex_list.size))
+        integrator.run(args.steps)
         info()
         traj_file.analyse()
         traj_file.dump()

@@ -85,7 +85,7 @@ def prepare_system(conf, system, active_sites=1):
             conf.type_c_tmp.mass,
             4,
             pid_c,
-            0.0])
+            10**-6])
         last_pid += 1
         bonds_a_c_tmp.append((pid_a, pid_c))
         v_idx += 1
@@ -119,25 +119,6 @@ def warmup(system, integrator, verletList, args, conf):
         (type_1, type_2): espressopp.interaction.LennardJones()
         for type_1, type_2, _, _ in conf.warmup_potential_matrix
     }
-    """
-    interNonRecpLJ = espressopp.interaction.VerletListNonReciprocalLennardJones(
-        verletList, conf.type_c_tmp.type_id)
-    interNonRecpLJ.setPotential(
-        type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id,
-        potential=espressopp.interaction.LennardJones(
-            sigma=conf.type_c_tmp.sigma,
-            epsilon=conf.type_c_tmp.epsilon,
-            cutoff=conf.type_c_tmp.sigma*conf.rc_lj))
-    for type_id, _, sigma, epsilon in conf.types:
-        sigma_12 = lb_sigma(conf.type_c.sigma, sigma)
-        epsilon_12 = lb_epsilon(conf.type_c.epsilon, epsilon)
-        interNonRecpLJ.setPotential(
-            type1=conf.type_c_tmp.type_id,
-            type2=type_id,
-            potential=espressopp.interaction.LennardJones(
-                sigma=sigma_12, epsilon=epsilon_12, cutoff=sigma_12*conf.rc_lj))
-    system.addInteraction(interNonRecpLJ)
-    """
 
     espressopp.tools.analyse.info(system, integrator, per_atom=True, valid_types=conf.type_ids)
     for s in range(args.warmup_loops):
