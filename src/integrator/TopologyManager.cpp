@@ -50,11 +50,40 @@ void TopologyManager::disconnect() {
   aftIntV_.disconnect();
 }
 
-void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
+void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl, longint type1, longint type2) {
   fpl->onTupleAdded.connect(
       boost::bind(&TopologyManager::onTupleAdded, this, _1, _2));
-  // FIXME: what to do when tuple will be removed?
+  tupleMap_.insert(std::make_pair(std::make_pair(type1, type2), fpl));
 }
+
+void TopologyManager::observeTriple(shared_ptr<FixedTripleList> ftl,
+                                    longint type1, longint type2, longint type3) {
+}
+
+void TopologyManager::observeQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
+                                       longint type2, longint type3, longint type4) {
+}
+
+void TopologyManager::InitializeTopology() {
+  // Collect locally the list of edges by iterating over registered tuple lists with bonds.
+  typedef std::vector<std::pair<longint, longint> > EdgesVector;
+  EdgesVector edges;
+  for(TupleMap::iterator it = tupleMap_.begin(); it != tupleMap_.end(); ++it) {
+    for (FixedPairList::PairList::Iterator pit(*it->second); pit.isValid(); ++pit) {
+      Particle &p1 = *pit->first;
+      Particle &p2 = *pit->second;
+      edges.push_back(std::make_pair(p1.id(), p2.id()));
+    }
+  }
+  // Scatter edges lists all over all nodes. This is costful operation but
+  // it is simpler than moving part of graphs all around.
+  std::vector<EdgesVector> global_edges;
+  mpi::all_gather(*(system_->comm), edges, global_edges);
+
+  // Build a graph. The same on every CPU.
+
+}
+
 
 void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
   Particle *p1 = system_->storage->lookupRealParticle(pid1);
@@ -67,6 +96,11 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
     merge_sets_.push_back(p1->res_id());
     merge_sets_.push_back(p2->res_id());
   }
+  newBond(p1, p2);
+}
+
+void TopologyManager::newBond(Particle *p1, Particle *p2) {
+
 }
 
 void TopologyManager::exchangeData() {
@@ -105,7 +139,8 @@ void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {
 }
 
 void TopologyManager::Rebuild() {
-  for (ResParticleIds::iterator it = res_particle_ids_.begin(); it != res_particle_ids_.end(); ++it) {
+  for (ResParticleIds::iterator it = res_particle_ids_.begin();
+       it != res_particle_ids_.end(); ++it) {
     delete &(*it->second);
   }
   res_particle_ids_.clear();
@@ -141,11 +176,11 @@ void TopologyManager::registerPython() {
       .def("connect", &TopologyManager::connect)
       .def("disconnect", &TopologyManager::disconnect)
       .def("rebuild", &TopologyManager::Rebuild)
-      .def("observe", &TopologyManager::observeTuple)
+      .def("observe_tuple", &TopologyManager::observeTuple)
+      .def("observe_triple", &TopologyManager::observeTriple)
+      .def("observe_quadruple", &TopologyManager::observeQuadruple)
       ;
 }
-
-
 
 }  // end namespace integrator
 }  // end namespace espressoppp

@@ -50,12 +50,24 @@ class TopologyManagerLocal(integrator_TopologyManager):
 
     def observe(self, fpl):
         if pmi.workerIsActive():
-            self.cxxclass.observe(self, fpl)
+            self.cxxclass.observe_tuple(self, fpl, 0, 0)
+
+    def observe_tuple(self, fpl, type1, type2):
+        if pmi.workerIsActive():
+            self.cxxclass.observe_tuple(self, fpl, type1, type2)
+
+    def observe_triple(self, ftl, type1, type2, type3):
+        if pmi.workerIsActive():
+            self.cxxclass.observe_triple(self, ftl, type1, type2, type3)
+
+    def observe_quadruple(self, fql, type1, type2, type3, type4):
+        if pmi.workerIsActive():
+            self.cxxclass.observe_quadruple(self, fql, type1, type2, type3, type4)
 
 if pmi.isController :
     class TopologyManager(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.TopologyManagerLocal',
-            pmicall = ['rebuild', 'observe']
+            pmicall = ['rebuild', 'observe_tuple', 'observe_triple', 'observe_quadruple']
             )
