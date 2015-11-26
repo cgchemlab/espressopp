@@ -50,35 +50,36 @@ TopologyManager::~TopologyManager() {
 }
 
 void TopologyManager::connect() {
-  aftIntV_ = integrator->aftCalcF.connect(boost::bind(&TopologyManager::exchangeData, this));
+  aftIntV2_ = integrator->aftIntV2.connect(boost::bind(&TopologyManager::exchangeData, this));
 }
 
 void TopologyManager::disconnect() {
-  aftIntV_.disconnect();
+  aftIntV2_.disconnect();
 }
 
 void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl, longint type1, longint type2) {
   fpl->onTupleAdded.connect(
       boost::bind(&TopologyManager::onTupleAdded, this, _1, _2));
-  tupleMap_.insert(std::make_pair(std::make_pair(type1, type2), fpl));
+  tupleMap_.push_back(fpl);
 }
 
 void TopologyManager::observeTriple(shared_ptr<FixedTripleList> ftl,
                                     longint type1, longint type2, longint type3) {
-  tripleMap_.insert(std::make_pair(boost::make_tuple(type1, type2, type3), ftl));
+  tripleMap_[type1][type2][type3] = ftl;
+  tripleMap_[type3][type2][type1] = ftl;
 }
 
 void TopologyManager::observeQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
                                        longint type2, longint type3, longint type4) {
-  quadrupleMap_.insert(std::make_pair(boost::make_tuple(type1, type2, type3, type4), fql));
+  quadrupleMap_[type1][type2][type3][type4] = fql;
+  quadrupleMap_[type4][type3][type2][type1] = fql;
 }
 
 void TopologyManager::InitializeTopology() {
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
-  typedef std::vector<std::pair<longint, longint> > EdgesVector;
   EdgesVector edges;
-  for(TupleMap::iterator it = tupleMap_.begin(); it != tupleMap_.end(); ++it) {
-    for (FixedPairList::PairList::Iterator pit(*it->second); pit.isValid(); ++pit) {
+  for(std::vector<shared_ptr<FixedPairList> >::iterator it = tupleMap_.begin(); it != tupleMap_.end(); ++it) {
+    for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
       edges.push_back(std::make_pair(p1.id(), p2.id()));
@@ -120,59 +121,121 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
   // Update res_id, if bond joins two molecules with different res_id then merge the sets.
   // p2.res_id() <- p1.res_id()
   if (p1->res_id() != p2->res_id()) {
-    merge_sets_.push_back(p1->res_id());
-    merge_sets_.push_back(p2->res_id());
+    merge_sets_.push_back(std::make_pair(p1->res_id(), p2->res_id()));
   }
   newBond(pid1, pid2);
 }
 
-void TopologyManager::newBond(longint pid1, longint pid2) {
-  LOG4ESPP_DEBUG(theLogger, "New bond; Adding edge: " << pid1 << "-" << pid2);
+void TopologyManager::newEdge(longint pid1, longint pid2) {
   if (graph_->count(pid1) == 0)
     graph_->insert(std::make_pair(pid1, new std::set<longint>()));
   if (graph_->count(pid2) == 0)
     graph_->insert(std::make_pair(pid2, new std::set<longint>()));
   graph_->at(pid1)->insert(pid2);
   graph_->at(pid2)->insert(pid1);
+}
+
+void TopologyManager::newBond(longint pid1, longint pid2) {
+  LOG4ESPP_DEBUG(theLogger, "New bond; Adding edge: " << pid1 << "-" << pid2);
+  newEdge(pid1, pid2);
+
+  // Because graph is updated.
+  newEdges_.push_back(std::make_pair(pid1, pid2));
 
   // Generate angles and dihedrals.
-  generateAngles(pid1, pid2);
-  generateDihedrals(pid1, pid2);
+  std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
+  std::set<Triplets> *triplets = new std::set<Triplets>();
+  generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
+
+
+  std::cout << "New triplets: " << std::endl;
+  for(std::set<Triplets>::iterator it = triplets->begin(); it != triplets->end(); ++it) {
+    std::cout << it->first << it->second.first << it->second.second << std::endl;
+  }
+
+  std::cout << "New quadruplets: " << std::endl;
+  for(std::set<Quadruplets>::iterator it = quadruplets->begin(); it != quadruplets->end(); ++it) {
+    std::cout << it->first << it->second.first << it->second.second.first << it->second.second.second << std::endl;
+  }
+
+  updateAngles(*triplets);
+  updateDihedrals(*quadruplets);
 }
 
-void TopologyManager::generateAngles(longint pid1, longint pid2) {
-  std::set<boost::tuple<longint, longint, longint> > triplets;
-  std::set<longint> *nb1 = graph_->at(pid1);
-  std::set<longint> *nb2 = graph_->at(pid2);
-  if (nb1) {
-    for (std::set<longint>::iterator it = nb1->begin(); it != nb1->end(); ++it) {
-      if (*it == pid1)
-        continue;
-      triplets.insert(boost::make_tuple(*it, pid1, pid2));
-    }
-  }
-  if (nb2) {
-    for (std::set<longint>::iterator it = nb2->begin(); it != nb2->end(); ++it) {
-      triplets.insert(boost::make_tuple(pid1, pid2, *it));
+void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
+  longint t1, t2, t3;
+  shared_ptr<FixedTripleList> ftl;
+  for (std::set<Triplets>::iterator it = triplets.begin(); it != triplets.end(); ++it) {
+    Particle *p1 = system_->storage->lookupLocalParticle(it->first);
+    Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
+    Particle *p3 = system_->storage->lookupLocalParticle(it->second.second);
+    if ((p1 && p2) && (p1 && p3)) {
+      t1 = p1->type();
+      t2 = p2->type();
+      t3 = p3->type();
+      // Look for fixed triple list which should be updated.
+      ftl = tripleMap_[t1][t2][t3];
+      if (!ftl)
+        ftl = tripleMap_[t3][t2][t1];
+      if (ftl) {
+        LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
+        bool ret = ftl->add(p1->id(), p2->id(), p3->id());
+        if (ret)
+          LOG4ESPP_DEBUG(theLogger, "Defined new angle: " << it->first << "-" << it->second.first << "-" << it->second.second);
+      }
     }
   }
 }
 
-void TopologyManager::generateDihedrals(longint pid1, longint pid2) {
-  std::set<boost::tuple<longint, longint, longint, longint> > quadruplets;
+void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
+  longint t1, t2, t3, t4;
+  shared_ptr<FixedQuadrupleList> fql;
+  for (std::set<Quadruplets>::iterator it = quadruplets.begin(); it != quadruplets.end(); ++it) {
+    Particle *p1 = system_->storage->lookupLocalParticle(it->first);
+    Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
+    Particle *p3 = system_->storage->lookupLocalParticle(it->second.second.first);
+    Particle *p4 = system_->storage->lookupLocalParticle(it->second.second.second);
+    if ((p1 && p2) && (p1 && p3)) {
+      t1 = p1->type();
+      t2 = p2->type();
+      t3 = p3->type();
+      t4 = p4->type();
+      // Look for fixed triple list which should be updated.
+      fql = quadrupleMap_[t1][t2][t3][t4];
+      if (!fql)
+        fql = quadrupleMap_[t4][t3][t2][t1];
+      if (fql) {
+        LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3 << "-" << t4);
+        bool ret = fql->add(p1->id(), p2->id(), p3->id(), p4->id());
+        if (!ret)
+          ret = fql->add(p4->id(), p3->id(), p2->id(), p1->id());
+        if (ret)
+          LOG4ESPP_DEBUG(theLogger, "Defined new dihedral: " << it->first << "-" << it->second.first << "-" << it->second.second.first << "-" << it->second.second.second);
+      }
+    }
+  }
+}
+
+void TopologyManager::generateAnglesDihedrals(longint pid1, longint pid2, std::set<Quadruplets> &quadruplets, std::set<Triplets> &triplets) {
   std::set<longint> *nb1 = graph_->at(pid1);
   std::set<longint> *nb2 = graph_->at(pid2);
   // Case pid2 pid1 <> <>
   if (nb1) {
+    //Iterates over p1 neighbours
     for (std::set<longint>::iterator it = nb1->begin(); it != nb1->end(); ++it) {
-      if (*it == pid1)
+      if (*it == pid1 || *it == pid2)
         continue;
+      if (triplets.count(std::make_pair(*it, std::make_pair(pid2, pid1))) == 0)
+        triplets.insert(std::make_pair(pid2, std::make_pair(pid1, *it)));
+
       std::set<longint> *nbb1 = graph_->at(*it);
       if (nbb1) {
-        for (std::set<longint>::iterator itt = nbb1->begin(); itt != nbb1->end(); ++it) {
-          if (*itt == *it)
+        for (std::set<longint>::iterator itt = nbb1->begin(); itt != nbb1->end(); ++itt) {
+          if (*itt == *it || *itt == pid1 || *itt == pid2)
             continue;
-          quadruplets.insert(boost::make_tuple(pid2, pid1, *it, *itt));
+          if (quadruplets.count(std::make_pair(*itt, std::make_pair(*it, std::make_pair(pid1, pid2)))) == 0)
+            quadruplets.insert(
+                std::make_pair(pid2, std::make_pair(pid1, std::make_pair(*it, *itt))));
         }
       }
     }
@@ -180,41 +243,69 @@ void TopologyManager::generateDihedrals(longint pid1, longint pid2) {
   // Case pid1 pid2 <> <>
   if (nb2) {
     for (std::set<longint>::iterator it = nb2->begin(); it != nb2->end(); ++it) {
-      if (*it == pid2)
+      if (*it == pid1 || *it == pid2)
         continue;
+      if (triplets.count(std::make_pair(*it, std::make_pair(pid2, pid1))) == 0)
+        triplets.insert(std::make_pair(pid1, std::make_pair(pid2, *it)));
+
       std::set<longint> *nbb2 = graph_->at(*it);
       if (nbb2) {
-        for (std::set<longint>::iterator itt = nbb2->begin(); itt != nbb2->end(); ++it) {
-          if (*itt == *it)
+        for (std::set<longint>::iterator itt = nbb2->begin(); itt != nbb2->end(); ++itt) {
+          if (*itt == *it || *itt == pid1 || *itt == pid2)
             continue;
-          quadruplets.insert(boost::make_tuple(pid1, pid2, *it, *itt));
+          if (quadruplets.count(std::make_pair(*itt, std::make_pair(*it, std::make_pair(pid2, pid1)))) == 0)
+            quadruplets.insert(
+                std::make_pair(pid1, std::make_pair(pid2, std::make_pair(*it, *itt))));
         }
       }
     }
   }
   // Case <> pid1 pid2 <>
   if (nb1 && nb2) {
-    
+    for(std::set<longint>::iterator it1 = nb1->begin(); it1 != nb1->end(); ++it1){
+        if (*it1 == pid1 || *it1 == pid2)
+            continue;
+        for (std::set<longint>::iterator it2 = nb2->begin(); it2 != nb2->end(); ++it2) {
+          if (*it2 == pid1 || *it2 == pid2 || *it1 == *it2)
+            continue;
+          if (quadruplets.count(std::make_pair(*it2, std::make_pair(pid2, std::make_pair(pid1, *it1)))) == 0)
+            quadruplets.insert(
+                std::make_pair(*it1, std::make_pair(pid1, std::make_pair(pid2, *it2))));
+        }
+    }
   }
 }
 
 void TopologyManager::exchangeData() {
-  // Collect all message from other CPUs.
+  // Collect all message from other CPUs. Both for res_id and new graph edges.
 
-  typedef std::vector<std::vector<longint> > GlobaleMergeSets;
+  typedef std::vector<std::vector<std::pair<longint, longint> > > GlobaleMergeSets;
   GlobaleMergeSets global_merge_sets;
 
-  mpi::all_gather(*(system_->comm), merge_sets_, global_merge_sets);
+  std::vector<std::pair<longint, longint> > output;
+  output.push_back(std::make_pair(merge_sets_.size(), newEdges_.size()));
+  output.insert(output.end(), merge_sets_.begin(), merge_sets_.end());
+  output.insert(output.end(), newEdges_.begin(), newEdges_.end());
+
+  mpi::all_gather(*(system_->comm), output, global_merge_sets);
 
   for (GlobaleMergeSets::iterator gms = global_merge_sets.begin();
        gms != global_merge_sets.end(); ++gms) {
-    for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
-      longint set_a_id = *(itm++);
-      longint set_b_id = *(itm++);
-      mergeResIdSets(set_a_id, set_b_id);
+    for (std::vector<std::pair<longint, longint> >::iterator itm = gms->begin(); itm != gms->end();) {
+      longint merge_set_size = itm->first;
+      longint new_edge_size = itm->second;
+      itm++;
+      for (int i = 0; i < merge_set_size; i++, itm++) {
+        mergeResIdSets(itm->first, itm->second);
+      }
+      // Update new edges.
+      for (int i = 0; i < new_edge_size; i++, itm++) {
+        newEdge(itm->first, itm->second);
+      }
     }
   }
   merge_sets_.clear();
+  newEdges_.clear();
 }
 
 void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {

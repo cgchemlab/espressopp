@@ -123,31 +123,25 @@ namespace espressopp {
 
     err.checkException();
     
-    if(returnVal){
-      // add the triple locally
-      this->add(p1, p2, p3);
-      //printf("me = %d: pid1 %d, pid2 %d, pid3 %d\n", mpiWorld->rank(), pid1, pid2, pid3);
-
+    if (returnVal) {
       // ADD THE GLOBAL TRIPLET
       // see whether the particle already has triples
+      bool found = false;
       std::pair<GlobalTriples::const_iterator,
-                GlobalTriples::const_iterator> equalRange
-        = globalTriples.equal_range(pid2);
-      if (equalRange.first == globalTriples.end()) {
-        // if it hasn't, insert the new triple
-        globalTriples.insert(std::make_pair(pid2,
-                             std::pair<longint, longint>(pid1, pid3)));
-      }
-      else {
+                GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid2);
+      if (equalRange.first != globalTriples.end()) {
         // otherwise test whether the triple already exists
-        for (GlobalTriples::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
-          if (it->second == std::pair<longint, longint>(pid1, pid3)) {
-            // TODO: Triple already exists, generate error!
-  	      ;
-          }
+        for (GlobalTriples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+          if (it->second == std::pair<longint, longint>(pid1, pid3))
+            found = true;
         }
-        // if not, insert the new triple
-        globalTriples.insert(equalRange.first, std::make_pair(pid2, std::pair<longint, longint>(pid1, pid3)));
+      }
+      returnVal = !found;
+      if (!found) {
+        // add the triple locally
+        this->add(p1, p2, p3);
+        globalTriples.insert(equalRange.first,
+            std::make_pair(pid2, std::pair<longint, longint>(pid1, pid3)));
       }
       LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
     }

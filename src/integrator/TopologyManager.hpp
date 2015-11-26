@@ -68,11 +68,17 @@ class TopologyManager : public Extension {
   typedef std::map<longint, PSet*> ResParticleIds;
 
  private:
+  typedef std::pair<longint, std::pair<longint, longint> > Triplets;
+  typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
+  typedef std::vector<std::pair<longint, longint> > EdgesVector;
+
   /** Handle local tuple update. */
   void onTupleAdded(longint pid1, longint pid2);
   void newBond(longint pid1, longint pid2);
-  void generateAngles(longint pid1, longint pid2);
-  void generateDihedrals(longint pid1, longint pid2);
+  void newEdge(longint pid1, longint pid2);
+  void updateAngles(std::set<Triplets> &triplets);
+  void updateDihedrals(std::set<Quadruplets> &quadruplets);
+  void generateAnglesDihedrals(longint pid1, longint pid2, std::set<Quadruplets> &quadruplets, std::set<Triplets> &triplets);
   void exchangeData();
   void mergeResIdSets(longint res_id_a, longint res_id_b);
   void connect();
@@ -80,21 +86,34 @@ class TopologyManager : public Extension {
 
   shared_ptr<System> system_;
   ResParticleIds res_particle_ids_;
-  std::vector<longint> merge_sets_;
+  std::vector<std::pair<longint, longint> > merge_sets_;
 
-  boost::signals2::connection aftIntV_;
+  boost::signals2::connection aftIntV2_, aftCalcF_;
 
   // Maping for tuples, triplets and quadruplets.
-  typedef boost::unordered_map<std::pair<longint, longint>, shared_ptr<FixedPairList> > TupleMap;
-  typedef boost::unordered_map<boost::tuple<longint, longint, longint>,
-                               shared_ptr<FixedTripleList> > TripleMap;
-  typedef boost::unordered_map<boost::tuple<longint, longint, longint, longint>,
-                               shared_ptr<FixedQuadrupleList> > QuadrupleMap;
+  typedef boost::unordered_map<
+      longint,
+      boost::unordered_map<
+          longint,
+          boost::unordered_map<
+              longint,
+              shared_ptr<FixedTripleList> > > > TripleMap;
+  typedef boost::unordered_map<
+      longint,
+      boost::unordered_map<
+          longint,
+          boost::unordered_map<
+              longint,
+              boost::unordered_map<
+                  longint,
+                  shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
   typedef std::map<longint, std::set<int>* > GraphMap;
 
-  TupleMap tupleMap_;
+  std::vector<shared_ptr<FixedPairList> > tupleMap_;
   TripleMap tripleMap_;
   QuadrupleMap quadrupleMap_;
+
+  EdgesVector newEdges_;
 
   GraphMap *graph_;
 

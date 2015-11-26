@@ -115,32 +115,31 @@ namespace espressopp {
     }
     err.checkException();
     
-    if(returnVal){
-      // add the quadruple locally
-      this->add(p1, p2, p3, p4);
+    if (returnVal) {
+
       // ADD THE GLOBAL QUADRUPLET
       // see whether the particle already has quadruples
+      bool found = false;
       std::pair<GlobalQuadruples::const_iterator,
                 GlobalQuadruples::const_iterator> equalRange
         = globalQuadruples.equal_range(pid1);
-      if (equalRange.first == globalQuadruples.end()) {
-        // if it hasn't, insert the new quadruple
-        globalQuadruples.insert(std::make_pair(pid1,
-          Triple<longint, longint, longint>(pid2, pid3, pid4)));
-      }
-      else {
+      if (equalRange.first != globalQuadruples.end()) {
         // otherwise test whether the quadruple already exists
-        for (GlobalQuadruples::const_iterator it = equalRange.first; it != equalRange.second; ++it)
-  	      if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4))
-  	        // TODO: Quadruple already exists, generate error!
-  	    	;
+        for (GlobalQuadruples::const_iterator it = equalRange.first;
+             it != equalRange.second && !found; ++it)
+          if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4))
+            found = true;
+      }
+      returnVal = !found;
+      if (!found) {
+        // add the quadruple locally
+        this->add(p1, p2, p3, p4);
         // if not, insert the new quadruple
         globalQuadruples.insert(equalRange.first,
           std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
+        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
       }
     }
-
-    LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
     return returnVal;
   }
 

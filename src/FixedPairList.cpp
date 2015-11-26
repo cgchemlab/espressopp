@@ -113,9 +113,7 @@ namespace espressopp {
       }
     }
     
-    if(returnVal){
-      // add the pair locally
-      this->add(p1, p2);
+    if (returnVal) {
       // ADD THE GLOBAL PAIR
       // see whether the particle already has pairs
       bool found = false;
@@ -127,16 +125,18 @@ namespace espressopp {
           if (it->second == pid2)
             found = true;
         }
-        // if not, insert the new pair
       }
+      returnVal = !found;
       if (!found) {
+        // add the pair locally
+        this->add(p1, p2);
+        // Update list of integers.
         globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
         // Throw signal onTupleAdded.
         onTupleAdded(pid1, pid2);
+        LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
       }
-      LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
     }
-    LOG4ESPP_DEBUG(theLogger, "Leaving add with returnVal " << returnVal);
     return returnVal;
   }
 

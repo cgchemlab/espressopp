@@ -3,7 +3,7 @@
 # Copyright (c) 2015 Jakub Krajniak <jkrajniak@gmail.com>
 #
 # Distributed under terms of the GNU GPLv3 license.
-# 
+#
 
 import espressopp
 try:
@@ -29,11 +29,13 @@ for i in range(100):
 system.storage.decompose()
 
 fpl = espressopp.FixedPairList(system.storage)
-ftl = espressopp.FixedPairList(system.storage)
+ftl = espressopp.FixedTripleList(system.storage)
+fql = espressopp.FixedQuadrupleList(system.storage)
 
 topology_manager = espressopp.integrator.TopologyManager(system)
 topology_manager.observe(fpl)
 topology_manager.observe_triple(ftl, 0, 0, 0)
+topology_manager.observe_quadruple(fql, 0, 0, 0, 0)
 
 import logging
 logging.getLogger("TopologyManager").setLevel(logging.DEBUG)
@@ -42,4 +44,11 @@ fpl.addBonds([(1, 2)])
 fpl.addBonds([(1, 3)])
 fpl.addBonds([(2, 3)])
 fpl.addBonds([(3, 2)])
+fpl.addBonds([(1, 4), (3, 4)])
 topology_manager.print_topology()
+
+print('-------TRIPLETS-----------')
+print ftl.getTriples()
+
+print('-------QUADRUPLETS--------')
+print fql.getQuadruples()

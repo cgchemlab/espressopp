@@ -174,6 +174,7 @@ namespace espressopp {
         timeIntegrate.startMeasure();
         // signal
         aftIntV();
+        aftIntV2();
         timeAftIntVS += timeIntegrate.stopMeasure();
       }
 

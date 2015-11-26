@@ -90,6 +90,7 @@ namespace espressopp {
         boost::signals2::signal0 <void> aftCalcF; // after calcForces()
         boost::signals2::signal0 <void> befIntV; // before integrate2()
         boost::signals2::signal0 <void> aftIntV; // after  integrate2()
+        boost::signals2::signal0 <void> aftIntV2; // after  integrate2() - second case after the first
 
 
         /** Register this class so it can be used from Python. */
