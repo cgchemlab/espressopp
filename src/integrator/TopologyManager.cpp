@@ -36,10 +36,17 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
     Extension(system), system_(system) {
   LOG4ESPP_INFO(theLogger, "TopologyManager");
   type = Extension::all;
+  graph_ = new GraphMap();
 }
 
 TopologyManager::~TopologyManager() {
   disconnect();
+  // Clean graph data structure
+  for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+    if (it->second)
+      delete it->second;
+  }
+  delete graph_;
 }
 
 void TopologyManager::connect() {
@@ -58,10 +65,12 @@ void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl, longint type1,
 
 void TopologyManager::observeTriple(shared_ptr<FixedTripleList> ftl,
                                     longint type1, longint type2, longint type3) {
+  tripleMap_.insert(std::make_pair(boost::make_tuple(type1, type2, type3), ftl));
 }
 
 void TopologyManager::observeQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
                                        longint type2, longint type3, longint type4) {
+  quadrupleMap_.insert(std::make_pair(boost::make_tuple(type1, type2, type3, type4), fql));
 }
 
 void TopologyManager::InitializeTopology() {
@@ -75,13 +84,31 @@ void TopologyManager::InitializeTopology() {
       edges.push_back(std::make_pair(p1.id(), p2.id()));
     }
   }
+  LOG4ESPP_DEBUG(theLogger, "Scatter " << edges.size());
   // Scatter edges lists all over all nodes. This is costful operation but
   // it is simpler than moving part of graphs all around.
   std::vector<EdgesVector> global_edges;
   mpi::all_gather(*(system_->comm), edges, global_edges);
 
   // Build a graph. The same on every CPU.
+  for (std::vector<EdgesVector>::iterator itv = global_edges.begin();
+       itv != global_edges.end(); ++itv) {
+    for (EdgesVector::iterator it = itv->begin(); it != itv->end(); ++it) {
+      newBond(it->first, it->second);
+    }
+  }
+}
 
+void TopologyManager::PrintTopology() {
+  for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+    if (it->second != NULL) {
+      std::cout << it->first << ": ";
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        std::cout << *itv << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
 }
 
 
@@ -96,11 +123,79 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
     merge_sets_.push_back(p1->res_id());
     merge_sets_.push_back(p2->res_id());
   }
-  newBond(p1, p2);
+  newBond(pid1, pid2);
 }
 
-void TopologyManager::newBond(Particle *p1, Particle *p2) {
+void TopologyManager::newBond(longint pid1, longint pid2) {
+  LOG4ESPP_DEBUG(theLogger, "New bond; Adding edge: " << pid1 << "-" << pid2);
+  if (graph_->count(pid1) == 0)
+    graph_->insert(std::make_pair(pid1, new std::set<longint>()));
+  if (graph_->count(pid2) == 0)
+    graph_->insert(std::make_pair(pid2, new std::set<longint>()));
+  graph_->at(pid1)->insert(pid2);
+  graph_->at(pid2)->insert(pid1);
 
+  // Generate angles and dihedrals.
+  generateAngles(pid1, pid2);
+  generateDihedrals(pid1, pid2);
+}
+
+void TopologyManager::generateAngles(longint pid1, longint pid2) {
+  std::set<boost::tuple<longint, longint, longint> > triplets;
+  std::set<longint> *nb1 = graph_->at(pid1);
+  std::set<longint> *nb2 = graph_->at(pid2);
+  if (nb1) {
+    for (std::set<longint>::iterator it = nb1->begin(); it != nb1->end(); ++it) {
+      if (*it == pid1)
+        continue;
+      triplets.insert(boost::make_tuple(*it, pid1, pid2));
+    }
+  }
+  if (nb2) {
+    for (std::set<longint>::iterator it = nb2->begin(); it != nb2->end(); ++it) {
+      triplets.insert(boost::make_tuple(pid1, pid2, *it));
+    }
+  }
+}
+
+void TopologyManager::generateDihedrals(longint pid1, longint pid2) {
+  std::set<boost::tuple<longint, longint, longint, longint> > quadruplets;
+  std::set<longint> *nb1 = graph_->at(pid1);
+  std::set<longint> *nb2 = graph_->at(pid2);
+  // Case pid2 pid1 <> <>
+  if (nb1) {
+    for (std::set<longint>::iterator it = nb1->begin(); it != nb1->end(); ++it) {
+      if (*it == pid1)
+        continue;
+      std::set<longint> *nbb1 = graph_->at(*it);
+      if (nbb1) {
+        for (std::set<longint>::iterator itt = nbb1->begin(); itt != nbb1->end(); ++it) {
+          if (*itt == *it)
+            continue;
+          quadruplets.insert(boost::make_tuple(pid2, pid1, *it, *itt));
+        }
+      }
+    }
+  }
+  // Case pid1 pid2 <> <>
+  if (nb2) {
+    for (std::set<longint>::iterator it = nb2->begin(); it != nb2->end(); ++it) {
+      if (*it == pid2)
+        continue;
+      std::set<longint> *nbb2 = graph_->at(*it);
+      if (nbb2) {
+        for (std::set<longint>::iterator itt = nbb2->begin(); itt != nbb2->end(); ++it) {
+          if (*itt == *it)
+            continue;
+          quadruplets.insert(boost::make_tuple(pid1, pid2, *it, *itt));
+        }
+      }
+    }
+  }
+  // Case <> pid1 pid2 <>
+  if (nb1 && nb2) {
+    
+  }
 }
 
 void TopologyManager::exchangeData() {
@@ -179,6 +274,8 @@ void TopologyManager::registerPython() {
       .def("observe_tuple", &TopologyManager::observeTuple)
       .def("observe_triple", &TopologyManager::observeTriple)
       .def("observe_quadruple", &TopologyManager::observeQuadruple)
+      .def("initialize", &TopologyManager::InitializeTopology)
+      .def("print_topology", &TopologyManager::PrintTopology)
       ;
 }
 

@@ -56,6 +56,7 @@ class TopologyManager : public Extension {
    * Initial topology.
    */
   void InitializeTopology();
+  void PrintTopology();
 
   /** Rebuild map res_id -> particle_id */
   void Rebuild();
@@ -69,7 +70,9 @@ class TopologyManager : public Extension {
  private:
   /** Handle local tuple update. */
   void onTupleAdded(longint pid1, longint pid2);
-  void newBond(Particle *p1, Particle *p2);
+  void newBond(longint pid1, longint pid2);
+  void generateAngles(longint pid1, longint pid2);
+  void generateDihedrals(longint pid1, longint pid2);
   void exchangeData();
   void mergeResIdSets(longint res_id_a, longint res_id_b);
   void connect();
@@ -87,10 +90,13 @@ class TopologyManager : public Extension {
                                shared_ptr<FixedTripleList> > TripleMap;
   typedef boost::unordered_map<boost::tuple<longint, longint, longint, longint>,
                                shared_ptr<FixedQuadrupleList> > QuadrupleMap;
+  typedef std::map<longint, std::set<int>* > GraphMap;
 
   TupleMap tupleMap_;
   TripleMap tripleMap_;
   QuadrupleMap quadrupleMap_;
+
+  GraphMap *graph_;
 
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);

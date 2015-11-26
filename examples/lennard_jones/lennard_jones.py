@@ -164,6 +164,7 @@ for pid in range(Npart):
   # the following default values are set for each particle:
   # (type=0, mass=1.0, velocity=(0,0,0), charge=0.0)
   system.storage.addParticle(pid, pos)
+  system.storage.modifyParticle(pid, 'res_id', pid)
 # distribute the particles to parallel CPUs 
 system.storage.decompose()
 
@@ -224,6 +225,10 @@ interaction = espressopp.interaction.VerletListLennardJones(verletlist)
 potential   = interaction.setPotential(type1=0, type2=0,
                                        potential=espressopp.interaction.LennardJones(
                                        epsilon=epsilon, sigma=sigma, cutoff=r_cutoff, shift=0.0))
+
+topology_manager = espressopp.integrator.TopologyManager(system)
+topology_manager.rebuild()
+integrator.addExtension(topology_manager)
 
 ########################################################################
 # 8. running the equilibration loop                                    #
