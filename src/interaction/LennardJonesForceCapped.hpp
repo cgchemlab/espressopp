@@ -118,9 +118,13 @@ class LennardJonesForceCapped : public PotentialTemplate< LennardJonesForceCappe
     real ffactor = frac6 * (ff1 * frac6 - ff2) * frac2;
     force = dist * ffactor;
     if (max_force != -1) {
-      real abs_force = force.abs();
-      if (abs_force > max_force) {
-        force = (force / abs_force) * max_force;
+      if (force.isNaNInf()) {
+        force = (dist / dist.abs()) * max_force;
+      } else {
+        real abs_force = force.abs();
+        if (abs_force > max_force) {
+          force = (force / abs_force) * max_force;
+        }
       }
     }
     return true;
