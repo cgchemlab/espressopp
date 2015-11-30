@@ -162,8 +162,17 @@ class Reaction {
   void set_interval(shared_ptr<int> interval) { interval_ = interval; }
   void set_dt(shared_ptr<real> dt) { dt_ = dt; }
 
-  void AddPostProcess(const shared_ptr<integrator::PostProcess> pp) {
-    post_process_.push_back(pp);
+  void AddPostProcess(const shared_ptr<integrator::PostProcess> pp, int type = 0) {
+    switch (type) {
+      case 1:
+        post_process_T1.push_back(pp); break;
+      case 2:
+        post_process_T2.push_back(pp); break;
+      case 0:
+        post_process_T1.push_back(pp);
+        post_process_T2.push_back(pp);
+        break;
+    }
   }
 
   /** Checks if the pair is valid. */
@@ -174,7 +183,8 @@ class Reaction {
   bool IsValidStateT_1(Particle &p);
   bool IsValidStateT_2(Particle &p);
 
-  std::set<Particle*> PostProcess(Particle &p);
+  std::set<Particle*> PostProcess_T1(Particle &p);
+  std::set<Particle*> PostProcess_T2(Particle &p);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -200,7 +210,8 @@ class Reaction {
   shared_ptr<int> interval_;  //!< number of steps between reaction loops
   shared_ptr<real> dt_;  //!< timestep from the integrator
 
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_;
+  std::vector<shared_ptr<integrator::PostProcess> > post_process_T1;
+  std::vector<shared_ptr<integrator::PostProcess> > post_process_T2;
 };
 
 

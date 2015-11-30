@@ -128,11 +128,22 @@ bool Reaction::IsValidStateT_2(Particle &p) {
 }
 
 
-std::set<Particle*> Reaction::PostProcess(Particle &p) {
+std::set<Particle*> Reaction::PostProcess_T1(Particle &p) {
   std::set<Particle*> output;
   std::vector<Particle*> ret;
-  for (std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_.begin();
-      it != post_process_.end(); ++it) {
+  for (std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_T1.begin();
+      it != post_process_T1.end(); ++it) {
+    ret = (*it)->process(p);
+    output.insert(ret.begin(), ret.end());
+  }
+  return output;
+}
+
+std::set<Particle*> Reaction::PostProcess_T2(Particle &p) {
+  std::set<Particle*> output;
+  std::vector<Particle*> ret;
+  for (std::vector< shared_ptr<integrator::PostProcess> >::iterator it = post_process_T2.begin();
+      it != post_process_T2.end(); ++it) {
     ret = (*it)->process(p);
     output.insert(ret.begin(), ret.end());
   }
@@ -752,7 +763,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     if (p1 != NULL) {
       if (reaction->IsValidStateT_1(*p1)) {
         p1->setState(p1->getState() + reaction->delta_1());
-        tmp = reaction->PostProcess(*p1);
+        tmp = reaction->PostProcess_T1(*p1);
         for (std::set<Particle*>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
           modified_particles.insert(*pit);
       } else {
@@ -762,7 +773,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     if (p2 != NULL) {
       if (reaction->IsValidStateT_2(*p2)) {
         p2->setState(p2->getState() + reaction->delta_2());
-        tmp = reaction->PostProcess(*p2);
+        tmp = reaction->PostProcess_T2(*p2);
         for (std::set<Particle*>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
           modified_particles.insert(*pit);
       } else {

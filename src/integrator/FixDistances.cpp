@@ -125,7 +125,6 @@ void FixDistances::restore_positions() {
       Real3D dst_pos = dst->position();
       Real3D unit_trans;
       if (dst_pos.isNaNInf()) {
-        // Problem with position. Reset it by picking random point on sphere
         LOG4ESPP_ERROR(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
             << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos);
         exit(1);
@@ -150,25 +149,35 @@ void FixDistances::restore_positions() {
   }
 }
 
-std::vector<Particle*> FixDistances::release_particle(longint anchor_id) {
-  Triplets::iterator fparticle = distance_triplets_.find(anchor_id);
+std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_) {
+  std::pair<Triplets::iterator, Triplets::iterator> equal_range =
+      distance_triplets_.equal_range(anchor_id);
+  int total_size = distance_triplets_.count(anchor_id);
+  System &system = getSystemRef();
 
+  Particle *p_anchor = system.storage->lookupRealParticle(anchor_id);
   std::vector<Particle*> mod_particles;
+  if (total_size == 0)
+    return mod_particles;
+
   std::vector<Particle*> tmp;
-  if (fparticle != distance_triplets_.end()) {
-    System &system = getSystemRef();
-    Particle *p1 = system.storage->lookupRealParticle(fparticle->second.first);
-    if (p1 != NULL) {
+  int removed = 0;
+  for (Triplets::iterator it = equal_range.first; it != equal_range.second; ++it) {
+    if (removed == nr_)
+      break;
+    Particle *p1 = system.storage->lookupLocalParticle(it->second.first);
+    if (p1) {
       if (post_process_) {
         tmp = post_process_->process(*p1);
         for (std::vector<Particle*>::iterator it = tmp.begin(); it != tmp.end(); ++it)
           mod_particles.push_back(*it);
       }
+      it = distance_triplets_.erase(it);
+      removed++;
       p1->setV(Real3D(0.0, 0.0, 0.0));
       p1->setF(Real3D(0.0, 0.0, 0.0));
     }
   }
-
   return mod_particles;
 }
 
@@ -271,9 +280,7 @@ LOG4ESPP_LOGGER(PostProcessReleaseParticles::theLogger, "PostProcessReleaseParti
 
 std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p) {
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessReleaseParticles::operator()");
-  if (nr_ == 1)
-    return fd_->release_particle(p.id());
-  return std::vector<Particle*>();
+  return fd_->release_particle(p.id(), nr_);
 }
 
 void PostProcessReleaseParticles::registerPython() {

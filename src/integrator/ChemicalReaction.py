@@ -178,10 +178,16 @@ class ReactionLocal(integrator_Reaction):
                 intramolecular
             )
 
-    def add_postprocess(self, post_process):
+    def add_postprocess(self, post_process, reactant_switch=0):
+        """Add new post process to the reaction.
+            Args:
+                post_process: The post process object.
+                reactant_switch: Which reactant (A, B or both) should be affected.
+                    0 - both, 1 - reactant A, 2 - reactant B.
+        """
         if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
                 pmi._MPIcomm.rank in pmi._PMIComm.GetMPIcpugroup()):
-            self.cxxclass.add_postprocess(self, post_process)
+            self.cxxclass.add_postprocess(self, post_process, reactant_switch)
 
 
 if pmi.isController:

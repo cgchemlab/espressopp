@@ -68,7 +68,7 @@ class FixDistances : public Extension {
 
   int totalSize();
   void restore_positions();
-  std::vector<Particle*> release_particle(longint anchor_id);
+  std::vector<Particle*> release_particle(longint anchor_id, int nr_=1);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -93,7 +93,10 @@ class FixDistances : public Extension {
 };
 
 /**
- * PostProcess action. Invoked when target particle is realesd from the contraint.
+ * PostProcess action. Invoked when target particle is realesd from the constraint.
+ *
+ * @params fd espressopp.integrator.FixDistances object.
+ * @params nr The integer with number of constraints to release at once.
  */
 class PostProcessReleaseParticles : public integrator::PostProcess {
  public:
