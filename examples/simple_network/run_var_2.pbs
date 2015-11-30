@@ -1,0 +1,32 @@
+#!/bin/bash -l
+#PBS -l mem=32gb
+#PBS -l walltime=24:00:00
+#PBS -o Output.job
+#PBS -j oe
+#PBS -l nodes=1:ppn=20:ivybridge
+#PBS -M jakub.krajniak@cs.kuleuven.be
+#PBS -A lp_polymer_goa_project
+#PBS -N exp_alpha
+
+module purge
+
+cd $PBS_O_WORKDIR
+
+module load espressopp/chem
+# Set up OpenMPI environment
+n_proc=$(cat $PBS_NODEFILE | wc -l)
+n_node=$(cat $PBS_NODEFILE | uniq | wc -l)
+mpdboot -f $PBS_NODEFILE -n $n_node -r ssh -v
+
+for alp in 0.1 0.01 0.001 0.0001 0.00001; do
+  for rate in 0.1 1.0 5.0; do
+	for i in {100..105}; do
+	    rng="`shuf -i 12345-99999 -n1`"
+	    nohup python -u lj_traj_2.py --eq_conf equilibrated_conf.pck --rate ${rate} --interval 10 --alpha $alp --loops 20000 --steps 100 --prefix lj2 --seed ${rng} &>> runlj21_${alp}_${rate}_${rng}.log &
+	done
+  done
+done
+
+for p in `jobs -p`; do
+  wait $p;
+done
