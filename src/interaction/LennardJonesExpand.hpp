@@ -42,6 +42,7 @@ namespace espressopp {
 	: epsilon(0.0), sigma(0.0), delta(0.0) {
 	setShift(0.0);
 	setCutoff(infinity);
+        initialized = false;
       }
 
       LennardJonesExpand(real _epsilon, real _sigma, real _delta, real _cutoff, real _shift)

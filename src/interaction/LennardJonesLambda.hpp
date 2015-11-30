@@ -53,6 +53,7 @@ namespace espressopp {
       LennardJonesLambda() : epsilon(0.0), sigma(0.0), has_max_force(false), max_force(-1) {
         setShift(0.0);
         setCutoff(infinity);
+        initialized = false;
       }
 
       LennardJonesLambda(real _epsilon, real _sigma, real _cutoff, real _shift)

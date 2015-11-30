@@ -53,6 +53,7 @@ namespace espressopp {
         setShift(0.0);
         setCutoff(infinity);
         preset();
+        initialized = false;
       }
 
       LennardJones(real _epsilon, real _sigma, 
@@ -61,6 +62,7 @@ namespace espressopp {
         setShift(_shift);
         setCutoff(_cutoff);
         preset();
+        initialized = true;
       }
 
       LennardJones(real _epsilon, real _sigma, 
@@ -70,6 +72,7 @@ namespace espressopp {
         setCutoff(_cutoff);
         preset();
         setAutoShift(); 
+        initialized = true;
       }
 
       virtual ~LennardJones() {};

@@ -37,6 +37,7 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
   LOG4ESPP_INFO(theLogger, "TopologyManager");
   type = Extension::all;
   graph_ = new GraphMap();
+  update_angles_dihedrals = false;
 }
 
 TopologyManager::~TopologyManager() {
@@ -67,12 +68,14 @@ void TopologyManager::observeTriple(shared_ptr<FixedTripleList> ftl,
                                     longint type1, longint type2, longint type3) {
   tripleMap_[type1][type2][type3] = ftl;
   tripleMap_[type3][type2][type1] = ftl;
+  update_angles_dihedrals = true;
 }
 
 void TopologyManager::observeQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
                                        longint type2, longint type3, longint type4) {
   quadrupleMap_[type1][type2][type3][type4] = fql;
   quadrupleMap_[type4][type3][type2][type1] = fql;
+  update_angles_dihedrals = true;
 }
 
 void TopologyManager::InitializeTopology() {
@@ -143,23 +146,14 @@ void TopologyManager::newBond(longint pid1, longint pid2) {
   newEdges_.push_back(std::make_pair(pid1, pid2));
 
   // Generate angles and dihedrals.
-  std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
-  std::set<Triplets> *triplets = new std::set<Triplets>();
-  generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
+  if (update_angles_dihedrals) {
+    std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
+    std::set<Triplets> *triplets = new std::set<Triplets>();
+    generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
 
-
-  std::cout << "New triplets: " << std::endl;
-  for(std::set<Triplets>::iterator it = triplets->begin(); it != triplets->end(); ++it) {
-    std::cout << it->first << it->second.first << it->second.second << std::endl;
+    updateAngles(*triplets);
+    updateDihedrals(*quadruplets);
   }
-
-  std::cout << "New quadruplets: " << std::endl;
-  for(std::set<Quadruplets>::iterator it = quadruplets->begin(); it != quadruplets->end(); ++it) {
-    std::cout << it->first << it->second.first << it->second.second.first << it->second.second.second << std::endl;
-  }
-
-  updateAngles(*triplets);
-  updateDihedrals(*quadruplets);
 }
 
 void TopologyManager::updateAngles(std::set<Triplets> &triplets) {

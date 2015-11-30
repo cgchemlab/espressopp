@@ -40,7 +40,7 @@ R0 = 0.5*sigma
 rho = 0.74
 N_a = 100
 active_sites = 1
-L = pow(N_a*type_a.mass/rho, 1.0/3.0)
+L = pow(3*N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
 
 force_cap = 1000.0

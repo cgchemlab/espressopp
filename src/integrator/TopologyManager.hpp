@@ -108,6 +108,7 @@ class TopologyManager : public Extension {
                   longint,
                   shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
   typedef std::map<longint, std::set<int>* > GraphMap;
+  bool update_angles_dihedrals;
 
   std::vector<shared_ptr<FixedPairList> > tupleMap_;
   TripleMap tripleMap_;

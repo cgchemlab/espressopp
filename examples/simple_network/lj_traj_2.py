@@ -191,28 +191,25 @@ def main():  # NOQA
         args.interval)
     # Reaction: A + A -> B:B + C
     r_type_1 = espressopp.integrator.Reaction(
-        type_1=conf.type_b.type_id,
+        type_1=conf.type_a.type_id,
         type_2=conf.type_a.type_id,
         delta_1=-1,
         delta_2=-1,
         min_state_1=1,
-        max_state_1=2,
-        min_state_2=2,
-        max_state_2=3,
+        max_state_1=4,
+        min_state_2=1,
+        max_state_2=4,
         rate=args.rate,
         cutoff=1.1*conf.type_a.sigma)
     # conf.rc_lj*tools.lb_sigma(conf.type_a.sigma, conf.type_b.sigma))
     print('Adding reaction 1, rate={}, cutoff={}, P={}'.format(args.rate, r_type_1.cutoff,
                                                                args.rate*args.interval*conf.dt))
-    # Change type: A -> B
-    r_1_post_process = espressopp.integrator.PostProcessChangeProperty()
-    r_1_post_process.add_change_property(
-        conf.type_a.type_id,
-        espressopp.ParticleProperties(conf.type_b.type_id, conf.type_b.mass, 0.0))
-    r_type_1.add_postprocess(r_1_post_process)
+    # Release one particle
+    r_1_release = espressopp.integrator.PostProcessReleaseParticles(fix_distance, 1)
+    r_type_1.add_postprocess(r_1_release, 1)
 
     ar.add_reaction(r_type_1)
-    integrator.addExtension(ar)
+    #integrator.addExtension(ar)
 
     # Dynamic resolution
     basic_dynamic_res = espressopp.integrator.BasicDynamicResolution(

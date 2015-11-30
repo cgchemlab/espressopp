@@ -75,9 +75,10 @@ def prepare_system(conf, system, active_sites=1):
         pids.append(i)
         last_pid += 1
         # Create three co-partner C
-        pid_c = last_pid
         for _ in range(3):
+	    pid_c = last_pid
             pos_c = pos + conf.R_ac*system.rng.uniformOnSphere()
+            print pid_c, pos_c, pos
             particles_list.append([
                 pid_c,
                 pos_c,
