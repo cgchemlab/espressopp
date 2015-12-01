@@ -54,19 +54,20 @@ FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longi
 void FixDistances::disconnect() {
   aftInitF_.disconnect();
   if (has_types_) {
-    sigOnParticlesChanged.disconnect();
+    aftIntV2_.disconnect();
   }
   sigBeforeSend.disconnect();
   sigAfterRecv.disconnect();
 }
 
 void FixDistances::connect() {
-  // Run after position is computed.
+  // Calculate force that will move particle, set it after forces are set to zero.
   aftInitF_ = integrator->aftInitF.connect(boost::bind(&FixDistances::restore_positions, this));
+
+  // If use particle types then update constraints at every time step at last.
   System &system = getSystemRef();
   if (has_types_) {
-    sigOnParticlesChanged = system.storage->onParticlesChanged.connect
-        (boost::bind(&FixDistances::onParticlesChanged, this));
+    aftIntV2_ = integrator->aftIntV2.connect(boost::bind(&FixDistances::onParticlesChanged, this));
   }
 
   sigBeforeSend = system.storage->beforeSendParticles.connect(

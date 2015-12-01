@@ -74,7 +74,7 @@ class FixDistances : public Extension {
   static void registerPython();
 
  private:
-  boost::signals2::connection aftInitF_, sigOnParticlesChanged, aftIntV_;
+  boost::signals2::connection aftInitF_, sigOnParticlesChanged, aftIntV2_;
   boost::signals2::connection sigBeforeSend, sigAfterRecv;
   Triplets distance_triplets_;
 
