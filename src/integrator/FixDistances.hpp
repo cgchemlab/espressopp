@@ -88,6 +88,7 @@ class FixDistances : public Extension {
   void beforeSendParticles(ParticleList& pl, OutBuffer& buf);
   void afterRecvParticles(ParticleList &pl, InBuffer& buf);
   shared_ptr<integrator::PostProcessChangeProperty> post_process_;
+  void printTriplets();
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };

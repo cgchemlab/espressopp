@@ -126,7 +126,9 @@ void FixDistances::restore_positions() {
       Real3D unit_trans;
       if (dst_pos.isNaNInf()) {
         LOG4ESPP_ERROR(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
-            << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos);
+            << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos
+            << " dst.ghost=" << dst->ghost()
+            );
         exit(1);
       }
       // Compute force that will cause to keep dst particle at particular distance from
@@ -142,7 +144,7 @@ void FixDistances::restore_positions() {
           << " dist " << dist
           << " new_force " << (2*new_trans*(dst->mass())/dt2));
 
-      Real3D newF = 2*new_trans*(dst->mass())/dt2;
+      Real3D newF = (2*new_trans*(dst->mass())/dt2) + dst->getF();
       if (newF.isNaNInf()) {
         std::cout << "new_trans=" << new_trans << std::endl;
         std::cout << "mass=" << dst->mass() << std::endl;
@@ -182,6 +184,7 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
         for (std::vector<Particle*>::iterator it = tmp.begin(); it != tmp.end(); ++it)
           mod_particles.push_back(*it);
       }
+      LOG4ESPP_DEBUG(theLogger, "Released particle: " << it->second.first << " of " << anchor_id);
       it = distance_triplets_.erase(it);
       removed++;
       p1->setV(Real3D(0.0, 0.0, 0.0));
@@ -261,6 +264,12 @@ void FixDistances::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
   LOG4ESPP_INFO(theLogger, "received fixed pair list after receive particles");
 }
 
+void FixDistances::printTriplets() {
+  for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end(); ++it) {
+     std::cout << it->first << "-" << it->second.first << " d=" <<it->second.second << std::endl;
+  }
+}
+
 longint FixDistances::totalSize() {
   System &system = getSystemRef();
   longint local_size = distance_triplets_.size();
@@ -278,7 +287,9 @@ void FixDistances::registerPython() {
     .def("connect", &FixDistances::connect)
     .def("disconnect", &FixDistances::disconnect)
     .def("add_triplet", &FixDistances::add_triplet)
-    .def("add_postprocess", &FixDistances::add_postprocess);
+    .def("add_postprocess", &FixDistances::add_postprocess)
+    .def("print_triplets", &FixDistances::printTriplets)
+    ;
 }
 
 /** Post process after pairs were added.

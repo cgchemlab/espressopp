@@ -89,8 +89,11 @@ def main():  # NOQA
 
     # Co-partner C is keep on certain distance.
     fix_list = [(x[0], x[1], conf.R_ac) for x in bonds_a_c_tmp]
-    fix_distance = espressopp.integrator.FixDistances(
-        system, fix_list)
+    fix_distance = espressopp.integrator.FixDistances(system, fix_list)
+    pp = espressopp.integrator.PostProcessChangeProperty()
+    pp.add_change_property(conf.type_c_tmp.type_id,
+        espressopp.ParticleProperties(conf.type_c.type_id, conf.type_c.mass, 0.0))
+    fix_distance.add_postprocess(pp)
 
     integrator.addExtension(fix_distance)
 
@@ -135,14 +138,23 @@ def main():  # NOQA
         vl_cutoffs.append(sigma_12*conf.rc_lj)
     system.addInteraction(interLJ)
 
+    # LJ force capped for dummy water molecules
+    interLJF = espressopp.interaction.VerletListLennardJonesForceCapped(verletList)
+    pot_dummy = espressopp.interaction.LennardJonesForceCapped(
+        sigma=conf.type_c_tmp.sigma, epsilon=conf.type_c_tmp.epsilon, cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
+    pot_dummy.max_force = conf.force_cap
+    interLJF.setPotential(type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id, potential=pot_dummy)
+    system.addInteraction(interLJF)
+
     # DynamicResolution of Lennard-Jones potential
-    interDynamicResLJ = espressopp.interaction.VerletListDynamicResolutionLennardJones(
+    interDynamicResLJ = espressopp.interaction.VerletListDynamicResolutionLennardJonesForceCapped(
         verletList, False)
     # Adds C-C interaction.
-    pot = espressopp.interaction.LennardJones(
+    pot = espressopp.interaction.LennardJonesForceCapped(
         sigma=conf.type_c.sigma,
         epsilon=conf.type_c.epsilon,
         cutoff=conf.type_c.sigma*conf.rc_lj)
+    pot.max_force = conf.force_cap
     interDynamicResLJ.setPotential(
         type1=conf.type_c.type_id, type2=conf.type_c.type_id,
         potential=pot)
@@ -152,8 +164,9 @@ def main():  # NOQA
     for type_id, _, sigma, epsilon in conf.types:
         sigma_12 = tools.lb_sigma(conf.type_c.sigma, sigma)
         epsilon_12 = tools.lb_epsilon(conf.type_c.epsilon, epsilon)
-        pot = espressopp.interaction.LennardJones(
+        pot = espressopp.interaction.LennardJonesForceCapped(
             sigma=sigma_12, epsilon=epsilon_12, cutoff=sigma_12*conf.rc_lj)
+        pot.max_force = conf.force_cap
         interDynamicResLJ.setPotential(
             type1=conf.type_c.type_id,
             type2=type_id,
@@ -209,7 +222,7 @@ def main():  # NOQA
     r_type_1.add_postprocess(r_1_release, 1)
 
     ar.add_reaction(r_type_1)
-    #integrator.addExtension(ar)
+    integrator.addExtension(ar)
 
     # Dynamic resolution
     basic_dynamic_res = espressopp.integrator.BasicDynamicResolution(

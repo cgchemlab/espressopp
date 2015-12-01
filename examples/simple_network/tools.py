@@ -75,10 +75,10 @@ def prepare_system(conf, system, active_sites=1):
         pids.append(i)
         last_pid += 1
         # Create three co-partner C
-        for _ in range(3):
+        for j in range(3):
 	    pid_c = last_pid
-            pos_c = pos + conf.R_ac*system.rng.uniformOnSphere()
-            print pid_c, pos_c, pos
+            pos_c = espressopp.Real3D(pos)
+            pos_c[j] += conf.R_ac
             particles_list.append([
                 pid_c,
                 pos_c,

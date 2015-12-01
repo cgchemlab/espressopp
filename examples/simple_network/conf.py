@@ -67,6 +67,7 @@ warmup_potential_matrix.extend([
      tools.lb_epsilon(type_c.epsilon, types[i].epsilon))
     for i in range(len(types))])
 warmup_potential_matrix.append([type_c.type_id, type_c.type_id, type_c.sigma, type_c.epsilon])
+warmup_potential_matrix.append([type_c_tmp.type_id, type_c_tmp.type_id, type_c_tmp.sigma, type_c_tmp.epsilon])
 
 for t1, t2, sig, eps in potential_matrix:
     print('{}-{} sig={} eps={}'.format(t1, t2, sig, eps))
