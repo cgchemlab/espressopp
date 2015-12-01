@@ -60,10 +60,13 @@ from _espressopp import integrator_CapForce
 
 class CapForceLocal(ExtensionLocal, integrator_CapForce):
 
-    def __init__(self, system, capForce, particleGroup = None):
+    def __init__(self, system, capForce, particleGroup = None, particleTypes=None):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             if (particleGroup == None) or (particleGroup.size() == 0):
               cxxinit(self, integrator_CapForce, system, capForce)
+              if particleTypes:
+                for type_id in particleTypes:
+                  self.cxxclass.set_type(type_id)
             else:
               cxxinit(self, integrator_CapForce, system, capForce, particleGroup)
 
@@ -73,5 +76,6 @@ if pmi.isController :
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.CapForceLocal',
             pmicall = ['setCapForce', 'setAbsCapForce', 'getCapForce', 'getAbsCapForce'],
+            pmiinvoke = ['set_type'],
             pmiproperty = [ 'particleGroup', 'adress' ]
             )
