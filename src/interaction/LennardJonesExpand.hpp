@@ -48,6 +48,7 @@ namespace espressopp {
 	: epsilon(_epsilon), sigma(_sigma), delta(_delta) {
 	setShift(_shift);
 	setCutoff(_cutoff);
+        initialized = true;
       }
 
       LennardJonesExpand(real _epsilon, real _sigma, real _delta, real _cutoff)
@@ -55,6 +56,7 @@ namespace espressopp {
 	autoShift = false;
 	setCutoff(_cutoff);
 	setAutoShift();
+        initialized = true;
       }
 
       // Setter and getter

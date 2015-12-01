@@ -117,6 +117,7 @@ namespace espressopp {
       real cutoffSqr;
       real shift;
       bool autoShift;
+      bool initialized;
 
       Derived* derived_this() {
         return static_cast< Derived* >(this);
@@ -151,7 +152,7 @@ namespace espressopp {
     //////////////////////////////////////////////////
     template < class Derived > 
     inline
-    PotentialTemplate< Derived >::PotentialTemplate() : cutoff(infinity), cutoffSqr(infinity), shift(0.0), autoShift(false){
+    PotentialTemplate< Derived >::PotentialTemplate() : cutoff(infinity), cutoffSqr(infinity), shift(0.0), autoShift(false), initialized(false) {
     }
 
     // Shift/cutoff handling
@@ -267,7 +268,7 @@ namespace espressopp {
     inline real
     PotentialTemplate< Derived >::
     _computeEnergySqr(real distSqr) const {
-      if (distSqr > cutoffSqr) 
+      if (distSqr > cutoffSqr || !initialized)
         return 0.0;
       else {
         real e = derived_this()->_computeEnergySqrRaw(distSqr) - shift;
@@ -315,7 +316,7 @@ namespace espressopp {
     PotentialTemplate< Derived >::
     _computeForce(Real3D& force, const Real3D& dist) const {
       real distSqr = dist.sqr();
-      if (distSqr > cutoffSqr)
+      if (distSqr > cutoffSqr || !initialized)
         return false;
       else {
         return derived_this()->_computeForceRaw(force, dist, distSqr);

@@ -63,6 +63,7 @@ namespace espressopp {
         setCutoff(_cutoff);
         preset();
         setAutoShift();
+        initialized = true;
       }
 
       LennardJonesGeneric(real _epsilon, real _sigma, int _a, int _b,
@@ -72,6 +73,7 @@ namespace espressopp {
         setShift(_shift);
         setCutoff(_cutoff);
         preset();
+        initialized = true;
       }
 
       virtual ~LennardJonesGeneric() {};

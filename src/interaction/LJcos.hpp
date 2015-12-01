@@ -45,12 +45,6 @@ namespace espressopp {
       real alpha, beta;
       real sqrcutoff;
 
-      real auxCoef; // This is temporary solution for empty potential. This problem
-                    // appears when there is a potential for, for example,  00 and
-                    // 01, but no potential for 11. The loop in interaction
-                    // template will call potential(1, 1) anyway if these particles are
-                    // within the range. Thus one have to set coefficient to 0,
-                    // in order to get zero forces. 
     public:
       static void registerPython();
 
@@ -59,7 +53,6 @@ namespace espressopp {
         autoShift = false;
         setCutoff(1.5);
         preset();
-        auxCoef = 0.0;
       }
 
       LJcos(real _phi): phi(_phi){	
@@ -67,7 +60,7 @@ namespace espressopp {
         autoShift = false;
         setCutoff(1.5);
         preset();
-        auxCoef = 1.0;
+        initialized = true;
       }
 
       virtual ~LJcos() {};
@@ -94,7 +87,7 @@ namespace espressopp {
       real _computeEnergySqrRaw(real distSqr) const {
         real energy;
         if(distSqr<=sqr_pot_border){
-          real frac2 = auxCoef / distSqr;
+          real frac2 = 1.0 / distSqr;
           real frac6 = frac2 * frac2 * frac2;
           energy = 4.0 * (frac6 * frac6 - frac6) + one_phi;
         }
@@ -110,7 +103,7 @@ namespace espressopp {
                             real distSqr) const {
         real ffactor;
         if(distSqr<=sqr_pot_border){
-          real frac2 = auxCoef / distSqr;
+          real frac2 = 1.0 / distSqr;
           real frac6 = frac2 * frac2 * frac2;
           ffactor = frac6 * ( 48.0 * frac6 - 24.0 ) * frac2;
         }

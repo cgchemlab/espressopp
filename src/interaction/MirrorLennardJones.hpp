@@ -65,6 +65,7 @@ namespace espressopp {
         setShift(-epsilon);
         setCutoff(2*pow(2.,1./6.)*sigma);
 	preset();
+        initialized = true;
       }
 
       void preset() {
