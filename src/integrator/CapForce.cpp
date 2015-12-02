@@ -43,6 +43,7 @@ namespace espressopp {
       allParticles = true;
       absCapping   = false;
       adress = false;
+      hasTypes = false;
     }
 
     CapForce::CapForce(shared_ptr<System> system, real _absCapForce)
@@ -52,6 +53,7 @@ namespace espressopp {
       allParticles = true;
       absCapping   = true;
       adress = false;
+      hasTypes = false;
     }
 
     CapForce::CapForce(shared_ptr<System> system, const Real3D& _capForce, shared_ptr< ParticleGroup > _particleGroup)
@@ -61,6 +63,7 @@ namespace espressopp {
       allParticles = false;
       absCapping   = false;
       adress = false;
+      hasTypes = false;
     }
 
     CapForce::CapForce(shared_ptr<System> system, real _absCapForce, shared_ptr< ParticleGroup > _particleGroup)
@@ -70,6 +73,7 @@ namespace espressopp {
       allParticles = false;
       absCapping   = true;
       adress = false;
+      hasTypes = false;
     }
 
     void CapForce::disconnect(){
@@ -130,6 +134,8 @@ namespace espressopp {
        if (absCapping) {
     	 real capfsq = absCapForce * absCapForce;
          for (ParticleGroup::iterator it=particleGroup->begin(); it != particleGroup->end(); it++ ) {
+           if (hasTypes && validTypes.count(it->type()) == 0)
+             continue;
        	   LOG4ESPP_DEBUG(theLogger, "applying scalar force capping to particle " << it->getId());
            real fsq = it->force().sqr();
            if (fsq > capfsq) {
@@ -142,6 +148,8 @@ namespace espressopp {
          }
        } else {
          for (ParticleGroup::iterator it=particleGroup->begin(); it != particleGroup->end(); it++ ) {
+           if (hasTypes && validTypes.count(it->type()) == 0)
+             continue;
            LOG4ESPP_DEBUG(theLogger, "applying vector force capping to particle " << it->getId());
            Real3D& f=it->force();
       	   for (int dir=0; dir<3; dir++) {
@@ -164,6 +172,8 @@ namespace espressopp {
        if (absCapping) {
     	 real capfsq = absCapForce * absCapForce;
          for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+           if (hasTypes && validTypes.count(cit->type()) == 0)
+             continue;
            real fsq = cit->force().sqr();
            if (fsq > capfsq) {
              real scaling = sqrt(capfsq / fsq);
@@ -174,6 +184,8 @@ namespace espressopp {
          }
        } else {
            for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+             if (hasTypes && validTypes.count(cit->type()) == 0)
+               continue;
         	 Real3D& f=cit->force();
       	     for (int dir=0; dir<3; dir++) {
                if (f[dir]>0 && f[dir]>capForce[dir]) {
@@ -190,7 +202,9 @@ namespace espressopp {
          real capfsq2 = absCapForce * absCapForce;
          ParticleList& adrATparticles = system.storage->getAdrATParticles();
          for (std::vector<Particle>::iterator it = adrATparticles.begin();
-                     it != adrATparticles.end(); it++) {             
+                     it != adrATparticles.end(); it++) {
+             if (hasTypes && validTypes.count(it->type()) == 0)
+               continue;
              real fsq2 = it->force().sqr();
              if (fsq2 > capfsq2) {
                 real scaling2 = sqrt(capfsq2 / fsq2);
@@ -222,6 +236,7 @@ namespace espressopp {
         .def("getAbsCapForce", &CapForce::getAbsCapForce)
         .def("setCapForce", &CapForce::setCapForce )
         .def("setAbsCapForce", &CapForce::setAbsCapForce )
+        .def("setType", &CapForce::setType)
         .def("connect", &CapForce::connect)
         .def("disconnect", &CapForce::disconnect)
         ;

@@ -57,9 +57,10 @@ bool Reaction::IsValidPair(Particle& p1, Particle& p2, ParticlePair &particle_or
   if (IsValidState(p1, p2, particle_order)) {
     Real3D distance = p1.position() - p2.position();
     real distance_2 = distance.sqr();
-
-    return ((distance_2 < cutoff_sqr_)
-        && ((*rng_)() < rate_ * (*dt_) * (*interval_)));
+    if ((distance_2 < cutoff_sqr_) && ((*rng_)() < rate_ * (*dt_) * (*interval_))) {
+      LOG4ESPP_DEBUG(theLogger, "Distance_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
+      return true;
+    }
   }
   return false;
 }

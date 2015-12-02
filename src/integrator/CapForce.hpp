@@ -74,11 +74,14 @@ namespace espressopp {
       private:
         boost::signals2::connection _aftCalcF;
         shared_ptr< ParticleGroup > particleGroup;
+        std::set<longint> validTypes;
+        bool hasTypes;
         bool allParticles;
         bool absCapping;
         bool adress;
         Real3D capForce;
         real absCapForce;
+        void setType(longint type_id) { validTypes.insert(type_id); hasTypes = true; }
         void connect();
         void disconnect();
 
