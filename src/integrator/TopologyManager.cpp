@@ -81,7 +81,8 @@ void TopologyManager::observeQuadruple(shared_ptr<FixedQuadrupleList> fql, longi
 void TopologyManager::InitializeTopology() {
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
-  for(std::vector<shared_ptr<FixedPairList> >::iterator it = tupleMap_.begin(); it != tupleMap_.end(); ++it) {
+  for (std::vector<shared_ptr<FixedPairList> >::iterator it = tupleMap_.begin();
+       it != tupleMap_.end(); ++it) {
     for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
@@ -174,8 +175,9 @@ void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
       if (ftl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
         bool ret = ftl->add(p1->id(), p2->id(), p3->id());
-        if (ret)
-          LOG4ESPP_DEBUG(theLogger, "Defined new angle: " << it->first << "-" << it->second.first << "-" << it->second.second);
+        if (ret) LOG4ESPP_DEBUG(theLogger,
+                                "Defined new angle: " << it->first << "-" << it->second.first << "-"
+                                    << it->second.second);
       }
     }
   }
@@ -203,14 +205,19 @@ void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
         bool ret = fql->add(p1->id(), p2->id(), p3->id(), p4->id());
         if (!ret)
           ret = fql->add(p4->id(), p3->id(), p2->id(), p1->id());
-        if (ret)
-          LOG4ESPP_DEBUG(theLogger, "Defined new dihedral: " << it->first << "-" << it->second.first << "-" << it->second.second.first << "-" << it->second.second.second);
+        if (ret) LOG4ESPP_DEBUG(theLogger,
+                                "Defined new dihedral: " << it->first << "-" << it->second.first
+                                    << "-" << it->second.second.first << "-"
+                                    << it->second.second.second);
       }
     }
   }
 }
 
-void TopologyManager::generateAnglesDihedrals(longint pid1, longint pid2, std::set<Quadruplets> &quadruplets, std::set<Triplets> &triplets) {
+void TopologyManager::generateAnglesDihedrals(longint pid1,
+                                              longint pid2,
+                                              std::set<Quadruplets> &quadruplets,
+                                              std::set<Triplets> &triplets) {
   std::set<longint> *nb1 = graph_->at(pid1);
   std::set<longint> *nb2 = graph_->at(pid2);
   // Case pid2 pid1 <> <>
@@ -227,7 +234,9 @@ void TopologyManager::generateAnglesDihedrals(longint pid1, longint pid2, std::s
         for (std::set<longint>::iterator itt = nbb1->begin(); itt != nbb1->end(); ++itt) {
           if (*itt == *it || *itt == pid1 || *itt == pid2)
             continue;
-          if (quadruplets.count(std::make_pair(*itt, std::make_pair(*it, std::make_pair(pid1, pid2)))) == 0)
+          if (quadruplets.count(std::make_pair(*itt,
+                                               std::make_pair(*it, std::make_pair(pid1, pid2))))
+              == 0)
             quadruplets.insert(
                 std::make_pair(pid2, std::make_pair(pid1, std::make_pair(*it, *itt))));
         }
@@ -247,7 +256,9 @@ void TopologyManager::generateAnglesDihedrals(longint pid1, longint pid2, std::s
         for (std::set<longint>::iterator itt = nbb2->begin(); itt != nbb2->end(); ++itt) {
           if (*itt == *it || *itt == pid1 || *itt == pid2)
             continue;
-          if (quadruplets.count(std::make_pair(*itt, std::make_pair(*it, std::make_pair(pid2, pid1)))) == 0)
+          if (quadruplets.count(std::make_pair(*itt,
+                                               std::make_pair(*it, std::make_pair(pid2, pid1))))
+              == 0)
             quadruplets.insert(
                 std::make_pair(pid1, std::make_pair(pid2, std::make_pair(*it, *itt))));
         }
@@ -256,16 +267,18 @@ void TopologyManager::generateAnglesDihedrals(longint pid1, longint pid2, std::s
   }
   // Case <> pid1 pid2 <>
   if (nb1 && nb2) {
-    for(std::set<longint>::iterator it1 = nb1->begin(); it1 != nb1->end(); ++it1){
-        if (*it1 == pid1 || *it1 == pid2)
-            continue;
-        for (std::set<longint>::iterator it2 = nb2->begin(); it2 != nb2->end(); ++it2) {
-          if (*it2 == pid1 || *it2 == pid2 || *it1 == *it2)
-            continue;
-          if (quadruplets.count(std::make_pair(*it2, std::make_pair(pid2, std::make_pair(pid1, *it1)))) == 0)
-            quadruplets.insert(
-                std::make_pair(*it1, std::make_pair(pid1, std::make_pair(pid2, *it2))));
-        }
+    for (std::set<longint>::iterator it1 = nb1->begin(); it1 != nb1->end(); ++it1) {
+      if (*it1 == pid1 || *it1 == pid2)
+        continue;
+      for (std::set<longint>::iterator it2 = nb2->begin(); it2 != nb2->end(); ++it2) {
+        if (*it2 == pid1 || *it2 == pid2 || *it1 == *it2)
+          continue;
+        if (quadruplets.count(std::make_pair(*it2,
+                                             std::make_pair(pid2, std::make_pair(pid1, *it1))))
+            == 0)
+          quadruplets.insert(
+              std::make_pair(*it1, std::make_pair(pid1, std::make_pair(pid2, *it2))));
+      }
     }
   }
 }
@@ -285,7 +298,8 @@ void TopologyManager::exchangeData() {
 
   for (GlobaleMergeSets::iterator gms = global_merge_sets.begin();
        gms != global_merge_sets.end(); ++gms) {
-    for (std::vector<std::pair<longint, longint> >::iterator itm = gms->begin(); itm != gms->end();) {
+    for (std::vector<std::pair<longint, longint> >::iterator itm = gms->begin();
+         itm != gms->end();) {
       longint merge_set_size = itm->first;
       longint new_edge_size = itm->second;
       itm++;
@@ -337,7 +351,7 @@ void TopologyManager::Rebuild() {
   mpi::all_gather(*(system_->comm), res_particle_ids_, global_res_particle_ids);
   // Update local storage.
   for (std::vector<ResParticleIds>::iterator it = global_res_particle_ids.begin();
-       it != global_res_particle_ids.end(); ++it ) {
+       it != global_res_particle_ids.end(); ++it) {
     for (ResParticleIds::iterator itp = it->begin(); itp != it->end(); ++itp) {
       for (PSet::iterator itps = itp->second->begin(); itps != itp->second->end(); ++itps) {
         if (res_particle_ids_[itp->first] == NULL)
@@ -352,7 +366,7 @@ void TopologyManager::registerPython() {
   using namespace espressopp::python;
 
   class_<TopologyManager, shared_ptr<TopologyManager>, bases<Extension> >
-      ("integrator_TopologyManager", init< shared_ptr<System> >())
+      ("integrator_TopologyManager", init<shared_ptr<System> >())
       .def("connect", &TopologyManager::connect)
       .def("disconnect", &TopologyManager::disconnect)
       .def("rebuild", &TopologyManager::Rebuild)
@@ -360,8 +374,7 @@ void TopologyManager::registerPython() {
       .def("observe_triple", &TopologyManager::observeTriple)
       .def("observe_quadruple", &TopologyManager::observeQuadruple)
       .def("initialize", &TopologyManager::InitializeTopology)
-      .def("print_topology", &TopologyManager::PrintTopology)
-      ;
+      .def("print_topology", &TopologyManager::PrintTopology);
 }
 
 }  // end namespace integrator

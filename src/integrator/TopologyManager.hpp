@@ -131,6 +131,7 @@ class TopologyManager: public Extension {
    * Exchange new topology and res_id data among cpus.
    */
   void exchangeData();
+
   /**
    * Merge two sets that holds mapping particle_id -> res_id
    * and update res_id of corresponding particles.
