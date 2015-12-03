@@ -152,7 +152,7 @@ namespace espressopp {
     //////////////////////////////////////////////////
     template < class Derived > 
     inline
-    PotentialTemplate< Derived >::PotentialTemplate() : cutoff(infinity), cutoffSqr(infinity), shift(0.0), autoShift(false), initialized(true) {
+    PotentialTemplate< Derived >::PotentialTemplate() : cutoff(infinity), cutoffSqr(infinity), shift(0.0), autoShift(false), initialized(false) {
     }
 
     // Shift/cutoff handling
@@ -268,7 +268,7 @@ namespace espressopp {
     inline real
     PotentialTemplate< Derived >::
     _computeEnergySqr(real distSqr) const {
-      if (distSqr > cutoffSqr || !initialized) 
+      if (distSqr > cutoffSqr || !initialized)
         return 0.0;
       else {
         real e = derived_this()->_computeEnergySqrRaw(distSqr) - shift;

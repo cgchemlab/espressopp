@@ -35,6 +35,7 @@ namespace espressopp {
       prefactor = _prefactor;
       alpha = _alpha;
       kmax  = _kmax;
+      initialized = true;
       
       I = Tensor(1.0, 1.0, 1.0, 0.0, 0.0, 0.0);
       sum = NULL;

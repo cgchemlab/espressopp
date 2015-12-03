@@ -76,6 +76,7 @@ namespace espressopp {
 	setCutoff(_cutoff);
         preset1();
         preset2();
+        initialized = true;
       }
 
       LennardJonesGromacs(real _epsilon, real _sigma, real _r1, real _cutoff)
@@ -85,6 +86,7 @@ namespace espressopp {
 	setAutoShift();
         preset1();
         preset2();
+        initialized = true;
       }
 
       void preset1() {

@@ -63,6 +63,7 @@ namespace espressopp {
                 setFilename(itype, filename);
                 setShift(0.0);
                 setCutoff(infinity);
+              initialized = true;
                 //std::cout << "using tabulated potential " << filename << "\n";
             }
          
@@ -71,6 +72,7 @@ namespace espressopp {
                 setFilename(itype, filename);
                 setShift(0.0);
                 setCutoff(cutoff);
+              initialized = true;
                 //std::cout << "using tabulated potential " << filename << "\n";
             }
          

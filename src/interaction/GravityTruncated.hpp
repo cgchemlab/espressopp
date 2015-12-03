@@ -53,6 +53,7 @@ namespace espressopp {
         autoShift = false;
         setCutoff(_cutoff);
         preset();
+        initialized = true;
       }
 
       void preset() {
