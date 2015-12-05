@@ -84,6 +84,11 @@ class TopologyManager: public Extension {
   void PrintTopology();
 
   /**
+   * Get neighbour list.
+   */
+  python::list getNeighbourLists();
+
+  /**
    * Rebuild the map of particle_id -> res_id and sync among cpus.
    */
   void Rebuild();

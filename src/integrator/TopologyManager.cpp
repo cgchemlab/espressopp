@@ -99,7 +99,7 @@ void TopologyManager::InitializeTopology() {
   for (std::vector<EdgesVector>::iterator itv = global_edges.begin();
        itv != global_edges.end(); ++itv) {
     for (EdgesVector::iterator it = itv->begin(); it != itv->end(); ++it) {
-      newBond(it->first, it->second);
+      newEdge(it->first, it->second);
     }
   }
 }
@@ -114,6 +114,20 @@ void TopologyManager::PrintTopology() {
       std::cout << std::endl;
     }
   }
+}
+
+python::list TopologyManager::getNeighbourLists() {
+  python::list nodes;
+  for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+    if (it->second != NULL) {
+      python::list neighbours;
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        neighbours.append(*itv);
+      }
+      nodes.append(python::make_tuple(it->first, neighbours));
+    }
+  }
+  return nodes;
 }
 
 
@@ -374,7 +388,8 @@ void TopologyManager::registerPython() {
       .def("observe_triple", &TopologyManager::observeTriple)
       .def("observe_quadruple", &TopologyManager::observeQuadruple)
       .def("initialize", &TopologyManager::InitializeTopology)
-      .def("print_topology", &TopologyManager::PrintTopology);
+      .def("print_topology", &TopologyManager::PrintTopology)
+      .def("get_neighbour_lists", &TopologyManager::getNeighbourLists);
 }
 
 }  // end namespace integrator

@@ -75,5 +75,5 @@ if pmi.isController :
             cls =  'espressopp.integrator.TopologyManagerLocal',
             pmicall = ['rebuild', 'observe', 'observe_tuple', 'observe_triple',
                        'observe_quadruple', 'initialize_topology'],
-            pmiinvoke = ['print_topology']
+            pmiinvoke = ['print_topology', 'get_neighbour_lists']
             )
