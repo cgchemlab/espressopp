@@ -16,9 +16,6 @@ import time
 import tools
 import conf
 
-import chain_h5md
-
-
 def _args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', default=False, action='store_true')

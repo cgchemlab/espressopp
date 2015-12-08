@@ -48,7 +48,7 @@ import numpy as np
 import pyh5md
 
 
-class DumpH5MDLocal(io_DumpH5MD):
+class DumpH5MDLoal(io_DumpH5MD):
     def __init__(self, system, filename, group_name='all',
                  store_position=True,
                  store_species=True,
@@ -103,8 +103,6 @@ class DumpH5MDLocal(io_DumpH5MD):
                                      author=author, email=email
                                      )
 
-        self._system_data()
-
         part = self.file.particles_group(self.group_name)
         if self.static_box:
             self.box = part.box(dimension=3,
@@ -149,15 +147,22 @@ class DumpH5MDLocal(io_DumpH5MD):
                 'lambda_adr', (self.chunk_size,), np.float64,
                 chunks=(1, self.chunk_size), fillvalue=-1)
 
+        self.parameters = self.file.f.create_group('parameters')
+        self._system_data()
+
+    @property
+    def parameters(self):
+        return self._parameters
+
     def _system_data(self):
         """Stores specific information about simulation."""
-        # Creates /system group
-        sys_group = self.file.f.create_group('parameters')
-        sys_group.attrs['software-id'] = 'espressopp'
-        sys_group.attrs['rng-seed'] = self.system.rng.get_seed()
-        sys_group.attrs['skin'] = self.system.skin
-        if self.system.integrator is not None:
-            sys_group.attrs['dt'] = self.system.integrator.dt
+        if pmi.workerIsActive():
+            # Creates /system group
+            self.parameters.attrs['software-id'] = 'espressopp'
+            self.parameters.attrs['rng-seed'] = self.system.rng.get_seed()
+            self.parameters.attrs['skin'] = self.system.skin
+            if self.system.integrator is not None:
+                self.parameters.attrs['dt'] = self.system.integrator.dt
 
     def update(self):
         if pmi.workerIsActive():
@@ -285,8 +290,9 @@ class DumpH5MDLocal(io_DumpH5MD):
     def flush(self):
         self.file.flush()
 
+
 if pmi.isController:
-    class DumpH5MD(object):
+    class DumpH5MdD(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.io.DumpH5MDLocal',
@@ -294,5 +300,4 @@ if pmi.isController:
                      'getVelocity', 'getMass', 'getCharge',
                      'close_file', 'dump', 'clear_buffers', 'flush', 'close'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
-                         'store_charge']
-        )
+                         'store_charge', 'parameters'])
