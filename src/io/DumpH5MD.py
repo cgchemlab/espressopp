@@ -152,12 +152,12 @@ class DumpH5MDLocal(io_DumpH5MD):
     def _system_data(self):
         """Stores specific information about simulation."""
         # Creates /system group
-        sys_group = self.file.f.create_group('parameters')
-        sys_group.attrs['software-id'] = 'espressopp'
-        sys_group.attrs['rng-seed'] = self.system.rng.get_seed()
-        sys_group.attrs['skin'] = self.system.skin
+        self.sys_group = self.file.f.create_group('parameters')
+        self.sys_group.attrs['software-id'] = 'espressopp'
+        self.sys_group.attrs['rng-seed'] = self.system.rng.get_seed()
+        self.sys_group.attrs['skin'] = self.system.skin
         if self.system.integrator is not None:
-            sys_group.attrs['dt'] = self.system.integrator.dt
+            self.sys_group.attrs['dt'] = self.system.integrator.dt
 
     def update(self):
         if pmi.workerIsActive():

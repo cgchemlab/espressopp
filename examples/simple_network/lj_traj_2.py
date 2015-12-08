@@ -166,15 +166,15 @@ def main():  # NOQA
         vl_cutoffs.append(sigma_12*conf.rc_lj)
     system.addInteraction(interLJ)
 
-    # LJ force capped for dummy water molecules
+    # LJ force capped for dummy water molecules to prevent those molecules
+    # from overlapping.
     interLJF = espressopp.interaction.VerletListLennardJonesForceCapped(verletList)
     pot_dummy = espressopp.interaction.LennardJonesForceCapped(
         sigma=conf.type_c_tmp.sigma, epsilon=conf.type_c_tmp.epsilon,
         cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
-        cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
     pot_dummy.max_force = conf.force_cap
-    interLJF.setPotential(type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id,
-                          potential=pot_dummy)
+    interLJF.setPotential(
+        type1=conf.type_c_tmp.type_id,
         type2=conf.type_c_tmp.type_id,
         potential=pot_dummy)
     system.addInteraction(interLJF)
@@ -257,7 +257,8 @@ def main():  # NOQA
     ar.add_reaction(r_type_1)
     integrator.addExtension(ar)
 
-    # Dynamic resolution
+    # Dynamic resolution. When particle reaches resolution of 1.0 then
+    # it changes type to final type.
     basic_dynamic_res = espressopp.integrator.BasicDynamicResolution(
         system, {conf.type_c.type_id: args.alpha})
     integrator.addExtension(basic_dynamic_res)
@@ -265,7 +266,7 @@ def main():  # NOQA
     d_1_pp.add_change_property(
         conf.type_c.type_id,
         espressopp.ParticleProperties(
-            conf.type_c_new.type_id, conf.type_c_new.mass, 0.0))
+            conf.type_c_final.type_id, conf.type_c_final.mass, 0.0))
     basic_dynamic_res.add_postprocess(d_1_pp, 1)
 
     topology_manager = espressopp.integrator.TopologyManager(system)
@@ -276,55 +277,68 @@ def main():  # NOQA
 
     integrator.addExtension(topology_manager)
 
-    output_file = '{}_{}_{}_{}.h5'.format(args.prefix, args.rate, args.alpha, args.seed)
-    traj_file = chain_h5md.DumpH5MD(
-        output_file,
-        system,
-        integrator,
-        'Jakub Krajniak',
-        edges=[edge_i for edge_i in system.bc.boxL], n_states=4,
-        valid_types=conf.type_ids + [conf.type_c.type_id])
-    topo_file = chain_h5md.DumpTopo(
-        traj_file, 'atoms', 'chains', system, integrator, fpl_a_a, time=True,
-        chunks=(8, 128, 2))
+    energy_file = '{}_{}_{}_{}_energy.csv'.format(
+        args.prefix, args.rate, args.alpha, args.seed)
+    print('Energy saved to: {}energy.csv'.format(args.prefix))
+    system_analysis = espressopp.analysis.SystemMonitor(
+        system, integrator, espressopp.analysis.SystemMonitorOutputCSV(
+            energy_file))
+    system_analysis.add_observable(
+        'lj', espressopp.analysis.PotentialEnergy(
+            system, interLJ))
+    system_analysis.add_observable(
+        'lj-dummy', espressopp.analysis.PotentialEnergy(
+            system, interLJF))
+    system_analysis.add_observable(
+        'lj-dyn', espressopp.analysis.PotentialEnergy(
+            system, interDynamicResLJ))
+    system_analysis.add_observable(
+        'bond', espressopp.analysis.PotentialEnergy(
+            system, interHarmonic))
+    system_analysis.add_observable(
+        'angle', espressopp.analysis.PotentialEnergy(
+            system, interAngHarmonic))
 
+    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, 10)
+    integrator.addExtension(ext_analysis)
+    print('Configured system analysis')
+
+    output_file = '{}_{}_{}_{}.h5'.format(args.prefix, args.rate, args.alpha, args.seed)
+    traj_file = espressopp.io.DumpH5MD(
+        system, output_file,
+        group_name='atoms',
+        static_box=False,
+        author='Jakub Krajniak',
+        email='jkrajniak@gmail.com',
+        store_species=True,
+        store_state=True,
+        store_lambda=True)
     # Save parameters of the simulation
-    traj_file.parameters.attrs['dt'] = conf.dt
-    traj_file.parameters.attrs['skin'] = conf.skin
-    traj_file.parameters.attrs['temperature'] = conf.T
-    traj_file.parameters.attrs['thermostat-gamma'] = conf.gamma
-    traj_file.parameters.attrs['th'] = args.interval
-    traj_file.parameters.attrs['rate'] = args.rate
-    traj_file.parameters.attrs['force-cap'] = conf.force_cap
-    traj_file.parameters.attrs['alpha'] = args.alpha
-    traj_file.parameters.attrs['ar-cutoff'] = r_type_1.cutoff
-    traj_file.parameters.attrs['rng-seed'] = args.seed
-    traj_file.parameters.attrs['steps'] = args.steps
-    traj_file.parameters.attrs['loops'] = args.loops
-    traj_file.parameters.attrs['active-sites'] = conf.active_sites
+    traj_file.sys_group.attrs['temperature'] = conf.T
+    traj_file.sys_group.attrs['thermostat-gamma'] = conf.gamma
+    traj_file.sys_group.attrs['th'] = args.interval
+    traj_file.sys_group.attrs['rate'] = args.rate
+    traj_file.sys_group.attrs['force-cap'] = conf.force_cap
+    traj_file.sys_group.attrs['alpha'] = args.alpha
+    traj_file.sys_group.attrs['ar-cutoff'] = r_type_1.cutoff
+    traj_file.sys_group.attrs['steps'] = args.steps
+    traj_file.sys_group.attrs['loops'] = args.loops
+    traj_file.sys_group.attrs['active-sites'] = conf.active_sites
 
 # Reset the integrator step.
     integrator.step = 0
-    info()
+    system_analysis.info()
 # Run system with non-capped potentials, no thermostat, fixed LJ epsilon
     print('Running serious simulation %s %s in T=%s' % (
         args.loops*args.steps, 'steps', conf.T))
     time0 = time.time()
-    T_comp = espressopp.analysis.Temperature(system)
-    T_comp.add_type(conf.type_c.type_id)
-    # logging.getLogger().setLevel(logging.DEBUG)
-    # logging.getLogger("ChemicalReaction").setLevel(logging.DEBUG)
-    # logging.getLogger('TopologyManager').setLevel(logging.DEBUG)
-    traj_file.analyse()
-    traj_file.dump()
-    topo_file.dump()
+    traj_file.dump(0, 0)
 
     for k in range(args.loops):
         integrator.run(args.steps)
-        info()
+        system_analysis.info()
         traj_file.analyse()
-        traj_file.dump()
-        topo_file.dump()
+        traj_file.dump(k*args.steps, k*args.steps*args.dt)
         if k % 10 == 0:
             traj_file.flush()
 
