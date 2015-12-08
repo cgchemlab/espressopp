@@ -314,16 +314,17 @@ def main():  # NOQA
         store_state=True,
         store_lambda=True)
     # Save parameters of the simulation
-    traj_file.sys_group.attrs['temperature'] = conf.T
-    traj_file.sys_group.attrs['thermostat-gamma'] = conf.gamma
-    traj_file.sys_group.attrs['th'] = args.interval
-    traj_file.sys_group.attrs['rate'] = args.rate
-    traj_file.sys_group.attrs['force-cap'] = conf.force_cap
-    traj_file.sys_group.attrs['alpha'] = args.alpha
-    traj_file.sys_group.attrs['ar-cutoff'] = r_type_1.cutoff
-    traj_file.sys_group.attrs['steps'] = args.steps
-    traj_file.sys_group.attrs['loops'] = args.loops
-    traj_file.sys_group.attrs['active-sites'] = conf.active_sites
+    print dir(traj_file)
+    traj_file.parameters.attrs['temperature'] = conf.T
+    traj_file.parameters.attrs['thermostat-gamma'] = conf.gamma
+    traj_file.parameters.attrs['th'] = args.interval
+    traj_file.parameters.attrs['rate'] = args.rate
+    traj_file.parameters.attrs['force-cap'] = conf.force_cap
+    traj_file.parameters.attrs['alpha'] = args.alpha
+    traj_file.parameters.attrs['ar-cutoff'] = r_type_1.cutoff
+    traj_file.parameters.attrs['steps'] = args.steps
+    traj_file.parameters.attrs['loops'] = args.loops
+    traj_file.parameters.attrs['active-sites'] = conf.active_sites
 
 # Reset the integrator step.
     integrator.step = 0
