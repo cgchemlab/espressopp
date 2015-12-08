@@ -149,15 +149,22 @@ class DumpH5MDLocal(io_DumpH5MD):
                 'lambda_adr', (self.chunk_size,), np.float64,
                 chunks=(1, self.chunk_size), fillvalue=-1)
 
+        self.parameters = self.file.f.create_group('parameters')
+        self._system_data()
+
+    @property
+    def parameters(self):
+        return self._parameters
+
     def _system_data(self):
         """Stores specific information about simulation."""
         # Creates /system group
-        self.sys_group = self.file.f.create_group('parameters')
-        self.sys_group.attrs['software-id'] = 'espressopp'
-        self.sys_group.attrs['rng-seed'] = self.system.rng.get_seed()
-        self.sys_group.attrs['skin'] = self.system.skin
+        sys_group = self.file.f.create_group('parameters')
+        sys_group.attrs['software-id'] = 'espressopp'
+        sys_group.attrs['rng-seed'] = self.system.rng.get_seed()
+        sys_group.attrs['skin'] = self.system.skin
         if self.system.integrator is not None:
-            self.sys_group.attrs['dt'] = self.system.integrator.dt
+            sys_group.attrs['dt'] = self.system.integrator.dt
 
     def update(self):
         if pmi.workerIsActive():
@@ -285,6 +292,7 @@ class DumpH5MDLocal(io_DumpH5MD):
     def flush(self):
         self.file.flush()
 
+
 if pmi.isController:
     class DumpH5MD(object):
         __metaclass__ = pmi.Proxy
@@ -294,5 +302,4 @@ if pmi.isController:
                      'getVelocity', 'getMass', 'getCharge',
                      'close_file', 'dump', 'clear_buffers', 'flush', 'close'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
-                         'store_charge']
-        )
+                         'store_charge', 'parameters'])

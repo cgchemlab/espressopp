@@ -322,6 +322,7 @@ def main():  # NOQA
     traj_file.parameters.attrs['force-cap'] = conf.force_cap
     traj_file.parameters.attrs['alpha'] = args.alpha
     traj_file.parameters.attrs['ar-cutoff'] = r_type_1.cutoff
+    traj_file.parameters.attrs['rng-seed'] = args.seed
     traj_file.parameters.attrs['steps'] = args.steps
     traj_file.parameters.attrs['loops'] = args.loops
     traj_file.parameters.attrs['active-sites'] = conf.active_sites
