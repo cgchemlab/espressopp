@@ -6,7 +6,6 @@
 #
 
 import cPickle
-import random
 import espressopp
 
 
@@ -76,7 +75,7 @@ def prepare_system(conf, system, active_sites=1):
         last_pid += 1
         # Create three co-partner C
         for j in range(3):
-	    pid_c = last_pid
+            pid_c = last_pid
             pos_c = espressopp.Real3D(pos)
             pos_c[j] += conf.R_ac
             particles_list.append([

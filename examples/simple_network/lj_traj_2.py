@@ -1,4 +1,21 @@
-"""Test case for releasing new particle."""
+#!/usr/bin/env python
+"""
+Copyright (C) 2015 Jakub Krajniak <jkrajniak@gmail.com>
+
+This file is distributed under free software licence:
+you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
 
 import espressopp  # pylint:disable=F0401
 import argparse
@@ -8,15 +25,13 @@ try:
 except ImportError:
     from mpi4py import MPI
 
-# import numpy as np
+import numpy as np
 
 import logging
 import time
 
 import tools
 import conf
-
-import chain_h5md
 
 
 def _args():
@@ -87,11 +102,12 @@ def main():  # NOQA
     bonds_a_c_tmp, particle_ids = tools.prepare_system(
         conf, system, active_sites=conf.active_sites)
 
-    # Co-partner C is keep on certain distance.
+    # Co-partner C is keep on certain distance. Release cause that molecule is activated.
     fix_list = [(x[0], x[1], conf.R_ac) for x in bonds_a_c_tmp]
     fix_distance = espressopp.integrator.FixDistances(system, fix_list)
     pp = espressopp.integrator.PostProcessChangeProperty()
-    pp.add_change_property(conf.type_c_tmp.type_id,
+    pp.add_change_property(
+        conf.type_c_tmp.type_id,
         espressopp.ParticleProperties(conf.type_c.type_id, conf.type_c.mass, 0.0))
     fix_distance.add_postprocess(pp)
 
@@ -117,6 +133,18 @@ def main():  # NOQA
     fpl_a_a.addBonds([])
     system.addInteraction(interHarmonic)
 
+    # Bending potential
+    tpl_a_a = espressopp.FixedTripleList(system.storage)
+    potAngHarmonic = espressopp.interaction.AngularHarmonic(
+        K=conf.kAng,
+        theta0=np.deg2rad(conf.angle),
+    )
+    interAngHarmonic = espressopp.interaction.FixedTripleListAngularHarmonic(
+        system,
+        tpl_a_a,
+        potAngHarmonic)
+    system.addInteraction(interAngHarmonic)
+
     dynamic_ex_list.observe(fpl_a_a)
 
     if not args.eq_conf:
@@ -141,9 +169,14 @@ def main():  # NOQA
     # LJ force capped for dummy water molecules
     interLJF = espressopp.interaction.VerletListLennardJonesForceCapped(verletList)
     pot_dummy = espressopp.interaction.LennardJonesForceCapped(
-        sigma=conf.type_c_tmp.sigma, epsilon=conf.type_c_tmp.epsilon, cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
+        sigma=conf.type_c_tmp.sigma,
+        epsilon=conf.type_c_tmp.epsilon,
+        cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
     pot_dummy.max_force = conf.force_cap
-    interLJF.setPotential(type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id, potential=pot_dummy)
+    interLJF.setPotential(
+        type1=conf.type_c_tmp.type_id,
+        type2=conf.type_c_tmp.type_id,
+        potential=pot_dummy)
     system.addInteraction(interLJF)
 
     # DynamicResolution of Lennard-Jones potential
@@ -232,6 +265,9 @@ def main():  # NOQA
     topology_manager = espressopp.integrator.TopologyManager(system)
     topology_manager.rebuild()
     topology_manager.observe(fpl_a_a)
+    topology_manager.observe_triple(
+        tpl_a_a, conf.type_a.type_id, conf.type_a.type_id, conf.type_a.type_id)
+
     integrator.addExtension(topology_manager)
 
     output_file = '{}_{}_{}_{}.h5'.format(args.prefix, args.rate, args.alpha, args.seed)

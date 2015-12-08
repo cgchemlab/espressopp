@@ -22,8 +22,10 @@ def get_r(mass):
 
 type_a = AtomType(1, 1.0*mass, 1.0*sigma, epsilon)
 type_b = AtomType(2, 0.8*mass, pow(124/125.0, 1.0/3.0)*sigma, epsilon)
+# New molecule
 type_c = AtomType(3, 0.2*mass, 0.2*sigma, epsilon)
 type_c_tmp = AtomType(4, type_c.mass, type_c.sigma, type_c.epsilon)
+type_c_final = AtomType(5, type_c.mass, type_c.sigma, type_c.epsilon)
 
 skin = 0.3*sigma
 rc = 1.5*sigma
@@ -49,7 +51,7 @@ force_cap = 1000.0
 R_ac = tools.lb_sigma(type_a.sigma, type_c.sigma)*rc_lj+0.01*sigma
 print('R_ac={}'.format(R_ac))
 
-types = [type_a, type_b]
+types = [type_a, type_b, type_c_final]
 type_ids = [x.type_id for x in types]
 
 potential_matrix = [
@@ -67,7 +69,8 @@ warmup_potential_matrix.extend([
      tools.lb_epsilon(type_c.epsilon, types[i].epsilon))
     for i in range(len(types))])
 warmup_potential_matrix.append([type_c.type_id, type_c.type_id, type_c.sigma, type_c.epsilon])
-warmup_potential_matrix.append([type_c_tmp.type_id, type_c_tmp.type_id, type_c_tmp.sigma, type_c_tmp.epsilon])
+warmup_potential_matrix.append([type_c_tmp.type_id, type_c_tmp.type_id,
+                                type_c_tmp.sigma, type_c_tmp.epsilon])
 
 for t1, t2, sig, eps in potential_matrix:
     print('{}-{} sig={} eps={}'.format(t1, t2, sig, eps))
