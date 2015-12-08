@@ -23,6 +23,7 @@ def get_r(mass):
 type_a = AtomType(1, 1.0*mass, 1.0*sigma, epsilon)
 type_b = AtomType(2, 0.8*mass, pow(124/125.0, 1.0/3.0)*sigma, epsilon)
 type_c = AtomType(3, 0.2*mass, 0.2*sigma, epsilon)
+type_c_new = AtomType(5, type_c.mass, type_c.sigma, type_c.epsilon)
 type_c_tmp = AtomType(4, type_c.mass, type_c.sigma, type_c.epsilon)
 
 skin = 0.3*sigma
@@ -38,7 +39,7 @@ R0 = 0.5*sigma
 
 # Size of system.
 rho = 0.74
-N_a = 100
+N_a = 500
 active_sites = 1
 L = pow(3*N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
@@ -49,7 +50,7 @@ force_cap = 1000.0
 R_ac = tools.lb_sigma(type_a.sigma, type_c.sigma)*rc_lj+0.01*sigma
 print('R_ac={}'.format(R_ac))
 
-types = [type_a, type_b]
+types = [type_a, type_b, type_c_new]
 type_ids = [x.type_id for x in types]
 
 potential_matrix = [

@@ -183,15 +183,22 @@ namespace espressopp {
       // Substract the timeForceComp.
       for (int i =0; i < timeForceComp.size(); i++)
         timeLost -= timeForceComp[i];
-      timeRun = timeIntegrate.getElapsedTime();
-      timeLost = timeRun - (timeForceComp[0] + timeForceComp[1] + timeForceComp[2] +
-                 timeComm1 + timeComm2 + timeInt1 + timeInt2 + timeResort);
 
       LOG4ESPP_INFO(theLogger, "finished run");
     }
 
     void VelocityVerlet::resetTimers() {
       timeForce  = 0.0;
+      // Prepare the force comp timers if the size is not valid.
+      System& system = getSystemRef();
+      const InteractionList& srIL = system.shortRangeInteractions;
+      if (timeForceComp.size() < srIL.size()) {
+        LOG4ESPP_DEBUG(theLogger, "Prepare timeForceComp");
+        timeForceComp.clear();
+        for (size_t i = 0; i < srIL.size(); i++) {
+          timeForceComp.push_back(0.0);
+        }
+      }
 
       timeComm1  = 0.0;
       timeComm2  = 0.0;

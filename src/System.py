@@ -106,17 +106,19 @@ class SystemLocal(_espressopp.System):
                 pass
         else :
             cxxinit(self, _espressopp.System, pmi._MPIcomm)
+
         self._integrator = None
 
     @property
     def integrator(self):
         return self._integrator
+
     @integrator.setter
-    def integrator(self, value):
-        self._integrator = value
+    def integrator(self, _integrator):
+        self._integrator = _integrator
 
     def addInteraction(self, interaction):
-        'add a short range list interaction'
+
         if pmi.workerIsActive():
             return self.cxxclass.addInteraction(self, interaction)
 

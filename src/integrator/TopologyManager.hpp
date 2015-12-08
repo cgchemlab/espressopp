@@ -97,7 +97,7 @@ class TopologyManager: public Extension {
 
   /// Defines map that stores res_id -> particle_id
   typedef std::set<longint> PSet;
-  typedef std::map<longint, PSet *> ResParticleIds;
+  typedef std::map<longint, shared_ptr<PSet> > ResParticleIds;
 
  private:
   typedef std::pair<longint, std::pair<longint, longint> > Triplets;

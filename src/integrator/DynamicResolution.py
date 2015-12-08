@@ -39,9 +39,16 @@ class BasicDynamicResolutionLocal(ExtensionLocal, integrator_BasicDynamicResolut
             for type_id, rate in type_rate.iteritems():
                 self.cxxclass.set_type_rate(self, type_id, rate)
 
-    def set_type_rate(type_id, rate):
+    def set_type_rate(self, type_id, rate):
         if pmi.workerIsActive():
             self.cxxclass.set_type_rate(self, type_id, rate)
+
+    def add_postprocess(self, pp, at_lambda=1):
+        if pmi.workerIsActive():
+            if at_lambda not in [0, 1]:
+                raise RuntimeError(
+                    'Wrong at_lambda parameter, got {} except 0 or 1'.format(at_lambda))
+            self.cxxclass.add_postprocess(self, pp, at_lambda)
 
 
 class DynamicResolutionLocal(ExtensionLocal, integrator_DynamicResolution):
@@ -57,7 +64,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = {
             'cls': 'espressopp.integrator.BasicDynamicResolutionLocal',
-            'pmicall': ['set_type_rate']
+            'pmicall': ['set_type_rate', 'add_postprocess']
         }
 
     class DynamicResolution(Extension):

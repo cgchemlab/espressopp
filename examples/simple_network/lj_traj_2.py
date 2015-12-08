@@ -8,7 +8,7 @@ try:
 except ImportError:
     from mpi4py import MPI
 
-# import numpy as np
+import numpy as np
 
 import logging
 import time
@@ -91,7 +91,8 @@ def main():  # NOQA
     fix_list = [(x[0], x[1], conf.R_ac) for x in bonds_a_c_tmp]
     fix_distance = espressopp.integrator.FixDistances(system, fix_list)
     pp = espressopp.integrator.PostProcessChangeProperty()
-    pp.add_change_property(conf.type_c_tmp.type_id,
+    pp.add_change_property(
+        conf.type_c_tmp.type_id,
         espressopp.ParticleProperties(conf.type_c.type_id, conf.type_c.mass, 0.0))
     fix_distance.add_postprocess(pp)
 
@@ -117,6 +118,13 @@ def main():  # NOQA
     fpl_a_a.addBonds([])
     system.addInteraction(interHarmonic)
 
+    # Angle
+    tpl_a_a = espressopp.FixedTripleList(system.storage)
+    potAngleHarmonic = espressopp.interaction.AngularHarmonic(K=5.0, theta0=np.deg2rad(120.0))
+    interPotAngleHarmonic = espressopp.interaction.FixedTripleListAngularHarmonic(
+        system, tpl_a_a, potAngleHarmonic)
+    system.addInteraction(interPotAngleHarmonic)
+
     dynamic_ex_list.observe(fpl_a_a)
 
     if not args.eq_conf:
@@ -141,9 +149,11 @@ def main():  # NOQA
     # LJ force capped for dummy water molecules
     interLJF = espressopp.interaction.VerletListLennardJonesForceCapped(verletList)
     pot_dummy = espressopp.interaction.LennardJonesForceCapped(
-        sigma=conf.type_c_tmp.sigma, epsilon=conf.type_c_tmp.epsilon, cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
+        sigma=conf.type_c_tmp.sigma, epsilon=conf.type_c_tmp.epsilon,
+        cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
     pot_dummy.max_force = conf.force_cap
-    interLJF.setPotential(type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id, potential=pot_dummy)
+    interLJF.setPotential(type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id,
+                          potential=pot_dummy)
     system.addInteraction(interLJF)
 
     # DynamicResolution of Lennard-Jones potential
@@ -228,10 +238,18 @@ def main():  # NOQA
     basic_dynamic_res = espressopp.integrator.BasicDynamicResolution(
         system, {conf.type_c.type_id: args.alpha})
     integrator.addExtension(basic_dynamic_res)
+    d_1_pp = espressopp.integrator.PostProcessChangeProperty()
+    d_1_pp.add_change_property(
+        conf.type_c.type_id,
+        espressopp.ParticleProperties(
+            conf.type_c_new.type_id, conf.type_c_new.mass, 0.0))
+    basic_dynamic_res.add_postprocess(d_1_pp, 1)
 
     topology_manager = espressopp.integrator.TopologyManager(system)
     topology_manager.rebuild()
-    topology_manager.observe(fpl_a_a)
+    topology_manager.observe_tuple(fpl_a_a)
+    topology_manager.initialize_topology()
+    topology_manager.register_triplet(tpl_a_a, conf.type_a.type_id)
     integrator.addExtension(topology_manager)
 
     output_file = '{}_{}_{}_{}.h5'.format(args.prefix, args.rate, args.alpha, args.seed)
@@ -272,6 +290,7 @@ def main():  # NOQA
     T_comp.add_type(conf.type_c.type_id)
     # logging.getLogger().setLevel(logging.DEBUG)
     # logging.getLogger("ChemicalReaction").setLevel(logging.DEBUG)
+    # logging.getLogger('TopologyManager').setLevel(logging.DEBUG)
     traj_file.analyse()
     traj_file.dump()
     topo_file.dump()

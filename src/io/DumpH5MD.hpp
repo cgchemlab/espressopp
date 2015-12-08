@@ -1,6 +1,9 @@
 /*
-  Copyright (C) 2015
+  Copyright (c) 2015
       Pierre de Buyl
+
+  Copyright (c) 2015
+      Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
 
@@ -19,8 +22,8 @@
 */
 
 // ESPP_CLASS
-#ifndef _ANALYSIS_PYSTORE_HPP
-#define _ANALYSIS_PYSTORE_HPP
+#ifndef _IO_DUMPH5MD_HPP
+#define _IO_DUMPH5MD_HPP
 
 #include "types.hpp"
 #include "SystemAccess.hpp"
@@ -29,16 +32,16 @@
 #include <object.h>
 
 namespace espressopp {
-  namespace analysis {
+  namespace io {
 
     template <class T> void init_pb(Py_buffer *pb, int ndim, int *shape);
     void free_pb(Py_buffer *pb);
 
     /** Store particle data in Python buffers */
-    class PyStore : public SystemAccess {
+    class DumpH5MD : public SystemAccess {
     public:
-      PyStore(shared_ptr<System> system, bool is_adress);
-      ~PyStore();
+      DumpH5MD(shared_ptr<System> system, bool is_adress);
+      ~DumpH5MD();
 
       int get_NLocal() { return NLocal; }
       void set_store_position(bool _s) { store_position=_s; }
@@ -71,7 +74,6 @@ namespace espressopp {
       PyObject* getMass();
       PyObject* getCharge();
       PyObject* getLambda();
-      PyObject* getResID();
 
       static void registerPython();
     private:
@@ -90,7 +92,6 @@ namespace espressopp {
       Py_buffer state;
       Py_buffer charge;
       Py_buffer lambda;
-      Py_buffer res_id;
     };
   }
 }

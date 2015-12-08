@@ -11,9 +11,7 @@ file(GLOB_RECURSE NOT_ESPRESSO_SOURCES
   integrator/unittest/*.cpp
 )
 
-file(GLOB H5MD_SOURCES io/DumpH5MD.cpp io/ch5md.cpp)
-
-list(REMOVE_ITEM ESPRESSO_SOURCES ${NOT_ESPRESSO_SOURCES} ${H5MD_SOURCES})
+list(REMOVE_ITEM ESPRESSO_SOURCES ${NOT_ESPRESSO_SOURCES})
 
 add_custom_target(gitversion COMMAND ${CMAKE_COMMAND} -DTOP_SOURCE_DIR="${CMAKE_SOURCE_DIR}" -P ${CMAKE_MODULE_PATH}/gitversion.cmake)
 
@@ -50,16 +48,7 @@ else(EXTERNAL_BOOST)
   set (BOOST espresso_boost)
 endif(EXTERNAL_BOOST)
 
-if(WITH_H5MD)
-  find_package(HDF5 REQUIRED COMPONENTS "C")
-  add_definitions(-DWITH_H5MD)
-  include_directories (${HDF5_INCLUDE_DIRS})
-else(WITH_H5MD)
-  set(H5MD_SOURCES)
-  set(HDF5_LIBRARIES)
-endif(WITH_H5MD)
-
-add_library(_espressopp ${ESPRESSO_SOURCES} ${H5MD_SOURCES})
+add_library(_espressopp ${ESPRESSO_SOURCES})
 target_link_libraries(_espressopp ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MPI_LIBRARIES} ${FFTW3_LIBRARIES} ${VAMPIRTRACE_LIBRARIES} ${HDF5_LIBRARIES})
 #python libs have not prefix (default would be 'lib')
 set_target_properties(_espressopp PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_DIRECTORY ..)
