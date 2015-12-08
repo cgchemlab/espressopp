@@ -23,15 +23,12 @@
 #define _IO_DUMPPAIRS_HPP
 
 #include "mpi.hpp"
-#include <boost/serialization/map.hpp>
-#include "types.hpp"
 #include "System.hpp"
-#include "io/FileBackup.hpp"
 #include "ParticleAccess.hpp"
 #include "integrator/MDIntegrator.hpp"
 #include "storage/Storage.hpp"
-#include "iterator/CellListIterator.hpp"
 #include "FixedPairList.hpp"
+#include <vector>
 
 #include "esutil/Error.hpp"
 
@@ -39,22 +36,28 @@
 
 namespace espressopp {
 namespace io {
-class DumpPairs: public ParticleAccess {
+class DumpTopology: public ParticleAccess {
  public:
-  DumpPairs(shared_ptr <System> system) : ParticleAccess(system) { }
-  ~DumpPairs() {  }
+  DumpTopology(shared_ptr<System> system, shared_ptr<integrator::MDIntegrator> integrator)
+      : ParticleAccess(system), integrator_(integrator) { }
+  ~DumpTopology() {  }
 
-  void perform_action() { dump(); }
+  void perform_action() { Dump(); }
 
-  void observeTuple(shared_ptr<FixedPairList>, std::string tuple_name,
-                    std::string particle_group = "atoms");
-  void dump();
+  void ObserveTuple(shared_ptr<FixedPairList> fpl);
+  void Dump();
 
-  void update();
+  python::list GetData();
 
   static void registerPython();
  private:
+  void ClearBuffer();
+
+  shared_ptr<integrator::MDIntegrator> integrator_;
   std::vector<shared_ptr<FixedPairList> > fpl_;
+  // Buffer for fpl data.
+  typedef std::vector<std::vector<longint> > FplBuffer;
+  FplBuffer fpl_buffer_;
 };
 
 }  // end namespace io

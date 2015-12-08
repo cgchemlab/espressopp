@@ -1,18 +1,59 @@
+# Copyright (c) 2015
+#     Pierre de Buyl
+#
+# Copyright (c) 2015
+#     Jakub Krajniak (jkrajniak at gmail.com)
+#
+#  This file is part of ESPResSo++.
+#
+#  ESPResSo++ is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#  ESPResSo++ is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#  You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+
+"""
+**************************
+**DumpH5MD** - IO object
+**************************
+
+This module provides a writer for H5MD_ file format.
+
+.. function:: espressopp.io.DumpH5MD(system, filename, *args)
+
+    :param system: The system object.
+    :type system: espressopp.System
+    :param filename: The file name.
+    :type filename: str
+
+    :rtype: The DumpH5MD writer.
+
+.. _H5MD: http://nongnu.org/h5md/
+
+"""
 
 import espressopp
 from espressopp.esutil import cxxinit
 from espressopp import pmi
-from _espressopp import analysis_PyStore
-
+from _espressopp import io_DumpH5MD
 from mpi4py import MPI
 import numpy as np
 import pyh5md
 
 
-class PyStoreLocal(analysis_PyStore):
+class DumpH5MDLocal(io_DumpH5MD):
     def __init__(self, system, filename, group_name='all',
-                 store_position=True, store_species=True,
-                 store_state=False, store_velocity=False,
+                 store_position=True,
+                 store_species=True,
+                 store_state=False,
+                 store_velocity=False,
                  store_force=False,
                  store_charge=False,
                  store_lambda=False,
@@ -42,7 +83,7 @@ class PyStoreLocal(analysis_PyStore):
         """
         if not pmi.workerIsActive():
             return
-        cxxinit(self, analysis_PyStore, system, is_adress)
+        cxxinit(self, io_DumpH5MD, system, is_adress)
 
         self.group_name = group_name
         self.store_position = store_position
@@ -88,8 +129,6 @@ class PyStoreLocal(analysis_PyStore):
                 'position', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
             self.image = part.trajectory(
                 'image', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
-            self.res_id = part.trajectory(
-                'res_id', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_species:
             self.species = part.trajectory(
                 'species', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
@@ -109,9 +148,6 @@ class PyStoreLocal(analysis_PyStore):
             self.lambda_adr = part.trajectory(
                 'lambda_adr', (self.chunk_size,), np.float64,
                 chunks=(1, self.chunk_size), fillvalue=-1)
-
-        self.connectivity_map = []
-        self.connectivity_g = self.file.f.create_group('connectivity')
 
     def _system_data(self):
         """Stores specific information about simulation."""
@@ -135,9 +171,6 @@ class PyStoreLocal(analysis_PyStore):
 
     def getImage(self):
         return self.cxxclass.getImage(self)
-
-    def getResID(self):
-        return self.cxxclass.getResID(self)
 
     def getVelocity(self):
         return self.cxxclass.getVelocity(self)
@@ -197,12 +230,6 @@ class PyStoreLocal(analysis_PyStore):
                 self.image.value.resize(total_size, axis=1)
             self.image.append(image, step, time, region=(idx_0, idx_1))
 
-            # Store res_id.
-            res_id = np.asarray(self.getResID())
-            if total_size > self.res_id.value.shape[1]:
-                self.res_id.value.resize(total_size, axis=1)
-            self.res_id.append(res_id, step, time, region=(idx_0, idx_1))
-
         # Store velocity.
         if self.store_velocity:
             vel = np.asarray(self.getVelocity())
@@ -249,29 +276,6 @@ class PyStoreLocal(analysis_PyStore):
                 self.lambda_adr.value.resize(total_size, axis=1)
             self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1))
 
-    def add_connectivity(self, fixed_list, name, fixed_list_rank=2):
-        if pmi.workerIsActive():
-            g_fixed_list = pyh5md.base.TimeData(
-                self.connectivity_g, name, shape=(0, fixed_list_rank),
-                dtype=np.int)
-            self.connectivity_map.append((name, fixed_list, g_fixed_list))
-
-    def dump_connectivity(self):
-        if pmi.workerIsActive():
-            # store connectivity.
-            for name, fl, g_ in self.connectivity_map:
-                NLocal = np.array(fl.size(), 'i')
-                NMaxLocal = np.array(0, 'i')
-                MPI.COMM_WORLD.Allreduce(NLocal, NMaxLocal, op=MPI.MAX)
-                cpu_size = ((NMaxLocal//self.chunk_size)+1)*self.chunk_size
-                total_size = MPI.COMM_WORLD.size*cpu_size
-                idx_0 = MPI.COMM_WORLD.rank*cpu_size
-                idx_1 = idx_0+NLocal
-                items = fl.getBonds()
-                if total_size > g_.value.shape[1]:
-                    g_.value.resize(total_size, axis=1)
-                g_.append(items, step, time, region=(idx_0, idx_1))
-
     def close_file(self):
         self.file.close()
 
@@ -282,14 +286,13 @@ class PyStoreLocal(analysis_PyStore):
         self.file.flush()
 
 if pmi.isController:
-    class PyStore(object):
+    class DumpH5MD(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.analysis.PyStoreLocal',
+            cls='espressopp.io.DumpH5MDLocal',
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge',
-                     'close_file', 'dump', 'clear_buffers', 'flush', 'close',
-                     'add_connectivity', 'dump_connectivity'],
+                     'close_file', 'dump', 'clear_buffers', 'flush', 'close'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
                          'store_charge']
         )

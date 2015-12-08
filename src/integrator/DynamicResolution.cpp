@@ -283,7 +283,8 @@ void BasicDynamicResolutionType::registerPython() {
       ("integrator_BasicDynamicResolutionType", init<shared_ptr<System> >())
        .def("set_type_rate", &BasicDynamicResolutionType::SetTypeRate)
        .def("connect", &BasicDynamicResolutionType::connect)
-       .def("disconnect", &BasicDynamicResolutionType::disconnect);
+       .def("disconnect", &BasicDynamicResolutionType::disconnect)
+       .def("add_postprocess", &BasicDynamicResolutionType::AddPostProcess);
 }
 
 void BasicDynamicResolutionType::UpdateWeights() {
@@ -292,11 +293,29 @@ void BasicDynamicResolutionType::UpdateWeights() {
     Particle &vp = *cit;
 
     real new_lambda = vp.lambda() + rate_type_[vp.type()];
-    if (new_lambda < 0.0) new_lambda = 0.0;
-    else if (new_lambda > 1.0) new_lambda = 1.0;
+    bool lambda_0(false);
+    bool lambda_1(false);
+    if (new_lambda < 0.0) {
+      new_lambda = 0.0;
+      lambda_0 = true;
+    } else if (new_lambda > 1.0) {
+      new_lambda = 1.0;
+      lambda_1 = true;
+    }
 
     vp.lambda() = new_lambda;
     vp.lambdaDeriv() = 0.0;
+    if (lambda_0) {
+      for (std::vector<shared_ptr<integrator::PostProcess> >::iterator it = post_process_0.begin();
+           it != post_process_0.end(); ++it) {
+        (*it)->process(vp);
+      }
+    } else if (lambda_1) {
+      for (std::vector<shared_ptr<integrator::PostProcess> >::iterator it = post_process_1.begin();
+           it != post_process_1.end(); ++it) {
+        (*it)->process(vp);
+      }
+    }
   }
 }
 }  // end namespace integrator

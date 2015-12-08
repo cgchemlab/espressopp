@@ -48,20 +48,24 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             self.cxxclass.rebuild(self)
 
-    def observe(self, fpl):
+    def observe_tuple(self, fpl):
         if pmi.workerIsActive():
             self.cxxclass.observe_tuple(self, fpl, 0, 0)
 
-    def observe_tuple(self, fpl, type1, type2):
+    def register_tuple(self, fpl, type1, type2):
         if pmi.workerIsActive():
             self.cxxclass.observe_tuple(self, fpl, type1, type2)
 
-    def observe_triple(self, ftl, type1, type2, type3):
+    def register_triplet(self, ftl, type1, type2=None, type3=None):
         if pmi.workerIsActive():
+            if type2 is None and type3 is None:
+                type2 = type3 = type1
             self.cxxclass.observe_triple(self, ftl, type1, type2, type3)
 
-    def observe_quadruple(self, fql, type1, type2, type3, type4):
+    def register_quadruplet(self, fql, type1, type2=None, type3=None, type4=None):
         if pmi.workerIsActive():
+            if None in [type2, type3, type4]:
+                type2 = type3 = type4 = type1
             self.cxxclass.observe_quadruple(self, fql, type1, type2, type3, type4)
 
     def initialize_topology(self):
@@ -73,7 +77,7 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.TopologyManagerLocal',
-            pmicall = ['rebuild', 'observe', 'observe_tuple', 'observe_triple',
-                       'observe_quadruple', 'initialize_topology'],
+            pmicall = ['rebuild', 'observe_tuple', 'register_tuple', 'register_triplet',
+                       'register_quadruplet', 'initialize_topology'],
             pmiinvoke = ['print_topology', 'get_neighbour_lists']
             )

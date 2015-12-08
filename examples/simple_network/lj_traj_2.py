@@ -169,12 +169,12 @@ def main():  # NOQA
     # LJ force capped for dummy water molecules
     interLJF = espressopp.interaction.VerletListLennardJonesForceCapped(verletList)
     pot_dummy = espressopp.interaction.LennardJonesForceCapped(
-        sigma=conf.type_c_tmp.sigma,
-        epsilon=conf.type_c_tmp.epsilon,
+        sigma=conf.type_c_tmp.sigma, epsilon=conf.type_c_tmp.epsilon,
+        cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
         cutoff=conf.type_c_tmp.sigma*conf.rc_lj)
     pot_dummy.max_force = conf.force_cap
-    interLJF.setPotential(
-        type1=conf.type_c_tmp.type_id,
+    interLJF.setPotential(type1=conf.type_c_tmp.type_id, type2=conf.type_c_tmp.type_id,
+                          potential=pot_dummy)
         type2=conf.type_c_tmp.type_id,
         potential=pot_dummy)
     system.addInteraction(interLJF)
@@ -261,12 +261,18 @@ def main():  # NOQA
     basic_dynamic_res = espressopp.integrator.BasicDynamicResolution(
         system, {conf.type_c.type_id: args.alpha})
     integrator.addExtension(basic_dynamic_res)
+    d_1_pp = espressopp.integrator.PostProcessChangeProperty()
+    d_1_pp.add_change_property(
+        conf.type_c.type_id,
+        espressopp.ParticleProperties(
+            conf.type_c_new.type_id, conf.type_c_new.mass, 0.0))
+    basic_dynamic_res.add_postprocess(d_1_pp, 1)
 
     topology_manager = espressopp.integrator.TopologyManager(system)
     topology_manager.rebuild()
-    topology_manager.observe(fpl_a_a)
-    topology_manager.observe_triple(
-        tpl_a_a, conf.type_a.type_id, conf.type_a.type_id, conf.type_a.type_id)
+    topology_manager.observe_tuple(fpl_a_a)
+    topology_manager.initialize_topology()
+    topology_manager.register_triplet(tpl_a_a, conf.type_a.type_id)
 
     integrator.addExtension(topology_manager)
 
@@ -308,6 +314,7 @@ def main():  # NOQA
     T_comp.add_type(conf.type_c.type_id)
     # logging.getLogger().setLevel(logging.DEBUG)
     # logging.getLogger("ChemicalReaction").setLevel(logging.DEBUG)
+    # logging.getLogger('TopologyManager').setLevel(logging.DEBUG)
     traj_file.analyse()
     traj_file.dump()
     topo_file.dump()

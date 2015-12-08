@@ -31,6 +31,7 @@
 #include "Extension.hpp"
 #include "VelocityVerlet.hpp"
 #include "Adress.hpp"
+#include "ChemicalReaction.hpp"
 
 #include "boost/signals2.hpp"
 
@@ -48,6 +49,18 @@ class BasicDynamicResolutionType : public Extension {
   ~BasicDynamicResolutionType();
 
   void SetTypeRate(longint type, real rate) { rate_type_[type] = rate; }
+  /**
+   * Define action after lambda reaches 1.0 or 0.0.
+   */
+  void AddPostProcess(const shared_ptr<integrator::PostProcess> pp, int when = 1) {
+    if (when == 1) {
+      post_process_1.push_back(pp);
+    } else if (when == 0) {
+      post_process_0.push_back(pp);
+    } else {
+      throw std::runtime_error("Wrong value of when.");
+    }
+  }
 
   static void registerPython();
  private:
@@ -56,6 +69,8 @@ class BasicDynamicResolutionType : public Extension {
   boost::unordered_map<longint, real> rate_type_;
   void UpdateWeights();
   boost::signals2::connection _aftIntV;
+  std::vector<shared_ptr<integrator::PostProcess> > post_process_0;
+  std::vector<shared_ptr<integrator::PostProcess> > post_process_1;
 };
 
 /**

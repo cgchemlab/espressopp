@@ -23,6 +23,7 @@
 #include "iterator/CellListIterator.hpp"
 #include "boost/serialization/map.hpp"
 #include "boost/serialization/set.hpp"
+#include "boost/serialization/shared_ptr.hpp"
 
 
 namespace espressopp {
@@ -299,10 +300,13 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
 
 void TopologyManager::exchangeData() {
   // Collect all message from other CPUs. Both for res_id and new graph edges.
-
   typedef std::vector<std::vector<std::pair<longint, longint> > > GlobaleMergeSets;
   GlobaleMergeSets global_merge_sets;
 
+  // Format: vector of pairs.
+  // 0: size of merge_sets, size of new_edges
+  // 1..size_of_merge_sets
+  // size_of_merge_sets+1...size_of_merge_sets+size_of_new_edges
   std::vector<std::pair<longint, longint> > output;
   output.push_back(std::make_pair(merge_sets_.size(), newEdges_.size()));
   output.insert(output.end(), merge_sets_.begin(), merge_sets_.end());
@@ -318,8 +322,10 @@ void TopologyManager::exchangeData() {
       longint new_edge_size = itm->second;
       itm++;
       for (int i = 0; i < merge_set_size; i++, itm++) {
+        LOG4ESPP_DEBUG(theLogger, "Merge sets " << itm->first << " with " << itm->second);
         mergeResIdSets(itm->first, itm->second);
       }
+      LOG4ESPP_DEBUG(theLogger, "Update new edges. " << new_edge_size);
       // Update new edges.
       for (int i = 0; i < new_edge_size; i++, itm++) {
         newEdge(itm->first, itm->second);
@@ -331,19 +337,26 @@ void TopologyManager::exchangeData() {
 }
 
 void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {
-  PSet *setB = res_particle_ids_[res_id_b];
+  if (res_id_a == res_id_b)
+    return;
+
+  if (res_particle_ids_[res_id_b]->begin() == res_particle_ids_[res_id_b]->end())
+    return;
+
+  shared_ptr<PSet> setA = res_particle_ids_[res_id_a];
+
+  shared_ptr<PSet> setB = res_particle_ids_[res_id_b];
+  assert (setB != NULL);
   // Merge two sets.
-  res_particle_ids_[res_id_a]->insert(res_particle_ids_[res_id_b]->begin(),
-                                      res_particle_ids_[res_id_b]->end());
-  // Update particle res_id;
   for (PSet::iterator it = setB->begin(); it != setB->end(); ++it) {
+    setA->insert(*it);
     Particle *p = system_->storage->lookupLocalParticle(*it);
     if (p) {
       p->setResId(res_id_a);
     }
   }
   res_particle_ids_[res_id_b] = res_particle_ids_[res_id_a];
-  delete setB;  // free memory
+  //delete setB;  // free memory as this set was copied to res_id_a.
 }
 
 void TopologyManager::Rebuild() {
@@ -356,8 +369,8 @@ void TopologyManager::Rebuild() {
   CellList cl = system_->storage->getRealCells();
   for (CellListIterator it(cl); it.isValid(); ++it) {
     Particle &p = *it;
-    if (res_particle_ids_[p.res_id()] == NULL)
-      res_particle_ids_[p.res_id()] = new PSet();
+    if (!res_particle_ids_[p.res_id()])
+      res_particle_ids_[p.res_id()] = make_shared<PSet>();
     res_particle_ids_[p.res_id()]->insert(p.id());
   }
   // Sync among CPUs.
@@ -368,8 +381,8 @@ void TopologyManager::Rebuild() {
        it != global_res_particle_ids.end(); ++it) {
     for (ResParticleIds::iterator itp = it->begin(); itp != it->end(); ++itp) {
       for (PSet::iterator itps = itp->second->begin(); itps != itp->second->end(); ++itps) {
-        if (res_particle_ids_[itp->first] == NULL)
-          res_particle_ids_[itp->first] = new PSet();
+        if (!res_particle_ids_[itp->first])
+          res_particle_ids_[itp->first] = make_shared<PSet>();
         res_particle_ids_[itp->first]->insert(*itps);
       }
     }

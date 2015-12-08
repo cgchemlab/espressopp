@@ -46,12 +46,12 @@ class TestTopologyManager(unittest.TestCase):
 
         topology_manager = espressopp.integrator.TopologyManager(system)
         self.topology_manager = topology_manager
-        topology_manager.observe(self.fpl1)
-        topology_manager.observe(self.fpl2)
-        topology_manager.observe(self.fpl3)
-        topology_manager.observe_triple(self.ftl, 0, 0, 0)
-        topology_manager.observe_quadruple(self.fql, 0, 0, 0, 0)
-        topology_manager.observe_quadruple(self.fql2, 0, 0, 0, 1)
+        topology_manager.observe_tuple(self.fpl1)
+        topology_manager.observe_tuple(self.fpl2)
+        topology_manager.observe_tuple(self.fpl3)
+        topology_manager.register_triplet(self.ftl, 0)
+        topology_manager.register_quadruplet(self.fql, 0)
+        topology_manager.register_quadruplet(self.fql2, 0, 0, 0, 1)
         topology_manager.rebuild()
         topology_manager.initialize_topology()
 

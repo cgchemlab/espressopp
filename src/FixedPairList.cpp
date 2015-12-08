@@ -152,6 +152,15 @@ namespace espressopp {
 	return bonds;
   }
 
+  std::vector<longint> FixedPairList::getPairList() {
+    std::vector<longint> ret;
+    for (GlobalPairs::const_iterator it = globalPairs.begin(); it != globalPairs.end(); it++) {
+      ret.push_back(it->first);
+      ret.push_back(it->second);
+    }
+    return ret;
+  }
+
   python::list FixedPairList::getAllBonds() {
     std::vector<longint> local_bonds;
     std::vector<std::vector<longint> > global_bonds;

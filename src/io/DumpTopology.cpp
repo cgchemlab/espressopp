@@ -19,52 +19,60 @@
 */
 
 #include "python.hpp"
-#include <fstream>
-#include <iomanip>
-#include "DumpPairs.hpp"
+#include "DumpTopology.hpp"
 #include "storage/Storage.hpp"
 
-#include "bc/BC.hpp"
-
-#include "analysis/ConfigurationExt.hpp"
-#include "analysis/ConfigurationsExt.hpp"
-
-using namespace espressopp;
-using namespace espressopp::analysis;
-using namespace std;
 
 namespace espressopp {
 namespace io {
 
-void DumpPairs::dump() {
-  shared_ptr <System> system = getSystem();
+void DumpTopology::ObserveTuple(shared_ptr<FixedPairList> fpl) {
+  fpl_.push_back(fpl);
+  fpl_buffer_.push_back(std::vector<longint>());
+}
 
+void DumpTopology::Dump() {
+  int fpl_index = 0;
+  int current_step = integrator_->getStep();
+  for (std::vector<shared_ptr<FixedPairList> >::iterator it = fpl_.begin();
+       it != fpl_.end(); ++it, fpl_index++) {
+    std::vector<longint> bonds = (*it)->getPairList();
+    fpl_buffer_[fpl_index].push_back(current_step);
+    fpl_buffer_[fpl_index].push_back(2*bonds.size());
+    fpl_buffer_[fpl_index].insert(fpl_buffer_[fpl_index].end(), bonds.begin(), bonds.end());
+  }
+}
+
+void DumpTopology::ClearBuffer() {
+  for (FplBuffer::iterator it = fpl_buffer_.begin(); it != fpl_buffer_.end(); ++it) {
+    it->clear();
+  }
+}
+
+python::list DumpTopology::GetData() {
+  python::list ret;
+  for (FplBuffer::iterator it = fpl_buffer_.begin(); it != fpl_buffer_.end(); ++it) {
+    python::list tpl;
+    for (std::vector<longint>::iterator itpl = it->begin(); itpl != it->end(); ++itpl) {
+      tpl.append(*itpl);
+    }
+    ret.append(tpl);
+  }
+  return ret;
 }
 
 // Python wrapping
-void DumpPairs::registerPython() {
+void DumpTopology::registerPython() {
 
   using namespace espressopp::python;
 
-  class_ < DumpPairs, bases < ParticleAccess >, boost::noncopyable >
-      ("io_DumpPairs", init < shared_ptr < System >,
-          shared_ptr < integrator::MDIntegrator >,
-          std::string,
-          bool,
-          real,
-          std::string,
-          bool > ())
-          .add_property("filename", &DumpPairs::getFilename,
-                        &DumpPairs::setFilename)
-          .add_property("unfolded", &DumpPairs::getUnfolded,
-                        &DumpPairs::setUnfolded)
-          .add_property("append", &DumpPairs::getAppend,
-                        &DumpPairs::setAppend)
-          .add_property("length_factor", &DumpPairs::getLengthFactor,
-                        &DumpPairs::setLengthFactor)
-          .add_property("length_unit", &DumpPairs::getLengthUnit,
-                        &DumpPairs::setLengthUnit)
-          .def("dump", &DumpPairs::dump);
+  class_<DumpTopology, bases<ParticleAccess>, boost::noncopyable>
+      ("io_DumpTopology", init<shared_ptr<System>, shared_ptr<integrator::MDIntegrator> >())
+      .def("dump", &DumpTopology::Dump)
+      .def("clear_buffer", &DumpTopology::ClearBuffer)
+      .def("get_data", &DumpTopology::GetData)
+      .def("observe_tuple", &DumpTopology::ObserveTuple);
 }
+
 }
 }
