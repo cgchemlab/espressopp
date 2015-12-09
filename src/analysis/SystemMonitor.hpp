@@ -89,12 +89,12 @@ class SystemMonitor : public ParticleAccess {
     if (system->comm->rank() == 0) {
       header_->push_back("step");
       header_->push_back("time");
-      header_->push_back("T");
-      header_->push_back("Ekin");
+      //header_->push_back("T");
+      //header_->push_back("Ekin");
       visible_observables_.push_back(1);
       visible_observables_.push_back(1);
-      visible_observables_.push_back(1);
-      visible_observables_.push_back(1);
+      //visible_observables_.push_back(1);
+      //visible_observables_.push_back(1);
     }
   }
 

@@ -283,6 +283,12 @@ def main():  # NOQA
     system_analysis = espressopp.analysis.SystemMonitor(
         system, integrator, espressopp.analysis.SystemMonitorOutputCSV(
             energy_file))
+    temp = espressopp.analysis.Temperature(system)
+    for t in conf.type_ids:
+        temp.add_type(t)
+    system_analysis.add_observable('T', temp)
+    system_analysis.add_observable(
+        'Ekin', espressopp.analysis.KineticEnergy(system, temp))
     system_analysis.add_observable(
         'lj', espressopp.analysis.PotentialEnergy(
             system, interLJ))
@@ -314,7 +320,6 @@ def main():  # NOQA
         store_state=True,
         store_lambda=True)
     # Save parameters of the simulation
-    print dir(traj_file)
     traj_file.parameters.attrs['temperature'] = conf.T
     traj_file.parameters.attrs['thermostat-gamma'] = conf.gamma
     traj_file.parameters.attrs['th'] = args.interval
@@ -327,26 +332,33 @@ def main():  # NOQA
     traj_file.parameters.attrs['loops'] = args.loops
     traj_file.parameters.attrs['active-sites'] = conf.active_sites
 
+# Observe tuple
+    dump_topol = espressopp.io.DumpTopology(system, integrator)
+    dump_topol.observe_tuple(fpl_a_a, 'fpl')
+    dump_topol.update()
+    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 10)
+    integrator.addExtension(ext_dump)
+
 # Reset the integrator step.
     integrator.step = 0
-    system_analysis.info()
 # Run system with non-capped potentials, no thermostat, fixed LJ epsilon
     print('Running serious simulation %s %s in T=%s' % (
         args.loops*args.steps, 'steps', conf.T))
     time0 = time.time()
     traj_file.dump(0, 0)
-
+    system_analysis.info()
     for k in range(args.loops):
         integrator.run(args.steps)
         system_analysis.info()
-        traj_file.analyse()
-        traj_file.dump(k*args.steps, k*args.steps*args.dt)
+        traj_file.dump(k*args.steps, k*args.steps*conf.dt)
         if k % 10 == 0:
             traj_file.flush()
+            dump_topol.update()
 
     espressopp.tools.analyse.final_info(system, integrator, verletList, time0, time.time())
     a_a_bonds = fpl_a_a.getBonds()
     print('Created %d bonds' % len(a_a_bonds[0]))
+    traj_file.close()
 
 
 if __name__ == '__main__':

@@ -35,7 +35,7 @@ void SystemMonitor::perform_action() {
     values_->push_back(current_step_);
     values_->push_back(current_step_ * integrator_->getTimeStep());
 
-    computeKineticEnergy();
+    //computeKineticEnergy();
     computeObservables();
 
     write();
@@ -49,7 +49,7 @@ void SystemMonitor::computeObservables() {
 }
 
 void SystemMonitor::computeKineticEnergy() {
-  real T = temp_->computeRaw();
+  real T = temp_->compute_real();
   real ekin = (3.0/2.0) * npart_->compute_real() * T;
   values_->push_back(T);
   values_->push_back(ekin);

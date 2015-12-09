@@ -52,12 +52,13 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
 
     def observe_tuple(self, fpl, name, particle_group='atoms'):
         if pmi.workerIsActive():
-            selx.cxxclass.observe_tuple(self, fpl)
+            self.cxxclass.observe_tuple(self, fpl)
             self.tuple_data[particle_group][name] = fpl
             self.tuple_index += 1
 
     def update(self):
-        pass
+        if pmi.workerIsActive():
+            print self.cxxclass.get_data(self)
   
   
 if pmi.isController :
@@ -65,7 +66,7 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.io.DumpTopologyLocal',
-            pmicall = ['dump', 'clear_buffer', 'observe_tuple'],
+            pmicall = ['dump', 'clear_buffer', 'observe_tuple', 'update'],
             pmiproperty = [],
             pmiinvoke = ['get_data']
         )
