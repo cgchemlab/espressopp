@@ -333,7 +333,8 @@ def main():  # NOQA
     traj_file.parameters.attrs['active-sites'] = conf.active_sites
 
 # Observe tuple
-    dump_topol = espressopp.io.DumpTopology(system, integrator)
+    haha = traj_file.get_file()
+    dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
     dump_topol.observe_tuple(fpl_a_a, 'fpl')
     dump_topol.update()
     ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 10)
@@ -353,7 +354,7 @@ def main():  # NOQA
         traj_file.dump(k*args.steps, k*args.steps*conf.dt)
         if k % 10 == 0:
             traj_file.flush()
-            dump_topol.update()
+        dump_topol.update()
 
     espressopp.tools.analyse.final_info(system, integrator, verletList, time0, time.time())
     a_a_bonds = fpl_a_a.getBonds()

@@ -303,6 +303,6 @@ if pmi.isController:
             cls='espressopp.io.DumpH5MDLocal',
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge',
-                     'close_file', 'dump', 'clear_buffers', 'flush', 'close'],
+                     'close_file', 'dump', 'clear_buffers', 'flush', 'close', 'get_file'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
                          'store_charge', 'parameters'])

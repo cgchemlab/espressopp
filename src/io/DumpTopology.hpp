@@ -29,6 +29,7 @@
 #include "storage/Storage.hpp"
 #include "FixedPairList.hpp"
 #include <vector>
+#include <deque>
 
 #include "esutil/Error.hpp"
 
@@ -39,13 +40,12 @@ namespace io {
 class DumpTopology: public ParticleAccess {
  public:
   DumpTopology(shared_ptr<System> system, shared_ptr<integrator::MDIntegrator> integrator)
-      : ParticleAccess(system), integrator_(integrator) { }
+      : ParticleAccess(system), integrator_(integrator), fpl_idx_(0) { }
   ~DumpTopology() {  }
 
   void perform_action() { Dump(); }
 
   void ObserveTuple(shared_ptr<FixedPairList> fpl);
-  void Dump();
 
   python::list GetData();
 
@@ -54,10 +54,13 @@ class DumpTopology: public ParticleAccess {
   void ClearBuffer();
 
   shared_ptr<integrator::MDIntegrator> integrator_;
-  std::vector<shared_ptr<FixedPairList> > fpl_;
-  // Buffer for fpl data.
-  typedef std::vector<std::vector<longint> > FplBuffer;
+  typedef std::deque<longint> FplBuffer;
   FplBuffer fpl_buffer_;
+  std::vector<shared_ptr<FixedPairList> > fpls_;
+  longint fpl_idx_;
+
+  void Dump();
+
 };
 
 }  // end namespace io

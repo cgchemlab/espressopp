@@ -20,55 +20,49 @@
 
 #include "python.hpp"
 #include "DumpTopology.hpp"
-#include "storage/Storage.hpp"
 
 
 namespace espressopp {
 namespace io {
 
 void DumpTopology::ObserveTuple(shared_ptr<FixedPairList> fpl) {
-  fpl_.push_back(fpl);
-  fpl_buffer_.push_back(std::vector<longint>());
+  fpls_.push_back(fpl);
 }
 
 void DumpTopology::Dump() {
-  int fpl_index = 0;
-  int current_step = integrator_->getStep();
-  for (std::vector<shared_ptr<FixedPairList> >::iterator it = fpl_.begin();
-       it != fpl_.end(); ++it, fpl_index++) {
-    std::vector<longint> bonds = (*it)->getPairList();
-    fpl_buffer_[fpl_index].push_back(current_step);
-    fpl_buffer_[fpl_index].push_back(2*bonds.size());
-    fpl_buffer_[fpl_index].insert(fpl_buffer_[fpl_index].end(), bonds.begin(), bonds.end());
+  fpl_buffer_.push_front(integrator_->getStep());
+  int idx = 0;
+  for (std::vector<shared_ptr<FixedPairList> >::iterator it = fpls_.begin();
+       it != fpls_.end(); ++it) {
+    std::vector<longint> pairs = (*it)->getPairList();
+    fpl_buffer_.push_front(idx);
+    fpl_buffer_.push_front(pairs.size()/2);
+    for (std::vector<longint>::iterator itt = pairs.begin(); itt != pairs.end();) {
+      fpl_buffer_.push_front(*(itt++));
+      fpl_buffer_.push_front(*(itt++));
+    }
+    idx++;
   }
 }
 
 void DumpTopology::ClearBuffer() {
-  for (FplBuffer::iterator it = fpl_buffer_.begin(); it != fpl_buffer_.end(); ++it) {
-    it->clear();
-  }
+  fpl_buffer_.clear();
 }
 
 python::list DumpTopology::GetData() {
   python::list ret;
   for (FplBuffer::iterator it = fpl_buffer_.begin(); it != fpl_buffer_.end(); ++it) {
-    python::list tpl;
-    for (std::vector<longint>::iterator itpl = it->begin(); itpl != it->end(); ++itpl) {
-      tpl.append(*itpl);
-    }
-    ret.append(tpl);
+    ret.append(*it);
   }
   return ret;
 }
 
 // Python wrapping
 void DumpTopology::registerPython() {
-
   using namespace espressopp::python;
 
   class_<DumpTopology, bases<ParticleAccess>, boost::noncopyable>
       ("io_DumpTopology", init<shared_ptr<System>, shared_ptr<integrator::MDIntegrator> >())
-      .def("dump", &DumpTopology::Dump)
       .def("clear_buffer", &DumpTopology::ClearBuffer)
       .def("get_data", &DumpTopology::GetData)
       .def("observe_tuple", &DumpTopology::ObserveTuple);
