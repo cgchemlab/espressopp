@@ -30,6 +30,7 @@ void DumpTopology::ObserveTuple(shared_ptr<FixedPairList> fpl) {
 }
 
 void DumpTopology::Dump() {
+  // Format: <step1><pair_idx_0><size><pid1><pid2><pid3><pid4><pair_idx_1><size><pid...><step2>..
   fpl_buffer_.push_front(integrator_->getStep());
   int idx = 0;
   for (std::vector<shared_ptr<FixedPairList> >::iterator it = fpls_.begin();
