@@ -151,20 +151,24 @@ class DumpH5MDLocal(io_DumpH5MD):
 
         self._system_data()
 
-    @property
-    def parameters(self):
-        if 'parameters' not in self.file.f:
-            self.file.f.create_group('parameters')
-        return self.file.f['parameters']
-
     def _system_data(self):
         """Stores specific information about simulation."""
-        # Creates /system group
-        self.parameters.attrs['software-id'] = 'espressopp'
-        self.parameters.attrs['rng-seed'] = self.system.rng.get_seed()
-        self.parameters.attrs['skin'] = self.system.skin
+        # Creates /system group 
+        parameters = {
+            'software-id': 'espressopp',
+            'rng-seed': self.system.rng.get_seed(),
+            'skin': self.system.skin,
+        }
         if self.system.integrator is not None:
-            self.parameters.attrs['dt'] = self.system.integrator.dt
+            parameters['dt'] = self.system.integrator.dt
+        self.set_parameters(parameters)
+    
+    def set_parameters(self, paramters):
+        if 'parameters' not in self.file.f:
+            self.file.f.create_group('parameters')
+        g_params = self.file.f['parameters']
+        for k, v in paramters.iteritems():
+            g_params.attrs[k] = v 
 
     def get_file(self):
         return self.file.f
@@ -286,14 +290,13 @@ class DumpH5MDLocal(io_DumpH5MD):
                 self.lambda_adr.value.resize(total_size, axis=1)
             self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1))
 
-    def close_file(self):
-        self.file.close()
-
     def close(self):
-        self.file.close()
+        if pmi.workerIsActive():
+            self.file.f.close()
 
     def flush(self):
-        self.file.flush()
+        if pmi.workerIsActive():
+            self.file.flush()
 
 
 if pmi.isController:
@@ -303,6 +306,6 @@ if pmi.isController:
             cls='espressopp.io.DumpH5MDLocal',
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge',
-                     'close_file', 'dump', 'clear_buffers', 'flush', 'close', 'get_file'],
+                     'dump', 'clear_buffers', 'flush', 'get_file', 'close', 'set_parameters'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
-                         'store_charge', 'parameters'])
+                         'store_charge'])
