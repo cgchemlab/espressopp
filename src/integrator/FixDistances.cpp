@@ -128,8 +128,7 @@ void FixDistances::restore_positions() {
       if (dst_pos.isNaNInf()) {
         LOG4ESPP_ERROR(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
             << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos
-            << " dst.ghost=" << dst->ghost()
-            );
+            << " dst.ghost=" << dst->ghost());
         exit(1);
       }
       // Compute force that will cause to keep dst particle at particular distance from
@@ -289,8 +288,7 @@ void FixDistances::registerPython() {
     .def("disconnect", &FixDistances::disconnect)
     .def("add_triplet", &FixDistances::add_triplet)
     .def("add_postprocess", &FixDistances::add_postprocess)
-    .def("print_triplets", &FixDistances::printTriplets)
-    ;
+    .def("print_triplets", &FixDistances::printTriplets);
 }
 
 /** Post process after pairs were added.

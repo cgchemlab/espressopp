@@ -8,7 +8,6 @@
 from collections import namedtuple
 
 import tools
-import numpy as np
 
 AtomType = namedtuple('AtomType', ['type_id', 'mass', 'sigma', 'epsilon'])
 
@@ -16,9 +15,6 @@ epsilon = 1.0
 sigma = 1.0
 mass = 1.0
 
-
-def get_r(mass):
-    return pow((3.0/4.0) * (mass/np.pi), 1.0/3.0)
 
 type_a = AtomType(1, 1.0*mass, 1.0*sigma, epsilon)
 type_b = AtomType(2, 0.8*mass, pow(124/125.0, 1.0/3.0)*sigma, epsilon)
@@ -45,6 +41,8 @@ angle = 120.0
 # Size of system.
 rho = 0.74
 N_a = 500
+# Number of coopartners.
+N_c = 3
 active_sites = 1
 L = pow(3*N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
@@ -75,9 +73,3 @@ warmup_potential_matrix.extend([
 warmup_potential_matrix.append([type_c.type_id, type_c.type_id, type_c.sigma, type_c.epsilon])
 warmup_potential_matrix.append([type_c_tmp.type_id, type_c_tmp.type_id,
                                 type_c_tmp.sigma, type_c_tmp.epsilon])
-
-for t1, t2, sig, eps in potential_matrix:
-    print('{}-{} sig={} eps={}'.format(t1, t2, sig, eps))
-
-for t1, t2, sig, eps in warmup_potential_matrix:
-    print('{}-{} sig={} eps={}'.format(t1, t2, sig, eps))

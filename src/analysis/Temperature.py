@@ -33,10 +33,10 @@ r"""
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 
-from espressopp.analysis.AnalysisBase import *
+from espressopp.analysis.Observable import *
 from _espressopp import analysis_Temperature
 
-class TemperatureLocal(AnalysisBaseLocal, analysis_Temperature):
+class TemperatureLocal(ObservableLocal, analysis_Temperature):
 
     def __init__(self, system):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -54,7 +54,7 @@ class TemperatureLocal(AnalysisBaseLocal, analysis_Temperature):
 
 
 if pmi.isController :
-    class Temperature(AnalysisBase):
+    class Temperature(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.analysis.TemperatureLocal',

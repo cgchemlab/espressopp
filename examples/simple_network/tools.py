@@ -74,7 +74,7 @@ def prepare_system(conf, system, active_sites=1):
         pids.append(i)
         last_pid += 1
         # Create three co-partner C
-        for j in range(3):
+        for j in range(conf.N_c):
             pid_c = last_pid
             pos_c = espressopp.Real3D(pos)
             pos_c[j] += conf.R_ac

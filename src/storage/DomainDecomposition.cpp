@@ -507,6 +507,8 @@ namespace espressopp {
                               ss << "Particle " << part.id() << " has moved to outer "
                                  << "space (one or more coordinates are nan)";
                               ss << " pos: " << pos;
+                              ss << " ghost: " << part.ghost() << " type: " << part.type();
+                              ss << " f: " << part.force();
                               LOG4ESPP_ERROR(logger, ss.str());
                               throw std::runtime_error(ss.str());
                             } else {
