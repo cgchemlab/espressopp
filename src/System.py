@@ -108,6 +108,8 @@ class SystemLocal(_espressopp.System):
             cxxinit(self, _espressopp.System, pmi._MPIcomm)
 
         self._integrator = None
+        self._interaction2id = {}
+        self._interaction_pid = 0
 
     @property
     def integrator(self):
@@ -117,15 +119,33 @@ class SystemLocal(_espressopp.System):
     def integrator(self, _integrator):
         self._integrator = _integrator
 
-    def addInteraction(self, interaction):
+    def addInteraction(self, interaction, name=None):
 
         if pmi.workerIsActive():
-            return self.cxxclass.addInteraction(self, interaction)
+            ret_val = self.cxxclass.addInteraction(self, interaction)
+            if name is not None:
+                if name in self._interaction2id:
+                    raise RuntimeException('Interaction with name {} already defined.'.format(name))
+                self._interaction2id[name] = self._interaction_pid
+            self._interaction_pid += 1
+            return ret_val
 
     def removeInteraction(self, number):
 
         if pmi.workerIsActive():
             self.cxxclass.removeInteraction(self, number)
+
+    def removeInteractionByName(self, name):
+        if pmi.workerIsActive():
+            if name not in self._interaction2id:
+                raise RuntimeException('Interaction {} not found'.format(name))
+            interaction_id = self._interaction2id[name]
+            self.cxxclass.removeInteraction(self, interaction_id)
+            self._interaction2id = {
+                k: v if v < interaction_id else v - 1
+                for k, v in self._interaction2id.iteritems()
+                }
+            self._interaction_pid = max(self._interaction2id.values()) + 1
 
     def getNumberOfInteractions(self):
 
@@ -181,7 +201,7 @@ if pmi.isController:
     pmiproxydefs = dict(
       cls = 'espressopp.SystemLocal',
       pmiproperty = ['storage', 'bc', 'rng', 'skin', 'maxCutoff', 'integrator'],
-      pmicall = ['addInteraction','removeInteraction','getInteraction',
-            'getNumberOfInteractions','scaleVolume', 'setTrace']
+      pmicall = ['addInteraction','removeInteraction', 'removeInteractionByName',
+            'getInteraction', 'getNumberOfInteractions','scaleVolume', 'setTrace']
     )
 
