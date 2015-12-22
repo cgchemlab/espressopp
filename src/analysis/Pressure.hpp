@@ -35,6 +35,7 @@ namespace espressopp {
       Pressure(shared_ptr< System > system) : Observable(system) {}
       ~Pressure() {}
       virtual real compute() const;
+      real compute_real() const;
 
       static void registerPython();
     };
