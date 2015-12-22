@@ -25,6 +25,7 @@
 #include "PotentialUniqueDist.hpp"
 #include "Zero.hpp"
 #include "LennardJones.hpp"
+#include "LennardJonesUnique.hpp"
 #include "LennardJonesAutoBonds.hpp"
 #include "LennardJonesCapped.hpp"
 #include "LennardJonesEnergyCapped.hpp"
@@ -103,6 +104,7 @@ namespace espressopp {
       LennardJonesGromacs::registerPython();
       LennardJonesGeneric::registerPython();
       LennardJonesLambda::registerPython();
+      LennardJonesUnique::registerPython();
       Morse::registerPython();
       CoulombTruncatedUniqueCharge::registerPython();
       CoulombTruncated::registerPython();

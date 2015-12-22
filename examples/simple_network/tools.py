@@ -99,10 +99,10 @@ def prepare_system(conf, system, active_sites=1):
 
 def warmup(system, integrator, verletList, args, conf):
     # Equilibration.
-    print('Equilibration...')
+    print('Warmup...')
     integrator.step = 0
     interEqLJ = espressopp.interaction.VerletListLennardJones(verletList)
-    system.addInteraction(interEqLJ)
+    system.addInteraction(interEqLJ, 'lj-eq')
     eps_delta = 0.0001
     eq_delta = [
         (sigma - eps_delta)/args.warmup_loops
@@ -130,4 +130,4 @@ def warmup(system, integrator, verletList, args, conf):
                 potential=pot)
 
     print('Finished warming up')
-    system.removeInteraction(1)
+    system.removeInteractionByName('lj-eq')

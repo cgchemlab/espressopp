@@ -39,12 +39,12 @@ kAng = 25.0
 angle = 120.0
 
 # Size of system.
-rho = 0.74
-N_a = 500
+rho = 0.8
+N_a = 1000
 # Number of coopartners.
 N_c = 3
 active_sites = 1
-L = pow(3*N_a*type_a.mass/rho, 1.0/3.0)
+L = pow(N_a*type_a.mass/rho, 1.0/3.0)
 box = (L, L, L)
 
 force_cap = 1000.0
