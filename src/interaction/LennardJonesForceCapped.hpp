@@ -52,7 +52,6 @@ class LennardJonesForceCapped : public PotentialTemplate< LennardJonesForceCappe
     setShift(0.0);
     setCutoff(infinity);
     preset();
-    initialized = false;
   }
 
   LennardJonesForceCapped(real _epsilon, real _sigma,
@@ -62,6 +61,7 @@ class LennardJonesForceCapped : public PotentialTemplate< LennardJonesForceCappe
     setShift(_shift);
     setCutoff(_cutoff);
     preset();
+    initialized = true;
   }
 
   LennardJonesForceCapped(real _epsilon, real _sigma,
@@ -71,6 +71,7 @@ class LennardJonesForceCapped : public PotentialTemplate< LennardJonesForceCappe
     setCutoff(_cutoff);
     preset();
     setAutoShift();
+    initialized = true;
   }
 
   void preset() {
