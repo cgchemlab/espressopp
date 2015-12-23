@@ -146,6 +146,10 @@ class SystemLocal(_espressopp.System):
                 for k, v in self._interaction2id.iteritems()
                 }
             self._interaction_pid = max(self._interaction2id.values()) + 1
+    
+    def getAllInteractions(self):
+        if pmi.workerIsActive():
+            return {k: self.getInteraction(v) for k, v in self._interaction2id.items()}
 
     def getNumberOfInteractions(self):
 
@@ -202,6 +206,7 @@ if pmi.isController:
       cls = 'espressopp.SystemLocal',
       pmiproperty = ['storage', 'bc', 'rng', 'skin', 'maxCutoff', 'integrator'],
       pmicall = ['addInteraction','removeInteraction', 'removeInteractionByName',
-            'getInteraction', 'getNumberOfInteractions','scaleVolume', 'setTrace']
+            'getInteraction', 'getNumberOfInteractions','scaleVolume', 'setTrace',
+            'getAllInteractions']
     )
 
