@@ -332,6 +332,8 @@ void ChemicalReaction::React() {
   SendMultiMap(effective_pairs_);
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle*> modified_particles = ApplyAR();
+  // Synchronize among CPUs so all are ready to update ghosts.
+  getSystem()->comm->barrier();
   // Update the ghost particles.
   LOG4ESPP_INFO(theLogger, "Update ghost, some particles were modified.");
   UpdateGhost(modified_particles);
@@ -783,6 +785,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     }
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if (p1 != NULL && p2 != NULL && valid_state) {
+      LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
       fixed_pair_list_->add(it->first, it->second.first);
     }
   }
