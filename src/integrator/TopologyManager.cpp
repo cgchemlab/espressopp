@@ -173,6 +173,7 @@ void TopologyManager::newBond(longint pid1, longint pid2) {
 }
 
 void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
+  LOG4ESPP_DEBUG(theLogger, "entering update angles");
   longint t1, t2, t3;
   shared_ptr<FixedTripleList> ftl;
   for (std::set<Triplets>::iterator it = triplets.begin(); it != triplets.end(); ++it) {
@@ -196,6 +197,7 @@ void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
       }
     }
   }
+  LOG4ESPP_DEBUG(theLogger, "leaving update angles");
 }
 
 void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
@@ -299,6 +301,7 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
 }
 
 void TopologyManager::exchangeData() {
+  LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
   // Collect all message from other CPUs. Both for res_id and new graph edges.
   typedef std::vector<std::vector<std::pair<longint, longint> > > GlobaleMergeSets;
   GlobaleMergeSets global_merge_sets;
@@ -334,9 +337,11 @@ void TopologyManager::exchangeData() {
   }
   merge_sets_.clear();
   newEdges_.clear();
+  LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
 }
 
 void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {
+  LOG4ESPP_DEBUG(theLogger, "merge sets A:" << res_id_a << " with B:" << res_id_b);
   if (res_id_a == res_id_b)
     return;
 
@@ -356,10 +361,12 @@ void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {
     }
   }
   res_particle_ids_[res_id_b] = res_particle_ids_[res_id_a];
+  LOG4ESPP_DEBUG(theLogger, "leaving merge sets A:" << res_id_a << " with B:" << res_id_b);
   //delete setB;  // free memory as this set was copied to res_id_a.
 }
 
 void TopologyManager::Rebuild() {
+  LOG4ESPP_DEBUG(theLogger, "entering Rebuild");
   for (ResParticleIds::iterator it = res_particle_ids_.begin();
        it != res_particle_ids_.end(); ++it) {
     delete &(*it->second);
@@ -387,6 +394,7 @@ void TopologyManager::Rebuild() {
       }
     }
   }
+  LOG4ESPP_DEBUG(theLogger, "leaving Rebuild");
 }
 
 void TopologyManager::registerPython() {
