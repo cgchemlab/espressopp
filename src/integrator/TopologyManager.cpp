@@ -299,6 +299,7 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
 }
 
 void TopologyManager::exchangeData() {
+  LOG4ESPP_DEBUG(theLogger, "exchange data");
   // Collect all message from other CPUs. Both for res_id and new graph edges.
   typedef std::vector<std::vector<std::pair<longint, longint> > > GlobaleMergeSets;
   GlobaleMergeSets global_merge_sets;
