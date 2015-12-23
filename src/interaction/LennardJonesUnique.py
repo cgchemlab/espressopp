@@ -34,7 +34,7 @@ from espressopp.esutil import *
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_LennardJonesUnique, \
-                      interaction_VerletListLennardJonesUnique
+                        interaction_VerletListLennardJonesUnique
 
 class LennardJonesUniqueLocal(PotentialLocal, interaction_LennardJonesUnique):
 

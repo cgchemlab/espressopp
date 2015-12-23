@@ -24,13 +24,6 @@
 #include "LennardJonesUnique.hpp"
 #include "Tabulated.hpp"
 #include "VerletListInteractionTemplate.hpp"
-#include "VerletListNonReciprocalInteractionTemplate.hpp"
-#include "VerletListAdressInteractionTemplate.hpp"
-#include "VerletListHadressInteractionTemplate.hpp"
-#include "VerletListDynamicResolutionInteractionTemplate.hpp"
-#include "CellListAllPairsInteractionTemplate.hpp"
-#include "FixedPairListInteractionTemplate.hpp"
-#include "FixedPairListTypesInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -52,6 +45,13 @@ namespace espressopp {
     	.add_property("sigma", &LennardJonesUnique::getSigma, &LennardJonesUnique::setSigma)
     	.add_property("epsilon", &LennardJonesUnique::getEpsilon, &LennardJonesUnique::setEpsilon)
         .def_pickle(LennardJonesUnique_pickle())
+      ;
+      
+      class_< VerletListLennardJonesUnique, bases< Interaction > >
+        ("interaction_VerletListLennardJonesUnique", init< shared_ptr<VerletList> >())
+        .def("getVerletList", &VerletListLennardJonesUnique::getVerletList)
+        .def("setPotential", &VerletListLennardJonesUnique::setPotential)
+        .def("getPotential", &VerletListLennardJonesUnique::getPotentialPtr)
       ;
 
     }

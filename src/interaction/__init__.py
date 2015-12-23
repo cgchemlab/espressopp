@@ -31,6 +31,7 @@ from espressopp.interaction.PotentialUniqueDist import *
 
 from espressopp.interaction.Zero import *
 from espressopp.interaction.LennardJones import *
+from espressopp.interaction.LennardJonesUnique import *
 from espressopp.interaction.LennardJonesAutoBonds import *
 from espressopp.interaction.LennardJonesCapped import *
 from espressopp.interaction.LennardJonesEnergyCapped import *
