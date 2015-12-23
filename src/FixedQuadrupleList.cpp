@@ -79,6 +79,64 @@ namespace espressopp {
       return FixedListComm::add(tmp);
   }*/
 
+  bool FixedQuadrupleList::iadd(longint pid1, longint pid2, longint pid3, longint pid4) {
+    // here we assume pid1 < pid2 < pid3 < pid4
+    bool returnVal = true;
+    System& system = storage->getSystemRef();
+
+    // ADD THE LOCAL QUADRUPLET
+    Particle *p1 = storage->lookupRealParticle(pid1);
+    Particle *p2 = storage->lookupLocalParticle(pid2);
+    Particle *p3 = storage->lookupLocalParticle(pid3);
+    Particle *p4 = storage->lookupLocalParticle(pid4);
+    if (!p1){
+      // Particle does not exist here, return false
+      returnVal = false;
+    }
+    else{
+      std::stringstream msg;
+      if (!p2) {
+        msg << "quadruple particle p2 " << pid2 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+      if (!p3) {
+        msg << "quadruple particle p3 " << pid3 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+      if (!p4) {
+        msg << "quadruple particle p4 " << pid4 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+    }
+
+    if (returnVal) {
+
+      // ADD THE GLOBAL QUADRUPLET
+      // see whether the particle already has quadruples
+      bool found = false;
+      std::pair<GlobalQuadruples::const_iterator,
+                GlobalQuadruples::const_iterator> equalRange
+          = globalQuadruples.equal_range(pid1);
+      if (equalRange.first != globalQuadruples.end()) {
+        // otherwise test whether the quadruple already exists
+        for (GlobalQuadruples::const_iterator it = equalRange.first;
+             it != equalRange.second && !found; ++it)
+          if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4))
+            found = true;
+      }
+      returnVal = !found;
+      if (!found) {
+        // add the quadruple locally
+        this->add(p1, p2, p3, p4);
+        // if not, insert the new quadruple
+        globalQuadruples.insert(equalRange.first,
+                                std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
+        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
+      }
+    }
+    return returnVal;
+  }
+
 
   bool FixedQuadrupleList::
   add(longint pid1, longint pid2, longint pid3, longint pid4) {

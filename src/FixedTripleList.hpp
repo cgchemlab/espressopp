@@ -55,6 +55,8 @@ namespace espressopp {
 		\return whether the triple was inserted on this processor.
 		*/
 		virtual bool add(longint pid1, longint pid2, longint pid3);
+	    // Non blocking version of 'add' method.
+	    bool iadd(longint pid1, longint pid2, longint pid3);
 		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
 		void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
 		virtual void onParticlesChanged();
@@ -71,8 +73,6 @@ namespace espressopp {
 
 	  private:
 		static LOG4ESPP_DECL_LOGGER(theLogger);
-
-
   };
 }
 

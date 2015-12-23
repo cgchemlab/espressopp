@@ -76,6 +76,60 @@ namespace espressopp {
       return FixedListComm::add(tmp);
   }*/
 
+  bool FixedTripleList::iadd(longint pid1, longint pid2, longint pid3) {
+    bool returnVal = true;
+    System& system = storage->getSystemRef();
+
+    // ADD THE LOCAL TRIPLET
+    Particle *p1 = storage->lookupLocalParticle(pid1);
+    Particle *p2 = storage->lookupRealParticle(pid2);
+    Particle *p3 = storage->lookupLocalParticle(pid3);
+
+    // middle particle is the reference particle and must exist here
+    if (!p2){
+      // particle does not exists here (some other CPU must have it)
+      returnVal = false;
+    } else {
+      std::stringstream msg;
+      if (!p1) {
+        msg << "adding error: triple particle p1 " << pid1 <<
+            " does not exists here and cannot be added";
+        msg << " triplet: " << pid1 << "-" << pid2 << "-" << pid3;
+        throw std::runtime_error(msg.str());
+      }
+      if (!p3) {
+        msg << "adding error: triple particle p3 " << pid3 <<
+            " does not exists here and cannot be added";
+        msg << " triplet: " << pid1 << "-" << pid2 << "-" << pid3;
+        throw std::runtime_error(msg.str());
+      }
+    }
+
+    if (returnVal) {
+      // ADD THE GLOBAL TRIPLET
+      // see whether the particle already has triples
+      bool found = false;
+      std::pair<GlobalTriples::const_iterator,
+                GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid2);
+      if (equalRange.first != globalTriples.end()) {
+        // otherwise test whether the triple already exists
+        for (GlobalTriples::const_iterator it = equalRange.first;
+             it != equalRange.second && !found; ++it) {
+          if (it->second == std::pair<longint, longint>(pid1, pid3))
+            found = true;
+        }
+      }
+      returnVal = !found;
+      if (!found) {
+        // add the triple locally
+        this->add(p1, p2, p3);
+        globalTriples.insert(equalRange.first,
+                             std::make_pair(pid2, std::pair<longint, longint>(pid1, pid3)));
+      }
+      LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
+    }
+    return returnVal;
+  }
 
   bool FixedTripleList::
   add(longint pid1, longint pid2, longint pid3) {
