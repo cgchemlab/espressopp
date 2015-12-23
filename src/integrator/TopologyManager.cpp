@@ -190,7 +190,9 @@ void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
         ftl = tripleMap_[t3][t2][t1];
       if (ftl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
-        bool ret = ftl->add(p1->id(), p2->id(), p3->id());
+        bool ret = ftl->iadd(p1->id(), p2->id(), p3->id());
+        if (!ret)
+          ret = ftl->iadd(p3->id(), p2->id(), p1->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new angle: " << it->first << "-" << it->second.first << "-"
                                     << it->second.second);
@@ -219,9 +221,9 @@ void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
         fql = quadrupleMap_[t4][t3][t2][t1];
       if (fql) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3 << "-" << t4);
-        bool ret = fql->add(p1->id(), p2->id(), p3->id(), p4->id());
+        bool ret = fql->iadd(p1->id(), p2->id(), p3->id(), p4->id());
         if (!ret)
-          ret = fql->add(p4->id(), p3->id(), p2->id(), p1->id());
+          ret = fql->iadd(p4->id(), p3->id(), p2->id(), p1->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new dihedral: " << it->first << "-" << it->second.first
                                     << "-" << it->second.second.first << "-"
