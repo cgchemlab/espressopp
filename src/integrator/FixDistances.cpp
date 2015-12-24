@@ -162,6 +162,7 @@ void FixDistances::restore_positions() {
 }
 
 std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_) {
+  LOG4ESPP_DEBUG(theLogger, "releasing particles " << nr_ << " of anchor " << anchor_id);
   std::pair<Triplets::iterator, Triplets::iterator> equal_range =
       distance_triplets_.equal_range(anchor_id);
   int total_size = distance_triplets_.count(anchor_id);
