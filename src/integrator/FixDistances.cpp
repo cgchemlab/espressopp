@@ -165,12 +165,17 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
   std::pair<Triplets::iterator, Triplets::iterator> equal_range =
       distance_triplets_.equal_range(anchor_id);
   int total_size = distance_triplets_.count(anchor_id);
-  System &system = getSystemRef();
-
-  Particle *p_anchor = system.storage->lookupRealParticle(anchor_id);
   std::vector<Particle*> mod_particles;
   if (total_size == 0)
     return mod_particles;
+  System &system = getSystemRef();
+
+  Particle *p_anchor = system.storage->lookupRealParticle(anchor_id);
+  if (!p_anchor) {
+    LOG4ESPP_DEBUG(theLogger, "release_particle, anchor_id=" << anchor_id << " not found");
+    return mod_particles;
+  }
+
 
   std::vector<Particle*> tmp;
   int removed = 0;
