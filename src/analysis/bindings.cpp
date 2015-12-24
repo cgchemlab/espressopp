@@ -120,7 +120,7 @@ namespace espressopp {
       SystemMonitor::registerPython();
       PotentialEnergy::registerPython();
       KineticEnergy::registerPython();
-      NFixedListEntries::registerPython();
+      NFixedPairListEntries::registerPython();
     }
   }
 }

@@ -20,23 +20,23 @@
 
 #include "python.hpp"
 #include "NFixedListEntries.hpp"
+#include "FixedPairList.hpp"
 
 using namespace espressopp;  //NOLINT
 
 namespace espressopp {
 namespace analysis {
 
-real NFixedListEntries::compute_real() const {
-
+real NFixedPairListEntries::compute_real() const {
+  return fpl_->totalSize();
 }
 
-
-void NFixedListEntries::registerPython() {
+void NFixedPairListEntries::registerPython() {
   using namespace espressopp::python;  //NOLINT
-  class_<NFixedListEntries, bases<Observable> >
-    ("analysis_NFixedListEntries",
+  class_<NFixedPairListEntries, bases<Observable> >
+    ("analysis_NFixedPairListEntries",
         init< shared_ptr<System>, shared_ptr<FixedPairList> >())
-    .add_property("value", &NFixedListEntries::compute_real);
+    .add_property("value", &NFixedPairListEntries::compute_real);
 }
 }  // end namespace analysis
 }  // end namespace espressopp

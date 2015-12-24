@@ -18,49 +18,36 @@
 
 """
 ***************************************
-**espressopp.analysis.NFixedListEntries**
+**espressopp.analysis.NFixedPairListEntries**
 ***************************************
 
-The object that computes potential energy of different interactions.
+The object that computes the number of entries in FixedPairList.
 
-.. function:: espressopp.analysis.NFixedListEntries(system, potential, compute_method=None)
+.. function:: espressopp.analysis.NFixedPairListEntries(system, fixed_pair_lit)
 
             :param system: The system object
             :type system: espressopp.System
-            :param interaction: The interaction object.
-            :type interaction: espressopp.interaction.Interaction
-            :param compute_method: If set to `ALL` (default) then compute total potential energies,
-                if set to `CG` then compute only coarse-grained part (if feasible),
-                if set to `AT` then compute only atomitic part of potential energy.
-            :type compute_method: str
-
+            :param fixed_pair_list: The observed fpl.
+            :type interaction: espressopp.FixedPairList
 """
 
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 
 from espressopp.analysis.Observable import *  # NOQA
-from _espressopp import analysis_NFixedListEntries
+from _espressopp import analysis_NFixedPairListEntries
 
 
-class NFixedListEntriesLocal(ObservableLocal, analysis_NFixedListEntries):
+class NFixedPairListEntriesLocal(ObservableLocal, analysis_NFixedPairListEntries):
     """The (local) compute of potential energy."""
-    def __init__(self, system, interaction, compute_method=None):
+    def __init__(self, system, fixed_pair_list):
         if pmi.workerIsActive():
-            if compute_method is None:
-                compute_method = 'ALL'
-            if compute_method not in ['AT', 'CG', 'ALL']:
-                raise ValueError('Wrong compute_method, should be ALL, AT or CG')
-
-            if compute_method == 'ALL':
-                cxxinit(self, analysis_NFixedListEntries, system, interaction)
-            else:
-                cxxinit(self, analysis_NFixedListEntries, system, interaction, compute_method == 'AT')
+            cxxinit(self, analysis_NFixedPairListEntries, system, fixed_pair_list)
 
 if pmi.isController:
-    class NFixedListEntries(Observable):
+    class NFixedPairListEntries(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.analysis.NFixedListEntriesLocal',
+            cls='espressopp.analysis.NFixedPairListEntriesLocal',
             pmiproperty=['value']
         )

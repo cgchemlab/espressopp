@@ -25,35 +25,23 @@
 #include "types.hpp"
 #include "Observable.hpp"
 #include "FixedPairList.hpp"
-#include "FixedTripleList.hpp"
-#include "FixedQuadrupleList.hpp"
 
 namespace espressopp {
 namespace analysis {
 
-class NFixedListEntries : public Observable {
+class NFixedPairListEntries : public Observable {
  public:
-  NFixedListEntries(shared_ptr<System> system, shared_ptr<FixedPairList> fpl) :
+  NFixedPairListEntries(shared_ptr<System> system, shared_ptr<FixedPairList> fpl) :
       Observable(system), fpl_(fpl) {
     result_type = real_scalar;
   }
-  NFixedListEntries(shared_ptr<System> system, shared_ptr<FixedTripleList> ftl) :
-      Observable(system), ftl_(ftl) {
-    result_type = real_scalar;
-  }
-  NFixedListEntries(shared_ptr<System> system, shared_ptr<FixedQuadrupleList> fql) :
-      Observable(system), fql_(fql) {
-    result_type = real_scalar;
-  }
 
-  ~NFixedListEntries() {}
+  ~NFixedPairListEntries() {}
   real compute_real() const;
 
   static void registerPython();
  private:
   shared_ptr<FixedPairList> fpl_;
-  shared_ptr<FixedTripleList> ftl_;
-  shared_ptr<FixedQuadrupleList> fql_;
 };
 }  // end namespace analysis
 }  // end namespace espressopp
