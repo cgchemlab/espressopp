@@ -162,8 +162,6 @@ void FixDistances::restore_positions() {
 }
 
 std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_) {
-  std::pair<Triplets::iterator, Triplets::iterator> equal_range =
-      distance_triplets_.equal_range(anchor_id);
   int total_size = distance_triplets_.count(anchor_id);
   std::vector<Particle*> mod_particles;
   if (total_size == 0)
@@ -176,7 +174,8 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
     return mod_particles;
   }
 
-
+  std::pair<Triplets::iterator, Triplets::iterator> equal_range =
+      distance_triplets_.equal_range(anchor_id);
   std::vector<Particle*> tmp;
   int removed = 0;
   for (Triplets::iterator it = equal_range.first; it != equal_range.second; ++it) {
