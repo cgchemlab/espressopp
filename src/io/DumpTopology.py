@@ -51,7 +51,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             self.tuple_data = {}
             if 'connectivity' not in self.h5md_file.file.f:
                 self.h5md_file.file.f.create_group('connectivity')
-            self.chunk_size = 256
+            self.chunk_size = 128
             self.dt = integrator.dt
 
     def dump(self):
@@ -86,12 +86,11 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                     (raw_data.pop(), raw_data.pop())
                     for _ in range(fpl_size)
                 ]
-                if len(data) > max_size:
-                    max_size = len(data)
+                max_size = max(len(data), max_size)
                 if step in step_data:
                     raise Exception('Wrong format!')
                 step_data[step][fpl_idx] = np.array(data)
-
+            MPI.COMM_WORLD.Barrier()
             NMaxLocal = np.array(max_size, 'i')
             NMaxGlobal = np.array(0, 'i')
             MPI.COMM_WORLD.Allreduce(NMaxLocal, NMaxGlobal, op=MPI.MAX)
