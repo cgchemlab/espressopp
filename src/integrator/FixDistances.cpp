@@ -179,7 +179,7 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
       distance_triplets_.equal_range(anchor_id);
   std::vector<Particle*> tmp;
   int removed = 0;
-  for (Triplets::iterator it = equal_range.first; it != equal_range.second; ++it) {
+  for (Triplets::iterator it = equal_range.first; it != equal_range.second;) {
     if (removed == nr_)
       break;
     Particle *p1 = system.storage->lookupLocalParticle(it->second.first);
@@ -192,10 +192,17 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
       LOG4ESPP_DEBUG(theLogger, "Released particle: " << it->second.first << " of " << anchor_id);
       it = distance_triplets_.erase(it);
       removed++;
+      LOG4ESPP_DEBUG(theLogger, "set V=0,0,0 F=0,0,0" << p1->id());
       p1->setV(Real3D(0.0, 0.0, 0.0));
       p1->setF(Real3D(0.0, 0.0, 0.0));
+      LOG4ESPP_DEBUG(theLogger, "seted V=0,0,0 F=0,0,0" << p1->id());
+      if (it == equal_range.second)
+          LOG4ESPP_DEBUG(theLogger, "it == equal_range.second");
+    } else {
+      ++it;
     }
   }
+  LOG4ESPP_DEBUG(theLogger, "leaving release_particle " << anchor_id);
   return mod_particles;
 }
 

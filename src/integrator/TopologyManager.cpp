@@ -210,7 +210,7 @@ void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
     Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
     Particle *p3 = system_->storage->lookupLocalParticle(it->second.second.first);
     Particle *p4 = system_->storage->lookupLocalParticle(it->second.second.second);
-    if ((p1 && p2) && (p1 && p3)) {
+    if (p1 && p2 && p3 && p4) {
       t1 = p1->type();
       t2 = p2->type();
       t3 = p3->type();
