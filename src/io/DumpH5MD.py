@@ -303,7 +303,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         # Store res_id
         if self.store_res_id:
             res_id = np.asarray(self.getResId())
-            if total_size > self.lambda_adr.value.shape[1]:
+            if total_size > self.res_id.value.shape[1]:
                 self.res_id.value.resize(total_size, axis=1)
             self.res_id.append(res_id, step, time, region=(idx_0, idx_1))
 
