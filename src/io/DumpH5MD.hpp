@@ -60,6 +60,8 @@ namespace espressopp {
       bool get_store_charge() { return store_charge; }
       void set_store_lambda(bool _s) { store_lambda = _s;}
       bool get_store_lambda() { return store_lambda; }
+      void set_store_res_id(bool _s) { store_res_id = _s; }
+      bool get_store_res_id() { return store_res_id; }
 
       void clear_buffers();
 
@@ -74,11 +76,14 @@ namespace espressopp {
       PyObject* getMass();
       PyObject* getCharge();
       PyObject* getLambda();
+      PyObject* getResId();
 
       static void registerPython();
     private:
       bool store_position, store_velocity, store_mass, store_id, store_force;
       bool store_species, store_state, store_charge, store_lambda;
+      bool store_res_id;
+
       bool is_adress_;
       bool cleared;
       int NLocal;
@@ -92,6 +97,7 @@ namespace espressopp {
       Py_buffer state;
       Py_buffer charge;
       Py_buffer lambda;
+      Py_buffer res_id;
     };
   }
 }

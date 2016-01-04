@@ -80,6 +80,7 @@ namespace espressopp {
       store_position = true;
       store_velocity = store_mass = store_force = store_species = store_state = false;
       store_lambda = false;
+      store_res_id = false;
 
       cleared = true;
       NLocal = -1;
@@ -91,6 +92,7 @@ namespace espressopp {
       species.len = 0;
       state.len = 0;
       lambda.len = 0;
+      res_id.len = 0;
     }
 
     DumpH5MD::~DumpH5MD() {
@@ -111,6 +113,7 @@ namespace espressopp {
         if (store_charge) free_pb(&charge);
         if (store_force) free_pb(&force);
         if (store_lambda) free_pb(&lambda);
+        if (store_res_id) free_pb(&res_id);
         cleared = true;
       }
     }
@@ -138,6 +141,7 @@ namespace espressopp {
       if (store_force) init_pb<real>(&force, 2, shape);
       if (store_charge) init_pb<real>(&charge, 1, shape);
       if (store_lambda) init_pb<real>(&lambda, 1, shape);
+      if (store_res_id) init_pb<int>(&res_id, 1, shape);
       cleared = false;
 
       CellList realCells = system.storage->getRealCells();
@@ -183,6 +187,7 @@ namespace espressopp {
               }
               if (store_charge) ((real*) charge.buf)[i] = at.q();
               if (store_lambda) ((real*) lambda.buf)[i] = at.lambda();
+              if (store_res_id) ((int*) res_id.buf)[i] = at.res_id();
               i++;
             }
           }
@@ -218,6 +223,7 @@ namespace espressopp {
           }
           if (store_charge) ((real*) charge.buf)[i] = cit->q();
           if (store_lambda) ((real*) lambda.buf)[i] = cit->lambda();
+          if (store_res_id) ((int*) res_id.buf)[i] = cit->res_id();
           i++;
         }
       }
@@ -288,6 +294,13 @@ namespace espressopp {
       return Py_None;
     }
 
+    PyObject* DumpH5MD::getResId() {
+      if (store_res_id && res_id.len)
+        return PyMemoryView_FromBuffer(&res_id);
+      Py_INCREF(Py_None);
+      return Py_None;
+    }
+
     void DumpH5MD::registerPython() {
       using namespace espressopp::python;
 
@@ -305,6 +318,7 @@ namespace espressopp {
         .def("getMass", &DumpH5MD::getMass)
         .def("getCharge", &DumpH5MD::getCharge)
         .def("getLambda", &DumpH5MD::getLambda)
+        .def("getResId", &DumpH5MD::getResId)
         .add_property("NLocal", &DumpH5MD::get_NLocal)
         .add_property("store_position", &DumpH5MD::get_store_position, &DumpH5MD::set_store_position)
         .add_property("store_species", &DumpH5MD::get_store_species, &DumpH5MD::set_store_species)
@@ -313,6 +327,7 @@ namespace espressopp {
         .add_property("store_force", &DumpH5MD::get_store_force, &DumpH5MD::set_store_force)
         .add_property("store_charge", &DumpH5MD::get_store_charge, &DumpH5MD::set_store_charge)
         .add_property("store_lambda", &DumpH5MD::get_store_lambda, &DumpH5MD::set_store_lambda)
+        .add_property("store_res_id", &DumpH5MD::get_store_res_id, &DumpH5MD::set_store_res_id)
         ;
     }
   }
