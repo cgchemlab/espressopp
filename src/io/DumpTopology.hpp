@@ -43,7 +43,7 @@ class DumpTopology: public ParticleAccess {
       : ParticleAccess(system), integrator_(integrator), fpl_idx_(0) { }
   ~DumpTopology() {  }
 
-  void perform_action() { Dump(); }
+  void perform_action();
 
   void ObserveTuple(shared_ptr<FixedPairList> fpl);
 
@@ -51,6 +51,8 @@ class DumpTopology: public ParticleAccess {
 
   static void registerPython();
  private:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
   void ClearBuffer();
 
   shared_ptr<integrator::MDIntegrator> integrator_;

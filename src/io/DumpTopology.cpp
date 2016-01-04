@@ -19,6 +19,7 @@
 */
 
 #include "python.hpp"
+#include <vector>
 #include "DumpTopology.hpp"
 
 
@@ -27,6 +28,10 @@ namespace io {
 
 void DumpTopology::ObserveTuple(shared_ptr<FixedPairList> fpl) {
   fpls_.push_back(fpl);
+}
+
+void DumpTopology::perform_action() {
+  Dump();
 }
 
 void DumpTopology::Dump() {
@@ -66,6 +71,7 @@ void DumpTopology::registerPython() {
       ("io_DumpTopology", init<shared_ptr<System>, shared_ptr<integrator::MDIntegrator> >())
       .def("clear_buffer", &DumpTopology::ClearBuffer)
       .def("get_data", &DumpTopology::GetData)
+      .def("dump", &DumpTopology::Dump)
       .def("observe_tuple", &DumpTopology::ObserveTuple);
 }
 

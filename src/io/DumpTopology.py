@@ -80,8 +80,6 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                 step = raw_data.pop()
                 fpl_idx = raw_data.pop()
                 fpl_size = raw_data.pop()
-                if fpl_size == 0:
-                    continue
                 data = [
                     (raw_data.pop(), raw_data.pop())
                     for _ in range(fpl_size)
@@ -89,7 +87,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                 max_size = max(len(data), max_size)
                 if step in step_data:
                     raise Exception('Wrong format!')
-                step_data[step][fpl_idx] = np.array(data)
+                step_data[step][fpl_idx] = np.array(data, dtype=np.int)
             MPI.COMM_WORLD.Barrier()
             NMaxLocal = np.array(max_size, 'i')
             NMaxGlobal = np.array(0, 'i')
