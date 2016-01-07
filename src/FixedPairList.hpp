@@ -77,7 +77,7 @@ namespace espressopp {
 	    int totalSize();
 
 	  	boost::signals2::signal2 <void, longint, longint> onTupleAdded;
-	    // TODO: Handle also removing bonds from the list.
+	    // TODO: Handle removing bonds from the list.
 
 	    static void registerPython();
 
