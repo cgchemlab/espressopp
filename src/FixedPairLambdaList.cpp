@@ -76,7 +76,7 @@ bool FixedPairLambdaList::add(longint pid1, longint pid2) {
   if (returnVal) {
     this->add(p1, p2);
     onTupleAdded(pid1, pid2);
-    pairsLambda.insert(std::make_pair(pid1, std::make_pair(pid2, initLambda_));
+    pairsLambda.insert(std::make_pair(pid1, std::make_pair(pid2, initLambda_)));
   }
 
   LOG4ESPP_INFO(theLogger, "added fixed pair to global pair lambda list");
@@ -238,7 +238,7 @@ void FixedPairLambdaList::registerPython() {
   bool (FixedPairLambdaList::*pyAdd)(longint pid1, longint pid2)
       = &FixedPairLambdaList::add;
 
-  class_<FixedPairLambdaList, shared_ptr<FixedPairLambdaList> >
+  class_<FixedPairLambdaList, shared_ptr<FixedPairLambdaList>, boost::noncopyable>
       ("FixedPairLambdaList", init<shared_ptr<storage::Storage>, real>())
           .def("add", pyAdd)
           .def("size", &FixedPairLambdaList::size)

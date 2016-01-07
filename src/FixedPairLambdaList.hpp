@@ -37,7 +37,7 @@
 namespace espressopp {
 class FixedPairLambdaList: public PairList {
  protected:
-  typedef std::multimap <longint, std::pair<longint, real>> PairsDist;
+  typedef std::multimap <longint, std::pair<longint, real> > PairsDist;
   boost::signals2::connection con1, con2, con3;
   shared_ptr <storage::Storage> storage;
   PairsDist pairsLambda;
