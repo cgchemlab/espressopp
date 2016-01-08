@@ -32,15 +32,13 @@
 #include <boost/signals2.hpp>
 #include "types.hpp"
 
-//#include "FixedListComm.hpp"
-
 namespace espressopp {
 class FixedPairLambdaList: public PairList {
  protected:
-  typedef std::multimap <longint, std::pair<longint, real> > PairsDist;
+  typedef std::multimap <longint, std::pair<longint, real> > PairsLambda;
   boost::signals2::connection con1, con2, con3;
   shared_ptr <storage::Storage> storage;
-  PairsDist pairsLambda;
+  PairsLambda pairsLambda;
   using PairList::add;
 
  public:
@@ -59,9 +57,9 @@ class FixedPairLambdaList: public PairList {
   virtual void onParticlesChanged();
 
   python::list getPairs();
-  python::list getPairsDist();
+  python::list getPairsLambda();
 
-  real getDist(int, int);
+  real getLambda(longint pid1, longint pid2);
   /** Get the number of bonds in the GlobalPairs list */
   int size() { return pairsLambda.size(); }
 

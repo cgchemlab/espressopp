@@ -28,8 +28,7 @@
 
 namespace espressopp {
 
-LOG4ESPP_LOGGER(FixedPairLambdaList::theLogger,
-"FixedPairLambdaList");
+LOG4ESPP_LOGGER(FixedPairLambdaList::theLogger, "FixedPairLambdaList");
 
 
 FixedPairLambdaList::FixedPairLambdaList(shared_ptr <storage::Storage> _storage, real initLambda)
@@ -74,19 +73,30 @@ bool FixedPairLambdaList::add(longint pid1, longint pid2) {
   err.checkException();
 
   if (returnVal) {
-    this->add(p1, p2);
-    onTupleAdded(pid1, pid2);
-    pairsLambda.insert(std::make_pair(pid1, std::make_pair(pid2, initLambda_)));
+    bool found = false;
+    std::pair<PairsLambda::const_iterator,
+              PairsLambda::const_iterator> equalRange = pairsLambda.equal_range(pid1);
+    if (equalRange.first != pairsLambda.end()) {
+      for (PairsLambda::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+        if (it->second.first == pid2)
+          found = true;
+      }
+    }
+    returnVal = !found;
+    if (!found) {
+      this->add(p1, p2);
+      onTupleAdded(pid1, pid2);
+      pairsLambda.insert(std::make_pair(pid1, std::make_pair(pid2, initLambda_)));
+      LOG4ESPP_INFO(theLogger, "added fixed pair to global pair lambda list");
+    }
   }
-
-  LOG4ESPP_INFO(theLogger, "added fixed pair to global pair lambda list");
   return returnVal;
 }
 
 python::list FixedPairLambdaList::getPairs() {
   python::tuple pair;
   python::list pairs;
-  for (PairsDist::const_iterator it = pairsLambda.begin(); it != pairsLambda.end(); it++) {
+  for (PairsLambda::const_iterator it = pairsLambda.begin(); it != pairsLambda.end(); it++) {
     pair = python::make_tuple(it->first, it->second.first);
     pairs.append(pair);
   }
@@ -94,10 +104,10 @@ python::list FixedPairLambdaList::getPairs() {
   return pairs;
 }
 
-python::list FixedPairLambdaList::getPairsDist() {
+python::list FixedPairLambdaList::getPairsLambda() {
   python::tuple pair;
   python::list pairs;
-  for (PairsDist::const_iterator it = pairsLambda.begin(); it != pairsLambda.end(); it++) {
+  for (PairsLambda::const_iterator it = pairsLambda.begin(); it != pairsLambda.end(); it++) {
     pair = python::make_tuple(it->first, it->second.first, it->second.second);
     pairs.append(pair);
   }
@@ -105,11 +115,11 @@ python::list FixedPairLambdaList::getPairsDist() {
   return pairs;
 }
 
-real FixedPairLambdaList::getDist(int pid1, int pid2) {
+real FixedPairLambdaList::getLambda(longint pid1, longint pid2) {
   real returnVal = -3;
 
-  PairsDist::iterator itr;
-  PairsDist::iterator lastElement;
+  PairsLambda::iterator itr;
+  PairsLambda::iterator lastElement;
 
   // locate an iterator to the first pair object associated with key
   itr = pairsLambda.find(pid1);
@@ -140,9 +150,8 @@ void FixedPairLambdaList::beforeSendParticles(ParticleList &pl, OutBuffer &buf) 
     int n = pairsLambda.count(pid);
 
     if (n > 0) {
-      std::pair <PairsDist::const_iterator,
-      PairsDist::const_iterator> equalRange
-          = pairsLambda.equal_range(pid);
+      std::pair<PairsLambda::const_iterator,
+                PairsLambda::const_iterator> equalRange = pairsLambda.equal_range(pid);
 
       // first write the pid of the first particle
       // then the number of partners
@@ -151,12 +160,11 @@ void FixedPairLambdaList::beforeSendParticles(ParticleList &pl, OutBuffer &buf) 
       toSendReal.reserve(toSendReal.size() + n);
       toSendInt.push_back(pid);
       toSendInt.push_back(n);
-      for (PairsDist::const_iterator it = equalRange.first;
+      for (PairsLambda::const_iterator it = equalRange.first;
            it != equalRange.second; ++it) {
         toSendInt.push_back(it->second.first);
         toSendReal.push_back(it->second.second);
       }
-
       // delete all of these pairs from the global list
       pairsLambda.erase(pid);
     }
@@ -172,8 +180,8 @@ void FixedPairLambdaList::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
   std::vector <real> receivedReal;
   int n;
   longint pid1, pid2;
-  real distVal;
-  PairsDist::iterator it = pairsLambda.begin();
+  real lambdaVal;
+  PairsLambda::iterator it = pairsLambda.begin();
   // receive the bond list
   buf.read(receivedInt);
   buf.read(receivedReal);
@@ -186,8 +194,8 @@ void FixedPairLambdaList::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
     n = receivedInt[i++];
     for (; n > 0; --n) {
       pid2 = receivedInt[i++];
-      distVal = receivedReal[j++];
-      it = pairsLambda.insert(it, std::make_pair(pid1, std::make_pair(pid2, distVal)));
+      lambdaVal = receivedReal[j++];
+      it = pairsLambda.insert(it, std::make_pair(pid1, std::make_pair(pid2, lambdaVal)));
     }
   }
   if (i != size) {
@@ -206,7 +214,7 @@ void FixedPairLambdaList::onParticlesChanged() {
   longint lastpid1 = -1;
   Particle *p1;
   Particle *p2;
-  for (PairsDist::const_iterator it = pairsLambda.begin(); it != pairsLambda.end(); ++it) {
+  for (PairsLambda::const_iterator it = pairsLambda.begin(); it != pairsLambda.end(); ++it) {
     if (it->first != lastpid1) {
       p1 = storage->lookupRealParticle(it->first);
       if (p1 == NULL) {
@@ -232,7 +240,6 @@ void FixedPairLambdaList::onParticlesChanged() {
 ** REGISTRATION WITH PYTHON
 ****************************************************/
 void FixedPairLambdaList::registerPython() {
-
   using namespace espressopp::python;
 
   bool (FixedPairLambdaList::*pyAdd)(longint pid1, longint pid2)
@@ -243,7 +250,7 @@ void FixedPairLambdaList::registerPython() {
           .def("add", pyAdd)
           .def("size", &FixedPairLambdaList::size)
           .def("getPairs", &FixedPairLambdaList::getPairs)
-          .def("getPairsDist", &FixedPairLambdaList::getPairsDist)
-          .def("getDist", &FixedPairLambdaList::getDist);
+          .def("getPairsLambda", &FixedPairLambdaList::getPairsLambda)
+          .def("getLambda", &FixedPairLambdaList::getLambda);
 }
 }

@@ -44,7 +44,7 @@ r"""
 		:type bondlist: 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.getDist(pid1, pid2)
+.. function:: espressopp.FixedPairLambdaList.getLambda(pid1, pid2)
 
 		:param pid1: 
 		:param pid2: 
@@ -56,7 +56,7 @@ r"""
 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.getPairsDist()
+.. function:: espressopp.FixedPairLambdaList.getPairsLambda()
 
 		:rtype: 
 
@@ -70,20 +70,15 @@ import espressopp
 from espressopp.esutil import cxxinit
 
 class FixedPairLambdaListLocal(_espressopp.FixedPairLambdaList):
-
-
     def __init__(self, storage, initial_lambda=1.0):
-
         if pmi.workerIsActive():
             cxxinit(self, _espressopp.FixedPairLambdaList, storage, initial_lambda)
 
     def add(self, pid1, pid2):
-
         if pmi.workerIsActive():
             return self.cxxclass.add(self, pid1, pid2)
 
     def size(self):
-
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
@@ -93,40 +88,28 @@ class FixedPairLambdaListLocal(_espressopp.FixedPairLambdaList):
         adds those pairs whose first particle is owned by
         this processor.
         """
-        
         if pmi.workerIsActive():
-            for bond in bondlist:
-                pid1, pid2 = bond
+            for pid1, pid2 in bondlist:
                 self.cxxclass.add(self, pid1, pid2)
 
     def getPairs(self):
-
         if pmi.workerIsActive():
-          bonds=self.cxxclass.getPairs(self)
-          return bonds 
+          return self.cxxclass.getPairs(self)
 
     def getPairsDist(self):
-
         if pmi.workerIsActive():
-          bonds=self.cxxclass.getPairsDist(self)
-          return bonds 
+          return self.cxxclass.getPairsDist(self)
         
-    def getDist(self, pid1, pid2):
+    def getLambda(self, pid1, pid2):
         if pmi.workerIsActive():
-          return self.cxxclass.getDist(self, pid1, pid2)
+          return self.cxxclass.getLambda(self, pid1, pid2)
         
 if pmi.isController:
   class FixedPairLambdaList(object):
-    __metaclass__ = pmi.Proxy
-    pmiproxydefs = dict(
-        cls = 'espressopp.FixedPairLambdaListLocal',
-        localcall = [ "add" ],
-        pmicall = [ "addPairs" ],
-        pmiinvoke = ['getPairs', 'getPairsDist', 'size']
-    )
-    
-    def getDist(self, pid1, pid2):
-      pairs = pmi.invoke(self.pmiobject, 'getDist', pid1, pid2)
-      for i in pairs:
-        if( i != -1 ):
-          return i
+      __metaclass__ = pmi.Proxy
+      pmiproxydefs = dict(
+          cls = 'espressopp.FixedPairLambdaListLocal',
+          localcall = [ "add" ],
+          pmicall = [ "addPairs" ],
+          pmiinvoke = ['getPairs', 'getPairsLambda', 'size', 'getLambda']
+      )

@@ -98,6 +98,7 @@ namespace espressopp {
       std::swap(pid1, pid2);
 
     System& system = storage->getSystemRef();
+    esutil::Error err(system.comm);
     
     // ADD THE LOCAL PAIR
     Particle *p1 = storage->lookupRealParticle(pid1);
@@ -109,9 +110,13 @@ namespace espressopp {
     }
     else{
       if (!p2) {
-	LOG4ESPP_DEBUG(theLogger, "Particle p2 " << pid2 << " not found");
+        std::stringstream msg;
+        msg << "bond particle p2 " << pid2 << " does not exists here and cannot be added";
+        err.setException(msg.str());
       }
     }
+
+    err.checkException();
     
     if (returnVal) {
       // ADD THE GLOBAL PAIR
