@@ -36,7 +36,6 @@
 
 namespace espressopp {
   
-  using namespace analysis;
 
   namespace integrator {
 
@@ -44,6 +43,7 @@ namespace espressopp {
 
       public:
         BerendsenBarostat(shared_ptr< System > system);
+        BerendsenBarostat(shared_ptr<System> system, shared_ptr<analysis::Pressure> pressure_compute);
         
         void setFixed(Int3D);
         Int3D getFixed();
@@ -76,6 +76,9 @@ namespace espressopp {
 
         /* rescale the system size and coord. of particles */
         void barostat();
+
+        /* Pressure computing object. */
+        shared_ptr<analysis::Pressure> pressure_compute_;
 
         /* Logger */
         static LOG4ESPP_DECL_LOGGER(theLogger);
