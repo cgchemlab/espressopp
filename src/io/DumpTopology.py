@@ -101,7 +101,10 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                     data = step_data[step][fpl_idx]
                     if data.shape[0] < NMaxLocal:
                         old_shape = data.shape
-                        linear_data = data.reshape((old_shape[0]*old_shape[1],))
+                        if len(data):
+                            linear_data = data.reshape((old_shape[0]*old_shape[1],))
+                        else:
+                            linear_data = data
                         data = np.pad(linear_data, (0, 2*NMaxLocal-linear_data.shape[0]),
                                       'constant', constant_values=-1)
                         data = data.reshape((NMaxLocal, 2))

@@ -272,7 +272,9 @@ namespace espressopp {
 	    p1 = storage->lookupRealParticle(it->first);
         if (p1 == NULL) {
           std::stringstream msg;
-          msg << "onParticlesChanged error. Fixed Pair List particle p1 " << it->first << " does not exists here";
+          msg << "onParticlesChanged error. Fixed Pair List particle p1 " << it->first << " does not exists here.";
+          msg << " p1: " << *p1;
+          msg << " pair: " << it->first << "-" << it->second;
           err.setException( msg.str() );
           //std::runtime_error(err.str());
         }
@@ -281,7 +283,9 @@ namespace espressopp {
       p2 = storage->lookupLocalParticle(it->second);
       if (p2 == NULL) {
           std::stringstream msg;
-          msg << "onParticlesChanged error. Fixed Pair List particle p2 " << it->second << " does not exists here";
+          msg << "onParticlesChanged error. Fixed Pair List particle p2 " << it->second << " does not exists here.";
+          msg << " p1: " << *p1;
+          msg << " pair: " << it->first << "-" << it->second;
           //std::runtime_error(err.str());
           err.setException( msg.str() );
       }

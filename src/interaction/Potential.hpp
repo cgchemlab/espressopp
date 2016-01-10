@@ -304,12 +304,7 @@ namespace espressopp {
         Real3D dist = p1.position() - p2.position();
         return _computeForce(force, dist);
       } catch (std::exception &e) {
-        LOG4ESPP_ERROR(Derived::theLogger,
-          "p1.id=" << p1.id() << " .type=" << p1.type()
-          << " .pos=" << p1.position()
-          << " p2.id=" << p2.id() << " .type=" << p2.type()
-          << " .pos=" << p2.position()
-          << "\n" << e.what());
+        LOG4ESPP_ERROR(Derived::theLogger, "p1:" << p1 << " p2: " << p2 << " \n" << e.what());
         throw e;
       }
     }
@@ -321,12 +316,7 @@ namespace espressopp {
       try {
         return _computeForce(force, dist);
       } catch (std::exception &e) {
-        LOG4ESPP_ERROR(Derived::theLogger,
-                       "p1.id=" << p1.id() << " .type=" << p1.type()
-                           << " .pos=" << p1.position()
-                           << " p2.id=" << p2.id() << " .type=" << p2.type()
-                           << " .pos=" << p2.position()
-                           << "\n" << e.what());
+        LOG4ESPP_ERROR(Derived::theLogger, "p1: " << p1 << " p2:" << p2 << "\n" << e.what());
         throw e;
       }
     }
