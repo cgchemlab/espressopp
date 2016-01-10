@@ -27,7 +27,6 @@
 
 namespace espressopp {
   
-  using namespace analysis;
   using namespace esutil;
   using namespace std;
   
@@ -45,6 +44,20 @@ namespace espressopp {
       
       type = Extension::Barostat;
 
+      
+      pressure_compute_ = make_shared<analysis::Pressure>(analysis::Pressure(getSystem()));
+
+      LOG4ESPP_INFO(theLogger, "BerendsenBarostat constructed");
+    }
+
+    BerendsenBarostat::BerendsenBarostat(shared_ptr<System> system,
+        shared_ptr<analysis::Pressure> pressure_compute) 
+        : Extension(system), pressure_compute_(pressure_compute) {
+      tau = 1.0;
+      P0 = 1.0;
+      fixed = Int3D(1, 1, 1);
+      exponent = 1.0/3.0;
+      type = Extension::Barostat;
       LOG4ESPP_INFO(theLogger, "BerendsenBarostat constructed");
     }
 
@@ -93,12 +106,9 @@ namespace espressopp {
 
     void BerendsenBarostat::barostat(){
       LOG4ESPP_DEBUG(theLogger, "equilibrating the pressure");
-
       System& system = getSystemRef();
-      
-      Pressure Pcurrent(getSystem());
-      
-      real P = Pcurrent.compute();  // calculating the current pressure in system
+
+      real P = pressure_compute_->compute();  // calculating the current pressure in system
       
       real mu3 = 1 + pref * (P - P0);
       
@@ -106,6 +116,7 @@ namespace espressopp {
       if(mu3<0.0){
         stringstream msg;
         msg << "Scaling coefficient is <0 (Berendsen barostat). mu^3="<<mu3;
+        msg << " pref  = " << pref << " P=" << P << " P0=" << P0;
         err.setException( msg.str() );
         err.checkException();
       }
@@ -140,7 +151,7 @@ namespace espressopp {
       class_<BerendsenBarostat, shared_ptr<BerendsenBarostat>, bases<Extension> >
 
         ("integrator_BerendsenBarostat", init< shared_ptr<System> >())
-
+        .def(init<shared_ptr<System>, shared_ptr<analysis::Pressure> >())
         .add_property("tau",
               &BerendsenBarostat::getTau,
               &BerendsenBarostat::setTau)
