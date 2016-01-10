@@ -145,6 +145,56 @@ namespace espressopp {
     return returnVal;
   }
 
+  bool FixedPairList::iadd(longint pid1, longint pid2) {
+    bool returnVal = true;
+    if (pid1 > pid2)
+      std::swap(pid1, pid2);
+
+    System& system = storage->getSystemRef();
+
+    // ADD THE LOCAL PAIR
+    Particle *p1 = storage->lookupRealParticle(pid1);
+    Particle *p2 = storage->lookupLocalParticle(pid2);
+
+    if (!p1){
+      // Particle does not exist here, return false
+      returnVal=false;
+    }
+    else{
+      if (!p2) {
+        std::stringstream msg;
+        msg << "bond particle p2 " << pid2 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+    }
+
+    if (returnVal) {
+      // ADD THE GLOBAL PAIR
+      // see whether the particle already has pairs
+      bool found = false;
+      std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange =
+          globalPairs.equal_range(pid1);
+      if (equalRange.first != globalPairs.end()) {
+        // otherwise test whether the pair already exists
+        for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+          if (it->second == pid2)
+            found = true;
+        }
+      }
+      returnVal = !found;
+      if (!found) {
+        // add the pair locally
+        this->add(p1, p2);
+        // Update list of integers.
+        globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
+        // Throw signal onTupleAdded.
+        onTupleAdded(pid1, pid2);
+        LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
+      }
+    }
+    return returnVal;
+  }
+
   python::list FixedPairList::getBonds()
   {
 	python::tuple bond;

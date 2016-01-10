@@ -786,7 +786,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if (p1 != NULL && p2 != NULL && valid_state) {
       LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-      fixed_pair_list_->add(it->first, it->second.first);
+      fixed_pair_list_->iadd(it->first, it->second.first);
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
