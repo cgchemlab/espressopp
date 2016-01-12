@@ -142,9 +142,9 @@ void FixDistances::restore_positions() {
           << " new pos: " << anchor_pos + new_trans
           << " unit_trans " << unit_trans
           << " dist " << dist
-          << " new_force " << (2*new_trans*(dst->mass())/dt2));
+          << " new_force " << (new_trans*(dst->mass())/dt2));
 
-      Real3D newF = (2*new_trans*(dst->mass())/dt2) + dst->getF();
+      Real3D newF = (new_trans*(dst->mass())/dt2) + dst->getF();
       if (newF.isNaNInf()) {
         std::cout << "new_trans=" << new_trans << std::endl;
         std::cout << "mass=" << dst->mass() << std::endl;
