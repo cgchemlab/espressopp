@@ -33,7 +33,7 @@
 namespace espressopp {
 using namespace espressopp::iterator;
 
-LOG4ESPP_LOGGER(DynamicExcludeList::theLogger, "VerletList");
+LOG4ESPP_LOGGER(DynamicExcludeList::theLogger, "DynamicExcludeList");
 
 DynamicExcludeList::DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator):
     integrator_(integrator) {
@@ -119,6 +119,7 @@ python::list DynamicExcludeList::getList() {
 }
 
 void DynamicExcludeList::exclude(longint pid1, longint pid2) {
+  LOG4ESPP_INFO(theLogger, "new exclude pair " << pid1 << "-" << pid2);
   exList->insert(std::make_pair(pid1, pid2));
 
   exList_add.push_back(pid1);
