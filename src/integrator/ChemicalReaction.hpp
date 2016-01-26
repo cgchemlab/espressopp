@@ -100,6 +100,7 @@ class Reaction {
         min_state_2_(-1),
         max_state_2_(-1),
         rate_(0.0),
+        reverse_(false),
         intramolecular_(false) {
     cutoff_ = 0.0;
     cutoff_sqr_ = 0.0;
@@ -107,7 +108,9 @@ class Reaction {
 
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
            int max_state_1, int min_state_2, int max_state_2, real cutoff,
-           real rate, bool intramolecular = false)
+           real rate, shared_ptr<FixedPairList> fpl,
+           bool intramolecular = false,
+           bool reverse = false)
       : type_1_(type_1),
         type_2_(type_2),
         delta_1_(delta_1),
@@ -117,6 +120,8 @@ class Reaction {
         min_state_2_(min_state_2),
         max_state_2_(max_state_2),
         rate_(rate),
+        reverse_(reverse),
+        fixed_pair_list_(fpl),
         intramolecular_(intramolecular) {
     set_cutoff(cutoff);
   }
@@ -162,6 +167,14 @@ class Reaction {
   void set_interval(shared_ptr<int> interval) { interval_ = interval; }
   void set_dt(shared_ptr<real> dt) { dt_ = dt; }
 
+  /**
+   * Define post-process method after reaction occures.
+   *
+   * @param pp: The PostProcess object.
+   * @param type: if set to 0 then applied to both particle types,
+   *     if set to 1 then applied only to type_1 particle,
+   *     if set to 2 then applied only to type_2 particle.
+   */
   void AddPostProcess(const shared_ptr<integrator::PostProcess> pp, int type = 0) {
     switch (type) {
       case 1:
@@ -189,6 +202,8 @@ class Reaction {
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
+  shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
+
  protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
@@ -205,6 +220,8 @@ class Reaction {
   real cutoff_sqr_;  //!< reaction cutoff^2
 
   bool intramolecular_;  //!< Allow to intramolecular reactions.
+
+  bool reverse_;  //!< If true then reaction will break a bond.
 
   shared_ptr<esutil::RNG> rng_;  //!< random number generator
   shared_ptr<int> interval_;  //!< number of steps between reaction loops
@@ -268,7 +285,6 @@ class ChemicalReaction : public Extension {
  public:
   ChemicalReaction(shared_ptr<System> system,
                    shared_ptr<VerletList> _verletList,
-                   shared_ptr<FixedPairList> _fixedPairList,
                    shared_ptr<storage::DomainDecomposition> _domdec);
   ~ChemicalReaction();
 
@@ -306,7 +322,6 @@ class ChemicalReaction : public Extension {
   shared_ptr<storage::DomainDecomposition> domdec_;
   shared_ptr<espressopp::interaction::Potential> potential_;
   shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
-  shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
   shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
 
   boost::signals2::connection initialize_;

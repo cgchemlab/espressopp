@@ -156,7 +156,8 @@ void Reaction::registerPython() {
   using namespace espressopp::python; //NOLINT
   class_<Reaction, shared_ptr<integrator::Reaction> >
     ("integrator_Reaction",
-         init<int, int, int, int, int, int, int, int, real, real, bool>())
+         init<int, int, int, int, int, int, int, int, real, real,
+         shared_ptr<FixedPairList>, bool, bool>())
       .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
       .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
       .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
@@ -242,11 +243,9 @@ void PostProcessChangeProperty::registerPython() {
 /** ChemicalReaction part*/
 ChemicalReaction::ChemicalReaction(
     shared_ptr<System> system, shared_ptr<VerletList> verletList,
-    shared_ptr<FixedPairList> fpl,
     shared_ptr<storage::DomainDecomposition> domdec)
     : Extension(system),
       verlet_list_(verletList),
-      fixed_pair_list_(fpl),
       domdec_(domdec) {
   type = Extension::Reaction;
 
@@ -786,7 +785,7 @@ std::set<Particle*> ChemicalReaction::ApplyAR() {
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if (p1 != NULL && p2 != NULL && valid_state) {
       LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-      fixed_pair_list_->iadd(it->first, it->second.first);
+      reaction->fixed_pair_list_->iadd(it->first, it->second.first);
     }
   }
   LOG4ESPP_INFO(theLogger, "Leaving applyAR");
@@ -812,7 +811,7 @@ void ChemicalReaction::registerPython() {
   class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >(
       "integrator_ChemicalReaction",
       init<shared_ptr<System>, shared_ptr<VerletList>,
-          shared_ptr<FixedPairList>, shared_ptr<storage::DomainDecomposition> >())
+           shared_ptr<storage::DomainDecomposition> >())
       .def("connect", &ChemicalReaction::connect)
       .def("disconnect", &ChemicalReaction::disconnect)
       .def("addReaction", &ChemicalReaction::AddReaction)

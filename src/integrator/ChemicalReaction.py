@@ -104,26 +104,23 @@ from _espressopp import integrator_PostProcessChangeProperty
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
     """Chemical Reaction integrator extension."""
-    def __init__(self, system, vl, fpl, domdec, interval=None):
+    def __init__(self, system, vl, domdec, interval=None):
         """Chemical reaction extension.
 
         Args:
           system: The espressopp.System object.
           vl: The verlet list.
-          fpl: The fixed pair list that will hold new bonds.
           domdec: The domain decomposition object.
           interval: The timestep where the extension will be run.
         """
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
-            cxxinit(self, integrator_ChemicalReaction, system, vl, fpl, domdec)
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_ChemicalReaction, system, vl, domdec)
             if interval is not None:
                 self.interval = interval
 
     def add_reaction(self, reaction):
         """Adds the reaction to the list."""
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+        if pmi.workerIsActive():
             self.cxxclass.addReaction(self, reaction)
 
     def remove_reaction(self, reaction_id):
@@ -132,8 +129,7 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
         Args:
           reaction_id: The id of the reaction to remove.
         """
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+        if pmi.workerIsActive():
             self.cxxclass.removeReaction(self, reaction_id)
 
 
@@ -141,27 +137,24 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
                                      integrator_PostProcess):
     """Post process of reaction that changes particle property."""
     def __init__(self):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+        if pmi.workerIsActive():
             cxxinit(self, integrator_PostProcessChangeProperty)
 
     def add_change_property(self, type_id, prop):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+        if pmi.workerIsActive():
             self.cxxclass.add_change_property(self, type_id, prop)
 
     def remove_change_property(self, type_id):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+        if pmi.workerIsActive():
             self.cxxclass.remove_change_property(self, type_id)
 
 
 class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-                 min_state_2, max_state_2, cutoff, rate, intramolecular=False):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+                 min_state_2, max_state_2, cutoff, rate, fpl, intramolecular=False,
+                 reverse=False):
+        if pmi.workerIsActive():
             cxxinit(
                 self,
                 integrator_Reaction,
@@ -175,7 +168,9 @@ class ReactionLocal(integrator_Reaction):
                 max_state_2,
                 cutoff,
                 rate,
-                intramolecular
+                fpl,
+                intramolecular,
+                reverse
             )
 
     def add_postprocess(self, post_process, reactant_switch=0):
@@ -185,8 +180,7 @@ class ReactionLocal(integrator_Reaction):
                 reactant_switch: Which reactant (A, B or both) should be affected.
                     0 - both, 1 - reactant A, 2 - reactant B.
         """
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.GetMPIcpugroup()):
+        if pmi.workerIsActive():
             self.cxxclass.add_postprocess(self, post_process, reactant_switch)
 
 
