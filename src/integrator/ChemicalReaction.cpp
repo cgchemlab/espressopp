@@ -260,6 +260,7 @@ ChemicalReaction::ChemicalReaction(
   interval_ = boost::make_shared<int>();
 
   reaction_list_ = ReactionList();
+  reverse_reaction_list_ = ReactionList();
 }
 
 ChemicalReaction::~ChemicalReaction() {
@@ -277,14 +278,18 @@ void ChemicalReaction::AddReaction(boost::shared_ptr<integrator::Reaction> react
   reaction->set_interval(interval_);
   reaction->set_rng(rng_);
 
-  // If VL cutoff is smaller than reaction, increase it.
-  if (reaction->cutoff() > current_cutoff_) {
-    LOG4ESPP_INFO(theLogger, "VL cutoff is extended to match with reaction cutoff");
-    verlet_list_->setVerletCutoff(reaction->cutoff());
+  if (!reaction->reverse()) {
+    // If VL cutoff is smaller than reaction, increase it.
+    if (reaction->cutoff() > current_cutoff_) {
+      LOG4ESPP_INFO(theLogger, "VL cutoff is extended to match with reaction cutoff");
+      verlet_list_->setVerletCutoff(reaction->cutoff());
+    }
+    LOG4ESPP_INFO(theLogger, "Add reaction");
+    reaction_list_.push_back(reaction);
+  } else {
+    // In this case, VL cutoff does not matter. Adds reaction on separate list.
+    reverse_reaction_list_.push_back(reaction);
   }
-
-  LOG4ESPP_INFO(theLogger, "Add reaction");
-  reaction_list_.push_back(reaction);
 }
 
 /** Removes the reaction from the list. */

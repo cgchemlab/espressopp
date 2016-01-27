@@ -331,6 +331,7 @@ class ChemicalReaction : public Extension {
   integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
 
   ReactionList reaction_list_;  //<! Container for reactions.
+  ReactionList reverse_reaction_list_;  //<! Container for reverse reactions.
 
   void connect();
   void disconnect();

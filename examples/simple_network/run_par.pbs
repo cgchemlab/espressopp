@@ -19,4 +19,4 @@ n_node=$(cat $PBS_NODEFILE | uniq | wc -l)
 mpdboot -f $PBS_NODEFILE -n $n_node -r ssh -v
 
 rng="`shuf -i 12345-99999 -n1`"
-python -u lj_traj_2.py --eq_conf equilibrated_conf.pck --rate 1.0 --interval 10 --alpha 0.0001 --loops 20000 --steps 100 --prefix lj2 --seed ${rng} &> runlj21_${rng}.log
+mpirun -n 20 python -u start_sim.py --loops 1000 --steps 1000 --seed ${rng} --prefix v2 &> runlj21_${rng}.log

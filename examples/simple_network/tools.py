@@ -8,6 +8,47 @@
 import cPickle
 import espressopp
 
+try:
+    import MPI  # pylint: disable=F0401
+except ImportError:
+    from mpi4py import MPI
+
+
+def initialize_system(args, conf):
+    print('Box={}'.format(conf.box))
+
+    # Initialize the espressopp system
+    system = espressopp.System()
+    system.kb = 1.0
+    system.rng = espressopp.esutil.RNG(args.seed)
+    system.bc = espressopp.bc.OrthorhombicBC(system.rng, conf.box)
+    system.skin = conf.skin
+    
+    nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
+    cellGrid = espressopp.tools.decomp.cellGrid(conf.box, nodeGrid, conf.rc, conf.skin)
+    print(nodeGrid, cellGrid)
+    system.storage = espressopp.storage.DomainDecomposition(system, nodeGrid, cellGrid)
+
+    integrator = espressopp.integrator.VelocityVerlet(system)
+    integrator.dt = conf.dt
+    
+    print('Setup integrator, T={}, gamma={}'.format(conf.T, conf.gamma))
+    thermostat = espressopp.integrator.LangevinThermostat(system)
+    thermostat.temperature = conf.T
+    thermostat.gamma = conf.gamma
+    thermostat.add_valid_types(conf.type_ids)
+    thermostat.add_valid_type_id(conf.type_c.type_id)
+    integrator.addExtension(thermostat)
+
+    return system, integrator
+
+def info(conf, system, integrator):
+    espressopp.tools.analyse.info(
+        system, 
+        integrator, 
+        per_atom=True,
+        valid_types=conf.type_ids+[conf.type_c.type_id])
+
 
 def lb_epsilon(eps1, eps2):
     return pow(eps1*eps2, 1.0/2.0)
@@ -101,6 +142,8 @@ def warmup(system, integrator, verletList, args, conf):
     # Equilibration.
     print('Warmup...')
     integrator.step = 0
+    old_dt = integrator.dt
+    integrator.dt = 0.1*old_dt
     interEqLJ = espressopp.interaction.VerletListLennardJones(verletList)
     system.addInteraction(interEqLJ, 'lj-eq')
     eps_delta = 0.0001
@@ -128,6 +171,7 @@ def warmup(system, integrator, verletList, args, conf):
                 type1=type_1,
                 type2=type_2,
                 potential=pot)
-
     print('Finished warming up')
+    integrator.step = 0
+    integrator.dt = old_dt
     system.removeInteractionByName('lj-eq')
