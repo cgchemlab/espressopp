@@ -58,6 +58,10 @@ namespace espressopp {
     bool add(longint pid1, longint pid2, longint pid3, longint pid4);
     /// Non-blocking add method.
     bool iadd(longint pid1, longint pid2, longint pid3, longint pid4);
+
+    bool remove(longint pid1, longint pid2, longint pid3, longint pid4);
+    bool removeByBond(longint pid1, longint pid2);
+
     void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
     void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
     virtual void onParticlesChanged();

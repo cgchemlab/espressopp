@@ -201,6 +201,73 @@ namespace espressopp {
     return returnVal;
   }
 
+  bool FixedQuadrupleList::remove(longint pid1, longint pid2, longint pid3, longint pid4) {
+    // here we assume pid1 < pid2 < pid3 < pid4
+    bool found = true;
+    System& system = storage->getSystemRef();
+
+    // ADD THE LOCAL QUADRUPLET
+    Particle *p1 = storage->lookupRealParticle(pid1);
+    Particle *p2 = storage->lookupLocalParticle(pid2);
+    Particle *p3 = storage->lookupLocalParticle(pid3);
+    Particle *p4 = storage->lookupLocalParticle(pid4);
+    if (!p1) {
+      // Particle does not exist here, return false
+      found = false;
+    } else {
+      std::stringstream msg;
+      if (!p2) {
+        msg << "quadruple particle p2 " << pid2 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+      if (!p3) {
+        msg << "quadruple particle p3 " << pid3 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+      if (!p4) {
+        msg << "quadruple particle p4 " << pid4 << " does not exists here and cannot be added";
+        throw std::runtime_error(msg.str());
+      }
+    }
+
+    bool returnVal = false;
+    if (found) {
+      std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange
+          = globalQuadruples.equal_range(pid1);
+      if (equalRange.first != globalQuadruples.end()) {
+        // otherwise test whether the quadruple already exists
+        for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
+          if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
+            it = globalQuadruples.erase(it);
+            returnVal = true;
+          } else {
+            ++it;
+          }
+      }
+    }
+    return returnVal;
+  }
+
+  bool FixedQuadrupleList::removeByBond(longint pid1, longint pid2) {
+    bool returnVal = false;
+    std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange =
+        globalQuadruples.equal_range(pid1);
+    if (equalRange.first != globalQuadruples.end()) {
+      for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;) {
+        if (it->second.first == pid2) {
+          LOG4ESPP_DEBUG(theLogger, "removed quadruple " << it->first << "-" << it->second.first
+              << "-" << it->second.second << "-" << it->second.third
+              << " bond: " << pid1 << "-" << pid2);
+          it = globalQuadruples.erase(it);
+          returnVal = true;
+        } else {
+          ++it;
+        }
+      }
+    }
+    return returnVal;
+  }
+
   python::list FixedQuadrupleList::getQuadruples()
   {
 	python::tuple quadruple;

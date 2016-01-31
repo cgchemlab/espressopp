@@ -127,7 +127,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedPairListLocal',
             #localcall = [ 'add' ],
-            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', "totalSize" ],
+            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', "totalSize", "remove" ],
             pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal', 'getAllBonds' ]
         )
         

@@ -61,7 +61,6 @@ Example
 >>> ar = espressopp.integrator.ChemicalReaction(
 >>>     system,
 >>>     verletList,
->>>     fpl_a_b,
 >>>     system.storage,
 >>>     interval)
 
@@ -77,7 +76,8 @@ Example
 >>>     max_state_a=2,
 >>>     max_state_b=1,
 >>>     rate=1000,
->>>     cutoff=ar_cutoff
+>>>     cutoff=ar_cutoff,
+>>>     fpl=fpl_a_b
 >>>     )
 
 Add the reaction to the integrator extension
@@ -97,6 +97,7 @@ from espressopp import pmi
 from espressopp.integrator.Extension import *  # NOQA
 from _espressopp import integrator_ChemicalReaction
 from _espressopp import integrator_Reaction
+from _espressopp import integrator_DissociationReaction
 
 from _espressopp import integrator_PostProcess
 from _espressopp import integrator_PostProcessChangeProperty
@@ -121,16 +122,7 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
     def add_reaction(self, reaction):
         """Adds the reaction to the list."""
         if pmi.workerIsActive():
-            self.cxxclass.addReaction(self, reaction)
-
-    def remove_reaction(self, reaction_id):
-        """Removes the reaction from the list.
-
-        Args:
-          reaction_id: The id of the reaction to remove.
-        """
-        if pmi.workerIsActive():
-            self.cxxclass.removeReaction(self, reaction_id)
+            self.cxxclass.add_reaction(self, reaction)
 
 
 class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
@@ -152,8 +144,7 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
 class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-                 min_state_2, max_state_2, cutoff, rate, fpl, intramolecular=False,
-                 reverse=False):
+                 min_state_2, max_state_2, cutoff, rate, fpl, intramolecular=False):
         if pmi.workerIsActive():
             cxxinit(
                 self,
@@ -169,8 +160,40 @@ class ReactionLocal(integrator_Reaction):
                 cutoff,
                 rate,
                 fpl,
-                intramolecular,
-                reverse
+                intramolecular
+            )
+
+    def add_postprocess(self, post_process, reactant_switch=0):
+        """Add new post process to the reaction.
+            Args:
+                post_process: The post process object.
+                reactant_switch: Which reactant (A, B or both) should be affected.
+                    0 - both, 1 - reactant A, 2 - reactant B.
+        """
+        if pmi.workerIsActive():
+            self.cxxclass.add_postprocess(self, post_process, reactant_switch)
+
+
+class DissociationReactionLocal(integrator_DissociationReaction):
+    """DissociationReaction reaction."""
+    def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
+                 min_state_2, max_state_2, cutoff, rate, diss_rate, fpl):
+        if pmi.workerIsActive():
+            cxxinit(
+                self,
+                integrator_DissociationReaction,
+                type_1,
+                type_2,
+                delta_1,
+                delta_2,
+                min_state_1,
+                max_state_1,
+                min_state_2,
+                max_state_2,
+                cutoff,
+                rate,
+                diss_rate,
+                fpl
             )
 
     def add_postprocess(self, post_process, reactant_switch=0):
@@ -192,7 +215,6 @@ if pmi.isController:
             pmiproperty=('interval',),
             pmicall=(
                 'add_reaction',
-                'remove_reaction'
                 )
             )
 
@@ -234,6 +256,30 @@ if pmi.isController:
                 'max_state_2',
                 'rate',
                 'cutoff',
-                'intramolecular'
+                'intramolecular',
+                'active'
                 )
             )
+
+    class DissociationReaction:
+            __metaclass__ = pmi.Proxy
+            pmiproxydefs = dict(
+                cls='espressopp.integrator.DissociationReactionLocal',
+                pmicall=(
+                    'add_postprocess',
+                ),
+                pmiproperty=(
+                    'type_1',
+                    'type_2',
+                    'delta_1',
+                    'delta_2',
+                    'min_state_1',
+                    'max_state_1',
+                    'min_state_2',
+                    'max_state_2',
+                    'rate',
+                    'cutoff',
+                    'diss_rate',
+                    'active'
+                    )
+                )

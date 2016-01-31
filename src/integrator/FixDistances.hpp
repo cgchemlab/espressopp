@@ -26,7 +26,7 @@
 #include <vector>
 #include "types.hpp"
 #include "logging.hpp"
-#include "Extension.hpp"
+#include "integrator/Extension.hpp"
 #include "ParticleGroup.hpp"
 #include "boost/signals2.hpp"
 #include "boost/unordered_map.hpp"

@@ -185,9 +185,12 @@ namespace espressopp {
                 GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid2);
       if (equalRange.first != globalTriples.end()) {
         // otherwise test whether the triple already exists
-        for (GlobalTriples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-          if (it->second == std::pair<longint, longint>(pid1, pid3))
+        for (GlobalTriples::const_iterator it = equalRange.first;
+             it != equalRange.second && !found; ++it) {
+          if (it->second == std::pair<longint, longint>(pid1, pid3) ||
+              it->second == std::pair<longint, longint>(pid3, pid1)) {
             found = true;
+          }
         }
       }
       returnVal = !found;
@@ -198,6 +201,75 @@ namespace espressopp {
             std::make_pair(pid2, std::pair<longint, longint>(pid1, pid3)));
       }
       LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
+    }
+    return returnVal;
+  }
+
+  bool FixedTripleList::remove(longint pid1, longint pid2, longint pid3) {
+    bool found = true;
+    // Checks locality.
+    Particle *p1 = storage->lookupLocalParticle(pid1);
+    Particle *p2 = storage->lookupRealParticle(pid2);
+    Particle *p3 = storage->lookupLocalParticle(pid3);
+
+    if (!p2) {
+      found = false;
+    } else {
+      std::stringstream msg;
+      if (!p1) {
+        msg << "adding error: triple particle p1 " << pid1 <<
+            " does not exists here and cannot be added";
+        msg << " triplet: " << pid1 << "-" << pid2 << "-" << pid3;
+        throw std::runtime_error(msg.str());
+      }
+      if (!p3) {
+        msg << "adding error: triple particle p3 " << pid3 <<
+            " does not exists here and cannot be added";
+        msg << " triplet: " << pid1 << "-" << pid2 << "-" << pid3;
+        throw std::runtime_error(msg.str());
+      }
+    }
+
+    bool returnVal = false;
+    if (found) {
+      // Remove entries.
+      std::pair<GlobalTriples::iterator, GlobalTriples::iterator> equalRange =
+          globalTriples.equal_range(pid2);
+      if (equalRange.first != globalTriples.end()) {
+        // otherwise test whether the triple already exists
+        for (GlobalTriples::iterator it = equalRange.first; it != equalRange.second;) {
+          if (it->second == std::pair<longint, longint>(pid1, pid3) ||
+              it->second == std::pair<longint, longint>(pid3, pid1)) {
+            LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
+                << "-" << it->second.second
+                << " bond: " << pid1 << "-" << pid2);
+            it = globalTriples.erase(it);
+            returnVal = true;
+          } else {
+            ++it;
+          }
+        }
+      }
+    }
+    return returnVal;
+  }
+
+  bool FixedTripleList::removeByBond(longint pid1, longint pid2) {
+    bool returnVal = false;
+    std::pair<GlobalTriples::iterator, GlobalTriples::iterator> equalRange =
+        globalTriples.equal_range(pid1);
+    if (equalRange.first != globalTriples.end()) {
+      for (GlobalTriples::iterator it = equalRange.first; it != equalRange.second;) {
+        if (it->second.first == pid2 || it->second.second == pid2) {
+          LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
+                                    << "-" << it->second.second
+                                    << " bond: " << pid1 << "-" << pid2);
+          it = globalTriples.erase(it);
+          returnVal = true;
+        } else {
+          ++it;
+        }
+      }
     }
     return returnVal;
   }
@@ -330,6 +402,14 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "regenerated local fixed triple list from global list");
   }
 
+  int FixedTripleList::totalSize() {
+    int local_size = globalTriples.size();
+    int global_size;
+    System& system = storage->getSystemRef();
+    mpi::all_reduce(*system.comm, local_size, global_size, std::plus<int>());
+    return global_size;
+  }
+
   /****************************************************
   ** REGISTRATION WITH PYTHON
   ****************************************************/
@@ -347,6 +427,7 @@ namespace espressopp {
       ("FixedTripleList", init< shared_ptr< storage::Storage > >())
       .def("add", pyAdd)
       .def("size", &FixedTripleList::size)
+      .def("totalSize", &FixedTripleList::totalSize)
       .def("getTriples",  &FixedTripleList::getTriples)
      ;
   }

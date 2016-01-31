@@ -167,7 +167,6 @@ namespace espressopp {
         throw std::runtime_error(msg.str());
       }
     }
-
     if (returnVal) {
       // ADD THE GLOBAL PAIR
       // see whether the particle already has pairs
@@ -193,6 +192,24 @@ namespace espressopp {
       }
     }
     return returnVal;
+  }
+
+  bool FixedPairList::remove(longint pid1, longint pid2) {
+    bool returnValue = false;
+    std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange =
+        globalPairs.equal_range(pid1);
+    if (equalRange.first != globalPairs.end()) {
+      for (GlobalPairs::iterator it = equalRange.first; it != equalRange.second;) {
+        if (it->second == pid2) {
+          it = globalPairs.erase(it);
+          returnValue = true;
+          onTupleRemoved(pid1, pid2);
+        } else {
+          it++;
+        }
+      }
+    }
+    return returnValue;
   }
 
   python::list FixedPairList::getBonds()
@@ -374,6 +391,7 @@ namespace espressopp {
     class_<FixedPairList, shared_ptr<FixedPairList>, boost::noncopyable >
       ("FixedPairList", init <shared_ptr<storage::Storage> >())
       .def("add", pyAdd)
+      .def("remove", &FixedPairList::remove)
       .def("size", &FixedPairList::size)
       .def("totalSize", &FixedPairList::totalSize)
       .def("getBonds",  &FixedPairList::getBonds)

@@ -26,16 +26,6 @@
 
 #include "ChemicalReaction.hpp"
 
-#include <algorithm>
-#include <cstdio>
-#include <utility>
-#include <vector>
-#include <set>
-
-#include "python.hpp"
-
-#include "types.hpp"
-#include "System.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "esutil/RNG.hpp"
@@ -43,8 +33,6 @@
 #include "storage/NodeGrid.hpp"
 #include "storage/DomainDecomposition.hpp"
 #include "FixDistances.hpp"
-
-#include "boost/make_shared.hpp"
 
 namespace espressopp {
 namespace integrator {

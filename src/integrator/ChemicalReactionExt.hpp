@@ -360,7 +360,6 @@ class ChemicalReaction : public Extension {
  private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
   void UpdateGhost(const std::set<Particle*>& modified_particles);
-  void CopyPairList();
 
   real current_cutoff_;
 
