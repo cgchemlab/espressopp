@@ -165,18 +165,20 @@ LOG4ESPP_LOGGER(DissociationReaction::theLogger, "DissociationReaction");
 bool DissociationReaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering DissociationReaction::IsValidPair");
   if (IsValidState(p1, p2, particle_order)) {
-    Real3D distance;
-    bc_->getMinimumImageVectorBox(distance, p1.position(), p2.position());
-    real distance_2 = distance.sqr();
-
     real W = (*rng_)();
 
-    // Break the bond when the distance exceed the cut_off with some probability.
-    if (distance_2 > cutoff_sqr_ && W < rate_ * (*dt_) * (*interval_)) {
-      LOG4ESPP_DEBUG(theLogger,
-                     "Break the bond, " << p1.id() << "-" << p2.id()
-                         << " d_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
-      return true;
+    if (rate_ > 0.0) {
+      Real3D distance;
+      bc_->getMinimumImageVectorBox(distance, p1.position(), p2.position());
+      real distance_2 = distance.sqr();
+
+      // Break the bond when the distance exceed the cut_off with some probability.
+      if (distance_2 > cutoff_sqr_ && W < rate_ * (*dt_) * (*interval_)) {
+        LOG4ESPP_DEBUG(theLogger,
+                       "Break the bond, " << p1.id() << "-" << p2.id()
+                           << " d_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
+        return true;
+      }
     }
 
     // Break the bond randomly.
