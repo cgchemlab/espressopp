@@ -158,6 +158,7 @@ void DynamicExcludeList::registerPython() {
        .def("observe", &DynamicExcludeList::observe)
        .def("unexclude", &DynamicExcludeList::unexclude)
        .def("get_list", &DynamicExcludeList::getList)
+       .def("update", &DynamicExcludeList::updateList)
        .def("connect", &DynamicExcludeList::connect)
        .def("disconnect", &DynamicExcludeList::disconnect);
 }

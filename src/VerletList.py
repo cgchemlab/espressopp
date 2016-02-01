@@ -59,12 +59,13 @@ from espressopp.esutil import cxxinit
 
 
 class DynamicExcludeListLocal(_espressopp.DynamicExcludeList):
-    def __init__(self, integrator, exclusionlist=[]):
+    def __init__(self, integrator, exclusionlist=None):
         if pmi.workerIsActive():
             cxxinit(self, _espressopp.DynamicExcludeList, integrator)
-            for pid1, pid2 in exclusionlist:
-                self.cxxclass.exclude(self, pid1, pid2)
-            self.cxxclass.is_dirty = False
+            if exclusionlist is not None:
+                for pid1, pid2 in exclusionlist:
+                    self.cxxclass.exclude(self, pid1, pid2)
+                self.cxxclass.update(self)
 
     def exclude(self, pid1, pid2):
         if pmi.workerIsActive():
@@ -140,7 +141,7 @@ if pmi.isController:
     pmiproxydefs = dict(
         cls='espressopp.DynamicExcludeListLocal',
         pmiproperty=['is_dirty', 'size'],
-        pmicall=['exclude', 'unexclude', 'connect', 'disconnect', 'observe'],
+        pmicall=['exclude', 'unexclude', 'connect', 'disconnect', 'observe', 'update'],
         pmiinvoke=['get_list']
     )
 
