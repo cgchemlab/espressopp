@@ -103,7 +103,9 @@ namespace espressopp {
       Settle::registerPython();
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
+
       Reaction::registerPython();
+      DissociationReaction::registerPython();
       ChemicalReaction::registerPython();
       PostProcess::registerPython();
       PostProcessChangeProperty::registerPython();

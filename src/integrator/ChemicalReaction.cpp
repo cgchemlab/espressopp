@@ -1,12 +1,6 @@
 /*
  Copyright (C) 2014-2016
    Jakub Krajniak (jkrajniak at gmail.com)
- Copyright (C) 2014-2015
-   Pierre de Buyl
- Copyright (C) 2012,2013
-   Max Planck Institute for Polymer Research
- Copyright (C) 2008,2009,2010,2011
-   Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
 
  This file is part of ESPResSo++.
 
@@ -26,16 +20,6 @@
 
 #include "ChemicalReaction.hpp"
 
-#include <algorithm>
-#include <cstdio>
-#include <utility>
-#include <vector>
-#include <set>
-
-#include "python.hpp"
-
-#include "types.hpp"
-#include "System.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "esutil/RNG.hpp"
@@ -44,17 +28,10 @@
 #include "storage/DomainDecomposition.hpp"
 #include "FixDistances.hpp"
 
-#include "boost/make_shared.hpp"
-
 namespace espressopp {
 namespace integrator {
 
-LOG4ESPP_LOGGER(ChemicalReaction::theLogger,
-"ChemicalReaction");
-LOG4ESPP_LOGGER(Reaction::theLogger,
-"Reaction");
-LOG4ESPP_LOGGER(PostProcess::theLogger,
-"PostProcess");
+LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles pair is valid. */
 bool Reaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
@@ -62,7 +39,7 @@ bool Reaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_or
     Real3D distance = p1.position() - p2.position();
     real distance_2 = distance.sqr();
     if ((distance_2 < cutoff_sqr_) && ((*rng_)() < rate_ * (*dt_) * (*interval_))) {
-      LOG4ESPP_DEBUG(theLogger, "Distance_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
+      LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id() << " d2=" << distance_2);
       return true;
     }
   }
@@ -197,13 +174,14 @@ bool DissociationReaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair 
     // Break the bond when the distance exceed the cut_off with some probability.
     if (distance_2 > cutoff_sqr_ && W < rate_ * (*dt_) * (*interval_)) {
       LOG4ESPP_DEBUG(theLogger,
-                     "Break the bond, d_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
+                     "Break the bond, " << p1.id() << "-" << p2.id()
+                         << " d_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
       return true;
     }
 
     // Break the bond randomly.
     if (W < diss_rate_ * (*dt_) * (*interval_)) {
-      LOG4ESPP_DEBUG(theLogger, "Break the bond randomly");
+      LOG4ESPP_DEBUG(theLogger, "Break the bond randomly " << p1.id() << "-" << p2.id());
       return true;
     }
   }
@@ -249,75 +227,7 @@ void DissociationReaction::registerPython() {
               .def("add_postprocess", &DissociationReaction::AddPostProcess);
 }
 
-
-/** PostProcess methods */
-void PostProcess::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-  class_ < PostProcess, shared_ptr < integrator::PostProcess >, boost::noncopyable >
-      ("integrator_PostProcess", no_init);
-}
-
-/** Adds new change property definition. */
-void PostProcessChangeProperty::AddChangeProperty(
-    int type_id,
-    boost::shared_ptr <ParticleProperties> new_property) {
-  std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
-  ret = type_properties_.insert(
-      std::pair < int, boost::shared_ptr < ParticleProperties > > (type_id, new_property));
-  if (ret.second == false)
-    throw std::runtime_error("Requested type already exists. To replace please remove it firstly");
-}
-
-/** Removes change property definition. */
-void PostProcessChangeProperty::RemoveChangeProperty(int type_id) {
-  int remove_elements = type_properties_.erase(type_id);
-  if (remove_elements == 0) {
-    throw std::runtime_error("Invalid type.");
-  }
-}
-
-/** Post process after pairs were added.
- *
- * In this case method will update the properties of the particles.
- * */
-std::vector<Particle *> PostProcessChangeProperty::process(Particle &p1) {
-  TypeParticlePropertiesMap::iterator it;
-  std::vector < Particle * > mod_particles;
-  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangeProperty::process()");
-  // Process particle p1.
-  it = type_properties_.find(p1.type());
-  bool mod = false;
-  LOG4ESPP_DEBUG(theLogger, "type " << it->second->type);
-  if (it != type_properties_.end()) {
-    if (it->second->type != NULL) {
-      p1.setType(it->second->type);
-      mod = true;
-    }
-    if (it->second->mass != NULL) {
-      p1.setMass(it->second->mass);
-      mod = true;
-    }
-    if (it->second->q != NULL) {
-      p1.setQ(it->second->q);
-      mod = true;
-    }
-    LOG4ESPP_DEBUG(theLogger, "Modified particle A: " << p1.id());
-  }
-  if (mod)
-    mod_particles.push_back(&(p1));
-  return mod_particles;
-}
-
-void PostProcessChangeProperty::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-
-  class_ < PostProcessChangeProperty, bases < integrator::PostProcess >,
-      boost::shared_ptr < integrator::PostProcessChangeProperty > >
-          ("integrator_PostProcessChangeProperty", init<>())
-              .def("add_change_property", &PostProcessChangeProperty::AddChangeProperty)
-              .def("remove_change_property", &PostProcessChangeProperty::RemoveChangeProperty);
-}
-
+LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
 /** ChemicalReaction part*/
 ChemicalReaction::ChemicalReaction(
@@ -418,13 +328,14 @@ void ChemicalReaction::React() {
   SendMultiMap(effective_pairs_);
   // Use effective_pairs_ to apply the reaction.
   std::set < Particle * > modified_particles;
+  ApplyDR(modified_particles);
   ApplyAR(modified_particles);
 //  UpdateGhost(modified_particles);
 //  modified_particles.clear();
-  ApplyDR(modified_particles);
   // Update the ghost particles.
   UpdateGhost(modified_particles);
   LOG4ESPP_DEBUG(theLogger, "Finished react()");
+  LOG4ESPP_DEBUG(theLogger, "Leaving react()");
 }
 
 /** Performs two-way parallel communication to consolidate mm between
@@ -951,6 +862,76 @@ void ChemicalReaction::registerPython() {
           "interval",
           &ChemicalReaction::interval,
           &ChemicalReaction::set_interval);
+}
+
+LOG4ESPP_LOGGER(PostProcess::theLogger, "PostProcess");
+
+/** PostProcess methods */
+void PostProcess::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+  class_ < PostProcess, shared_ptr < integrator::PostProcess >, boost::noncopyable >
+      ("integrator_PostProcess", no_init);
+}
+
+/** Adds new change property definition. */
+void PostProcessChangeProperty::AddChangeProperty(
+    int type_id,
+    boost::shared_ptr <ParticleProperties> new_property) {
+  std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
+  ret = type_properties_.insert(
+      std::pair < int, boost::shared_ptr < ParticleProperties > > (type_id, new_property));
+  if (ret.second == false)
+    throw std::runtime_error("Requested type already exists. To replace please remove it firstly");
+}
+
+/** Removes change property definition. */
+void PostProcessChangeProperty::RemoveChangeProperty(int type_id) {
+  int remove_elements = type_properties_.erase(type_id);
+  if (remove_elements == 0) {
+    throw std::runtime_error("Invalid type.");
+  }
+}
+
+/** Post process after pairs were added.
+ *
+ * In this case method will update the properties of the particles.
+ * */
+std::vector<Particle *> PostProcessChangeProperty::process(Particle &p1) {
+  TypeParticlePropertiesMap::iterator it;
+  std::vector < Particle *> mod_particles;
+  LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangeProperty::process()");
+  // Process particle p1.
+  it = type_properties_.find(p1.type());
+  bool mod = false;
+  LOG4ESPP_DEBUG(theLogger, "type " << it->second->type);
+  if (it != type_properties_.end()) {
+    if (it->second->type != NULL) {
+      p1.setType(it->second->type);
+      mod = true;
+    }
+    if (it->second->mass != NULL) {
+      p1.setMass(it->second->mass);
+      mod = true;
+    }
+    if (it->second->q != NULL) {
+      p1.setQ(it->second->q);
+      mod = true;
+    }
+    LOG4ESPP_DEBUG(theLogger, "Modified particle A: " << p1.id());
+  }
+  if (mod)
+    mod_particles.push_back(&(p1));
+  return mod_particles;
+}
+
+void PostProcessChangeProperty::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_ < PostProcessChangeProperty, bases < integrator::PostProcess >,
+      boost::shared_ptr < integrator::PostProcessChangeProperty > >
+          ("integrator_PostProcessChangeProperty", init<>())
+              .def("add_change_property", &PostProcessChangeProperty::AddChangeProperty)
+              .def("remove_change_property", &PostProcessChangeProperty::RemoveChangeProperty);
 }
 
 }  // namespace integrator

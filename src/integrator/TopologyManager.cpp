@@ -19,6 +19,9 @@
 */
 
 #include "TopologyManager.hpp"
+
+#include <utility>
+
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "boost/serialization/map.hpp"
@@ -59,31 +62,43 @@ void TopologyManager::disconnect() {
   aftIntV2_.disconnect();
 }
 
-void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl, longint type1, longint type2) {
+void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
   fpl->onTupleAdded.connect(
       boost::bind(&TopologyManager::onTupleAdded, this, _1, _2));
-  tupleMap_.push_back(fpl);
+  fpl->onTupleRemoved.connect(
+      boost::bind(&TopologyManager::onTupleRemoved, this, _1, _2));
+  tuples_.push_back(fpl);
 }
 
-void TopologyManager::observeTriple(shared_ptr<FixedTripleList> ftl,
-                                    longint type1, longint type2, longint type3) {
+void TopologyManager::registerTuple(
+    shared_ptr<FixedPairList> fpl, longint type1, longint type2, longint level) {
+  tuples_.push_back(fpl);
+  LOG4ESPP_ERROR(theLogger, "Currently, only calculated 1-4 interaction.");
+  tupleMap_[type1][type2] = fpl;
+  tupleMap_[type2][type1] = fpl;
+}
+
+void TopologyManager::registerTriple(shared_ptr<FixedTripleList> ftl,
+                                     longint type1, longint type2, longint type3) {
   tripleMap_[type1][type2][type3] = ftl;
   tripleMap_[type3][type2][type1] = ftl;
+  triples_.push_back(ftl);
   update_angles_dihedrals = true;
 }
 
-void TopologyManager::observeQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
-                                       longint type2, longint type3, longint type4) {
+void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
+                                        longint type2, longint type3, longint type4) {
   quadrupleMap_[type1][type2][type3][type4] = fql;
   quadrupleMap_[type4][type3][type2][type1] = fql;
+  quadruples_.push_back(fql);
   update_angles_dihedrals = true;
 }
 
 void TopologyManager::InitializeTopology() {
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
-  for (std::vector<shared_ptr<FixedPairList> >::iterator it = tupleMap_.begin();
-       it != tupleMap_.end(); ++it) {
+  for (std::vector< shared_ptr<FixedPairList> >::iterator it = tuples_.begin();
+       it != tuples_.end(); ++it) {
     for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
@@ -142,8 +157,9 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
   if (p1->res_id() != p2->res_id()) {
     merge_sets_.push_back(std::make_pair(p1->res_id(), p2->res_id()));
   }
-  newBond(pid1, pid2);
+  newEdges_.push_back(std::make_pair(pid1, pid2));
 }
+
 
 void TopologyManager::newEdge(longint pid1, longint pid2) {
   if (graph_->count(pid1) == 0)
@@ -152,27 +168,72 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     graph_->insert(std::make_pair(pid2, new std::set<longint>()));
   graph_->at(pid1)->insert(pid2);
   graph_->at(pid2)->insert(pid1);
-}
 
-void TopologyManager::newBond(longint pid1, longint pid2) {
-  LOG4ESPP_DEBUG(theLogger, "New bond; Adding edge: " << pid1 << "-" << pid2);
-  newEdge(pid1, pid2);
-
-  // Because graph is updated.
-  newEdges_.push_back(std::make_pair(pid1, pid2));
-
-  // Generate angles and dihedrals.
+  // Generate angles, dihedrals, based on updated graph.
   if (update_angles_dihedrals) {
     std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
     std::set<Triplets> *triplets = new std::set<Triplets>();
     generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
 
-    updateAngles(*triplets);
-    updateDihedrals(*quadruplets);
+    defineAngles(*triplets);
+    defineDihedrals(*quadruplets);
+    define14tuples(*quadruplets);
   }
 }
 
-void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
+void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
+  Particle *p1 = system_->storage->lookupRealParticle(pid1);
+  Particle *p2 = system_->storage->lookupLocalParticle(pid2);
+  if (!p1 || !p2)
+    return;
+  if (p1->res_id() == p2->res_id()) {
+    split_sets_.push_back(std::make_pair(p1->res_id(), std::make_pair(pid1, pid2)));
+  }
+  removedEdges_.push_back(std::make_pair(pid1, pid2));
+}
+
+void TopologyManager::deleteEdge(longint pid1, longint pid2) {
+  removeBond(pid1, pid2);
+
+  if (graph_->count(pid1) > 0)
+    graph_->at(pid1)->erase(pid2);
+  if (graph_->count(pid2) > 0)
+    graph_->at(pid2)->erase(pid1);
+}
+
+void TopologyManager::removeBond(longint pid1, longint pid2) {
+  LOG4ESPP_DEBUG(theLogger, "Removed bond; removing edge: " << pid1 << "-" << pid2);
+
+  Particle *p1 = system_->storage->lookupLocalParticle(pid1);
+  Particle *p2 = system_->storage->lookupLocalParticle(pid2);
+  if (p1->ghost() && !p2->ghost()) {
+    std::swap(pid1, pid2);
+  } else if (p1->ghost() && p2->ghost()) {
+    return;
+  }
+
+  // Generate list of angles/dihedrals to remove, based on the graph.
+  if (update_angles_dihedrals) {
+    std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
+    std::set <Triplets> *triplets = new std::set<Triplets>();
+    generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
+
+    // Update angles.
+    undefineAngles(*triplets);
+    undefineDihedrals(*quadruplets);
+    undefine14tuples(*quadruplets);
+    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin();
+        it != triples_.end(); ++it) {
+      (*it)->onParticlesChanged();
+    }
+    for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
+        it != quadruples_.end(); ++it) {
+      (*it)->onParticlesChanged();
+    }
+  }
+}
+
+void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
   LOG4ESPP_DEBUG(theLogger, "entering update angles");
   longint t1, t2, t3;
   shared_ptr<FixedTripleList> ftl;
@@ -180,7 +241,7 @@ void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
     Particle *p1 = system_->storage->lookupLocalParticle(it->first);
     Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
     Particle *p3 = system_->storage->lookupLocalParticle(it->second.second);
-    if ((p1 && p2) && (p1 && p3)) {
+    if (p1 && p2 && p3) {
       t1 = p1->type();
       t2 = p2->type();
       t3 = p3->type();
@@ -202,7 +263,7 @@ void TopologyManager::updateAngles(std::set<Triplets> &triplets) {
   LOG4ESPP_DEBUG(theLogger, "leaving update angles");
 }
 
-void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
+void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
   longint t1, t2, t3, t4;
   shared_ptr<FixedQuadrupleList> fql;
   for (std::set<Quadruplets>::iterator it = quadruplets.begin(); it != quadruplets.end(); ++it) {
@@ -227,6 +288,119 @@ void TopologyManager::updateDihedrals(std::set<Quadruplets> &quadruplets) {
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new dihedral: " << it->first << "-" << it->second.first
                                     << "-" << it->second.second.first << "-"
+                                    << it->second.second.second);
+      }
+    }
+  }
+}
+
+void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
+  longint t1, t4;
+  shared_ptr<FixedPairList> fpl;
+  for (std::set<Quadruplets>::iterator it = quadruplets.begin(); it != quadruplets.end(); ++it) {
+    Particle *p1 = system_->storage->lookupLocalParticle(it->first);
+    Particle *p4 = system_->storage->lookupLocalParticle(it->second.second.second);
+    if (p1 && p4) {
+      t1 = p1->type();
+      t4 = p4->type();
+      // Look for fixed triple list which should be updated.
+      fpl = tupleMap_[t1][t4];
+      if (!fpl)
+        fpl = tupleMap_[t4][t1];
+      if (fpl) {
+        LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t4);
+        bool ret = fpl->iadd(p1->id(), p4->id());
+        if (!ret)
+          ret = fpl->iadd(p4->id(), p1->id());
+        if (ret) LOG4ESPP_DEBUG(theLogger,
+                                "Defined new 1-4 pair: " << it->first << "-"
+                                    << it->second.second.second);
+      }
+    }
+  }
+}
+
+void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
+  LOG4ESPP_DEBUG(theLogger, "entering update angles");
+  longint t1, t2, t3;
+  shared_ptr<FixedTripleList> ftl;
+  for (std::set<Triplets>::iterator it = triplets.begin(); it != triplets.end(); ++it) {
+    Particle *p1 = system_->storage->lookupLocalParticle(it->first);
+    Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
+    Particle *p3 = system_->storage->lookupLocalParticle(it->second.second);
+    if (p1 && p2 && p3) {
+      t1 = p1->type();
+      t2 = p2->type();
+      t3 = p3->type();
+      // Look for fixed triple list which should be updated.
+      ftl = tripleMap_[t1][t2][t3];
+      if (!ftl)
+        ftl = tripleMap_[t3][t2][t1];
+      if (ftl) {
+        LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
+        bool ret = ftl->remove(p1->id(), p2->id(), p3->id());
+        if (!ret)
+          ret = ftl->remove(p3->id(), p2->id(), p1->id());
+        if (ret) LOG4ESPP_DEBUG(theLogger,
+                                "Remove angle: " << it->first << "-" << it->second.first << "-"
+                                    << it->second.second);
+      }
+    }
+  }
+  LOG4ESPP_DEBUG(theLogger, "leaving update angles");
+}
+
+void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
+  longint t1, t2, t3, t4;
+  shared_ptr<FixedQuadrupleList> fql;
+  for (std::set<Quadruplets>::iterator it = quadruplets.begin(); it != quadruplets.end(); ++it) {
+    Particle *p1 = system_->storage->lookupLocalParticle(it->first);
+    Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
+    Particle *p3 = system_->storage->lookupLocalParticle(it->second.second.first);
+    Particle *p4 = system_->storage->lookupLocalParticle(it->second.second.second);
+    if (p1 && p2 && p3 && p4) {
+      t1 = p1->type();
+      t2 = p2->type();
+      t3 = p3->type();
+      t4 = p4->type();
+      // Look for fixed triple list which should be updated.
+      fql = quadrupleMap_[t1][t2][t3][t4];
+      if (!fql)
+        fql = quadrupleMap_[t4][t3][t2][t1];
+      if (fql) {
+        LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3 << "-" << t4);
+        bool ret = fql->remove(p1->id(), p2->id(), p3->id(), p4->id());
+        if (!ret)
+          ret = fql->remove(p4->id(), p3->id(), p2->id(), p1->id());
+        if (ret) LOG4ESPP_DEBUG(theLogger,
+                                "Remove dihedral: " << it->first << "-" << it->second.first
+                                    << "-" << it->second.second.first << "-"
+                                    << it->second.second.second);
+      }
+    }
+  }
+}
+
+void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
+  longint t1, t4;
+  shared_ptr<FixedPairList> fpl;
+  for (std::set<Quadruplets>::iterator it = quadruplets.begin(); it != quadruplets.end(); ++it) {
+    Particle *p1 = system_->storage->lookupLocalParticle(it->first);
+    Particle *p4 = system_->storage->lookupLocalParticle(it->second.second.second);
+    if (p1 && p4) {
+      t1 = p1->type();
+      t4 = p4->type();
+      // Look for fixed triple list which should be updated.
+      fpl = tupleMap_[t1][t4];
+      if (!fpl)
+        fpl = tupleMap_[t4][t1];
+      if (fpl) {
+        LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t4);
+        bool ret = fpl->remove(p1->id(), p4->id());
+        if (!ret)
+          ret = fpl->remove(p4->id(), p1->id());
+        if (ret) LOG4ESPP_DEBUG(theLogger,
+                                "Remove dihedral: " << it->first << "-"
                                     << it->second.second.second);
       }
     }
@@ -305,40 +479,82 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
 void TopologyManager::exchangeData() {
   LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
   // Collect all message from other CPUs. Both for res_id and new graph edges.
-  typedef std::vector<std::vector<std::pair<longint, longint> > > GlobaleMergeSets;
-  GlobaleMergeSets global_merge_sets;
+  typedef std::vector<std::vector<longint> > GlobalMerge;
+  GlobalMerge global_merge_sets;
 
+  // Pack data
   // Format: vector of pairs.
-  // 0: size of merge_sets, size of new_edges
-  // 1..size_of_merge_sets
-  // size_of_merge_sets+1...size_of_merge_sets+size_of_new_edges
-  std::vector<std::pair<longint, longint> > output;
-  output.push_back(std::make_pair(merge_sets_.size(), newEdges_.size()));
-  output.insert(output.end(), merge_sets_.begin(), merge_sets_.end());
-  output.insert(output.end(), newEdges_.begin(), newEdges_.end());
+  // 0: size of merge_sets, size of new_edges;
+  // 1: size of split_sets, size of removed_edges;
+  // 2..size_of_merge_sets
+  // size_of_merge_sets+2...size_of_merge_sets+size_of_new_edges
+  //
+  std::vector<longint> output;
+  output.push_back(merge_sets_.size());
+  output.push_back(newEdges_.size());
+  output.push_back(split_sets_.size());
+  output.push_back(removedEdges_.size());
 
+  for (std::vector<std::pair<longint, longint> >::iterator it = merge_sets_.begin();
+      it != merge_sets_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second);
+  }
+  for (std::vector<std::pair<longint, longint> >::iterator it = newEdges_.begin();
+      it != newEdges_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second);
+  }
+  for (std::vector<std::pair<longint, std::pair<longint, longint> > >::iterator it = split_sets_.begin();
+      it != split_sets_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second.first);
+    output.push_back(it->second.second);
+  }
+  for (std::vector<std::pair<longint, longint> >::iterator it = removedEdges_.begin();
+      it != removedEdges_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second);
+  }
+
+  // Send and gather data from all nodes.
   mpi::all_gather(*(system_->comm), output, global_merge_sets);
 
-  for (GlobaleMergeSets::iterator gms = global_merge_sets.begin();
-       gms != global_merge_sets.end(); ++gms) {
-    for (std::vector<std::pair<longint, longint> >::iterator itm = gms->begin();
-         itm != gms->end();) {
-      longint merge_set_size = itm->first;
-      longint new_edge_size = itm->second;
-      itm++;
-      for (int i = 0; i < merge_set_size; i++, itm++) {
-        LOG4ESPP_DEBUG(theLogger, "Merge sets " << itm->first << " with " << itm->second);
-        mergeResIdSets(itm->first, itm->second);
+  // Merge data from other nodes.
+  longint f1, f2, f3, merge_set_size, new_edge_size, split_set_size, remove_edge_size;
+  for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
+    for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
+      merge_set_size = *(itm++);
+      new_edge_size = *(itm++);
+      split_set_size = *(itm++);
+      remove_edge_size = *(itm++);
+      for (int i = 0; i < merge_set_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        mergeResIdSets(f1, f2);
       }
-      LOG4ESPP_DEBUG(theLogger, "Update new edges. " << new_edge_size);
-      // Update new edges.
-      for (int i = 0; i < new_edge_size; i++, itm++) {
-        newEdge(itm->first, itm->second);
+      for (int i = 0; i < new_edge_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        newEdge(f1, f2);
+      }
+      for (int i = 0; i < split_set_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        f3 = *(itm++);
+        splitResIdSets(f1, f2, f3);
+      }
+      for (int i = 0; i < remove_edge_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        deleteEdge(f1, f2);
       }
     }
   }
   merge_sets_.clear();
   newEdges_.clear();
+  removedEdges_.clear();
+  split_sets_.clear();
   LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
 }
 
@@ -365,6 +581,16 @@ void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {
   res_particle_ids_[res_id_b] = res_particle_ids_[res_id_a];
   LOG4ESPP_DEBUG(theLogger, "leaving merge sets A:" << res_id_a << " with B:" << res_id_b);
   //delete setB;  // free memory as this set was copied to res_id_a.
+}
+
+void TopologyManager::splitResIdSets(longint res_id, longint pid1, longint pid2) {
+  LOG4ESPP_DEBUG(theLogger, "spliting set " << res_id << " pid1=" << pid1 << " pid2=" << pid2);
+
+  shared_ptr<PSet> setA = res_particle_ids_[res_id];
+
+  PSet set_1;
+  PSet set_2;
+
 }
 
 void TopologyManager::Rebuild() {
@@ -408,8 +634,9 @@ void TopologyManager::registerPython() {
       .def("disconnect", &TopologyManager::disconnect)
       .def("rebuild", &TopologyManager::Rebuild)
       .def("observe_tuple", &TopologyManager::observeTuple)
-      .def("observe_triple", &TopologyManager::observeTriple)
-      .def("observe_quadruple", &TopologyManager::observeQuadruple)
+      .def("register_tuple", &TopologyManager::registerTuple)
+      .def("register_triple", &TopologyManager::registerTriple)
+      .def("register_quadruple", &TopologyManager::registerQuadruple)
       .def("initialize", &TopologyManager::InitializeTopology)
       .def("print_topology", &TopologyManager::PrintTopology)
       .def("get_neighbour_lists", &TopologyManager::getNeighbourLists);

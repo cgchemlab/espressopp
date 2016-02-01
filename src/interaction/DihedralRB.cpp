@@ -20,7 +20,6 @@
 
 #include "python.hpp"
 #include "DihedralRB.hpp"
-#include "FixedTripleListInteractionTemplate.hpp"
 #include "FixedQuadrupleListInteractionTemplate.hpp"
 
 namespace espressopp {

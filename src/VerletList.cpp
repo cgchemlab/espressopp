@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2015-2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -38,9 +40,10 @@ LOG4ESPP_LOGGER(DynamicExcludeList::theLogger, "DynamicExcludeList");
 DynamicExcludeList::DynamicExcludeList(shared_ptr<integrator::MDIntegrator> integrator):
     integrator_(integrator) {
   LOG4ESPP_INFO(theLogger, "construct of DynamicExcludeList");
-  exListDirty = true;
   exList = boost::make_shared<ExcludeList>();
   connect();
+  exList_remove.clear();
+  exList_add.clear();
 }
 
 DynamicExcludeList::~DynamicExcludeList() {
@@ -49,7 +52,7 @@ DynamicExcludeList::~DynamicExcludeList() {
 
 void DynamicExcludeList::connect() {
   LOG4ESPP_INFO(theLogger, "Connected to integrator");
-  aftIntV = integrator_->aftIntV.connect(boost::bind(&DynamicExcludeList::updateList, this));
+  aftIntV = integrator_->aftIntV2.connect(boost::bind(&DynamicExcludeList::updateList, this));
 }
 
 void DynamicExcludeList::disconnect() {
@@ -61,53 +64,62 @@ void DynamicExcludeList::observe(shared_ptr<FixedPairList> fpl) {
   fpl->onTupleAdded.connect(
       boost::bind(&DynamicExcludeList::exclude, this, _1, _2));
 
-  // TODO: Handle when bond is removed from observerd  fixed pair list. Currently this is not
-  // implemented there.
+  fpl->onTupleRemoved.connect(
+      boost::bind(&DynamicExcludeList::unexclude, this, _1, _2));
 }
 
 void DynamicExcludeList::updateList() {
   LOG4ESPP_INFO(theLogger, "Update dynamic list.");
-  // Collect state from all CPUs. If somewhere list is dirty then gather and scatter.
-  bool global_exListDirty;
-  mpi::all_reduce(*(integrator_->getSystem()->comm), exListDirty,
-                  global_exListDirty, std::logical_or<bool>());
-  if (global_exListDirty) {
-    LOG4ESPP_INFO(theLogger, "Exclude dynamic list is dirty, exchange it.");
-    std::vector<longint> out_buffer;
-    std::vector<std::vector<longint> > in_buffer;
+  // Collect state from all CPUs.
+  LOG4ESPP_INFO(theLogger, "Exclude dynamic list is dirty, exchange it.");
+  std::vector<longint> out_buffer;
+  std::vector<std::vector<longint> > in_buffer;
 
-    // Prepare output.
-    out_buffer.push_back(2*exList_remove.size());
-    out_buffer.insert(out_buffer.end(), exList_remove.begin(), exList_remove.end());
-    out_buffer.push_back(2*exList_add.size());
-    out_buffer.insert(out_buffer.end(), exList_add.begin(), exList_add.end());
-    // Gather everywhere everything.
-    mpi::all_gather(*(integrator_->getSystem()->comm), out_buffer, in_buffer);
-    //Update list.
-    for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin();
-         it != in_buffer.end(); ++it) {
-      for (int i = 1; i < (it->at(0)+1); i=i+2) {
-        exList->erase(std::make_pair(it->at(i), it->at(i+1)));
-        exList->erase(std::make_pair(it->at(i+1), it->at(i)));
-        LOG4ESPP_DEBUG(theLogger, "removed pair: " << it->at(i) << "-" << it->at(i+1));
+  // Prepare output.
+  out_buffer.push_back(exList_remove.size() / 2);
+  out_buffer.push_back(exList_add.size() / 2);
+  for (std::vector<longint>::iterator it = exList_remove.begin(); it != exList_remove.end(); ++it) {
+    out_buffer.push_back(*it);
+  }
+  for (std::vector<longint>::iterator it = exList_add.begin(); it != exList_add.end(); ++it) {
+    out_buffer.push_back(*it);
+  }
+
+  // Gather everywhere everything.
+  mpi::all_gather(*(integrator_->getSystem()->comm), out_buffer, in_buffer);
+  //Update list.
+  LOG4ESPP_DEBUG(theLogger, "update data from " << in_buffer.size());
+
+  for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin(); it != in_buffer.end(); it++) {
+    for (std::vector<longint>::iterator itm = it->begin(); itm != it->end();) {
+      longint remove_size = *(itm++);
+      longint add_size = *(itm++);
+      LOG4ESPP_DEBUG(theLogger, "remove_size=" << remove_size << " add_size=" << add_size);
+      for (int i = 0; i < remove_size; i++) {
+        longint f1 = *(itm++);
+        longint f2 = *(itm++);
+        exList->erase(std::make_pair(f1, f2));
+        exList->erase(std::make_pair(f2, f1));
+        //LOG4ESPP_DEBUG(theLogger, "removed pair: " << f1 << "-" << f2);
       }
-      for (int i = (it->at(0)+2); i < it->size(); i=i+2) {
-        LOG4ESPP_DEBUG(theLogger, "add pair: " << it->at(i) << "-" << it->at(i+1));
-        exList->insert(std::make_pair(it->at(i), it->at(i+1)));
-        exList->insert(std::make_pair(it->at(i+1), it->at(i)));
+      for (int i = 0; i < add_size; i++) {
+        longint f1 = *(itm++);
+        longint f2 = *(itm++);
+        exList->insert(std::make_pair(f1, f2));
+        exList->insert(std::make_pair(f2, f1));
+        //LOG4ESPP_DEBUG(theLogger, "add pair: " << f1 << "-" << f2);
       }
     }
   }
   exList_remove.clear();
   exList_add.clear();
-  exListDirty = false;
+  LOG4ESPP_DEBUG(theLogger, "leave DynamicExcludeList::updateList");
 }
 void DynamicExcludeList::setExListDirty(bool val) {
   if (!val) {
     exList_remove.clear();
     exList_add.clear();
   }
-  exListDirty = val;
 }
 
 python::list DynamicExcludeList::getList() {
@@ -120,20 +132,18 @@ python::list DynamicExcludeList::getList() {
 
 void DynamicExcludeList::exclude(longint pid1, longint pid2) {
   LOG4ESPP_INFO(theLogger, "new exclude pair " << pid1 << "-" << pid2);
-  exList->insert(std::make_pair(pid1, pid2));
+  //exList->insert(std::make_pair(pid1, pid2));
 
   exList_add.push_back(pid1);
   exList_add.push_back(pid2);
-  exListDirty = true;
 }
 
 void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
   exList_remove.push_back(pid1);
   exList_remove.push_back(pid2);
 
-  exList->erase(std::make_pair(pid1, pid2));
-  exList->erase(std::make_pair(pid2, pid1));
-  exListDirty = true;
+  //exList->erase(std::make_pair(pid1, pid2));
+  //exList->erase(std::make_pair(pid2, pid1));
 }
 
 void DynamicExcludeList::registerPython() {

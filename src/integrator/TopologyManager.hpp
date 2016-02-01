@@ -46,12 +46,18 @@ class TopologyManager: public Extension {
    * are used to update those list based on the new
    * bond that appear in the system.
    */
+
+  void observeTuple(shared_ptr<FixedPairList> fpl);
+
   /**
    * Observe fixed pair list against changes.
    * @param fpl FixedPairList
+   * @param type1 particle type
+   * @param type2 particle type
+   * @param level tuple level; number of bonds between two particles on the list
    */
-  void observeTuple(shared_ptr<FixedPairList> fpl,
-                    longint type1, longint type2);
+  void registerTuple(shared_ptr<FixedPairList> fpl,
+                    longint type1, longint type2, longint level);
   /**
    * Register triple pair list with desire atom types.
    * @param ftl FixedTripleList
@@ -59,8 +65,8 @@ class TopologyManager: public Extension {
    * @param type2 The longint type_2
    * @param type3 The lontint type_3
    */
-  void observeTriple(shared_ptr<FixedTripleList> ftl,
-                     longint type1, longint type2, longint type3);
+  void registerTriple(shared_ptr<FixedTripleList> ftl,
+                      longint type1, longint type2, longint type3);
   /**
    * Register quadruple list with desire atom types.
    * @param fql FixedQuadrupleList
@@ -69,8 +75,8 @@ class TopologyManager: public Extension {
    * @param type3 The longint type_3
    * @param type4 The longint type_4
    */
-  void observeQuadruple(shared_ptr<FixedQuadrupleList> fql,
-                        longint type1, longint type2, longint type3, longint type4);
+  void registerQuadruple(shared_ptr<FixedQuadrupleList> fql,
+                         longint type1, longint type2, longint type3, longint type4);
 
   /**
    * Initialized topology by looking for bonds in registered PairLists and
@@ -108,22 +114,46 @@ class TopologyManager: public Extension {
    * Handle signal from FixedPairList that new bond was created.
    */
   void onTupleAdded(longint pid1, longint pid2);
+  void onTupleRemoved(longint pid1, longint pid2);
   /**
    * Process new bond.
    */
   void newBond(longint pid1, longint pid2);
+
+  /**
+   * Process removing of the bond.
+   */
+  void removeBond(longint pid1, longint pid2);
+
   /**
    * Process new edge in topology.
    */
   void newEdge(longint pid1, longint pid2);
+
+  /**
+   * Process removing edge from topology.
+   */
+  void deleteEdge(longint pid1, longint pid2);
+
   /**
    * Update registered FixedTripleList with new entries.
    */
-  void updateAngles(std::set<Triplets> &triplets);
+  void defineAngles(std::set<Triplets> &triplets);
   /**
    * Update registered FixedQuadrupleLists with new entries.
    */
-  void updateDihedrals(std::set<Quadruplets> &quadruplets);
+  void defineDihedrals(std::set<Quadruplets> &quadruplets);
+  void define14tuples(std::set<Quadruplets> &quadruplets);
+  /**
+   * Update registered FixedTripleList with new entries.
+   */
+  void undefineAngles(std::set<Triplets> &triplets);
+  /**
+   * Update registered FixedQuadrupleLists with new entries.
+   */
+  void undefineDihedrals(std::set<Quadruplets> &quadruplets);
+  void undefine14tuples(std::set<Quadruplets> &quadruplets);
+
   /**
    * Based on topology, generate missing angles and dihedrals around newly
    * created bond.
@@ -132,6 +162,7 @@ class TopologyManager: public Extension {
                                longint pid2,
                                std::set<Quadruplets> &quadruplets,
                                std::set<Triplets> &triplets);
+
   /**
    * Exchange new topology and res_id data among cpus.
    */
@@ -142,6 +173,12 @@ class TopologyManager: public Extension {
    * and update res_id of corresponding particles.
    */
   void mergeResIdSets(longint res_id_a, longint res_id_b);
+
+  /**
+   * Split sets into two.
+   */
+  void splitResIdSets(longint res_id, longint pid1, longint pid2);
+
   /**
    * Connecting/Disconnecting to signals.
    */
@@ -149,12 +186,18 @@ class TopologyManager: public Extension {
   void disconnect();
 
   shared_ptr<System> system_;
+  /// Stores mapping: key -> res_id, value->set of particle ids with given res_id.
   ResParticleIds res_particle_ids_;
   std::vector<std::pair<longint, longint> > merge_sets_;
+  /// Holds sets to split, triplet: res_id, pid1, pid2.
+  typedef std::vector<std::pair<longint, std::pair<longint, longint> > > SplitSets;
+  SplitSets split_sets_;
 
   boost::signals2::connection aftIntV2_, aftCalcF_;
 
   // Maping for tuples, triplets and quadruplets.
+  typedef boost::unordered_map<longint,
+      boost::unordered_map<longint, shared_ptr<FixedPairList> > > TupleMap;
   typedef boost::unordered_map<
       longint,
       boost::unordered_map<
@@ -171,14 +214,19 @@ class TopologyManager: public Extension {
               boost::unordered_map<
                   longint,
                   shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
-  typedef std::map<longint, std::set<int> *> GraphMap;
+  typedef std::map<longint, std::set<int>* > GraphMap;
   bool update_angles_dihedrals;
 
-  std::vector<shared_ptr<FixedPairList> > tupleMap_;
+  std::vector<shared_ptr<FixedPairList> > tuples_;
+  std::vector<shared_ptr<FixedTripleList> > triples_;
+  std::vector<shared_ptr<FixedQuadrupleList> > quadruples_;
+
+  TupleMap tupleMap_;
   TripleMap tripleMap_;
   QuadrupleMap quadrupleMap_;
 
   EdgesVector newEdges_;
+  EdgesVector removedEdges_;
 
   /** Adjacent list. */
   GraphMap *graph_;

@@ -43,30 +43,30 @@ class TopologyManagerLocal(integrator_TopologyManager):
             cxxinit(self, integrator_TopologyManager, system)
 
     def rebuild(self):
-        """
-        """
         if pmi.workerIsActive():
             self.cxxclass.rebuild(self)
 
     def observe_tuple(self, fpl):
         if pmi.workerIsActive():
-            self.cxxclass.observe_tuple(self, fpl, 0, 0)
+            self.cxxclass.observe_tuple(self, fpl)
 
-    def register_tuple(self, fpl, type1, type2):
+    def register_tuple(self, fpl, type1, type2=None):
         if pmi.workerIsActive():
-            self.cxxclass.observe_tuple(self, fpl, type1, type2)
+            if type2 is None:
+                type2 = type1
+            self.cxxclass.register_tuple(self, fpl, type1, type2, 4)
 
     def register_triplet(self, ftl, type1, type2=None, type3=None):
         if pmi.workerIsActive():
             if type2 is None and type3 is None:
                 type2 = type3 = type1
-            self.cxxclass.observe_triple(self, ftl, type1, type2, type3)
+            self.cxxclass.register_triple(self, ftl, type1, type2, type3)
 
     def register_quadruplet(self, fql, type1, type2=None, type3=None, type4=None):
         if pmi.workerIsActive():
             if None in [type2, type3, type4]:
                 type2 = type3 = type4 = type1
-            self.cxxclass.observe_quadruple(self, fql, type1, type2, type3, type4)
+            self.cxxclass.register_quadruple(self, fql, type1, type2, type3, type4)
 
     def initialize_topology(self):
         if pmi.workerIsActive():

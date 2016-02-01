@@ -1,12 +1,6 @@
 /*
  Copyright (C) 2014-2016
    Jakub Krajniak (jkrajniak at gmail.com)
- Copyright (C) 2014
-    Pierre de Buyl
- Copyright (C) 2012,2013
-    Max Planck Institute for Polymer Research
- Copyright (C) 2008,2009,2010,2011
-    Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
 
  This file is part of ESPResSo++.
 
@@ -86,6 +80,7 @@ class PostProcessChangeProperty : public integrator::PostProcess {
  private:
   TypeParticlePropertiesMap type_properties_;
 };
+
 
 /** Class for the chemical reactions. */
 class Reaction {
@@ -299,6 +294,7 @@ class SynthesisReaction : public integrator::Reaction {
 };
  */
 
+
 typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
 typedef std::vector<boost::unordered_multimap<longint, longint> > RevReactionPairList;
@@ -360,7 +356,6 @@ class ChemicalReaction : public Extension {
  private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
   void UpdateGhost(const std::set<Particle*>& modified_particles);
-  void CopyPairList();
 
   real current_cutoff_;
 
@@ -384,6 +379,8 @@ class ChemicalReaction : public Extension {
   void connect();
   void disconnect();
 };
+
+
 
 
 }  // namespace integrator
