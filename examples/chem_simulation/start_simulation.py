@@ -222,6 +222,7 @@ def main():  #NOQA
     verletlist = espressopp.VerletList(
         system,
         cutoff=max_cutoff,
+        #exclusionlist=input_conf.exclusions
         exclusionlist=dynamic_exclusion_list
         )
 
@@ -283,10 +284,14 @@ def main():  #NOQA
     system.storage.decompose()
 
     # Set chemical reactions
+    fpls = []
     if args.reactions:
         reaction_config = reaction_parser.parse_config(args.reactions)
-        reaction_parser.setup_reactions(system, verletlist, reaction_config)
+        ar, fpls, rs = reaction_parser.setup_reactions(
+            system, verletlist, input_conf, reaction_config)
 
+    for f in fpls:
+        dynamic_exclusion_list.observe(f)
     print('Energy saved to: {}energy.csv'.format(args.output_prefix))
     system_analysis = espressopp.analysis.SystemMonitor(
         system,
@@ -301,10 +306,22 @@ def main():  #NOQA
         print('System analysis: adding {}'.format(label))
         system_analysis.add_observable(
             label, espressopp.analysis.PotentialEnergy(system, interaction))
-    system_analysis.add_observable('P', pressure_comp, True)
+    for ff in fpls:
+        system_analysis.add_observable(
+            'fpl', espressopp.analysis.NFixedPairListEntries(system, ff))
     ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, args.energy_collect)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
+
+    print('Setting TopologyManager')
+    topology_manager = espressopp.integrator.TopologyManager(system)
+    topology_manager.rebuild()
+    for bi in bondedinteractions.values():
+        topology_manager.observe_tuple(bi.getFixedPairList())
+    for f in fpls:
+        topology_manager.observe_tuple(f)
+    topology_manager.initialize_topology()
+    integrator.addExtension(topology_manager)
 
     print('Save trajectory to {}{}'.format(args.output_prefix, args.output_file))
     h5md_output_file = '{}{}'.format(args.output_prefix, args.output_file)
@@ -322,6 +339,15 @@ def main():  #NOQA
         'temperature': args.temperature})
 
     dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
+    for i, f in enumerate(fpls):
+        dump_topol.observe_tuple(f, 'fpl_{}'.format(i))
+
+    for bid, bi in bondedinteractions.items():
+        f = bi.getFixedPairList()
+        dump_topol.observe_tuple(f, 'fpl_{}'.format(bid))
+
+    #dump_topol.dump()
+    #dump_topol.update()
     ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 10)
     integrator.addExtension(ext_dump)
 
@@ -342,8 +368,10 @@ def main():  #NOQA
     system_analysis.dump()
     system_analysis.info()
 
+    #import IPython; IPython.embed()
     for k in range(sim_step):
         integrator.run(integrator_step)
+        dump_topol.update()
         if k_energy_collect > 0 and k % k_energy_collect == 0:
             system_analysis.info()
         if k_trj_collect > 0 and k % k_trj_collect == 0:

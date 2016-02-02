@@ -159,7 +159,7 @@ class TabulatedLocal(PotentialLocal, interaction_Tabulated):
     def __init__(self, itype, filename, cutoff=infinity):
 
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_Tabulated, itype, filename, cutoff)
+            cxxinit(self, interaction_Tabulated, int(itype), filename, cutoff)
 
 class VerletListAdressTabulatedLocal(InteractionLocal, interaction_VerletListAdressTabulated):
 

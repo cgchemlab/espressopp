@@ -36,10 +36,10 @@ void DumpTopology::perform_action() {
 
 void DumpTopology::Dump() {
   // Format: <step1><pair_idx_0><size><pid1><pid2><pid3><pid4><pair_idx_1><size><pid...><step2>..
-  fpl_buffer_.push_front(integrator_->getStep());
   int idx = 0;
   for (std::vector<shared_ptr<FixedPairList> >::iterator it = fpls_.begin();
        it != fpls_.end(); ++it) {
+    fpl_buffer_.push_front(integrator_->getStep());
     std::vector<longint> pairs = (*it)->getPairList();
     fpl_buffer_.push_front(idx);
     fpl_buffer_.push_front(pairs.size()/2);

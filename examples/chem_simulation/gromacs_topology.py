@@ -951,7 +951,7 @@ def genParticleList(input_conf, use_velocity=False, use_charge=False, use_adress
     Returns:
         List of property names and particle list.
     """
-    props = ['id', 'type', 'pos', 'res_id']
+    props = ['id', 'type', 'pos', 'res_id', 'state']
     use_mass = bool(input_conf.masses)
     use_velocity = use_velocity and bool(input_conf.vx)
     use_charge = use_charge and bool(input_conf.charges)
@@ -970,7 +970,7 @@ def genParticleList(input_conf, use_velocity=False, use_charge=False, use_adress
         tmp = [pid+1,
                input_conf.types[pid],
                espressopp.Real3D(input_conf.x[pid], input_conf.y[pid], input_conf.z[pid]),
-               input_conf.res_ids[pid]
+               input_conf.res_ids[pid], input_conf.states[pid]
               ]
         if use_mass:
             tmp.append(input_conf.masses[pid])
