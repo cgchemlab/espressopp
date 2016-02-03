@@ -303,7 +303,7 @@ bool FixedTripleListAdress::iadd(longint pid1, longint pid2, longint pid3) {
     bool (FixedTripleListAdress::*pyAdd)(longint pid1, longint pid2, longint pid3)
       = &FixedTripleListAdress::add;
 
-    class_<FixedTripleListAdress, shared_ptr<FixedTripleListAdress> >
+    class_<FixedTripleListAdress, shared_ptr<FixedTripleListAdress>, boost::noncopyable >
       ("FixedTripleListAdress",
               init <shared_ptr<storage::Storage>,
                      shared_ptr<FixedTupleListAdress> >())

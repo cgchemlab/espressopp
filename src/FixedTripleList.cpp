@@ -125,6 +125,7 @@ namespace espressopp {
         this->add(p1, p2, p3);
         globalTriples.insert(equalRange.first,
                              std::make_pair(pid2, std::pair<longint, longint>(pid1, pid3)));
+        onTupleAdded(pid1, pid2, pid3);
       }
       LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
     }
@@ -199,6 +200,7 @@ namespace espressopp {
         this->add(p1, p2, p3);
         globalTriples.insert(equalRange.first,
             std::make_pair(pid2, std::pair<longint, longint>(pid1, pid3)));
+        onTupleAdded(pid1, pid2, pid3);
       }
       LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
     }
@@ -244,6 +246,7 @@ namespace espressopp {
                 << "-" << it->second.second
                 << " bond: " << pid1 << "-" << pid2);
             it = globalTriples.erase(it);
+            onTupleRemoved(it->second.first, it->first, it->second.second);
             returnVal = true;
           } else {
             ++it;
@@ -265,6 +268,7 @@ namespace espressopp {
                                     << "-" << it->second.second
                                     << " bond: " << pid1 << "-" << pid2);
           it = globalTriples.erase(it);
+          onTupleRemoved(it->second.first, pid1, it->second.second);
           returnVal = true;
         } else {
           ++it;
@@ -423,7 +427,7 @@ namespace espressopp {
     //bool (FixedTripleList::*pyAdd)(pvec pids)
     //      = &FixedTripleList::add;
 
-    class_< FixedTripleList, shared_ptr< FixedTripleList > >
+    class_< FixedTripleList, shared_ptr< FixedTripleList >, boost::noncopyable  >
       ("FixedTripleList", init< shared_ptr< storage::Storage > >())
       .def("add", pyAdd)
       .def("size", &FixedTripleList::size)

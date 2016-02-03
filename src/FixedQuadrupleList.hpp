@@ -73,6 +73,9 @@ namespace espressopp {
     	return globalQuadruples.size();
     }
 
+    boost::signals2::signal4 <void, longint, longint, longint, longint> onTupleAdded;
+    boost::signals2::signal4 <void, longint, longint, longint, longint> onTupleRemoved;
+
     static void registerPython();
 
   private:

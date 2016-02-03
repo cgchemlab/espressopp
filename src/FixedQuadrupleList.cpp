@@ -131,6 +131,7 @@ namespace espressopp {
         // if not, insert the new quadruple
         globalQuadruples.insert(equalRange.first,
                                 std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
+        onTupleAdded(pid1, pid2, pid3, pid4);
         LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
       }
     }
@@ -195,6 +196,7 @@ namespace espressopp {
         // if not, insert the new quadruple
         globalQuadruples.insert(equalRange.first,
           std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
+        onTupleAdded(pid1, pid2, pid3, pid4);
         LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
       }
     }
@@ -239,6 +241,7 @@ namespace espressopp {
         for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
           if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
             it = globalQuadruples.erase(it);
+            onTupleRemoved(pid1, pid2, pid3, pid4);
             returnVal = true;
           } else {
             ++it;
@@ -259,6 +262,7 @@ namespace espressopp {
               << "-" << it->second.second << "-" << it->second.third
               << " bond: " << pid1 << "-" << pid2);
           it = globalQuadruples.erase(it);
+          onTupleRemoved(it->first, it->second.first, it->second.second, it->second.third);
           returnVal = true;
         } else {
           ++it;
@@ -415,7 +419,7 @@ namespace espressopp {
     //bool (FixedQuadrupleList::*pyAdd)(pvec pids)
     //          = &FixedQuadrupleList::add;
 
-    class_< FixedQuadrupleList, shared_ptr< FixedQuadrupleList > >
+    class_< FixedQuadrupleList, shared_ptr< FixedQuadrupleList >, boost::noncopyable >
       ("FixedQuadrupleList", init< shared_ptr< storage::Storage > >())
       .def("add", pyAdd)
       .def("size", &FixedQuadrupleList::size)

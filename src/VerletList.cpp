@@ -60,12 +60,34 @@ void DynamicExcludeList::disconnect() {
   aftIntV.disconnect();
 }
 
-void DynamicExcludeList::observe(shared_ptr<FixedPairList> fpl) {
+void DynamicExcludeList::observe_tuple(shared_ptr<FixedPairList> fpl) {
   fpl->onTupleAdded.connect(
       boost::bind(&DynamicExcludeList::exclude, this, _1, _2));
 
   fpl->onTupleRemoved.connect(
       boost::bind(&DynamicExcludeList::unexclude, this, _1, _2));
+}
+
+void DynamicExcludeList::observe_triple(shared_ptr<FixedTripleList> ftl) {
+  ftl->onTupleAdded.connect(
+      boost::bind(&DynamicExcludeList::exclude, this, _1, _3));
+  ftl->onTupleRemoved.connect(
+      boost::bind(&DynamicExcludeList::unexclude, this, _1, _3));
+}
+
+void DynamicExcludeList::observe_quadruple(shared_ptr<FixedQuadrupleList> fql) {
+  fql->onTupleAdded.connect(
+      boost::bind(&DynamicExcludeList::exclude, this, _1, _3));
+  fql->onTupleAdded.connect(
+      boost::bind(&DynamicExcludeList::exclude, this, _1, _4));
+  fql->onTupleAdded.connect(
+      boost::bind(&DynamicExcludeList::exclude, this, _2, _4));
+  fql->onTupleRemoved.connect(
+      boost::bind(&DynamicExcludeList::unexclude, this, _1, _3));
+  fql->onTupleRemoved.connect(
+      boost::bind(&DynamicExcludeList::unexclude, this, _1, _4));
+  fql->onTupleRemoved.connect(
+      boost::bind(&DynamicExcludeList::unexclude, this, _2, _4));
 }
 
 void DynamicExcludeList::updateList() {
@@ -155,7 +177,9 @@ void DynamicExcludeList::registerPython() {
                      &DynamicExcludeList::setExListDirty)
        .add_property("size", &DynamicExcludeList::getSize)
        .def("exclude", &DynamicExcludeList::exclude)
-       .def("observe", &DynamicExcludeList::observe)
+       .def("observe_tuple", &DynamicExcludeList::observe_tuple)
+       .def("observe_triple", &DynamicExcludeList::observe_triple)
+       .def("observe_quadruple", &DynamicExcludeList::observe_quadruple)
        .def("unexclude", &DynamicExcludeList::unexclude)
        .def("get_list", &DynamicExcludeList::getList)
        .def("update", &DynamicExcludeList::updateList)

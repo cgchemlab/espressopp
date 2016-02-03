@@ -35,6 +35,8 @@
 #include "boost/signals2.hpp"
 #include "boost/unordered_set.hpp"
 #include "FixedPairList.hpp"
+#include "FixedTripleList.hpp"
+#include "FixedQuadrupleList.hpp"
 
 namespace espressopp {
 typedef boost::unordered_set<std::pair<longint, longint> > ExcludeList;
@@ -54,7 +56,9 @@ class DynamicExcludeList {
   bool getExListDirty() { return exListDirty; }
   void setExListDirty(bool val);
 
-  void observe(shared_ptr<FixedPairList> fpl);
+  void observe_tuple(shared_ptr<FixedPairList> fpl);
+  void observe_triple(shared_ptr<FixedTripleList> ftl);
+  void observe_quadruple(shared_ptr<FixedQuadrupleList> fql);
   
   static void registerPython();
 

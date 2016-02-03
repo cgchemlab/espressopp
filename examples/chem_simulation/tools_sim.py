@@ -701,3 +701,43 @@ def setDihedralInteractions(system, input_conf, ftpl=None):
             system.addInteraction(dihedralinteraction)
             ret_list.update({(did, cross_dih): dihedralinteraction})
     return ret_list
+
+
+def setTopologyManager(input_conf, tm, bondedint, angleint, dihedralint, pairint):
+    pid2type = {p+1: input_conf.types[p] for p in xrange(len(input_conf.types))}
+    # Set input tuples. That does not change but serves as an input.
+    for bi in bondedint.values():
+        tm.observe_tuple(bi.getFixedPairList())
+
+    # Register angle, dihedral, pair fixed pair lists.
+    for ai in angleint.values():
+        fl = ai.getFixedTripleList()
+        triples = fl.getTriples()
+        type_triples = {tuple(map(pid2type.get, m)) for t in triples for m in t}
+        for types in type_triples:
+            tm.register_triplet(fl, *types)
+
+    # Register dihedrals
+    for di in dihedralint.values():
+        fl = di.getFixedQuadrupleList()
+        quadruples = fl.getQuadruples()
+        type_quadruples = {tuple(map(pid2type.get, m)) for t in quadruples for m in t}
+        for types in type_quadruples:
+            tm.register_quadruplet(fl, *types)
+
+    for pi in pairint.values():
+        fl = pi.getFixedPairList()
+        pairs = fl.getPairs()
+        type_pairs = {tuple(map(pid2type.get, m)) for t in pairs for m in t}
+        for types in type_pairs:
+            tm.register_tuple(fl, *types)
+
+def setDynamicExcludeList(dyn, bondedint, angleint, dihedralint, pairint):
+    for bi in bondedint.values():
+        dyn.observe_tuple(bi.getFixedPairList())
+    for ai in angleint.values():
+        dyn.observe_triple(ai.getFixedTripleList())
+    for di in dihedralint.values():
+        dyn.observe_quadruple(di.getFixedQuadrupleList())
+    for pi in pairint.values():
+        dyn.observe_tuple(pi.getFixedPairList())

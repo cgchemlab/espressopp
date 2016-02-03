@@ -276,7 +276,7 @@ void FixedQuadrupleListAdress::registerPython() {
   bool (FixedQuadrupleListAdress::*pyAdd)(longint pid1, longint pid2,
          longint pid3, longint pid4) = &FixedQuadrupleListAdress::add;
 
-  class_< FixedQuadrupleListAdress, shared_ptr< FixedQuadrupleListAdress > >
+  class_< FixedQuadrupleListAdress, shared_ptr< FixedQuadrupleListAdress >, boost::noncopyable >
     ("FixedQuadrupleListAdress",
         init<shared_ptr< storage::Storage>, shared_ptr<FixedTupleListAdress> >())
     .def("add", pyAdd)

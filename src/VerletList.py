@@ -75,10 +75,17 @@ class DynamicExcludeListLocal(_espressopp.DynamicExcludeList):
         if pmi.workerIsActive():
             self.cxxclass.unexclude(self, pid1, pid2)
 
-    def observe(self, fpl):
+    def observe_tuple(self, fpl):
         if pmi.workerIsActive():
-            self.cxxclass.observe(self, fpl)
+            self.cxxclass.observe_tuple(self, fpl)
 
+    def observe_triple(self, ftl):
+        if pmi.workerIsActive():
+            self.cxxclass.observe_triple(self, ftl)
+
+    def observe_quadruple(self, fql):
+        if pmi.workerIsActive():
+            self.cxxclass.observe_quadruple(self, fql)
 
 class VerletListLocal(_espressopp.VerletList):
 
@@ -141,7 +148,8 @@ if pmi.isController:
     pmiproxydefs = dict(
         cls='espressopp.DynamicExcludeListLocal',
         pmiproperty=['is_dirty', 'size'],
-        pmicall=['exclude', 'unexclude', 'connect', 'disconnect', 'observe', 'update'],
+        pmicall=['exclude', 'unexclude', 'connect', 'disconnect', 'observe_tuple',
+                 'observe_triple', 'observe_quadruple', 'update'],
         pmiinvoke=['get_list']
     )
 
