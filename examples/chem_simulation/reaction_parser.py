@@ -52,12 +52,17 @@ def parse_reverse_equation(input_string):
 def process_reaction(reaction):
     reaction = dict(reaction)
 
-    return (reaction['group'], {
+    group = reaction['group']
+    data = {
         'rate': reaction['rate'],
         'cutoff': reaction['cutoff'],
         'intramolecular': reaction['intramolecular'],
         'reactant_list': parse_equation(reaction['reaction'])
-        })
+        }
+    if 'min_cutoff' in reaction:
+        data['min_cutoff'] = reaction['min_cutoff']
+
+    return (group, data)
 
 
 def process_general(cfg):
@@ -131,10 +136,10 @@ def setup_reactions(system, verletlist, input_conf, config):
                 intramolecular=bool(chem_reaction['intramolecular']),
                 cutoff=float(chem_reaction['cutoff'])
             )
-            r.intramolecular = False
+            if 'min_cutoff' in chem_reaction:
+                r.min_cutoff = float(chem_reaction['min_cutoff'])
             r.active = True
             ar.add_reaction(r)
-    system.integrator.addExtension(ar)
     return ar, fpls, rs
 
 if __name__ == '__main__':

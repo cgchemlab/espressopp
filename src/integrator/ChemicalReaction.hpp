@@ -99,6 +99,8 @@ class Reaction {
         intramolecular_(false), active_(true) {
     cutoff_ = 0.0;
     cutoff_sqr_ = 0.0;
+    min_cutoff_ = 0.0;
+    min_cutoff_sqr_ = 0.0;
   }
 
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
@@ -116,8 +118,10 @@ class Reaction {
         rate_(rate),
         reverse_(false),
         fixed_pair_list_(fpl),
-        intramolecular_(intramolecular), active_(true) {
+        intramolecular_(intramolecular),
+        active_(true) {
     set_cutoff(cutoff);
+    set_min_cutoff(0.0);
   }
   virtual ~Reaction() { }
 
@@ -129,6 +133,12 @@ class Reaction {
     cutoff_sqr_ = cutoff * cutoff;
   }
   real cutoff() { return cutoff_; }
+
+  void set_min_cutoff(real cutoff) {
+    min_cutoff_ = cutoff;
+    min_cutoff_sqr_ = cutoff * cutoff;
+  }
+  real min_cutoff() { return min_cutoff_; }
 
   void set_type_1(int type_1) { type_1_ = type_1; }
   int type_1() { return type_1_; }
@@ -219,6 +229,8 @@ class Reaction {
   real rate_;  //!< reaction rate
   real cutoff_;  //!< reaction cutoff
   real cutoff_sqr_;  //!< reaction cutoff^2
+  real min_cutoff_;  //!< min reaction cutoff
+  real min_cutoff_sqr_;  //!< min reaction cutoff^2
   bool active_ ;  //!< is reaction active, by default true
 
   bool intramolecular_;  //!< Allow to intramolecular reactions.

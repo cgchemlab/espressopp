@@ -35,10 +35,11 @@ LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles pair is valid. */
 bool Reaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
+  LOG4ESPP_DEBUG(theLogger, "entering Reaction::IsValidPair, min_cutoff=" << min_cutoff_ << " cutoff_=" << cutoff_);
   if (IsValidState(p1, p2, particle_order)) {
     Real3D distance = p1.position() - p2.position();
     real distance_2 = distance.sqr();
-    if ((distance_2 < cutoff_sqr_) && ((*rng_)() < rate_ * (*dt_) * (*interval_))) {
+    if (distance_2 < cutoff_sqr_ && distance_2 >= min_cutoff_sqr_ && (*rng_)() < rate_ * (*dt_) * (*interval_)) {
       LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id() << " d2=" << distance_2);
       return true;
     }
@@ -153,6 +154,7 @@ void Reaction::registerPython() {
           .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
           .add_property("rate", &Reaction::rate, &Reaction::set_rate)
           .add_property("cutoff", &Reaction::cutoff, &Reaction::set_cutoff)
+          .add_property("min_cutoff", &Reaction::min_cutoff, &Reaction::set_min_cutoff)
           .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
           .add_property("active", &Reaction::active, &Reaction::set_active)
           .def("add_postprocess", &Reaction::AddPostProcess);

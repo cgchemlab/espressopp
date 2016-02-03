@@ -24,6 +24,8 @@ import sys
 import espressopp  # noqa
 import numpy
 
+import tools as general_tools
+
 __doc__ = 'The tools for the simulation.'
 
 
@@ -732,6 +734,7 @@ def setTopologyManager(input_conf, tm, bondedint, angleint, dihedralint, pairint
         for types in type_pairs:
             tm.register_tuple(fl, *types)
 
+
 def setDynamicExcludeList(dyn, bondedint, angleint, dihedralint, pairint):
     for bi in bondedint.values():
         dyn.observe_tuple(bi.getFixedPairList())
@@ -741,3 +744,59 @@ def setDynamicExcludeList(dyn, bondedint, angleint, dihedralint, pairint):
         dyn.observe_quadruple(di.getFixedQuadrupleList())
     for pi in pairint.values():
         dyn.observe_tuple(pi.getFixedPairList())
+
+
+def _args():
+    parser = general_tools.MyArgParser(description='Runs classical MD simulation',
+                                       fromfile_prefix_chars='@')
+    parser.add_argument('--conf', required=True, help='Input .gro coordinate file')
+    parser.add_argument('--top', '--topology', required=True, help='Topology file',
+                        dest='top')
+    parser.add_argument('--node_grid')
+    parser.add_argument('--skin', type=float, default=0.16,
+                        help='Skin value for Verlet list')
+    parser.add_argument('--coord', help='Input coordinate h5md file')
+    parser.add_argument('--coord_frame', default=-1, type=int,
+                        help='Time frame of input coordinate h5md file')
+    parser.add_argument('--run', type=int, default=10000,
+                        help='Number of simulation steps')
+    parser.add_argument('--int_step', default=1000, type=int, help='Steps in integrator')
+    parser.add_argument('--rng_seed', type=int, help='Seed for RNG', required=True)
+    parser.add_argument('--output_prefix',
+                        default='', type=str,
+                        help='Prefix for output files')
+    parser.add_argument('--output_file',
+                        default='trjout.h5', type=str,
+                        help='Name of output trajectory file')
+    parser.add_argument('--thermostat',
+                        default='lv',
+                        choices=('lv', 'vr'),
+                        help='Thermostat to use, lv: Langevine, vr: Stochastic velocity rescale')
+    parser.add_argument('--barostat', default='lv', choices=('lv', 'br'),
+                        help='Barostat to use, lv: Langevine, br: Berendsen')
+    parser.add_argument('--thermostat_gamma', type=float, default=0.5,
+                        help='Thermostat coupling constant')
+    parser.add_argument('--temperature', default=423.0, type=float, help='Temperature')
+    parser.add_argument('--pressure', help='Pressure', type=float)
+    parser.add_argument('--trj_collect', default=1000, type=int,
+                        help='Collect trajectory every (step)')
+    parser.add_argument('--energy_collect', default=1000, type=int,
+                        help='Collect energy every (step)')
+    parser.add_argument('--dt', default=0.001, type=float,
+                        help='Integrator time step')
+    parser.add_argument('--lj_cutoff', default=1.2, type=float,
+                        help='Cutoff of atomistic non-bonded interactions')
+    parser.add_argument('--cg_cutoff', default=1.4, type=float,
+                        help='Cuoff of coarse-grained non-bonded interactions')
+    parser.add_argument('--table_groups', default='A,B',
+                        help='Name of CG groups to read from tables')
+    parser.add_argument('--initial_step', default=0,
+                        help='Initial integrator step (useful for continue simulation',
+                        type=int)
+    parser.add_argument('--reactions', default=None,
+                        help='Configuration file with chemical reactions')
+    parser.add_argument('--debug', default=None)
+    parser.add_argument('--start_ar', default=0, type=int)
+    parser.add_argument('--interactive', default=0, type=int)
+
+    return parser

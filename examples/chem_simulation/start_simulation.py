@@ -24,8 +24,10 @@ try:
 except ImportError:
     from mpi4py import MPI
 import time
+import logging
 
 import random
+import math
 import numpy as np
 import tools as general_tools
 import gromacs_topology
@@ -42,59 +44,6 @@ __doc__ = 'Run GROMACS-like simulation'
 # Do not to modify lines below.
 
 
-def _args():
-    parser = general_tools.MyArgParser(description='Runs classical MD simulation',
-                                       fromfile_prefix_chars='@')
-    parser.add_argument('--conf', required=True, help='Input .gro coordinate file')
-    parser.add_argument('--top', '--topology', required=True, help='Topology file',
-                        dest='top')
-    parser.add_argument('--node_grid')
-    parser.add_argument('--skin', type=float, default=0.16,
-                        help='Skin value for Verlet list')
-    parser.add_argument('--coord', help='Input coordinate h5md file')
-    parser.add_argument('--coord_frame', default=-1, type=int,
-                        help='Time frame of input coordinate h5md file')
-    parser.add_argument('--run', type=int, default=10000,
-                        help='Number of simulation steps')
-    parser.add_argument('--int_step', default=1000, type=int, help='Steps in integrator')
-    parser.add_argument('--rng_seed', type=int, help='Seed for RNG', required=True)
-    parser.add_argument('--output_prefix',
-                        default='', type=str,
-                        help='Prefix for output files')
-    parser.add_argument('--output_file',
-                        default='trjout.h5', type=str,
-                        help='Name of output trajectory file')
-    parser.add_argument('--thermostat',
-                        default='lv',
-                        choices=('lv', 'vr'),
-                        help='Thermostat to use, lv: Langevine, vr: Stochastic velocity rescale')
-    parser.add_argument('--barostat', default='lv', choices=('lv', 'br'),
-                        help='Barostat to use, lv: Langevine, br: Berendsen')
-    parser.add_argument('--thermostat_gamma', type=float, default=0.5,
-                        help='Thermostat coupling constant')
-    parser.add_argument('--temperature', default=423.0, type=float, help='Temperature')
-    parser.add_argument('--pressure', help='Pressure', type=float)
-    parser.add_argument('--trj_collect', default=1000, type=int,
-                        help='Collect trajectory every (step)')
-    parser.add_argument('--energy_collect', default=1000, type=int,
-                        help='Collect energy every (step)')
-    parser.add_argument('--dt', default=0.001, type=float,
-                        help='Integrator time step')
-    parser.add_argument('--lj_cutoff', default=1.2, type=float,
-                        help='Cutoff of atomistic non-bonded interactions')
-    parser.add_argument('--cg_cutoff', default=1.4, type=float,
-                        help='Cuoff of coarse-grained non-bonded interactions')
-    parser.add_argument('--table_groups', default='A,B',
-                        help='Name of CG groups to read from tables')
-    parser.add_argument('--initial_step', default=0,
-                        help='Initial integrator step (useful for continue simulation',
-                        type=int)
-    parser.add_argument('--reactions', default=None,
-                        help='Configuration file with chemical reactions')
-
-    return parser
-
-
 def sort_trajectory(trj, ids):
     print('Sorting trajectory')
     idd = [
@@ -105,9 +54,14 @@ def sort_trajectory(trj, ids):
 
 
 def main():  #NOQA
-    args = _args().parse_args()
+    args = tools_sim._args().parse_args()
 
-    _args().save_to_file('{}params.out'.format(args.output_prefix), args)
+    tools_sim._args().save_to_file('{}params.out'.format(args.output_prefix), args)
+
+    if args.debug:
+        for s in args.debug.split(','):
+            print('Activating logger {}'.format(s))
+            logging.getLogger(s.strip()).setLevel(logging.DEBUG)
 
     table_groups = map(str.strip, args.table_groups.split(','))
     lj_cutoff = args.lj_cutoff
@@ -223,7 +177,6 @@ def main():  #NOQA
     verletlist = espressopp.VerletList(
         system,
         cutoff=max_cutoff,
-        #exclusionlist=input_conf.exclusions
         exclusionlist=dynamic_exclusion_list
         )
 
@@ -374,8 +327,8 @@ def main():  #NOQA
     integrator.step = args.initial_step
     traj_file.dump(integrator.step, integrator.step*dt)
 
-    k_trj_collect = args.trj_collect / integrator_step
-    k_energy_collect = args.energy_collect / integrator_step
+    k_trj_collect = int(math.ceil(float(args.trj_collect) / integrator_step))
+    k_energy_collect = int(math.ceil(float(args.energy_collect) / integrator_step))
 
     print('Running simulation for {} steps'.format(sim_step*integrator_step))
     print('Collect trajectory every {} step'.format(k_trj_collect*integrator_step))
@@ -384,10 +337,15 @@ def main():  #NOQA
     system_analysis.dump()
     system_analysis.info()
 
-    #import IPython; IPython.embed()
+    if args.interactive:
+        import IPython
+        IPython.embed()
     for k in range(sim_step):
         integrator.run(integrator_step)
         dump_topol.update()
+        if k == args.start_ar and args.reactions:
+            print('Activating ChemicalReaction')
+            integrator.addExtension(ar)
         if k_energy_collect > 0 and k % k_energy_collect == 0:
             system_analysis.info()
         if k_trj_collect > 0 and k % k_trj_collect == 0:

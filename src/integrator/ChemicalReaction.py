@@ -256,6 +256,7 @@ if pmi.isController:
                 'max_state_2',
                 'rate',
                 'cutoff',
+                'min_cutoff',
                 'intramolecular',
                 'active'
                 )
@@ -279,6 +280,7 @@ if pmi.isController:
                     'max_state_2',
                     'rate',
                     'cutoff',
+                    'min_cutoff',
                     'diss_rate',
                     'active'
                     )
