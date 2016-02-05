@@ -224,11 +224,11 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
     undefine14tuples(*quadruplets);
     for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin();
         it != triples_.end(); ++it) {
-      (*it)->onParticlesChanged();
+      (*it)->updateParticlesStorage();
     }
     for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
         it != quadruples_.end(); ++it) {
-      (*it)->onParticlesChanged();
+      (*it)->updateParticlesStorage();
     }
   }
 }
