@@ -65,6 +65,7 @@ namespace espressopp {
     void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
     void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
     virtual void onParticlesChanged();
+    virtual void updateParticlesStorage();
 
     python::list getQuadruples();
 

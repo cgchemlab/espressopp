@@ -405,6 +405,49 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "regenerated local fixed quadruple list from global list");
   }
 
+  void FixedQuadrupleList::updateParticlesStorage() {
+    // (re-)generate the local quadruple list from the global list
+    System& system = storage->getSystemRef();
+
+    this->clear();
+    longint lastpid1 = -1;
+    Particle *p1;
+    Particle *p2;
+    Particle *p3;
+    Particle *p4;
+    for (GlobalQuadruples::const_iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
+      if (it->first != lastpid1) {
+        p1 = storage->lookupRealParticle(it->first);
+        if (p1 == NULL) {
+          std::stringstream msg;
+          msg << "quadruple particle p1 " << it->first << " does not exists here";
+          throw std::runtime_error(msg.str());
+        }
+        lastpid1 = it->first;
+      }
+      p2 = storage->lookupLocalParticle(it->second.first);
+      if (p2 == NULL) {
+        std::stringstream msg;
+        msg << "quadruple particle p2 " << it->second.first << " does not exists here";
+        throw std::runtime_error(msg.str());
+      }
+      p3 = storage->lookupLocalParticle(it->second.second);
+      if (p3 == NULL) {
+        std::stringstream msg;
+        msg << "quadruple particle p3 " << it->second.second << " does not exists here";
+        throw std::runtime_error(msg.str());
+      }
+      p4 = storage->lookupLocalParticle(it->second.third);
+      if (p4 == NULL) {
+        std::stringstream msg;
+        msg << "quadruple particle p4 " << it->second.third << " does not exists here";
+        throw std::runtime_error(msg.str());
+      }
+      this->add(p1, p2, p3, p4);
+    }
+    LOG4ESPP_INFO(theLogger, "regenerated local fixed quadruple list from global list");
+  }
+
 
   /****************************************************
   ** REGISTRATION WITH PYTHON

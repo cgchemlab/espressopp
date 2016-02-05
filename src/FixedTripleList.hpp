@@ -64,8 +64,10 @@ namespace espressopp {
 		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
 		void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
 		virtual void onParticlesChanged();
+		virtual void updateParticlesStorage();
 
-		python::list getTriples();
+
+	python::list getTriples();
 
 	    /** Get the number of triples in the GlobalTriples list */
 	    int size() {

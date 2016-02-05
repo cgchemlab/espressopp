@@ -370,6 +370,40 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
   }
 
+  void FixedPairList::updateParticlesStorage() {
+    LOG4ESPP_INFO(theLogger, "rebuild local bond list from global\n");
+
+    System& system = storage->getSystemRef();
+
+    this->clear();
+    longint lastpid1 = -1;
+    Particle *p1;
+    Particle *p2;
+    for (GlobalPairs::const_iterator it = globalPairs.begin(); it != globalPairs.end(); ++it) {
+      if (it->first != lastpid1) {
+        p1 = storage->lookupRealParticle(it->first);
+        if (p1 == NULL) {
+          std::stringstream msg;
+          msg << "onParticlesChanged error. Fixed Pair List particle p1 " << it->first << " does not exists here.";
+          msg << " p1: " << *p1;
+          msg << " pair: " << it->first << "-" << it->second;
+          throw std::runtime_error(msg.str());
+        }
+        lastpid1 = it->first;
+      }
+      p2 = storage->lookupLocalParticle(it->second);
+      if (p2 == NULL) {
+        std::stringstream msg;
+        msg << "onParticlesChanged error. Fixed Pair List particle p2 " << it->second << " does not exists here.";
+        msg << " p1: " << *p1;
+        msg << " pair: " << it->first << "-" << it->second;
+        throw std::runtime_error(msg.str());
+      }
+      this->add(p1, p2);
+    }
+    LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
+  }
+
   int FixedPairList::totalSize() {
     int local_size = globalPairs.size();
     int global_size;

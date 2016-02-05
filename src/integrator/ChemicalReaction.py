@@ -144,7 +144,7 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
 class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-                 min_state_2, max_state_2, cutoff, rate, fpl, intramolecular=False):
+                 min_state_2, max_state_2, cutoff, rate, fpl):
         if pmi.workerIsActive():
             cxxinit(
                 self,
@@ -160,7 +160,7 @@ class ReactionLocal(integrator_Reaction):
                 cutoff,
                 rate,
                 fpl,
-                intramolecular
+                False
             )
 
     def add_postprocess(self, post_process, reactant_switch=0):

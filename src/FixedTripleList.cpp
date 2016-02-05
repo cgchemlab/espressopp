@@ -406,6 +406,43 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "regenerated local fixed triple list from global list");
   }
 
+  void FixedTripleList::updateParticlesStorage() {
+    System& system = storage->getSystemRef();
+
+    // (re-)generate the local triple list from the global list
+    this->clear();
+    longint lastpid2 = -1;
+    Particle *p1;
+    Particle *p2;
+    Particle *p3;
+    for (GlobalTriples::const_iterator it = globalTriples.begin(); it != globalTriples.end(); ++it) {
+      if (it->first != lastpid2) {
+        p2 = storage->lookupRealParticle(it->first);
+        if (p2 == NULL) {
+          std::stringstream msg;
+          msg << "triple particle p2 " << it->first << " does not exists here";
+          throw std::runtime_error(msg.str());
+        }
+        lastpid2 = it->first;
+      }
+      p1 = storage->lookupLocalParticle(it->second.first);
+      if (p1 == NULL) {
+        std::stringstream msg;
+        msg << "triple particle p1 " << it->second.first << " does not exists here";
+        throw std::runtime_error(msg.str());
+      }
+      p3 = storage->lookupLocalParticle(it->second.second);
+      if (p3 == NULL) {
+        std::stringstream msg;
+        msg << "triple particle p3 " << it->second.second << " does not exists here";
+        throw std::runtime_error(msg.str());
+      }
+      this->add(p1, p2, p3);
+    }
+
+    LOG4ESPP_INFO(theLogger, "regenerated local fixed triple list from global list");
+  }
+
   int FixedTripleList::totalSize() {
     int local_size = globalTriples.size();
     int global_size;

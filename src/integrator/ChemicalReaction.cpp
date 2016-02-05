@@ -218,6 +218,9 @@ void DissociationReaction::registerPython() {
               .add_property("min_state_2",
                             &DissociationReaction::min_state_2,
                             &DissociationReaction::set_min_state_2)
+              .add_property("intramolecular",
+                            &DissociationReaction::intramolecular, 
+                            &DissociationReaction::set_intramolecular)
               .add_property("max_state_2",
                             &DissociationReaction::max_state_2,
                             &DissociationReaction::set_max_state_2)
@@ -333,9 +336,9 @@ void ChemicalReaction::React() {
   // Use effective_pairs_ to apply the reaction.
   std::set < Particle * > modified_particles;
   ApplyDR(modified_particles);
+  // Synchronize, all cpus should finish dissocition part.
+  (*system.comm).barrier();
   ApplyAR(modified_particles);
-//  UpdateGhost(modified_particles);
-//  modified_particles.clear();
   // Update the ghost particles.
   UpdateGhost(modified_particles);
   LOG4ESPP_DEBUG(theLogger, "Finished react()");
@@ -782,7 +785,7 @@ void ChemicalReaction::ApplyDR(std::set < Particle * > &modified_particles) {
     }
     // Trigger update of FixedPairList.
     if (updated_fpl)
-      (*it)->fixed_pair_list_->onParticlesChanged();
+      (*it)->fixed_pair_list_->updateParticlesStorage();
   }
 }
 

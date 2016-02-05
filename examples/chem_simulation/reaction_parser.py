@@ -12,7 +12,7 @@ import espressopp
 
 
 def parse_equation(input_string):
-    re_reactant = re.compile(r'(?P<name>\w+)\((?P<min>\d+),\s+(?P<max>\d+)\)')
+    re_reactant = re.compile(r'(?P<name>\w+)\((?P<min>\d+),\s*(?P<max>\d+)\)')
     re_product = re.compile(r'(?P<name>\w+)\((?P<delta>[0-9-]+)\)')
 
     reactants, products = input_string.split('->')
@@ -32,12 +32,12 @@ def parse_equation(input_string):
 
 
 def parse_reverse_equation(input_string):
-    re_reactant = re.compile(r'(?P<name>\w+)\((?P<min>\d+),\s+(?P<max>\d+)\)')
+    re_reactant = re.compile(r'(?P<name>\w+)\((?P<min>\d+),\s*(?P<max>\d+)\)')
     re_product = re.compile(r'(?P<name>\w+)\((?P<delta>[0-9-]+)\)')
 
     reactant_list = {}
 
-    reactants, products = input_string.split('->')
+    reactants, products = map(str.strip, input_string.split('->'))
     mol_a, mol_b = map(re_reactant.match, map(str.strip, reactants.split(':')))
 
     reactant_list['type_1'] = mol_a.groupdict()
@@ -56,9 +56,15 @@ def process_reaction(reaction):
     data = {
         'rate': reaction['rate'],
         'cutoff': reaction['cutoff'],
-        'intramolecular': reaction['intramolecular'],
-        'reactant_list': parse_equation(reaction['reaction'])
+        'intramolecular': reaction.get('intramolecular', 0),
         }
+    try:
+        data['reactant_list'] = parse_equation(reaction['reaction'])
+        data['reverse'] = False
+    except:
+        data['reactant_list'] = parse_reverse_equation(reaction['reaction'])
+        data['reverse'] = True
+
     if 'min_cutoff' in reaction:
         data['min_cutoff'] = reaction['min_cutoff']
 
@@ -122,7 +128,11 @@ def setup_reactions(system, verletlist, input_conf, config):
 
         for chem_reaction in reaction_group['reaction_list']:
             rl = chem_reaction['reactant_list']
-            r = espressopp.integrator.Reaction(
+            if chem_reaction['reverse']:
+                r_class = espressopp.integrator.DissociationReaction
+            else:
+                r_class = espressopp.integrator.Reaction
+            r = r_class(
                 type_1=atom_name2atom_type[rl['type_1']['name']],
                 type_2=atom_name2atom_type[rl['type_2']['name']],
                 delta_1=int(rl['type_1']['delta']),
@@ -133,9 +143,10 @@ def setup_reactions(system, verletlist, input_conf, config):
                 max_state_2=int(rl['type_2']['max']),
                 rate=float(chem_reaction['rate']),
                 fpl=fpl,
-                intramolecular=bool(chem_reaction['intramolecular']),
                 cutoff=float(chem_reaction['cutoff'])
             )
+            if not chem_reaction['reverse']:
+                r.intramolecular = bool(chem_reaction['intramolecular'])
             if 'min_cutoff' in chem_reaction:
                 r.min_cutoff = float(chem_reaction['min_cutoff'])
             r.active = True
@@ -145,3 +156,4 @@ def setup_reactions(system, verletlist, input_conf, config):
 if __name__ == '__main__':
     import sys
     print parse_config(sys.argv[1])
+    print('Input file is correct')
