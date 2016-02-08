@@ -166,7 +166,13 @@ class ParticleLocal(object):
     def state(self): return self.__getTmp().state
     @state.setter
     def state(self, val): self.__getTmp().state = val
-    
+
+    @property
+    def res_id(self): return self.__getTmp().res_id
+    @res_id.setter
+    def res_id(self, val): self.__getTmp().res_id = val
+
+
     def getLocalData(self, key):
         tmp = self.storage.lookupRealParticle(self.pid)
         if tmp is not None:
@@ -177,8 +183,31 @@ class ParticleLocal(object):
     def locateParticle(self):
         tmp = self.storage.lookupRealParticle(self.pid)
         return (tmp is not None)
-    
+
+
+class ParticlePropertiesLocal(_espressopp._ParticleProperties):
+    def __init__(self, type, mass, q):
+        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
+                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+            cxxinit(self, _espressopp._ParticleProperties)
+            self.cxxclass.init(self)
+            self.type = int(type)
+            self.mass = mass
+            self.q = q
+
+
 if pmi.isController:
+    class ParticleProperties(object):
+      __metaclass__ = pmi.Proxy
+      pmiproxydefs = dict(
+          cls='espressopp.ParticlePropertiesLocal',
+          pmiproperty=[
+              'type',
+              'mass',
+              'q',
+              ]
+          )
+
     class Particle(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
