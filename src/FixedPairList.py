@@ -84,6 +84,10 @@ class FixedPairListLocal(_espressopp.FixedPairList):
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
+    def totalSize(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.totalSize(self)
+
     def addBonds(self, bondlist):
         """
         Each processor takes the broadcasted bondlist and
@@ -101,6 +105,10 @@ class FixedPairListLocal(_espressopp.FixedPairList):
         if pmi.workerIsActive():
           bonds=self.cxxclass.getBonds(self)
           return bonds
+
+    def getAllBonds(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getAllBonds(self)
       
     def resetLongtimeMaxBond(self):
 
@@ -119,8 +127,8 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedPairListLocal',
             #localcall = [ 'add' ],
-            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond' ],
-            pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal']
+            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', "totalSize" ],
+            pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal', 'getAllBonds' ]
         )
         
         def getLongtimeMaxBond(self):

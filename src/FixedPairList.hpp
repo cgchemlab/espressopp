@@ -65,13 +65,17 @@ namespace espressopp {
 		void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
 		virtual void onParticlesChanged();
 
+	    std::vector<longint> getPairList();
 	    python::list getBonds();
+	    python::list getAllBonds();
 	    GlobalPairs* getGlobalPairs() {return &globalPairs;};
 
 	    /** Get the number of bonds in the GlobalPairs list */
 	    int size() {
 	    	return globalPairs.size();
 	    }
+
+            int totalSize();
 
 	    static void registerPython();
 
