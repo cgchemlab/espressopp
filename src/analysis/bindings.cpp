@@ -67,6 +67,8 @@
 
 #include "SystemMonitor.hpp"
 #include "PotentialEnergy.hpp"
+#include "KineticEnergy.hpp"
+#include "NFixedListEntries.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -112,11 +114,13 @@ namespace espressopp {
       LBOutput::registerPython();
       LBOutputScreen::registerPython();
       LBOutputVzInTime::registerPython();
-			LBOutputVzOfX::registerPython();
+      LBOutputVzOfX::registerPython();
 
       SystemMonitorOutputCSV::registerPython();
       SystemMonitor::registerPython();
       PotentialEnergy::registerPython();
+      KineticEnergy::registerPython();
+      NFixedPairListEntries::registerPython();
     }
   }
 }
