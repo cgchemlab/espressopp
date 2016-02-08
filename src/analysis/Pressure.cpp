@@ -36,6 +36,10 @@ using namespace interaction;
 
 namespace espressopp {
   namespace analysis {
+    real Pressure::compute_real() const {
+      return compute();
+    }
+  
     real Pressure::compute() const {
 
       System& system = getSystemRef();

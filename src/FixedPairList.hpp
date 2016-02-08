@@ -73,6 +73,8 @@ namespace espressopp {
 	    	return globalPairs.size();
 	    }
 
+      int totalSize();
+
 	    static void registerPython();
 
 	  private:
