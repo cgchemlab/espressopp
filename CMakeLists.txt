@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 project(espressopp)
 
-set(PROJECT_VERSION "0.9.0-dev")
-
 # Cmake modules/macros are in a subdirectory to keep this file cleaner
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -119,13 +117,13 @@ list(APPEND EXTRA_LIBRARIES ${CMAKE_DL_LIBS})
 # add_definitions( -DHAVE_CONFIG_H )
 
 if (EXTERNAL_BOOST)
-  set(Boost_VERSION 1.55.0)
+  set(NEEDED Boost_VERSION 1.55.0)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5")
-    set(Boost_VERSION 1.58.0) #issue #8
+    set(NEEDED_Boost_VERSION 1.58.0) #issue #8
   endif()
-  find_package(Boost ${Boost_VERSION} COMPONENTS mpi python serialization filesystem)
+  find_package(Boost ${NEEDED_Boost_VERSION} COMPONENTS mpi python serialization system filesystem)
   if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost not found, make sure you have installed boost and it's dev packages. To hint cmake to your Boost installation, use the option -DBOOST_ROOT=/path/to/boost. As last resort you can use our internal replacement with -DEXTERNAL_BOOST=OFF")
+    message(FATAL_ERROR "Boost (required at least version ${NEEDED_Boost_VERSION}) not found, make sure you have installed boost and it's dev packages. To hint cmake to your Boost installation, use the option -DBOOST_ROOT=/path/to/boost. As last resort you can use our internal replacement with -DEXTERNAL_BOOST=OFF")
   endif(NOT Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 else(EXTERNAL_BOOST)
@@ -158,6 +156,11 @@ endif()
 ######################################
 add_subdirectory(src)
 add_subdirectory(contrib)
+if (EXTERNAL_MPI4PY)
+  set (TEST_ENV "PYTHONPATH=${CMAKE_BINARY_DIR}:$ENV{PYTHONPATH}")
+else (EXTERNAL_MPI4PY)
+  set (TEST_ENV "PYTHONPATH=${CMAKE_BINARY_DIR}:${CMAKE_BINARY_DIR}/contrib:$ENV{PYTHONPATH}")
+endif (EXTERNAL_MPI4PY)
 add_subdirectory(testsuite)
 
 add_custom_target(symlink ALL COMMENT "Creating symlink")
@@ -199,3 +202,27 @@ else ( DOXYGEN_FOUND )
     message ( WARNING "Not building system documentation because Doxygen not found.")
 endif ( DOXYGEN_FOUND )
 
+######################################
+# User documentation (Sphinx)     # 
+######################################
+
+find_program(SPHINX_EXECUTABLE
+  NAMES sphinx-build
+  DOC "Sphinx documentation generation tool (http://www.sphinx-doc.org/)"
+)
+
+if ( SPHINX_EXECUTABLE )
+
+   set ( SPHINX_BUILD_ROOT "${CMAKE_SOURCE_DIR}/doc/ug" )
+
+   add_custom_target(ug
+      COMMAND ${CMAKE_COMMAND} -E env "${TEST_ENV}" "${SPHINX_EXECUTABLE}" -b html . _build/html
+      COMMENT "HTML ug documentation available at ${SPHINX_BUILD_ROOT}/_build/html"
+      DEPENDS ${SPHINX_BUILD_ROOT}/conf.py _espressopp
+      WORKING_DIRECTORY ${SPHINX_BUILD_ROOT}
+   )
+
+   message ( STATUS "Generate user documentation via ${SPHINX_EXECUTABLE}: make ug") 
+else ( SPHINX_EXECUTABLE )
+    message ( WARNING "Not building user documentation because Doxygen not found.")
+endif ( SPHINX_EXECUTABLE )
