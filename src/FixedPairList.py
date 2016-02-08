@@ -59,6 +59,10 @@ r"""
 .. function:: espressopp.FixedPairList.size()
 
 		:rtype: 
+
+.. function:: espressopp.FixedPairList.totalSize()
+
+        :rtype:
 """
 from espressopp import pmi
 import _espressopp 
@@ -127,7 +131,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedPairListLocal',
             #localcall = [ 'add' ],
-            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', "totalSize" ],
+            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', 'totalSize' ],
             pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal', 'getAllBonds' ]
         )
         
