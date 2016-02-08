@@ -294,6 +294,14 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
   }
 
+  int FixedPairList::totalSize() {
+    int local_size = globalPairs.size();
+    int global_size;
+    System& system = storage->getSystemRef();
+    mpi::all_reduce(*system.comm, local_size, global_size, std::plus<int>());
+    return global_size;
+  }
+
   /****************************************************
   ** REGISTRATION WITH PYTHON
   ****************************************************/
