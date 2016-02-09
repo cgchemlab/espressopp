@@ -25,11 +25,10 @@ except ImportError:
     from mpi4py import MPI
 import time
 import logging
-
 import random
-import math
+import shutil
+
 import numpy as np
-import tools as general_tools
 import gromacs_topology
 import reaction_parser
 import tools_sim
@@ -184,7 +183,7 @@ def main():  #NOQA
     vl_interaction = gromacs_topology.setLennardJonesInteractions(
         system, input_conf.defaults, input_conf.atomtypeparams,
         verletlist, lj_cutoff, input_conf.nonbond_params, table_groups=table_groups)
-    cg_vl_interaction = gromacs_topology.setTabulatedInteractions(
+    gromacs_topology.setTabulatedInteractions(
         system, input_conf.atomtypeparams, vl=verletlist,
         cutoff=cg_cutoff, interaction=vl_interaction, table_groups=table_groups)
     bondedinteractions = gromacs_topology.setBondedInteractions(
@@ -195,8 +194,11 @@ def main():  #NOQA
         system, input_conf.dihedraltypes, input_conf.dihedraltypeparams)
     pairinteractions = gromacs_topology.setPairInteractions(
         system, input_conf.pairtypes, input_conf.pairtypeparams, lj_cutoff)
-    coulombinteraction = gromacs_topology.setCoulombInteractions(
-        system, verletlist, lj_cutoff, input_conf.atomtypeparams, epsilon1=1, epsilon2=80, kappa=0)
+    gromacs_topology.setCoulombInteractions(
+        system, verletlist, lj_cutoff, input_conf.atomtypeparams,
+        epsilon1=args.coulomb_epsilon1,
+        epsilon2=args.coulomb_epsilon2,
+        kappa=args.coulomb_kappa)
 
     print('Bonds: {}'.format(sum(len(x) for x in input_conf.bondtypes.values())))
     print('Angles: {}'.format(sum(len(x) for x in input_conf.angletypes.values())))
@@ -215,6 +217,8 @@ def main():  #NOQA
         thermostat = espressopp.integrator.StochasticVelocityRescaling(system)
         thermostat.temperature = temperature
         thermostat.coupling = args.thermostat_gamma
+    else:
+        raise Exception('Wrong thermostat keyword: `{}`'.format(args.thermostat))
     integrator.addExtension(thermostat)
 
     pressure_comp = espressopp.analysis.Pressure(system)
@@ -224,13 +228,13 @@ def main():  #NOQA
             print('Barostat: Langevin with P={}, gamma={}, mass={}'.format(
                 pressure, 0.5, pow(10, 4)))
             barostat = espressopp.integrator.LangevinBarostat(system, system.rng, temperature)
-            barostat.gammaP = 0.5
-            barostat.mass = pow(10, 4)
+            barostat.gammaP = args.barostat_gammaP
+            barostat.mass = args.barostat_mass
             barostat.pressure = pressure
         elif args.barostat == 'br':
             print('Barostat: Berendsen with P={} and tau={}'.format(pressure, 0.5))
             barostat = espressopp.integrator.BerendsenBarostat(system, pressure_comp)
-            barostat.tau = 50.0
+            barostat.tau = args.barostat_tau
             barostat.pressure = pressure
         integrator.addExtension(barostat)
 
@@ -244,6 +248,9 @@ def main():  #NOQA
         reaction_config = reaction_parser.parse_config(args.reactions)
         ar, fpls, rs = reaction_parser.setup_reactions(
             system, verletlist, input_conf, reaction_config)
+        output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
+        print('Save copy of reaction config to: {}'.format(output_reaction_config))
+        shutil.copyfile(args.reactions, output_reaction_config)
 
     # Observe tuple lists
     print('Setup DynamicExcludeList')
@@ -256,11 +263,12 @@ def main():  #NOQA
         dihedralinteractions,
         pairinteractions)
 
-    print('Energy saved to: {}energy.csv'.format(args.output_prefix))
+    energy_file = '{}_energy_{}.csv'.format(args.output_prefix, rng_seed)
+    print('Energy saved to: {}'.format(energy_file))
     system_analysis = espressopp.analysis.SystemMonitor(
         system,
         integrator,
-        espressopp.analysis.SystemMonitorOutputCSV('{}energy.csv'.format(args.output_prefix)))
+        espressopp.analysis.SystemMonitorOutputCSV(energy_file))
     temp_comp = espressopp.analysis.Temperature(system)
     system_analysis.add_observable('T', temp_comp)
     system_analysis.add_observable(
@@ -290,17 +298,17 @@ def main():  #NOQA
     topology_manager.initialize_topology()
     integrator.addExtension(topology_manager)
 
-    print('Save trajectory to {}{}'.format(args.output_prefix, args.output_file))
-    h5md_output_file = '{}{}'.format(args.output_prefix, args.output_file)
+    h5md_output_file = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.output_file)
+    print('Save trajectory to: {}'.format(h5md_output_file))
     traj_file = espressopp.io.DumpH5MD(
         system, h5md_output_file,
         group_name=h5md_group,
         static_box=False,
         author='Jakub Krajniak',
         email='jkrajniak@gmail.com',
-        store_species=True,
-        store_state=True,
-        store_lambda=True)
+        store_species=args.store_species,
+        store_state=args.store_state,
+        store_lambda=args.store_lambda)
 
     traj_file.set_parameters({
         'temperature': args.temperature})

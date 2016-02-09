@@ -260,11 +260,10 @@ class DissociationReaction : public Reaction {
       int min_state_2, int max_state_2,
       real break_cutoff,
       real break_rate,
-      real diss_rate,
       shared_ptr<FixedPairList> fpl
       ) : Reaction(type_1, type_2, delta_1, delta_2,
           min_state_1, max_state_1, min_state_2, max_state_2, break_cutoff, break_rate, fpl,
-          true), diss_rate_(diss_rate) {
+          true), diss_rate_(0.0) {
     reverse_ = true;
   }
   virtual ~DissociationReaction() { }

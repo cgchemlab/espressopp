@@ -16,12 +16,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import ast
 import collections
 import math
 import os
 import sys
 
 import espressopp  # noqa
+import random
 import numpy
 
 import tools as general_tools
@@ -761,7 +763,8 @@ def _args():
     parser.add_argument('--run', type=int, default=10000,
                         help='Number of simulation steps')
     parser.add_argument('--int_step', default=1000, type=int, help='Steps in integrator')
-    parser.add_argument('--rng_seed', type=int, help='Seed for RNG', required=True)
+    parser.add_argument('--rng_seed', type=int, help='Seed for RNG', required=False,
+                        default=random.randint(1000, 10000))
     parser.add_argument('--output_prefix',
                         default='', type=str,
                         help='Prefix for output files')
@@ -774,6 +777,12 @@ def _args():
                         help='Thermostat to use, lv: Langevine, vr: Stochastic velocity rescale')
     parser.add_argument('--barostat', default='lv', choices=('lv', 'br'),
                         help='Barostat to use, lv: Langevine, br: Berendsen')
+    parser.add_argument('--barostat_tau', default=5.0, type=float,
+                        help='Tau parameter for Berendsen barostat')
+    parser.add_argument('--barostat_mass', default=50.0, type=float,
+                        help='Mass parameter for Langevin barostat')
+    parser.add_argument('--barostat_gammaP', default=1.0, type=float,
+                        help='gammaP parameter for Langevin barostat')
     parser.add_argument('--thermostat_gamma', type=float, default=0.5,
                         help='Thermostat coupling constant')
     parser.add_argument('--temperature', default=423.0, type=float, help='Temperature')
@@ -788,6 +797,12 @@ def _args():
                         help='Cutoff of atomistic non-bonded interactions')
     parser.add_argument('--cg_cutoff', default=1.4, type=float,
                         help='Cuoff of coarse-grained non-bonded interactions')
+    parser.add_argument('--coulomb_epsilon1', default=1.0, type=float,
+                        help='Epsilon_1 for coulomb interactions')
+    parser.add_argument('--coulomb_epsilon2', default=80.0, type=float,
+                        help='Epsilon_2 for coulomb interactions')
+    parser.add_argument('--coulomb_kappa', default=1.0, type=float,
+                        help='Kappa paramter for coulomb interactions')
     parser.add_argument('--table_groups', default='A,B',
                         help='Name of CG groups to read from tables')
     parser.add_argument('--initial_step', default=0,
@@ -795,8 +810,14 @@ def _args():
                         type=int)
     parser.add_argument('--reactions', default=None,
                         help='Configuration file with chemical reactions')
-    parser.add_argument('--debug', default=None)
-    parser.add_argument('--start_ar', default=0, type=int)
-    parser.add_argument('--interactive', default=0, type=int)
+    parser.add_argument('--debug', default=None, help='Turn on logging mechanism')
+    parser.add_argument('--start_ar', default=0, type=int, help='When to start chemical reactions')
+    parser.add_argument('--interactive', default=0, type=int, help='Run interactive mode')
+    parser.add_argument('--store_species', default=False, type=ast.literal_eval,
+                        help='Store particle types')
+    parser.add_argument('--store_state', default=True, type=ast.literal_eval,
+                        help='Store chemical state')
+    parser.add_argument('--store_lambda', default=False, type=ast.literal_eval,
+                        help='Store lambda parameter')
 
     return parser

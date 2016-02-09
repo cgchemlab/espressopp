@@ -177,7 +177,7 @@ class ReactionLocal(integrator_Reaction):
 class DissociationReactionLocal(integrator_DissociationReaction):
     """DissociationReaction reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-                 min_state_2, max_state_2, cutoff, rate, diss_rate, fpl):
+                 min_state_2, max_state_2, cutoff, rate, fpl):
         if pmi.workerIsActive():
             cxxinit(
                 self,
@@ -192,7 +192,6 @@ class DissociationReactionLocal(integrator_DissociationReaction):
                 max_state_2,
                 cutoff,
                 rate,
-                diss_rate,
                 fpl
             )
 

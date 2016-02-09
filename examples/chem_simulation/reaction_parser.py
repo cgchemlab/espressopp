@@ -54,10 +54,11 @@ def process_reaction(reaction):
 
     group = reaction['group']
     data = {
-        'rate': reaction['rate'],
-        'cutoff': reaction['cutoff'],
-        'intramolecular': reaction.get('intramolecular', 0),
+        'rate': float(reaction['rate']),
+        'cutoff': float(reaction['cutoff']),
+        'intramolecular': eval(reaction.get('intramolecular', 'False')),
         }
+
     try:
         data['reactant_list'] = parse_equation(reaction['reaction'])
         data['reverse'] = False
@@ -66,7 +67,17 @@ def process_reaction(reaction):
         data['reverse'] = True
 
     if 'min_cutoff' in reaction:
-        data['min_cutoff'] = reaction['min_cutoff']
+        data['min_cutoff'] = float(reaction['min_cutoff'])
+
+    if 'diss_rate' in reaction:
+        if not data['reverse']:
+            raise Exception('Invalid keyword `diss_rate` for non-dissociation reaction')
+        data['diss_rate'] = float(reaction['diss_rate'])
+
+    if 'active' in reaction:
+        data['active'] = eval(reaction['active'])
+    else:
+        data['active'] = True
 
     return (group, data)
 
@@ -132,6 +143,7 @@ def setup_reactions(system, verletlist, input_conf, config):
                 r_class = espressopp.integrator.DissociationReaction
             else:
                 r_class = espressopp.integrator.Reaction
+            print r_class
             r = r_class(
                 type_1=atom_name2atom_type[rl['type_1']['name']],
                 type_2=atom_name2atom_type[rl['type_2']['name']],
@@ -149,7 +161,10 @@ def setup_reactions(system, verletlist, input_conf, config):
                 r.intramolecular = bool(chem_reaction['intramolecular'])
             if 'min_cutoff' in chem_reaction:
                 r.min_cutoff = float(chem_reaction['min_cutoff'])
-            r.active = True
+            if 'diss_rate' in chem_reaction:
+                r.diss_rate = float(chem_reaction['diss_rate'])
+            if 'active' in chem_reaction:
+                r.active = chem_reaction['active']
             ar.add_reaction(r)
     return ar, fpls, rs
 

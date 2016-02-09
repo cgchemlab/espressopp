@@ -116,8 +116,7 @@ std::set<Particle *> Reaction::PostProcess_T1(Particle &p) {
   std::vector < Particle * > ret;
   for (std::vector < shared_ptr < integrator::PostProcess > > ::iterator it =
                                                                              post_process_T1.begin();
-      it != post_process_T1.end();
-  ++it) {
+      it != post_process_T1.end(); ++it) {
     ret = (*it)->process(p);
     output.insert(ret.begin(), ret.end());
   }
@@ -129,8 +128,7 @@ std::set<Particle *> Reaction::PostProcess_T2(Particle &p) {
   std::vector < Particle * > ret;
   for (std::vector < shared_ptr < integrator::PostProcess > > ::iterator it =
                                                                              post_process_T2.begin();
-      it != post_process_T2.end();
-  ++it) {
+      it != post_process_T2.end(); ++it) {
     ret = (*it)->process(p);
     output.insert(ret.begin(), ret.end());
   }
@@ -142,8 +140,10 @@ void Reaction::registerPython() {
   using namespace espressopp::python; //NOLINT
   class_ < Reaction, shared_ptr < integrator::Reaction > >
       ("integrator_Reaction",
-          init < int, int, int, int, int, int, int, int, real, real,
-          shared_ptr < FixedPairList >, bool > ())
+          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
+          // min_state_2, max_state_2, cutoff, rate, fpl, intramolecular
+          init<int, int, int, int, int, int, int, int, real, real,
+               shared_ptr<FixedPairList>, bool>())
           .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
           .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
           .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
@@ -199,7 +199,9 @@ void DissociationReaction::registerPython() {
   class_ < DissociationReaction, bases < Reaction >, shared_ptr < integrator::DissociationReaction >
       >
           ("integrator_DissociationReaction",
-              init < int, int, int, int, int, int, int, int, real, real, real, shared_ptr
+              // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
+              // max_state_2, break_cutoff, break_rate, fpl
+              init < int, int, int, int, int, int, int, int, real, real, shared_ptr
               < FixedPairList > > ())
               .add_property("type_1",
                             &DissociationReaction::type_1, &DissociationReaction::set_type_1)
