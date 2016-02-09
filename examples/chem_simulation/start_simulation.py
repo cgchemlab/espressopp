@@ -367,7 +367,7 @@ def main():  #NOQA
         traj_file.close()
 
     # Saves output file.
-    output_gro_file = '{}_{}_{}.gro'.format(args.output_prefix, args.output_file, rng_seed)
+    output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
     dump_gro = espressopp.io.DumpGRO(
         system, integrator, filename=output_gro_file,
         unfolded=True, append=False)

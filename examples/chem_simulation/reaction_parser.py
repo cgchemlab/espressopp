@@ -139,6 +139,8 @@ def setup_reactions(system, verletlist, input_conf, config):
 
         for chem_reaction in reaction_group['reaction_list']:
             rl = chem_reaction['reactant_list']
+            if not chem_reaction['active']:
+                continue
             if chem_reaction['reverse']:
                 r_class = espressopp.integrator.DissociationReaction
             else:

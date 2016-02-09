@@ -23,7 +23,6 @@ import logging
 import os
 
 import numpy
-import networkx
 
 __doc__ = "Set of I/O classes and functions."""
 
@@ -429,32 +428,6 @@ class GROMACSTopologyFile(TopologyFile):
             del self.__dict__['__state']
         self.current_charges = {}
         self.atoms_updated = False
-
-    def get_graph(self):
-        """Returns graph."""
-        output_graph = networkx.Graph(box=None)
-        for at_id, g_at in self.atoms.iteritems():
-            output_graph.add_node(
-                at_id,
-                name=g_at.name,
-                res_id=g_at.chain_idx,
-                position=None,
-                chain_name=g_at.chain_name)
-
-        for (b1, b2), params in self.bonds.iteritems():
-            output_graph.add_edge(b1, b2, params=params, cross=False)
-
-        if 'bonds' in self.new_data:
-            for (b1, b2), params in self.new_data['bonds'].iteritems():
-                output_graph.add_edge(b1, b2, params=params, cross=False)
-
-        if 'cross_bonds' in self.new_data:
-            for (b1, b2), params in self.new_data['cross_bonds'].iteritems():
-                output_graph.add_edge(b1, b2, params=params, cross=True)
-
-        for n_id in output_graph.nodes():
-            output_graph.node[n_id]['degree'] = output_graph.degree(n_id)
-        return output_graph
 
     def update_position(self, pdbfile):
         """Reads the position data from the coordinate file and update the atoms.
@@ -874,52 +847,6 @@ class LammpsReader(object):
                 else:
                     self.current_section = None
 
-    def get_graph(self, settings):
-        """Creates networkx.Graph object from coordinate and topology data.
-
-        Args:
-            settings: The settings object.
-
-        Returns:
-            networkx.Graph object. Each of node has attributes:
-                - name: The name of atom.
-                - res_id: The id of molecule.
-                - chain_name: The name of molecule.
-                - position: The x, y, z position tuple.
-                - degree: The degree of the node.
-            Graph object has attribute `box` with the x, y, z values of a box.
-            Each of edges has attribute `bond_type` with a number that corresponds to bond type
-            in force field data.
-        """
-        type2chain_name = settings.cg_configuration['LAMMPS']['type2chain']
-        name_seq = settings.cg_configuration['LAMMPS']['name_seq']
-        output_graph = networkx.Graph(box=(self.box['x'], self.box['y'], self.box['z']))
-        seq_idx = {k: 0 for k in name_seq}
-        for at_id, lmp_at in self.atoms.iteritems():
-            chain_name = type2chain_name[lmp_at['atom_type']]
-            at_seq = name_seq[chain_name]
-            chain_len = len(at_seq)
-            at_name = at_seq[seq_idx[chain_name] % chain_len]
-            mol_idx = lmp_at['res_id']
-            position = lmp_at['position']
-            output_graph.add_node(
-                at_id,
-                name=at_name,
-                res_id=mol_idx,
-                position=position,
-                chain_name=chain_name)
-            seq_idx[chain_name] += 1
-
-        # Adding edges
-        for bond_id, bond_list in self.topology['bonds'].iteritems():
-            for b1, b2 in bond_list:
-                output_graph.add_edge(b1, b2, bond_type=bond_id)
-
-        # Updates degree
-        for n_id in output_graph.nodes():
-            output_graph.node[n_id]['degree'] = output_graph.degree(n_id)
-
-        return output_graph
 
     # Parsers section
     def _read_header(self, input_line):
