@@ -361,9 +361,10 @@ def main():  #NOQA
             traj_file.dump(int_step, int_step*dt)
         if k_trj_collect > 0 and k % 100 == 0:
             traj_file.flush()
-
-    traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
-    traj_file.close()
+    else:
+        dump_topol.update()
+        traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
+        traj_file.close()
 
     print('finished!')
     print('total time: {}'.format(time.time()-time0))
