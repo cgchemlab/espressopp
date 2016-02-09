@@ -1,4 +1,4 @@
-#  Copyright (c) 2015
+#  Copyright (c) 2015-2016
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
@@ -19,22 +19,83 @@
 
 r"""
 *********************************************
-**DumpPairs** - IO Object
+**DumpTopology** - IO object
 *********************************************
 
-* `dump()`
+.. function:: espressopp.io.DumpTopology(system, integrator, h5md_file)
 
-  Properties
+   :param system: The ESPP System object.
+   :type system: espressopp.System
+   :param integrator: The integrator object.
+   :type integrator: espressopp.integrator.MDIntegrator
+   :param h5md_file: The H5MD file object.
+   :type h5md_file: espressopp.io.DumpH5MD
 
-* `h5md_file`
-  HDF5 file object.
+.. function:: espressopp.io.DumpTopology.dump()
+
+   Store data from tuple into memory.
+
+.. function:: espressopp.io.DumpTopology.observe_tuple(fpl, name, particle_group)
+
+   Observers fixed pair list and stores list of bonds every time steps.
+
+   :param fpl: The FixedPairList object.
+   :type fpl: espressopp.FixedPairList
+   :param name: The name of the tuple to store in H5MD file.
+   :type name: str
+   :param particle_group: The particle group to referee to.
+   :type particle_group: str
+
+.. function:: espressopp.io.DumpTopology.add_static_tuple(fpl, name, particle_group)
+
+   Stores data from fixed pair list once when the command is invoked.
+
+   :param fpl: The FixedPairList object.
+   :type fpl: espressopp.FixedPairList
+   :param name: The name of the tuple to store in H5MD file.
+   :type name: str
+   :param particle group: The particle group to referee to.
+   :type particle_group: str
+
+.. function:: espressopp.io.DumpTopology.update()
+
+   Update H5MD file.
+
+Example
++++++++
+
+The code belows dump topology every 10 time steps and stores pairs from
+FixedPairList `fpl`.
+
+>>> traj_file = espressopp.io.DumpH5MD(
+        system, output_file,
+        group_name='atoms',
+        static_box=False,
+        author='xxx',
+        email='xxx@xxx',
+        store_species=True,
+        store_velocity=True,
+        store_state=True,
+        store_lambda=True)
+
+>>> dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
+>>> dump_topol.observe_tuple(fpl_a_a, 'fpl')
+>>> dump_topol.dump()
+>>> dump_topol.update()
+>>> ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 10)
+>>> integrator.addExtension(ext_dump)
+
+Stores static data from FixedPairList `fpl_0`
+
+>>> dump_topol.add_static_tuple(fpl_0, 'fpl_0', 'atoms')
+
 """
 
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 from mpi4py import MPI
 
-from espressopp.ParticleAccess import *
+from espressopp.ParticleAccess import *  #NOQA
 from _espressopp import io_DumpTopology
 
 import collections
@@ -70,6 +131,28 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             g.attrs['particle_group'] = particle_group
             self.tuple_data[self.tuple_index] = g
             self.tuple_index += 1
+
+    def add_static_tuple(self, fpl, name, particle_group='atoms'):
+        if pmi.workerIsActive():
+            bonds = fpl.getBonds()
+            NMaxLocal = np.array(len(bonds), 'i')
+            NMaxGlobal = np.array(0, 'i')
+            MPI.COMM_WORLD.Allreduce(NMaxLocal, NMaxGlobal, op=MPI.MAX)
+            size_per_cpu = ((NMaxGlobal // self.chunk_size)+1)*self.chunk_size
+            total_size = MPI.COMM_WORLD.size*size_per_cpu
+            # Prepares Dataset.
+            g = pyh5md.FixedData(
+                self.h5md_file.file.f['/connectivity'],
+                name,
+                shape=(total_size, 2),
+                dtype=np.int,
+                fillvalue=-1)
+            g.attrs['particle_group'] = particle_group
+            # Calculates index per cpu.
+            idx_0 = MPI.COMM_WORLD.rank*size_per_cpu
+            idx_1 = idx_0 + NMaxLocal
+            # Writes data.
+            g[idx_0:idx_1] = bonds
 
     def update(self):
         if pmi.workerIsActive():
@@ -118,7 +201,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.io.DumpTopologyLocal',
-            pmicall=['dump', 'clear_buffer', 'observe_tuple', 'update'],
+            pmicall=['dump', 'clear_buffer', 'observe_tuple', 'update', 'add_static_tuple'],
             pmiproperty=[],
             pmiinvoke=['get_data']
         )

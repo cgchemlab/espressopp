@@ -812,7 +812,7 @@ def _args():
                         help='Configuration file with chemical reactions')
     parser.add_argument('--debug', default=None, help='Turn on logging mechanism')
     parser.add_argument('--start_ar', default=0, type=int, help='When to start chemical reactions')
-    parser.add_argument('--interactive', default=0, type=int, help='Run interactive mode')
+    parser.add_argument('--interactive', default=False, type=ast.literal_eval, help='Run interactive mode')
     parser.add_argument('--store_species', default=False, type=ast.literal_eval,
                         help='Store particle types')
     parser.add_argument('--store_state', default=True, type=ast.literal_eval,

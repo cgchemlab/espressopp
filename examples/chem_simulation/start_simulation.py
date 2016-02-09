@@ -321,7 +321,7 @@ def main():  #NOQA
     # Generates topology based on fixed pair lists.
     for bid, bi in bondedinteractions.items():
         f = bi.getFixedPairList()
-        dump_topol.observe_tuple(f, 'fpl_{}'.format(bid))
+        dump_topol.add_static_tuple(f, 'fpl_{}'.format(bid))
 
     dump_topol.dump()
     dump_topol.update()
