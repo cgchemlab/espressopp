@@ -366,6 +366,14 @@ def main():  #NOQA
         traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
         traj_file.close()
 
+    # Saves output file.
+    output_gro_file = '{}_{}_{}.gro'.format(args.output_prefix, args.output_file, rng_seed)
+    dump_gro = espressopp.io.DumpGRO(
+        system, integrator, filename=output_gro_file,
+        unfolded=True, append=False)
+    dump_gro.dump()
+    print('Wrote end configuration to: {}'.format(output_gro_file))
+
     print('finished!')
     print('total time: {}'.format(time.time()-time0))
     espressopp.tools.analyse.final_info(system, integrator, verletlist, time0, time.time())
