@@ -245,8 +245,8 @@ namespace espressopp {
             LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
                 << "-" << it->second.second
                 << " bond: " << pid1 << "-" << pid2);
-            it = globalTriples.erase(it);
             onTupleRemoved(it->second.first, it->first, it->second.second);
+            it = globalTriples.erase(it);
             returnVal = true;
           } else {
             ++it;

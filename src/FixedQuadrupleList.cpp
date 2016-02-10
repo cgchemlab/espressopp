@@ -240,9 +240,9 @@ namespace espressopp {
         // otherwise test whether the quadruple already exists
         for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
           if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
-            it = globalQuadruples.erase(it);
             onTupleRemoved(pid1, pid2, pid3, pid4);
             returnVal = true;
+            it = globalQuadruples.erase(it);
           } else {
             ++it;
           }
