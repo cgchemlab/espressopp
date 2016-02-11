@@ -31,7 +31,7 @@
 #include "Extension.hpp"
 #include "VelocityVerlet.hpp"
 #include "Adress.hpp"
-#include "ChemicalReaction.hpp"
+#include "ChemicalReactionPostProcess.hpp"
 
 #include "boost/signals2.hpp"
 
@@ -52,7 +52,7 @@ class BasicDynamicResolutionType : public Extension {
   /**
    * Define action after lambda reaches 1.0 or 0.0.
    */
-  void AddPostProcess(const shared_ptr<integrator::PostProcess> pp, int when = 1) {
+  void AddPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int when = 1) {
     if (when == 1) {
       post_process_1.push_back(pp);
     } else if (when == 0) {
@@ -69,8 +69,8 @@ class BasicDynamicResolutionType : public Extension {
   boost::unordered_map<longint, real> rate_type_;
   void UpdateWeights();
   boost::signals2::connection _aftIntV;
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_0;
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_1;
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_0;
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_1;
 };
 
 /**

@@ -27,8 +27,9 @@ from espressopp.esutil import cxxinit
 from espressopp import pmi
 from espressopp.integrator.Extension import *
 from _espressopp import integrator_FixDistances
-from _espressopp import integrator_PostProcess
+from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessReleaseParticles
+from _espressopp import integrator_PostProcessJoinParticles
 
 
 class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
@@ -54,13 +55,18 @@ class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
 
 
 class PostProcessReleaseParticlesLocal(integrator_PostProcessReleaseParticles,
-                                       integrator_PostProcess):
-    """Post process of reaction that changes particle property."""
+                                       integrator_ChemicalReactionPostProcess):
+    """Post process of reaction that remove constraint."""
     def __init__(self, fix_distance_ext, nr=1):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+        if pmi.workerIsActive():
             cxxinit(self, integrator_PostProcessReleaseParticles, fix_distance_ext, nr)
 
+
+class PostProcessJoinParticlesLocal(integrator_PostProcessJoinParticles, integrator_ChemicalReactionPostProcess):
+    """Post process of reaction that join two particles."""
+    def __init__(self, fix_distance_ext, distance):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_PostProcessJoinParticles, fix_distance_ext, distance)
 
 if pmi.isController:
     class FixDistances(Extension):
@@ -68,11 +74,12 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls='espressopp.integrator.FixDistancesLocal',
             pmicall=['addConstraints', 'add_postprocess', 'totalSize'],
-            pmiinvoke=['print_triplets']
-            )
+            pmiinvoke=['print_triplets'])
 
     class PostProcessReleaseParticles:
         __metaclass__ = pmi.Proxy
-        pmiproxydefs = dict(
-            cls='espressopp.integrator.PostProcessReleaseParticlesLocal'
-            )
+        pmiproxydefs = dict(cls='espressopp.integrator.PostProcessReleaseParticlesLocal')
+
+    class PostProcessJoinParticles:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(cls='espressopp.integrator.PostProcessJoinParticlesLocal')

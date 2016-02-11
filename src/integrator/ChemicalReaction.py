@@ -99,8 +99,9 @@ from _espressopp import integrator_ChemicalReaction
 from _espressopp import integrator_Reaction
 from _espressopp import integrator_DissociationReaction
 
-from _espressopp import integrator_PostProcess
+from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessChangeProperty
+from _espressopp import integrator_PostProcessRemoveBond
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -126,7 +127,7 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
 
 
 class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
-                                     integrator_PostProcess):
+                                     integrator_ChemicalReactionPostProcess):
     """Post process of reaction that changes particle property."""
     def __init__(self):
         if pmi.workerIsActive():
@@ -139,6 +140,16 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
     def remove_change_property(self, type_id):
         if pmi.workerIsActive():
             self.cxxclass.remove_change_property(self, type_id)
+
+class PostProcessRemoveBondLocal(integrator_PostProcessRemoveBond, integrator_ChemicalReactionPostProcess):
+    """Post process of reaction, remove some bonds."""
+    def __init__(self, fpl, number_of_bonds):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_PostProcessRemoveBond, fpl, number_of_bonds)
+
+    def add_postprocess(self, pp):
+        if pmi.workerIsActive():
+            self.cxxclass.add_postprocess(self, pp)
 
 
 class ReactionLocal(integrator_Reaction):
@@ -171,7 +182,8 @@ class ReactionLocal(integrator_Reaction):
                     0 - both, 1 - reactant A, 2 - reactant B.
         """
         if pmi.workerIsActive():
-            self.cxxclass.add_postprocess(self, post_process, reactant_switch)
+            name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
+            self.cxxclass.add_postprocess(self, post_process, name_switch.get(reactant_switch, reactant_switch))
 
 
 class DissociationReactionLocal(integrator_DissociationReaction):
@@ -230,6 +242,10 @@ if pmi.isController:
             cls='espressopp.integrator.PostProcessUpdateResIdLocal',
             pmicall=('add_molecule_size',)
         )
+
+    class PostProcessRemoveBond:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(cls='espressopp.integrator.PostProcessRemoveBondLocal', pmicall=('add_postprocess'))
 
     class PostProcessUpdateExcludeList:
         __metaclass__ = pmi.Proxy

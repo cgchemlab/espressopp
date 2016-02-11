@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015
+  Copyright (C) 2015-2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -306,14 +306,14 @@ void BasicDynamicResolutionType::UpdateWeights() {
     vp.lambda() = new_lambda;
     vp.lambdaDeriv() = 0.0;
     if (lambda_0) {
-      for (std::vector<shared_ptr<integrator::PostProcess> >::iterator it = post_process_0.begin();
+      for (std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> >::iterator it = post_process_0.begin();
            it != post_process_0.end(); ++it) {
-        (*it)->process(vp);
+        (*it)->process(vp, vp);
       }
     } else if (lambda_1) {
-      for (std::vector<shared_ptr<integrator::PostProcess> >::iterator it = post_process_1.begin();
+      for (std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> >::iterator it = post_process_1.begin();
            it != post_process_1.end(); ++it) {
-        (*it)->process(vp);
+        (*it)->process(vp, vp);
       }
     }
   }

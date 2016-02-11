@@ -180,6 +180,10 @@ class TopologyManager: public Extension {
   void splitResIdSets(longint res_id, longint pid1, longint pid2);
 
   /**
+   * BFS on graph, looking for connected components to update res_id after edge is removed.
+   */
+
+  /**
    * Connecting/Disconnecting to signals.
    */
   void connect();

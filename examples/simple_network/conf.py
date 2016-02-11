@@ -19,7 +19,7 @@ mass = 1.0
 type_a = AtomType(1, 1.0*mass, 1.0*sigma, epsilon)
 type_b = AtomType(2, 0.8*mass, pow(124/125.0, 1.0/3.0)*sigma, epsilon)
 # New molecule
-type_c = AtomType(3, 0.1*mass, 0.2*sigma, epsilon)
+type_c = AtomType(3, 0.2*mass, 0.2*sigma, epsilon)
 type_c_tmp = AtomType(4, type_c.mass, type_c.sigma, type_c.epsilon)
 type_c_final = AtomType(5, type_c.mass, type_c.sigma, type_c.epsilon)
 
@@ -32,15 +32,15 @@ gamma = 5.0
 
 # Bond A-B
 kF = 30.0
-R0 = 0.5*sigma
+R0 = 0.8*sigma
 
 # Angle
 kAng = 25.0
 angle = 120.0
 
 # Size of system.
-rho = 0.6
-N_a = 100
+rho = 0.8
+N_a = 250
 # Number of coopartners.
 N_c = 3
 active_sites = 1

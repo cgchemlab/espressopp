@@ -74,6 +74,10 @@ namespace espressopp {
           "res_id",
           make_getter(&ParticleProperties::res_id),
           make_setter(&ParticleProperties::res_id))
+       .add_property(
+           "lambda_adr",
+           make_getter(&ParticleProperties::lambda),
+           make_setter(&ParticleProperties::lambda))
       .def(
           "init",
           &ParticleProperties::init

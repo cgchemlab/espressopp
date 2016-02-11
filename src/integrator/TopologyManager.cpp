@@ -505,16 +505,16 @@ void TopologyManager::exchangeData() {
     output.push_back(it->first);
     output.push_back(it->second);
   }
-  for (std::vector<std::pair<longint, std::pair<longint, longint> > >::iterator it = split_sets_.begin();
-      it != split_sets_.end(); ++it) {
-    output.push_back(it->first);
-    output.push_back(it->second.first);
-    output.push_back(it->second.second);
-  }
   for (std::vector<std::pair<longint, longint> >::iterator it = removedEdges_.begin();
       it != removedEdges_.end(); ++it) {
     output.push_back(it->first);
     output.push_back(it->second);
+  }
+  for (std::vector<std::pair<longint, std::pair<longint, longint> > >::iterator it = split_sets_.begin();
+       it != split_sets_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second.first);
+    output.push_back(it->second.second);
   }
 
   // Send and gather data from all nodes.
@@ -538,16 +538,16 @@ void TopologyManager::exchangeData() {
         f2 = *(itm++);
         newEdge(f1, f2);
       }
+      for (int i = 0; i < remove_edge_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        deleteEdge(f1, f2);
+      }
       for (int i = 0; i < split_set_size; i++) {
         f1 = *(itm++);
         f2 = *(itm++);
         f3 = *(itm++);
         splitResIdSets(f1, f2, f3);
-      }
-      for (int i = 0; i < remove_edge_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        deleteEdge(f1, f2);
       }
     }
   }
@@ -587,6 +587,7 @@ void TopologyManager::splitResIdSets(longint res_id, longint pid1, longint pid2)
   LOG4ESPP_DEBUG(theLogger, "spliting set " << res_id << " pid1=" << pid1 << " pid2=" << pid2);
 
   shared_ptr<PSet> setA = res_particle_ids_[res_id];
+  longint max_res_id = (--res_particle_ids_.end())->first;
 
   PSet set_1;
   PSet set_2;

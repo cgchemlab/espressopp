@@ -42,45 +42,17 @@
 #include "VerletList.hpp"
 #include "interaction/Potential.hpp"
 
+#include "ChemicalReactionPostProcess.hpp"
+
 
 namespace espressopp {
 namespace integrator {
 
 /** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
-typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
+
 typedef std::pair<Particle*, Particle*> ParticlePair;
 
 const int kCrCommTag = 0xad;
-
-/** PostProcess **/
-class PostProcess {
- public:
-  PostProcess() { }
-  virtual ~PostProcess() { }
-  virtual std::vector<Particle*> process(Particle& p) = 0;
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- protected:
-  shared_ptr<System> system_;
-  static LOG4ESPP_DECL_LOGGER(theLogger);
-};
-
-
-class PostProcessChangeProperty : public integrator::PostProcess {
- public:
-  std::vector<Particle*> process(Particle& p);
-  void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
-  void RemoveChangeProperty(int type_id);
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- private:
-  TypeParticlePropertiesMap type_properties_;
-};
-
 
 /** Class for the chemical reactions. */
 class Reaction {
@@ -186,7 +158,7 @@ class Reaction {
    *     if set to 1 then applied only to type_1 particle,
    *     if set to 2 then applied only to type_2 particle.
    */
-  void AddPostProcess(const shared_ptr<integrator::PostProcess> pp, int type = 0) {
+  void AddPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int type = 0) {
     switch (type) {
       case 1:
         post_process_T1.push_back(pp); break;
@@ -207,8 +179,8 @@ class Reaction {
   bool IsValidStateT_1(Particle &p);
   bool IsValidStateT_2(Particle &p);
 
-  std::set<Particle*> PostProcess_T1(Particle &p);
-  std::set<Particle*> PostProcess_T2(Particle &p);
+  std::set<Particle*> PostProcess_T1(Particle &p, Particle &partner);
+  std::set<Particle*> PostProcess_T2(Particle &p, Particle &partner);
 
   shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
 
@@ -242,8 +214,8 @@ class Reaction {
   shared_ptr<real> dt_;  //!< timestep from the integrator
   bc::BC *bc_;  //!< boundary condition
 
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_T1;
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_T2;
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;
 };
 
 
@@ -283,116 +255,6 @@ class DissociationReaction : public Reaction {
   real diss_rate_;  //!< Dissociation rate.
 
 };
-
-/** Implements the synthesis reaction
- *
- * The reaction is in the form \f[ A + B \rightarrow A-B \f]
- *
- * In addtion the residue id of A molecule is transfer to B molecule so that
- * they have the same residue id. Other properties of A and B molecules remain the same.
- *
-class SynthesisReaction : public integrator::Reaction {
- public:
-  SynthesisReaction(int type_1, int type_2, int delta_1, int delta_2,
-                    int min_state_1, int min_state_2, int max_state_1,
-                    int max_state_2, real cutoff, real rate,
-                    bool intramolecular)
-      : Reaction(type_1, type_2, delta_1, delta_2, min_state_1, min_state_2,
-                 max_state_1, max_state_2, cutoff, rate, intramolecular) {
-  }
-
-  static void registerPython();
-};
- */
-
-
-typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
-typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
-typedef std::vector<boost::unordered_multimap<longint, longint> > RevReactionPairList;
-
-
-/** Reaction scheme for polymer growth and curing/crosslinking
-
- This extension enables the rate-controlled stochastic curing of polymer
- systems, either for chain growth of step growth, depending on the
- parameters.
-
- The variables type_1, type_2, min_state_1, min_state_2, max_state_1, max_state_2
- control the particles that enter the curing reaction
- \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
- where A and B may possess additional bonds not shown.
-
- An extra bond is added between A and B whenever the state of A and B falls
- into the defined range by variables min/max state.
- The condition is as follow:
- \f[ a >= minStateA \land stateA < maxStateA \f]
- the same holds for the particle B. Both condition should match.
- In addition if the intramolecular property is set to true (by default) then
- the reaction only happend between heterogenous molecules.
-
- The reaction proceeds by testing for all possible (A,B) pairs and
- selects them only at a given rate. It works in parallel, by gathering
- first the successful pairs between neigboring CPUs and ensuring that
- each particle enters only in one new bond per reaction step.
- */
-class ChemicalReaction : public Extension {
- public:
-  ChemicalReaction(shared_ptr<System> system,
-                   shared_ptr<VerletList> _verletList,
-                   shared_ptr<storage::DomainDecomposition> _domdec);
-  ~ChemicalReaction();
-
-  void set_interval(int interval) {
-    *interval_ = interval;
-  }
-  int interval() {
-    return *interval_;
-  }
-
-  void Initialize();
-  void AddReaction(boost::shared_ptr<integrator::Reaction> reaction);
-
-  void React();
-
-  void SendMultiMap(integrator::ReactionMap &mm);  //NOLINT
-  void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
-  void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
-      integrator::ReactionMap& effective_candidates);  //NOLINT
-  void ApplyAR(std::set<Particle*>& modified_particles);
-  void ApplyDR(std::set<Particle*>& modified_particles);
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- private:
-  static LOG4ESPP_DECL_LOGGER(theLogger);
-  void UpdateGhost(const std::set<Particle*>& modified_particles);
-
-  real current_cutoff_;
-
-  shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
-  shared_ptr<real> dt_;  //!< Timestep from the integrator.
-
-  shared_ptr<storage::DomainDecomposition> domdec_;
-  shared_ptr<espressopp::interaction::Potential> potential_;
-  shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
-  shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
-
-  boost::signals2::connection initialize_;
-  boost::signals2::connection react_;
-
-  integrator::ReactionMap potential_pairs_;  //!< Container for (A,B) potential partners/
-  integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
-
-  ReactionList reaction_list_;  //<! Container for reactions.
-  ReactionList reverse_reaction_list_;  //<! Container for reverse reactions.
-
-  void connect();
-  void disconnect();
-};
-
-
-
 
 }  // namespace integrator
 }  // namespace espressopp

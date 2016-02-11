@@ -100,7 +100,8 @@ def main():  # NOQA
         potAngHarmonic)
     system.addInteraction(interAngHarmonic, 'angle')
 
-    dynamic_ex_list.observe(fpl_a_a)
+    dynamic_ex_list.observe_tuple(fpl_a_a)
+    dynamic_ex_list.observe_triple(tpl_a_a)
 
     if not args.eq_conf:
         tools.warmup(system, integrator, verletList, args, conf)
@@ -170,8 +171,8 @@ def main():  # NOQA
         max_state_2=3,
         rate=args.rate,
         fpl=fpl_a_a,
-        intramolecular=True,
         cutoff=1.1*conf.type_a.sigma)
+    r_type_1.intramolecular = True
     # conf.rc_lj*tools.lb_sigma(conf.type_a.sigma, conf.type_b.sigma))
     print('Adding reaction 1, rate={}, cutoff={}, P={}'.format(args.rate, r_type_1.cutoff,
                                                                args.rate*args.interval*conf.dt))
@@ -186,9 +187,8 @@ def main():  # NOQA
         max_state_2=2,
         rate=args.rate,
         fpl=fpl_a_a,
-        intramolecular=True,
         cutoff=1.1*conf.type_a.sigma)
-    # Release one particle
+    r_type_2.intramolecular = True
     ar.add_reaction(r_type_1)
     ar.add_reaction(r_type_2)
 
@@ -201,10 +201,10 @@ def main():  # NOQA
         max_state_1=1,
         min_state_2=1,
         max_state_2=2,
-        rate=2.0*args.rate,
-        diss_rate=0.0*args.rate,
+        rate=args.rate,
         fpl=fpl_a_a,
-        cutoff=1.0*conf.type_a.sigma)
+        cutoff=0.9*conf.type_a.sigma)
+    r_type_3.intramolecular = True
     ar.add_reaction(r_type_3)
 
     r_type_4 = espressopp.integrator.DissociationReaction(
@@ -216,10 +216,10 @@ def main():  # NOQA
         max_state_1=5,
         min_state_2=1,
         max_state_2=2,
-        rate=2.0*args.rate,
-        diss_rate=0.0*args.rate,
+        rate=args.rate,
         fpl=fpl_a_a,
-        cutoff=1.0)
+        cutoff=0.9*conf.type_a.sigma)
+    r_type_3.intramolecular = True
     ar.add_reaction(r_type_4)
 
     integrator.addExtension(ar)
@@ -315,10 +315,10 @@ def main():  # NOQA
         traj_file.dump(k*args.steps, k*args.steps*conf.dt)
         traj_file.flush()
         dump_topol.update()
-        if k == args.loops / 2:
+        if k == args.loops / 12:
             print('Activated r3 and r4')
-            #r_type_3.active = False
-            #r_type_4.active = False
+            r_type_3.active = False
+            r_type_4.active = False
     traj_file.close()
     dump_topol.update()
     espressopp.tools.analyse.final_info(system, integrator, verletList, time0, time.time())

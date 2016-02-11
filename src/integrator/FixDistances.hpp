@@ -32,7 +32,7 @@
 #include "boost/unordered_map.hpp"
 #include "Real3D.hpp"
 #include "Particle.hpp"
-#include "ChemicalReaction.hpp"
+#include "ChemicalReactionPostProcess.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -97,12 +97,12 @@ class FixDistances : public Extension {
  * PostProcess action. Invoked when target particle is realesd from the constraint.
  *
  * @params fd espressopp.integrator.FixDistances object.
- * @params nr The integer with number of constraints to release at once.
+ * @params nr The integer with the number of constraints to release at once.
  */
-class PostProcessReleaseParticles : public integrator::PostProcess {
+class PostProcessReleaseParticles : public integrator::ChemicalReactionPostProcess {
  public:
   PostProcessReleaseParticles(shared_ptr<FixDistances> fd, int nr) : fd_(fd), nr_(nr) {}
-  std::vector<Particle*> process(Particle &p);
+  std::vector<Particle*> process(Particle &p, Particle &partner);
 
   static void registerPython();
  private:
@@ -111,6 +111,20 @@ class PostProcessReleaseParticles : public integrator::PostProcess {
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
+
+class PostProcessJoinParticles : public integrator::ChemicalReactionPostProcess {
+ public:
+  PostProcessJoinParticles(shared_ptr<FixDistances> fd, real distance) : fd_(fd), distance_(distance) {}
+  std::vector<Particle*> process(Particle &p, Particle &partner);
+  static void registerPython();
+
+ private:
+  shared_ptr<integrator::FixDistances> fd_;
+  real distance_;
+
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
 }  // end namespace integrator
 }  // end namespace espressopp
 #endif
