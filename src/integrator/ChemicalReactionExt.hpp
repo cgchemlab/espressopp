@@ -68,17 +68,26 @@ typedef std::vector<boost::unordered_multimap<longint, longint> > RevReactionPai
 
  An extra bond is added between A and B whenever the state of A and B falls
  into the defined range by variables min/max state.
- The condition is as follow:
+ The conditions are as follow:
  \f[ a >= minStateA \land stateA < maxStateA \f]
  the same holds for the particle B. Both condition should match.
- In addition if the intramolecular property is set to true (by default) then
- the reaction only happend between heterogenous molecules.
+
+ In addition to that, there is also a probabilistic condition
+ \f[ k\Delta t \Phi < W \f]
+ where \f$k\f$ is a kinetic rate, \f$\Delta t\f$ is an integrator time step,
+ \f$W\f$ is a number from uniform random number generator and \f$\Phi\f$ is
+ an interval between invokation of the reactions.
+
+ It is possible to exclude reactions between particles that are in the same
+ molecule (like polymer chain etc.). This can be done by settings intramolecular
+ property to false (default).
 
  The reaction proceeds by testing for all possible (A,B) pairs and
  selects them only at a given rate. It works in parallel, by gathering
  first the successful pairs between neigboring CPUs and ensuring that
  each particle enters only in one new bond per reaction step.
  */
+
 class ChemicalReaction : public Extension {
  public:
   ChemicalReaction(shared_ptr<System> system,
@@ -92,8 +101,11 @@ class ChemicalReaction : public Extension {
   int interval() {
     return *interval_;
   }
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
 
-  void Initialize();
+ private:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
   void AddReaction(boost::shared_ptr<integrator::Reaction> reaction);
 
   void React();
@@ -101,15 +113,10 @@ class ChemicalReaction : public Extension {
   void SendMultiMap(integrator::ReactionMap &mm);  //NOLINT
   void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
   void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
-      integrator::ReactionMap& effective_candidates);  //NOLINT
+               integrator::ReactionMap& effective_candidates);  //NOLINT
   void ApplyAR(std::set<Particle*>& modified_particles);
   void ApplyDR(std::set<Particle*>& modified_particles);
 
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- private:
-  static LOG4ESPP_DECL_LOGGER(theLogger);
   void UpdateGhost(const std::set<Particle*>& modified_particles);
 
   real current_cutoff_;

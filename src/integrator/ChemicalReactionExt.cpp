@@ -33,7 +33,12 @@ namespace integrator {
 
 LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
 
-/** ChemicalReaction part*/
+/** ChemicalReaction extension to the integrator
+ *
+ * @param system The espressopp.System object.
+ * @param verletList The espressopp.VerletList object.
+ * @param domdec The espressopp.storage.DomainDecomposition object.
+ */
 ChemicalReaction::ChemicalReaction(
     shared_ptr <System> system, shared_ptr <VerletList> verletList,
     shared_ptr <storage::DomainDecomposition> domdec)
@@ -57,15 +62,14 @@ ChemicalReaction::ChemicalReaction(
 }
 
 ChemicalReaction::~ChemicalReaction() {
-  disconnect();
   LOG4ESPP_INFO(theLogger, "Destructor ChemicalReaction");
+  disconnect();
 }
 
-void ChemicalReaction::Initialize() {
-  LOG4ESPP_INFO(theLogger, "Init ChemicalReaction");
-}
-
-/** Adds the chemical reaction to the list of reactions */
+/** Adds the chemical reaction to the list of reactions
+ *
+ * @param reaction espressopp.Reaction object.
+ */
 void ChemicalReaction::AddReaction(boost::shared_ptr <integrator::Reaction> reaction) {
   reaction->set_dt(dt_);
   reaction->set_interval(interval_);

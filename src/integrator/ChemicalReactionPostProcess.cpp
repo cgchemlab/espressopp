@@ -59,9 +59,10 @@ void PostProcessChangeProperty::RemoveChangeProperty(int type_id) {
   }
 }
 
-/** Post process after pairs were added.
+/** Updates the properties of the particle
+ * @param p1 The particle that will be updated
+ * @param partner The reference to the partner of p1 particle.
  *
- * In this case method will update the properties of the particles.
  * */
 std::vector<Particle *> PostProcessChangeProperty::process(Particle &p1, Particle &partner) {
   TypeParticlePropertiesMap::iterator it;
@@ -105,9 +106,6 @@ void PostProcessChangeProperty::registerPython() {
               .def("remove_change_property", &PostProcessChangeProperty::RemoveChangeProperty);
 }
 
-/**
- * Remove bond after the new bond is created.
- */
 LOG4ESPP_LOGGER(PostProcessRemoveBond::theLogger, "PostProcessRemoveBond");
 
 std::vector<Particle*> PostProcessRemoveBond::process(Particle &p, Particle &partner) {
@@ -126,14 +124,8 @@ std::vector<Particle*> PostProcessRemoveBond::process(Particle &p, Particle &par
       LOG4ESPP_DEBUG(theLogger, "removed bond "
           << it->first << "-" << it->second << " p=" << p.id() << " partner=" << partner.id());
       remove_bonds++;
-      if (pp_) {
-        std::vector<Particle*> tmp;
-        tmp = pp_->process(partner, partner);
-        ret.insert(ret.begin(), tmp.begin(), tmp.end());
-      }
     }
   }
-
   return ret;
 }
 
@@ -142,8 +134,7 @@ void PostProcessRemoveBond::registerPython() {
 
   class_<PostProcessRemoveBond, bases<integrator::ChemicalReactionPostProcess>,
          boost::shared_ptr<integrator::PostProcessRemoveBond> >
-      ("integrator_PostProcessRemoveBond", init<shared_ptr<FixedPairList>, int>())
-          .def("add_postprocess", &PostProcessRemoveBond::AddPostProcess);
+      ("integrator_PostProcessRemoveBond", init<shared_ptr<FixedPairList>, int>());
 }
 
 }  // namespace integrator

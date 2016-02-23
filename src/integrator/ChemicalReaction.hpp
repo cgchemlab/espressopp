@@ -48,13 +48,17 @@
 namespace espressopp {
 namespace integrator {
 
-/** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
-
 typedef std::pair<Particle*, Particle*> ParticlePair;
-
 const int kCrCommTag = 0xad;
 
-/** Class for the chemical reactions. */
+
+/** Base class for performing addition reaction.
+ *
+ * It modeled following reaction:
+ *
+ *  \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
+ *
+ **/
 class Reaction {
  public:
   Reaction()
@@ -75,6 +79,24 @@ class Reaction {
     min_cutoff_sqr_ = 0.0;
   }
 
+  /*** Constructor of Reaction object.
+   *
+   * \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
+   *
+   * @param type_1 The type of A particle.
+   * @param type_2 The type of B particle.
+   * @param delta_1 The delta A.
+   * @param delta_2 The delta B.
+   * @param min_state_1 The minimum state of particle A (greater equal to it).
+   * @param max_state_1 The maximum state of particle A (less not equal to it).
+   * @param min_state_2 The minimum state of particle B.
+   * @param max_state_2 The maximum state of particle B.
+   * @param cutoff The reaction cutoff distance.
+   * @param rate The reaction rate.
+   * @param fpl The espressopp.FixedPairList with the new bonds that are added by reaction.
+   * @param intramolecular If set to true then intramolecular bonds are allowed.
+   *
+   */
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
            int max_state_1, int min_state_2, int max_state_2, real cutoff,
            real rate, shared_ptr<FixedPairList> fpl,
@@ -106,6 +128,10 @@ class Reaction {
   }
   real cutoff() { return cutoff_; }
 
+  /*** Defines minimum cut-off distance.
+   *
+   * This will define the minimu distance when reaction should occured.
+   */
   void set_min_cutoff(real cutoff) {
     min_cutoff_ = cutoff;
     min_cutoff_sqr_ = cutoff * cutoff;
@@ -148,6 +174,8 @@ class Reaction {
   void set_reverse(bool r) { reverse_ = r; }
 
   bool active() { return active_; }
+
+  /** Activate the reaction*/
   void set_active(bool s) { active_ = s; }
 
   /**
@@ -219,6 +247,20 @@ class Reaction {
 };
 
 
+/*** Defines dissociation reactions.
+ *
+ * This special type of reaction, modeling follwoing reaction:
+ *
+ * \f[ A:B -> A + B \f]
+ *
+ * When this reaction is invoked, the list of bonds between particles
+ * A and B is scanned, the bond is removed when those conditions occures:
+ *  - distance between A and B is larger than specific cut_off distance,
+ *  - the \f[ k\Delta t \Phi < W\f] when \f[k\f] is a rate
+ *
+ * It is also possible to remove the bond without checking if the distance exceed the bond
+ * by defining only the diss_rate. By default, this rate is set to 0
+ */
 class DissociationReaction : public Reaction {
  public:
   DissociationReaction() : Reaction() {
