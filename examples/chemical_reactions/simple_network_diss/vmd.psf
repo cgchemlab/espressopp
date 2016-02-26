@@ -1,0 +1,11 @@
+PSF CMAP
+
+       4 !NATOM
+       1 T001    0 UNX  FE   FE                    
+       2 T001    0 UNX  FE   FE                    
+       3 T005    0 UNX  FE   FE                    
+       4 T001    0 UNX  FE   FE                    
+
+       2 !NBOND:
+       1       2       1       4
+END
