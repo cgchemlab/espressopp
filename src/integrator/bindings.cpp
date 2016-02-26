@@ -104,6 +104,9 @@ namespace espressopp {
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
 
+      ReactionCutoff::registerPython();
+      ReactionCutoffStatic::registerPython();
+      ReactionCutoffRandom::registerPython();
       Reaction::registerPython();
       DissociationReaction::registerPython();
       ChemicalReaction::registerPython();

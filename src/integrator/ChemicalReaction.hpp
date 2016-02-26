@@ -24,6 +24,9 @@
 
 #include <boost/unordered_map.hpp>
 #include <boost/signals2.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/variate_generator.hpp>
 
 #include <utility>
 #include <map>
@@ -49,7 +52,75 @@ namespace espressopp {
 namespace integrator {
 
 typedef std::pair<Particle*, Particle*> ParticlePair;
-const int kCrCommTag = 0xad;
+const int kCrCommTag = 0xad;  // @warning: this made problems when multiple extension will be enabled.
+
+
+class ReactionCutoff {
+ public:
+  ReactionCutoff() {}
+  virtual ~ReactionCutoff() {}
+  virtual bool check(Particle &p1, Particle &p2) = 0;
+  virtual real cutoff() = 0;
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+ protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
+class ReactionCutoffStatic : public ReactionCutoff {
+ public:
+  ReactionCutoffStatic() {
+    set_cutoff(0.0, 0.0);
+  }
+  ReactionCutoffStatic(real min_cutoff, real max_cutoff) {
+    set_cutoff(min_cutoff, max_cutoff);
+  }
+  bool check(Particle &p1, Particle &p2);
+  real cutoff() { return max_cutoff_; }
+
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+ protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
+ private:
+  void set_cutoff(real min_cutoff, real max_cutoff) {
+    min_cutoff_ = min_cutoff;
+    min_cutoff_sqr_ = min_cutoff*min_cutoff;
+    max_cutoff_ = max_cutoff;
+    max_cutoff_sqr_ = max_cutoff*max_cutoff;
+  }
+
+  real min_cutoff_;
+  real min_cutoff_sqr_;
+  real max_cutoff_;
+  real max_cutoff_sqr_;
+};
+
+class ReactionCutoffRandom : public ReactionCutoff {
+ public:
+  ReactionCutoffRandom(real eq_distance, real eq_width, longint seed)
+      : eq_width_(eq_width), eq_distance_(eq_distance), seed_(seed),
+        generator_(boost::mt19937(seed), boost::normal_distribution<>(0.0, eq_width)) {
+  }
+  bool check(Particle &p1, Particle &p2);
+  real cutoff() { return  eq_distance_ + 0.5*eq_width_; }
+
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+ protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
+ private:
+  real eq_distance_;
+  real eq_width_;
+  longint interval_;
+  longint seed_;
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator_;
+};
 
 
 /** Base class for performing addition reaction.
@@ -73,10 +144,6 @@ class Reaction {
         rate_(0.0),
         reverse_(false),
         intramolecular_(false), active_(true) {
-    cutoff_ = 0.0;
-    cutoff_sqr_ = 0.0;
-    min_cutoff_ = 0.0;
-    min_cutoff_sqr_ = 0.0;
   }
 
   /*** Constructor of Reaction object.
@@ -98,7 +165,7 @@ class Reaction {
    *
    */
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
-           int max_state_1, int min_state_2, int max_state_2, real cutoff,
+           int max_state_1, int min_state_2, int max_state_2,
            real rate, shared_ptr<FixedPairList> fpl,
            bool intramolecular = false)
       : type_1_(type_1),
@@ -114,29 +181,15 @@ class Reaction {
         fixed_pair_list_(fpl),
         intramolecular_(intramolecular),
         active_(true) {
-    set_cutoff(cutoff);
-    set_min_cutoff(0.0);
   }
   virtual ~Reaction() { }
 
+  virtual real cutoff() {
+    return reaction_cutoff_->cutoff();
+  }
+
   void set_rate(real rate) { rate_ = rate; }
   real rate() { return rate_; }
-
-  void set_cutoff(real cutoff) {
-    cutoff_ = cutoff;
-    cutoff_sqr_ = cutoff * cutoff;
-  }
-  real cutoff() { return cutoff_; }
-
-  /*** Defines minimum cut-off distance.
-   *
-   * This will define the minimu distance when reaction should occured.
-   */
-  void set_min_cutoff(real cutoff) {
-    min_cutoff_ = cutoff;
-    min_cutoff_sqr_ = cutoff * cutoff;
-  }
-  real min_cutoff() { return min_cutoff_; }
 
   void set_type_1(int type_1) { type_1_ = type_1; }
   int type_1() { return type_1_; }
@@ -199,6 +252,10 @@ class Reaction {
     }
   }
 
+  void SetReactionCutoff(shared_ptr<ReactionCutoff> rc) {
+    reaction_cutoff_ = rc;
+  }
+
   /** Checks if the pair is valid. */
   virtual bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
   /** Checks if the pair has valid state. */
@@ -227,10 +284,6 @@ class Reaction {
   int delta_1_;  //!< state change for reactant A
   int delta_2_;  //!< state change for reactant B
   real rate_;  //!< reaction rate
-  real cutoff_;  //!< reaction cutoff
-  real cutoff_sqr_;  //!< reaction cutoff^2
-  real min_cutoff_;  //!< min reaction cutoff
-  real min_cutoff_sqr_;  //!< min reaction cutoff^2
   bool active_ ;  //!< is reaction active, by default true
 
   bool intramolecular_;  //!< Allow to intramolecular reactions.
@@ -244,6 +297,8 @@ class Reaction {
 
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;
+
+  shared_ptr<ReactionCutoff> reaction_cutoff_;
 };
 
 
@@ -264,8 +319,8 @@ class Reaction {
 class DissociationReaction : public Reaction {
  public:
   DissociationReaction() : Reaction() {
-    cutoff_ = 0.0;
-    cutoff_sqr_ = 0.0;
+    break_cutoff_ = 0.0;
+    break_cutoff_sqr_ = 0.0;
     reverse_ = true;
   }
 
@@ -276,14 +331,18 @@ class DissociationReaction : public Reaction {
       real break_rate,
       shared_ptr<FixedPairList> fpl
       ) : Reaction(type_1, type_2, delta_1, delta_2,
-          min_state_1, max_state_1, min_state_2, max_state_2, break_cutoff, break_rate, fpl,
-          true), diss_rate_(0.0) {
+          min_state_1, max_state_1, min_state_2, max_state_2, break_rate, fpl,
+          true), diss_rate_(0.0), break_cutoff_(break_cutoff) {
     reverse_ = true;
+    break_cutoff_sqr_ = break_cutoff_*break_cutoff_;
   }
   virtual ~DissociationReaction() { }
 
   real diss_rate() { return diss_rate_; }
   void set_diss_rate(real s) { diss_rate_ = s; }
+
+  void set_cutoff(real cutoff) { break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff*cutoff;}
+  real cutoff() { return break_cutoff_; }
 
   bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
 
@@ -295,7 +354,8 @@ class DissociationReaction : public Reaction {
 
  private:
   real diss_rate_;  //!< Dissociation rate.
-
+  real break_cutoff_;
+  real break_cutoff_sqr_;
 };
 
 }  // namespace integrator

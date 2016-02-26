@@ -46,6 +46,9 @@ from _espressopp import integrator_DissociationReaction
 from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessChangeProperty
 from _espressopp import integrator_PostProcessRemoveBond
+from _espressopp import integrator_ReactionCutoffStatic
+from _espressopp import integrator_ReactionCutoffRandom
+from _espressopp import integrator_ReactionCutoff
 
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
@@ -85,11 +88,26 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
         if pmi.workerIsActive():
             self.cxxclass.remove_change_property(self, type_id)
 
+
 class PostProcessRemoveBondLocal(integrator_PostProcessRemoveBond, integrator_ChemicalReactionPostProcess):
     """Post process of reaction, remove some bonds."""
     def __init__(self, fpl, number_of_bonds):
         if pmi.workerIsActive():
             cxxinit(self, integrator_PostProcessRemoveBond, fpl, number_of_bonds)
+
+
+class ReactionCutoffStaticLocal(integrator_ReactionCutoffStatic, integrator_ReactionCutoff):
+    """Reaction cutoff object."""
+    def __init__(self, max_cutoff, min_cutoff=0.0):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_ReactionCutoffStatic, min_cutoff, max_cutoff)
+
+
+class ReactionCutoffRandomLocal(integrator_ReactionCutoffRandom, integrator_ReactionCutoff):
+    """Reaction cutoff from normal distribution."""
+    def __init__(self, eq_distance, eq_width, seed=12345):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_ReactionCutoffRandom, eq_distance, eq_width, seed)
 
 
 class ReactionLocal(integrator_Reaction):
@@ -108,11 +126,11 @@ class ReactionLocal(integrator_Reaction):
                 max_state_1,
                 min_state_2,
                 max_state_2,
-                cutoff,
                 rate,
                 fpl,
                 False
             )
+            self.cxxclass.set_cutoff(self, ReactionCutoffStaticLocal(cutoff))
 
     def add_postprocess(self, post_process, reactant_switch=0):
         """Add new post process to the reaction.
@@ -124,6 +142,11 @@ class ReactionLocal(integrator_Reaction):
         if pmi.workerIsActive():
             name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
             self.cxxclass.add_postprocess(self, post_process, name_switch.get(reactant_switch, reactant_switch))
+
+    def set_cutoff(self, reaction_cutoff):
+        """Set cutoff object."""
+        if pmi.workerIsActive():
+            self.cxxclass.set_cutoff(self, reaction_cutoff)
 
 
 class DissociationReactionLocal(integrator_DissociationReaction):
@@ -146,6 +169,7 @@ class DissociationReactionLocal(integrator_DissociationReaction):
                 rate,
                 fpl
             )
+            self.cxxclass.set_cutoff(self, ReactionCutoffStaticLocal(cutoff))
 
     def add_postprocess(self, post_process, reactant_switch=0):
         """Add new post process to the reaction.
@@ -187,12 +211,21 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(cls='espressopp.integrator.PostProcessRemoveBondLocal')
 
+    class ReactionCutoffStatic:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = {'cls': 'espressopp.integrator.ReactionCutoffStaticLocal'}
+
+    class ReactionCutoffRandom:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = {'cls': 'espressopp.integrator.ReactionCutoffRandomLocal'}
+
     class Reaction:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.ReactionLocal',
             pmicall=(
                 'add_postprocess',
+                'set_cutoff'
             ),
             pmiproperty=(
                 'type_1',
@@ -204,8 +237,6 @@ if pmi.isController:
                 'min_state_2',
                 'max_state_2',
                 'rate',
-                'cutoff',
-                'min_cutoff',
                 'intramolecular',
                 'active'
                 )
@@ -229,7 +260,6 @@ if pmi.isController:
                     'max_state_2',
                     'rate',
                     'cutoff',
-                    'min_cutoff',
                     'diss_rate',
                     'active'
                     )

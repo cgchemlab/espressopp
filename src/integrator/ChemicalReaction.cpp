@@ -31,22 +31,62 @@
 namespace espressopp {
 namespace integrator {
 
-LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
+LOG4ESPP_LOGGER(ReactionCutoff::theLogger, "ReactionCutoff");
+LOG4ESPP_LOGGER(ReactionCutoffStatic::theLogger, "ReactionCutoffStatic");
+LOG4ESPP_LOGGER(ReactionCutoffRandom::theLogger, "ReactionCutoffStatic");
+
+void ReactionCutoff::registerPython() {
+  using namespace espressopp::python; //NOLINT
+  class_ < ReactionCutoff, shared_ptr < integrator::ReactionCutoff >, boost::noncopyable >
+      ("integrator_ReactionCutoff", no_init);
+}
+
+bool ReactionCutoffStatic::check(Particle &p1, Particle &p2) {
+  Real3D distance = p1.position() - p2.position();
+  real distance_2 = distance.sqr();
+  return (distance_2 >= min_cutoff_sqr_ && distance_2 < max_cutoff_sqr_);
+}
+
+void ReactionCutoffStatic::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_ < ReactionCutoffStatic, bases < integrator::ReactionCutoff >,
+           boost::shared_ptr < integrator::ReactionCutoffStatic > >
+      ("integrator_ReactionCutoffStatic", init<real, real>());
+}
+
+bool ReactionCutoffRandom::check(Particle &p1, Particle &p2) {
+  real random_cutoff_ = fabs(generator_()) + eq_distance_;
+  real random_cutoff_sqr_ = random_cutoff_*random_cutoff_;
+  Real3D distance = p1.position() - p2.position();
+  real distance_2 = distance.sqr();
+  return (distance_2 < random_cutoff_sqr_);
+}
+
+void ReactionCutoffRandom::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_ < ReactionCutoffRandom, bases < integrator::ReactionCutoff >,
+           boost::shared_ptr < integrator::ReactionCutoffRandom > >
+      ("integrator_ReactionCutoffRandom", init<real, real, longint>());
+}
+
 
 /** Checks if the particles pair is valid. */
 bool Reaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
-  LOG4ESPP_DEBUG(theLogger, "entering Reaction::IsValidPair, min_cutoff=" << min_cutoff_ << " cutoff_=" << cutoff_);
+  LOG4ESPP_DEBUG(theLogger, "entering Reaction::IsValidPair");
   if (IsValidState(p1, p2, particle_order)) {
-    Real3D distance = p1.position() - p2.position();
-    real distance_2 = distance.sqr();
-    if (distance_2 < cutoff_sqr_ && distance_2 >= min_cutoff_sqr_ && (*rng_)() < rate_ * (*dt_) * (*interval_)) {
-      LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id() << " d2=" << distance_2);
+    real W = (*rng_)();
+    real p = rate_ * (*dt_) * (*interval_);
+    if (W < p && reaction_cutoff_->check(p1, p2)) {
+      LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
       return true;
     }
   }
   return false;
 }
 
+LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles has correct state. */
 bool Reaction::IsValidState(Particle &p1, Particle &p2, ParticlePair &correct_order) {
@@ -142,7 +182,7 @@ void Reaction::registerPython() {
       ("integrator_Reaction",
           // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
           // min_state_2, max_state_2, cutoff, rate, fpl, intramolecular
-          init<int, int, int, int, int, int, int, int, real, real,
+          init<int, int, int, int, int, int, int, int, real,
                shared_ptr<FixedPairList>, bool>())
           .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
           .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
@@ -153,11 +193,10 @@ void Reaction::registerPython() {
           .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
           .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
           .add_property("rate", &Reaction::rate, &Reaction::set_rate)
-          .add_property("cutoff", &Reaction::cutoff, &Reaction::set_cutoff)
-          .add_property("min_cutoff", &Reaction::min_cutoff, &Reaction::set_min_cutoff)
           .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
           .add_property("active", &Reaction::active, &Reaction::set_active)
-          .def("add_postprocess", &Reaction::AddPostProcess);
+          .def("add_postprocess", &Reaction::AddPostProcess)
+          .def("set_cutoff", &Reaction::SetReactionCutoff);
 }
 
 /** DissociationReaction */
@@ -175,10 +214,10 @@ bool DissociationReaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair 
       real distance_2 = distance.sqr();
 
       // Break the bond when the distance exceed the cut_off with some probability.
-      if (distance_2 > cutoff_sqr_ && W < rate_ * (*dt_) * (*interval_)) {
+      if (distance_2 > break_cutoff_sqr_ && W < rate_ * (*dt_) * (*interval_)) {
         LOG4ESPP_DEBUG(theLogger,
                        "Break the bond, " << p1.id() << "-" << p2.id()
-                           << " d_2=" << distance_2 << " cutoff_sqr=" << cutoff_sqr_);
+                           << " d_2=" << distance_2 << " cutoff_sqr=" << break_cutoff_sqr_);
         return true;
       }
     }
@@ -226,10 +265,9 @@ void DissociationReaction::registerPython() {
               .add_property("max_state_2",
                             &DissociationReaction::max_state_2,
                             &DissociationReaction::set_max_state_2)
+              .add_property("cutoff", &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
               .add_property("rate",
                             &DissociationReaction::rate, &DissociationReaction::set_rate)
-              .add_property("cutoff",
-                            &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
               .add_property("diss_rate",
                             &DissociationReaction::diss_rate, &DissociationReaction::set_diss_rate)
               .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
