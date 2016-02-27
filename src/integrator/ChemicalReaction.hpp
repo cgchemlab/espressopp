@@ -1,21 +1,21 @@
 /*
- Copyright (C) 2014-2016
+   Copyright (C) 2014-2016
    Jakub Krajniak (jkrajniak at gmail.com)
 
- This file is part of ESPResSo++.
+   This file is part of ESPResSo++.
 
- ESPResSo++ is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+   ESPResSo++ is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
- ESPResSo++ is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+   ESPResSo++ is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 // ESPP_CLASS
@@ -47,50 +47,53 @@
 
 #include "ChemicalReactionPostProcess.hpp"
 
-
 namespace espressopp {
 namespace integrator {
+typedef std::pair<Particle *, Particle *> ParticlePair;
 
-typedef std::pair<Particle*, Particle*> ParticlePair;
-const int kCrCommTag = 0xad;  // @warning: this made problems when multiple extension will be enabled.
-
+const int kCrCommTag = 0xad;// @warning: this made problems when multiple extension will be enabled.
 
 class ReactionCutoff {
- public:
-  ReactionCutoff() {}
-  virtual ~ReactionCutoff() {}
+public:
+  ReactionCutoff() { }
+
+  virtual ~ReactionCutoff() { }
+
   virtual bool check(Particle &p1, Particle &p2) = 0;
   virtual real cutoff() = 0;
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
 class ReactionCutoffStatic : public ReactionCutoff {
- public:
+public:
   ReactionCutoffStatic() {
     set_cutoff(0.0, 0.0);
   }
+
   ReactionCutoffStatic(real min_cutoff, real max_cutoff) {
     set_cutoff(min_cutoff, max_cutoff);
   }
+
   bool check(Particle &p1, Particle &p2);
-  real cutoff() { return max_cutoff_; }
+  real cutoff() {return max_cutoff_; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
- private:
+private:
   void set_cutoff(real min_cutoff, real max_cutoff) {
     min_cutoff_ = min_cutoff;
-    min_cutoff_sqr_ = min_cutoff*min_cutoff;
+    min_cutoff_sqr_ = min_cutoff * min_cutoff;
     max_cutoff_ = max_cutoff;
-    max_cutoff_sqr_ = max_cutoff*max_cutoff;
+    max_cutoff_sqr_ = max_cutoff * max_cutoff;
   }
 
   real min_cutoff_;
@@ -100,28 +103,28 @@ class ReactionCutoffStatic : public ReactionCutoff {
 };
 
 class ReactionCutoffRandom : public ReactionCutoff {
- public:
+public:
   ReactionCutoffRandom(real eq_distance, real eq_width, longint seed)
-      : eq_width_(eq_width), eq_distance_(eq_distance), seed_(seed),
-        generator_(boost::mt19937(seed), boost::normal_distribution<>(0.0, eq_width)) {
-  }
+        :eq_width_(eq_width), eq_distance_(eq_distance), seed_(seed),
+            generator_(boost::mt19937(seed), boost::normal_distribution<>(0.0, eq_width)) { }
+
   bool check(Particle &p1, Particle &p2);
-  real cutoff() { return  eq_distance_ + 0.5*eq_width_; }
+  real cutoff() {return eq_distance_ + 0.5 * eq_width_; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
- private:
+private:
+
   real eq_distance_;
   real eq_width_;
   longint interval_;
   longint seed_;
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator_;
 };
-
 
 /** Base class for performing addition reaction.
  *
@@ -131,20 +134,19 @@ class ReactionCutoffRandom : public ReactionCutoff {
  *
  **/
 class Reaction {
- public:
+public:
   Reaction()
-      : type_1_(-1),
-        type_2_(-1),
-        delta_1_(-1),
-        delta_2_(-1),
-        min_state_1_(-1),
-        max_state_1_(-1),
-        min_state_2_(-1),
-        max_state_2_(-1),
-        rate_(0.0),
-        reverse_(false),
-        intramolecular_(false), active_(true) {
-  }
+        :type_1_(-1),
+            type_2_(-1),
+            delta_1_(-1),
+            delta_2_(-1),
+            min_state_1_(-1),
+            max_state_1_(-1),
+            min_state_2_(-1),
+            max_state_2_(-1),
+            rate_(0.0),
+            reverse_(false),
+            intramolecular_(false), active_(true) { }
 
   /*** Constructor of Reaction object.
    *
@@ -164,72 +166,85 @@ class Reaction {
    * @param intramolecular If set to true then intramolecular bonds are allowed.
    *
    */
-  Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
-           int max_state_1, int min_state_2, int max_state_2,
-           real rate, shared_ptr<FixedPairList> fpl,
-           bool intramolecular = false)
-      : type_1_(type_1),
-        type_2_(type_2),
-        delta_1_(delta_1),
-        delta_2_(delta_2),
-        min_state_1_(min_state_1),
-        max_state_1_(max_state_1),
-        min_state_2_(min_state_2),
-        max_state_2_(max_state_2),
-        rate_(rate),
-        reverse_(false),
-        fixed_pair_list_(fpl),
-        intramolecular_(intramolecular),
-        active_(true) {
-  }
+  Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int
+      min_state_2, int max_state_2, real rate, shared_ptr<FixedPairList> fpl, bool
+      intramolecular = false)
+        :type_1_(type_1),
+            type_2_(type_2),
+            delta_1_(delta_1),
+            delta_2_(delta_2),
+            min_state_1_(min_state_1),
+            max_state_1_(max_state_1),
+            min_state_2_(min_state_2),
+            max_state_2_(max_state_2),
+            rate_(rate),
+            reverse_(false),
+            fixed_pair_list_(fpl),
+            intramolecular_(intramolecular),
+            active_(true) { }
+
   virtual ~Reaction() { }
 
   virtual real cutoff() {
     return reaction_cutoff_->cutoff();
   }
 
-  void set_rate(real rate) { rate_ = rate; }
-  real rate() { return rate_; }
+  void set_rate(real rate) {rate_ = rate; }
 
-  void set_type_1(int type_1) { type_1_ = type_1; }
-  int type_1() { return type_1_; }
+  real rate() {return rate_; }
 
-  void set_type_2(int type_2) { type_2_ = type_2; }
-  int type_2() { return type_2_; }
+  void set_type_1(int type_1) {type_1_ = type_1; }
 
-  void set_delta_1(int delta_1) { delta_1_ = delta_1; }
-  int delta_1() { return delta_1_; }
+  int type_1() {return type_1_; }
 
-  void set_delta_2(int delta_2) { delta_2_ = delta_2; }
-  int delta_2() { return delta_2_; }
+  void set_type_2(int type_2) {type_2_ = type_2; }
 
-  void set_min_state_1(int min_state_1) { min_state_1_ = min_state_1; }
-  int min_state_1() { return min_state_1_; }
+  int type_2() {return type_2_; }
 
-  void set_min_state_2(int min_state_2) { min_state_2_ = min_state_2; }
-  int min_state_2() { return min_state_2_; }
+  void set_delta_1(int delta_1) {delta_1_ = delta_1; }
 
-  void set_max_state_1(int max_state_1) { max_state_1_ = max_state_1; }
-  int max_state_1() { return max_state_1_; }
+  int delta_1() {return delta_1_; }
 
-  void set_max_state_2(int max_state_2) { max_state_2_ = max_state_2; }
-  int max_state_2() { return max_state_2_; }
+  void set_delta_2(int delta_2) {delta_2_ = delta_2; }
 
-  void set_intramolecular(bool intramolecular) { intramolecular_ = intramolecular; }
-  bool intramolecular() { return intramolecular_; }
+  int delta_2() {return delta_2_; }
 
-  void set_rng(const shared_ptr<esutil::RNG> rng) { rng_ = rng; }
-  void set_interval(shared_ptr<int> interval) { interval_ = interval; }
-  void set_dt(shared_ptr<real> dt) { dt_ = dt; }
-  void set_bc(bc::BC *bc) { bc_ = bc; }
+  void set_min_state_1(int min_state_1) {min_state_1_ = min_state_1; }
 
-  bool reverse() { return reverse_; };
-  void set_reverse(bool r) { reverse_ = r; }
+  int min_state_1() {return min_state_1_; }
 
-  bool active() { return active_; }
+  void set_min_state_2(int min_state_2) {min_state_2_ = min_state_2; }
+
+  int min_state_2() {return min_state_2_; }
+
+  void set_max_state_1(int max_state_1) {max_state_1_ = max_state_1; }
+
+  int max_state_1() {return max_state_1_; }
+
+  void set_max_state_2(int max_state_2) {max_state_2_ = max_state_2; }
+
+  int max_state_2() {return max_state_2_; }
+
+  void set_intramolecular(bool intramolecular) {intramolecular_ = intramolecular; }
+
+  bool intramolecular() {return intramolecular_; }
+
+  void set_rng(const shared_ptr<esutil::RNG> rng) {rng_ = rng; }
+
+  void set_interval(shared_ptr<int> interval) {interval_ = interval; }
+
+  void set_dt(shared_ptr<real> dt) {dt_ = dt; }
+
+  void set_bc(bc::BC *bc) {bc_ = bc; }
+
+  bool reverse() {return reverse_; };
+
+  void set_reverse(bool r) {reverse_ = r; }
+
+  bool active() {return active_; }
 
   /** Activate the reaction*/
-  void set_active(bool s) { active_ = s; }
+  void set_active(bool s) {active_ = s; }
 
   /**
    * Define post-process method after reaction occures.
@@ -257,50 +272,51 @@ class Reaction {
   }
 
   /** Checks if the pair is valid. */
-  virtual bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  virtual bool IsValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
+
   /** Checks if the pair has valid state. */
-  bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  bool IsValidState(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
   bool IsValidStateT_1(Particle &p);
   bool IsValidStateT_2(Particle &p);
 
-  std::set<Particle*> PostProcess_T1(Particle &p, Particle &partner);
-  std::set<Particle*> PostProcess_T2(Particle &p, Particle &partner);
+  std::set<Particle *> PostProcess_T1(Particle &p, Particle &partner);
+  std::set<Particle *> PostProcess_T2(Particle &p, Particle &partner);
 
-  shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
+  shared_ptr<FixedPairList> fixed_pair_list_;//!< Bond list.
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
-  int type_1_;  //!< type of reactant A
-  int type_2_;  //!< type of reactant B
-  int min_state_1_;  //!< min state of reactant A
-  int min_state_2_;  //!< min state of reactant B
-  int max_state_1_;  //!< max state of reactant A
-  int max_state_2_;  //!< max state of reactant B
-  int delta_1_;  //!< state change for reactant A
-  int delta_2_;  //!< state change for reactant B
-  real rate_;  //!< reaction rate
-  bool active_ ;  //!< is reaction active, by default true
+  int type_1_;//!< type of reactant A
+  int type_2_;//!< type of reactant B
+  int min_state_1_;//!< min state of reactant A
+  int min_state_2_;//!< min state of reactant B
+  int max_state_1_;//!< max state of reactant A
+  int max_state_2_;//!< max state of reactant B
+  int delta_1_;//!< state change for reactant A
+  int delta_2_;//!< state change for reactant B
+  real rate_;//!< reaction rate
+  bool active_;//!< is reaction active, by default true
 
-  bool intramolecular_;  //!< Allow to intramolecular reactions.
+  bool intramolecular_;//!< Allow to intramolecular reactions.
 
-  bool reverse_;  //!< If true then reaction will break a bond.
+  bool reverse_;//!< If true then reaction will break a bond.
 
-  shared_ptr<esutil::RNG> rng_;  //!< random number generator
-  shared_ptr<int> interval_;  //!< number of steps between reaction loops
-  shared_ptr<real> dt_;  //!< timestep from the integrator
-  bc::BC *bc_;  //!< boundary condition
+  shared_ptr<esutil::RNG> rng_;//!< random number generator
+  shared_ptr<int> interval_;//!< number of steps between reaction loops
+  shared_ptr<real> dt_;//!< timestep from the integrator
+
+  bc::BC *bc_;//!< boundary condition
 
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;
 
   shared_ptr<ReactionCutoff> reaction_cutoff_;
 };
-
 
 /*** Defines dissociation reactions.
  *
@@ -317,48 +333,49 @@ class Reaction {
  * by defining only the diss_rate. By default, this rate is set to 0
  */
 class DissociationReaction : public Reaction {
- public:
-  DissociationReaction() : Reaction() {
+public:
+  DissociationReaction():
+    Reaction() {
     break_cutoff_ = 0.0;
     break_cutoff_sqr_ = 0.0;
     reverse_ = true;
   }
 
-  DissociationReaction(
-      int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1,
-      int min_state_2, int max_state_2,
-      real break_cutoff,
-      real break_rate,
-      shared_ptr<FixedPairList> fpl
-      ) : Reaction(type_1, type_2, delta_1, delta_2,
-          min_state_1, max_state_1, min_state_2, max_state_2, break_rate, fpl,
-          true), diss_rate_(0.0), break_cutoff_(break_cutoff) {
+  DissociationReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int
+      max_state_1, int min_state_2, int max_state_2, real break_cutoff, real break_rate,
+      shared_ptr<FixedPairList> fpl):
+    Reaction(type_1, type_2, delta_1, delta_2,
+        min_state_1, max_state_1, min_state_2, max_state_2, break_rate, fpl,
+        true), diss_rate_(0.0), break_cutoff_(break_cutoff) {
     reverse_ = true;
-    break_cutoff_sqr_ = break_cutoff_*break_cutoff_;
+    break_cutoff_sqr_ = break_cutoff_ * break_cutoff_;
   }
+
   virtual ~DissociationReaction() { }
 
-  real diss_rate() { return diss_rate_; }
-  void set_diss_rate(real s) { diss_rate_ = s; }
+  real diss_rate() {return diss_rate_; }
 
-  void set_cutoff(real cutoff) { break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff*cutoff;}
-  real cutoff() { return break_cutoff_; }
+  void set_diss_rate(real s) {diss_rate_ = s; }
 
-  bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  void set_cutoff(real cutoff) {break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff * cutoff; }
+
+  real cutoff() {return break_cutoff_; }
+
+  bool IsValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
- private:
-  real diss_rate_;  //!< Dissociation rate.
+private:
+
+  real diss_rate_;//!< Dissociation rate.
   real break_cutoff_;
   real break_cutoff_sqr_;
 };
-
-}  // namespace integrator
-}  // namespace espressopp
+}// namespace integrator
+}// namespace espressopp
 
 #endif
