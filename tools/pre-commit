@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# please copy this file to .git/hooks/ and chmod +x
+
+EXIT_STATUS=0
+
+CPPLINT="tools/codestyle/cpplint/cpplint.py"
+CPPLINT_ARGS="--filter=-runtime/references,-runtime/rtti"
+
+INCLUDE_GURAD_TOOL="tools/codestyle/check_include_guard.sh"
+
+list_target_files() {
+  git diff --cached --name-only | grep -v "^jubatus/server/third_party/" | grep -v "^jubatus/server/server/.*_\\(server.[hc]pp\\|impl.cpp\\|types.hpp\\|keeper.cpp\\|client.hpp\\)" | grep -v "^jubatus/client/*"
+}
+
+if [ -z "$(list_target_files)" ]; then
+  exit 0
+fi
+
+# cpplint
+codestyle_violation_count=$(list_target_files | xargs "${CPPLINT}" "${CPPLINT_ARGS}" 2>&1 | grep Total | sed -e "s/[^0-9]*\([0-9]*\)/\1/")
+echo $codestyle_violation_count
+if [ $codestyle_violation_count != "0" ]
+then
+    echo "Error: Please go along with Jubatus coding style when you commit"
+    list_target_files | xargs "${CPPLINT}" "${CPPLINT_ARGS}"
+    EXIT_STATUS=1
+fi
+
+# include guard
+INCLUDE_GUARD_RESULT="$(list_target_files | xargs "${INCLUDE_GURAD_TOOL}")"
+if [ "$(echo -n "${INCLUDE_GUARD_RESULT}" | wc -l)" != "0" ]
+then
+    echo "Error: Illegal include guard detected"
+    echo "${INCLUDE_GUARD_RESULT}"
+    EXIT_STATUS=1
+fi
+
+# exit
+if [ ${EXIT_STATUS} = 0 ]; then
+  list_target_files | xargs git add
+fi
+
+exit ${EXIT_STATUS}
