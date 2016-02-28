@@ -47,9 +47,19 @@
 
 namespace espressopp {
 namespace integrator {
-typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
+
+struct ReactionDef {
+  longint reaction_id;
+  real reaction_rate;
+
+  ReactionDef(longint r_id, real rr) {
+    reaction_id = r_id;
+    reaction_rate = rr;
+  }
+};
+
+typedef boost::unordered_multimap<longint, std::pair<longint, ReactionDef> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
-typedef std::vector<boost::unordered_multimap<longint, longint> > RevReactionPairList;
 
 /** Reaction scheme for polymer growth and curing/crosslinking
 

@@ -118,7 +118,7 @@ def main():  # NOQA
     fpl_a_a.addBonds([])
     system.addInteraction(interHarmonic)
 
-    dynamic_ex_list.observe(fpl_a_a)
+    dynamic_ex_list.observe_tuple(fpl_a_a)
 
     if not args.eq_conf:
         tools.warmup(system, integrator, verletList, args, conf)
@@ -190,7 +190,6 @@ def main():  # NOQA
     ar = espressopp.integrator.ChemicalReaction(
         system,
         verletList,
-        fpl_a_a,
         system.storage,
         args.interval)
     # Reaction: A + A -> B:B + C
@@ -204,6 +203,7 @@ def main():  # NOQA
         min_state_2=2,
         max_state_2=3,
         rate=args.rate,
+        fpl=fpl_a_a,
         cutoff=1.1*conf.type_a.sigma)
     # conf.rc_lj*tools.lb_sigma(conf.type_a.sigma, conf.type_b.sigma))
     print('Adding reaction 1, rate={}, cutoff={}, P={}'.format(args.rate, r_type_1.cutoff,
@@ -225,7 +225,7 @@ def main():  # NOQA
 
     topology_manager = espressopp.integrator.TopologyManager(system)
     topology_manager.rebuild()
-    topology_manager.observe(fpl_a_a)
+    topology_manager.observe_tuple(fpl_a_a)
     integrator.addExtension(topology_manager)
 
     output_file = '{}_{}_{}_{}_{}.h5'.format(args.prefix, args.rate, args.alpha, r_type_1.cutoff, args.seed)

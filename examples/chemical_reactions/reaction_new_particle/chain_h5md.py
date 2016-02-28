@@ -112,7 +112,7 @@ class DumpTopo(object):
         f.f.require_group('topology')
         f.f.require_group('topology/'+group)
         if time:
-            self.element = pyh5md.base.TimeData(f.f['topology/atoms'], name, shape=(0,2), dtype=np.int32, chunks=chunks, compression='gzip', fillvalue=-1)
+            self.element = pyh5md.base.TimeData(f.f['topology/atoms'], name, shape=(0,2), dtype=np.int32, chunks=chunks, fillvalue=-1)
         else:
             data = np.array([b for local_bonds in fpl.getBonds() for b in local_bonds])
             self.element = pyh5md.base.FixedData(f.f['topology/atoms'], name, data=data)

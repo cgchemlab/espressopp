@@ -49,7 +49,13 @@
 
 namespace espressopp {
 namespace integrator {
-typedef std::pair<Particle *, Particle *> ParticlePair;
+
+/// Stores reaction pair in correct order with reaction rate.
+struct ParticlePair {
+  Particle *first;
+  Particle *second;
+  real reaction_rate;
+};
 
 const int kCrCommTag = 0xad;// @warning: this made problems when multiple extension will be enabled.
 
@@ -212,7 +218,6 @@ public:
             max_state_1_(-1),
             min_state_2_(-1),
             max_state_2_(-1),
-            rate_(0.0),
             reverse_(false),
             intramolecular_(false), active_(true) { }
 
@@ -228,13 +233,12 @@ public:
    * @param max_state_1 The maximum state of particle A (less not equal to it).
    * @param min_state_2 The minimum state of particle B.
    * @param max_state_2 The maximum state of particle B.
-   * @param rate The reaction rate.
    * @param fpl The espressopp.FixedPairList with the new bonds that are added by reaction.
    * @param intramolecular If set to true then intramolecular bonds are allowed.
    *
    */
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int
-      min_state_2, int max_state_2, real rate, shared_ptr<FixedPairList> fpl, bool intramolecular = false)
+      min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, bool intramolecular = false)
         :type_1_(type_1),
             type_2_(type_2),
             delta_1_(delta_1),
@@ -243,7 +247,6 @@ public:
             max_state_1_(max_state_1),
             min_state_2_(min_state_2),
             max_state_2_(max_state_2),
-            rate_(rate),
             reverse_(false),
             fixed_pair_list_(fpl),
             intramolecular_(intramolecular),
@@ -255,9 +258,34 @@ public:
     return reaction_cutoff_->cutoff();
   }
 
-  void set_rate(real rate) {rate_ = rate; }
+  void setRate(bool t1_t2, longint state, real rate) {
+    if (t1_t2)
+      state_rate_T1[state] = rate;
+    else
+      state_rate_T2[state] = rate;
+  }
 
-  real rate() {return rate_; }
+  real getRate(bool t1_t2, longint state) {
+    if (t1_t2)
+      return state_rate_T1[state];
+    else
+      return state_rate_T2[state];
+  }
+
+  python::list getAllRates(bool t1_t2) {
+    python::list ret_val;
+    if (t1_t2) {
+      for (boost::unordered_map<longint, real>::iterator it = state_rate_T1.begin(); it != state_rate_T1.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    } else {
+      for (boost::unordered_map<longint, real>::iterator it = state_rate_T2.begin(); it != state_rate_T2.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    }
+  };
 
   void set_type_1(int type_1) {type_1_ = type_1; }
 
@@ -370,7 +398,6 @@ protected:
   int max_state_2_;//!< max state of reactant B
   int delta_1_;//!< state change for reactant A
   int delta_2_;//!< state change for reactant B
-  real rate_;//!< reaction rate
   bool active_;//!< is reaction active, by default true
 
   bool intramolecular_;//!< Allow to intramolecular reactions.
@@ -382,6 +409,9 @@ protected:
   shared_ptr<real> dt_;//!< timestep from the integrator
 
   bc::BC *bc_;//!< boundary condition
+
+  boost::unordered_map<longint, real> state_rate_T1;  //!< Map chemical state to rate.
+  boost::unordered_map<longint, real> state_rate_T2;  //!< Map chemical state to rate.
 
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;
@@ -413,20 +443,45 @@ public:
   }
 
   DissociationReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int
-      max_state_1, int min_state_2, int max_state_2, real break_cutoff, real break_rate,
+      max_state_1, int min_state_2, int max_state_2, real break_cutoff,
       shared_ptr<FixedPairList> fpl):
     Reaction(type_1, type_2, delta_1, delta_2,
-        min_state_1, max_state_1, min_state_2, max_state_2, break_rate, fpl,
-        true), diss_rate_(0.0), break_cutoff_(break_cutoff) {
+        min_state_1, max_state_1, min_state_2, max_state_2, fpl,
+        true), break_cutoff_(break_cutoff) {
     reverse_ = true;
     break_cutoff_sqr_ = break_cutoff_ * break_cutoff_;
   }
 
   virtual ~DissociationReaction() { }
 
-  real diss_rate() {return diss_rate_; }
+  void setDissRate(bool t1_t2, longint state, real rate) {
+    if (t1_t2)
+      diss_rate_T1[state] = rate;
+    else
+      diss_rate_T2[state] = rate;
+  }
 
-  void set_diss_rate(real s) {diss_rate_ = s; }
+  real getDissRate(bool t1_t2, longint state) {
+    if (t1_t2)
+      return diss_rate_T1[state];
+    else
+      return diss_rate_T2[state];
+  }
+
+  python::list getAllDissRates(bool t1_t2) {
+    python::list ret_val;
+    if (t1_t2) {
+      for (boost::unordered_map<longint, real>::iterator it = diss_rate_T1.begin(); it != diss_rate_T1.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    } else {
+      for (boost::unordered_map<longint, real>::iterator it = diss_rate_T2.begin(); it != diss_rate_T2.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    }
+  };
 
   void set_cutoff(real cutoff) {break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff * cutoff; }
 
@@ -441,7 +496,8 @@ protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
 private:
-  real diss_rate_;  //!< Dissociation rate.
+  boost::unordered_map<longint, real> diss_rate_T1;  //!< Dissociation rate based on state.
+  boost::unordered_map<longint, real> diss_rate_T2;  //!< Dissociation rate based on state.
   real break_cutoff_;
   real break_cutoff_sqr_;
 };

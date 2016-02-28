@@ -92,7 +92,12 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_or
 
   if (isValidState(p1, p2, particle_order)) {
     real W = (*rng_)();
-    real p = rate_ * (*dt_) * (*interval_);
+    // Gets state dependent reaction rate.
+    real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.first->state()];
+    // Multiply by time step and interval.
+    p *= (*dt_) * (*interval_);
+
+    particle_order.reaction_rate = p;
 
     if ((W < p) && reaction_cutoff_->check(p1, p2)) {
       LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
@@ -203,8 +208,8 @@ void Reaction::registerPython() {
   class_<Reaction, shared_ptr<integrator::Reaction> >
       ("integrator_Reaction",
           // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-          // min_state_2, max_state_2, cutoff, rate, fpl, intramolecular
-       init<int, int, int, int, int, int, int, int, real,
+          // min_state_2, max_state_2, fpl, intramolecular
+       init<int, int, int, int, int, int, int, int,
             shared_ptr<FixedPairList>, bool>())
       .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
       .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
@@ -214,11 +219,14 @@ void Reaction::registerPython() {
       .add_property("delta_2", &Reaction::delta_2, &Reaction::set_delta_2)
       .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
       .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
-      .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
       .add_property("active", &Reaction::active, &Reaction::set_active)
+      .add_property("cutoff", &Reaction::cutoff)
       .def("add_postprocess", &Reaction::addPostProcess)
-      .def("set_cutoff", &Reaction::set_reaction_cutoff);
+      .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
+      .def("set_rate", &Reaction::setRate)
+      .def("get_rate", &Reaction::getRate)
+      .def("get_all_rates", &Reaction::getAllRates);
 }
 
 /** DissociationReaction */
@@ -231,7 +239,14 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ParticlePair 
   if (isValidState(p1, p2, particle_order)) {
     real W = (*rng_)();
 
-    if (rate_ > 0.0) {
+    // Gets state dependent reaction rate.
+    real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.second->state()];
+    // Multiply by time step and interval.
+    p *= (*dt_) * (*interval_);
+    // Set the reaction rate.
+    particle_order.reaction_rate = p;
+
+    if (p > 0.0) {
       Real3D distance;
 
       bc_->getMinimumImageVectorBox(distance, p1.position(), p2.position());
@@ -239,7 +254,7 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ParticlePair 
       real distance_2 = distance.sqr();
 
       // Break the bond when the distance exceed the cut_off with some probability.
-      if ((distance_2 > break_cutoff_sqr_) && (W < rate_ * (*dt_) * (*interval_))) {
+      if ((distance_2 > break_cutoff_sqr_) && (W < p)) {
         LOG4ESPP_DEBUG(theLogger,
             "Break the bond, " << p1.id() << "-" << p2.id()
                                << " d_2=" << distance_2 << " cutoff_sqr=" << break_cutoff_sqr_);
@@ -248,7 +263,11 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ParticlePair 
     }
 
     // Break the bond randomly.
-    if (W < diss_rate_ * (*dt_) * (*interval_)) {
+
+    real p_diss_rate = diss_rate_T1[particle_order.first->state()] * diss_rate_T2[particle_order.second->state()];
+    p_diss_rate *= (*dt_) * (*interval_);
+
+    if (W < p_diss_rate) {
       LOG4ESPP_DEBUG(theLogger, "Break the bond randomly " << p1.id() << "-" << p2.id());
       return true;
     }
@@ -262,42 +281,44 @@ void DissociationReaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<DissociationReaction, bases<Reaction>, shared_ptr<integrator::DissociationReaction>
   >
-    ("integrator_DissociationReaction",
+      ("integrator_DissociationReaction",
 
-      // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
-      // max_state_2, break_cutoff, break_rate, fpl
-      init<int, int, int, int, int, int, int, int, real, real, shared_ptr
-      <FixedPairList> >())
-    .add_property("type_1",
-      &DissociationReaction::type_1, &DissociationReaction::set_type_1)
-    .add_property("type_2",
-      &DissociationReaction::type_2, &DissociationReaction::set_type_2)
-    .add_property("delta_1",
-      &DissociationReaction::delta_1, &DissociationReaction::set_delta_1)
-    .add_property("min_state_1",
-      &DissociationReaction::min_state_1,
-      &DissociationReaction::set_min_state_1)
-    .add_property("max_state_1",
-      &DissociationReaction::max_state_1,
-      &DissociationReaction::set_max_state_1)
-    .add_property("delta_2",
-      &DissociationReaction::delta_2, &DissociationReaction::set_delta_2)
-    .add_property("min_state_2",
-      &DissociationReaction::min_state_2,
-      &DissociationReaction::set_min_state_2)
-    .add_property("intramolecular",
-      &DissociationReaction::intramolecular,
-      &DissociationReaction::set_intramolecular)
-    .add_property("max_state_2",
-      &DissociationReaction::max_state_2,
-      &DissociationReaction::set_max_state_2)
-    .add_property("cutoff", &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
-    .add_property("rate",
-      &DissociationReaction::rate, &DissociationReaction::set_rate)
-    .add_property("diss_rate",
-      &DissociationReaction::diss_rate, &DissociationReaction::set_diss_rate)
-    .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
-    .def("add_postprocess", &DissociationReaction::addPostProcess);
+          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
+          // max_state_2, break_cutoff, fpl
+       init<int, int, int, int, int, int, int, int, real, shared_ptr
+           <FixedPairList> >())
+      .add_property("type_1",
+                    &DissociationReaction::type_1, &DissociationReaction::set_type_1)
+      .add_property("type_2",
+                    &DissociationReaction::type_2, &DissociationReaction::set_type_2)
+      .add_property("delta_1",
+                    &DissociationReaction::delta_1, &DissociationReaction::set_delta_1)
+      .add_property("min_state_1",
+                    &DissociationReaction::min_state_1,
+                    &DissociationReaction::set_min_state_1)
+      .add_property("max_state_1",
+                    &DissociationReaction::max_state_1,
+                    &DissociationReaction::set_max_state_1)
+      .add_property("delta_2",
+                    &DissociationReaction::delta_2, &DissociationReaction::set_delta_2)
+      .add_property("min_state_2",
+                    &DissociationReaction::min_state_2,
+                    &DissociationReaction::set_min_state_2)
+      .add_property("intramolecular",
+                    &DissociationReaction::intramolecular,
+                    &DissociationReaction::set_intramolecular)
+      .add_property("max_state_2",
+                    &DissociationReaction::max_state_2,
+                    &DissociationReaction::set_max_state_2)
+      .add_property("cutoff", &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
+      .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
+      .def("add_postprocess", &DissociationReaction::addPostProcess)
+      .def("set_rate", &DissociationReaction::setRate)
+      .def("get_rate", &DissociationReaction::getRate)
+      .def("get_all_rates", &DissociationReaction::getAllRates)
+      .def("set_diss_rate", &DissociationReaction::setDissRate)
+      .def("get_diss_rate", &DissociationReaction::getDissRate)
+      .def("get_all_diss_rates", &DissociationReaction::getAllDissRates);
 }
 }  // namespace integrator
 }  // namespace espressopp

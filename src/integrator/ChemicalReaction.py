@@ -58,6 +58,15 @@ r"""
 
     .. math:: i_{min} \le i < i_{max} \land j_{min} \le j < j_{max}
 
+    The reaction rate is given with `rate` parameter. It is possible to define rate parameter that
+    will depend on the chemical state of particle A or B. The rate can be defined separately for both
+    particle types by passing a tuple of two lists
+
+        ([i_min, i_min+1, i_min+2, ... , i_max-1], [j_min, j_min+1, j_min+2, ... , j_max-1])
+
+    If rate is defined as a single positive real number then it will be assigned to all states, both for A and
+    B particles.
+
     :param type_1: The type of particle A.
     :type type_1: int
     :param type_2: The type of particle B.
@@ -95,7 +104,7 @@ r"""
     :param type: Defined on which particle post-process will be run.
     :type type: string
 
-.. function:: espressopp.integrator.Reaction.set_cutoff(rc)
+.. function:: espressopp.integrator.Reaction.set_reaction_cutoff(rc)
 
     Define how the distance condition will be handled.
 
@@ -239,11 +248,31 @@ class ReactionLocal(integrator_Reaction):
                 max_state_1,
                 min_state_2,
                 max_state_2,
-                rate,
                 fpl,
                 False
             )
-            self.cxxclass.set_cutoff(self, ReactionCutoffStaticLocal(cutoff))
+            self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
+
+            if isinstance(rate, tuple):
+                r_t1 = rate[0]
+                r_t2 = rate[1]
+                t1_elements = max_state_1 - min_state_1
+                t2_elements = max_state_2 - min_state_2
+                if len(r_t1) < t1_elements:
+                    raise Exception('Number of rate elements for type 1 is not sufficient, required: {}'.format(
+                                    t1_elements))
+                if len(r_t2) < t2_elements:
+                    raise Exception('Number of rate elements for type 2 is not sufficient, required: {}'.format(
+                                                    t2_elements))
+                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
+                    self.cxxclass.set_rate(self, True, s1, r_t1[idx])
+                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
+                    self.cxxclass.set_rate(self, False, s2, r_t2[idx])
+            else:
+                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
+                    self.cxxclass.set_rate(self, True, s1, rate)
+                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
+                    self.cxxclass.set_rate(self, False, s2, rate)
 
     def add_postprocess(self, post_process, reactant_switch=0):
         """Add new post process to the reaction.
@@ -256,10 +285,10 @@ class ReactionLocal(integrator_Reaction):
             name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
             self.cxxclass.add_postprocess(self, post_process, name_switch.get(reactant_switch, reactant_switch))
 
-    def set_cutoff(self, reaction_cutoff):
+    def set_reaction_cutoff(self, reaction_cutoff):
         """Set cutoff object."""
         if pmi.workerIsActive():
-            self.cxxclass.set_cutoff(self, reaction_cutoff)
+            self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
 
 
 class DissociationReactionLocal(integrator_DissociationReaction):
@@ -279,10 +308,30 @@ class DissociationReactionLocal(integrator_DissociationReaction):
                 min_state_2,
                 max_state_2,
                 cutoff,
-                rate,
                 fpl
             )
-            self.cxxclass.set_cutoff(self, ReactionCutoffStaticLocal(cutoff))
+            self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
+
+            if isinstance(rate, tuple):
+                r_t1 = rate[0]
+                r_t2 = rate[1]
+                t1_elements = max_state_1 - min_state_1
+                t2_elements = max_state_2 - min_state_2
+                if len(r_t1) < t1_elements:
+                    raise Exception('Number of rate elements for type 1 is not sufficient, required: {}'.format(
+                                    t1_elements))
+                if len(r_t2) < t2_elements:
+                    raise Exception('Number of rate elements for type 2 is not sufficient, required: {}'.format(
+                                                    t2_elements))
+                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
+                    self.cxxclass.set_rate(self, True, s1, r_t1[idx])
+                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
+                    self.cxxclass.set_rate(self, False, s2, r_t2[idx])
+            else:
+                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
+                    self.cxxclass.set_rate(self, True, s1, rate)
+                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
+                    self.cxxclass.set_rate(self, False, s2, rate)
 
     def add_postprocess(self, post_process, reactant_switch=0):
         """Add new post process to the reaction.
@@ -313,13 +362,6 @@ if pmi.isController:
             pmicall=('add_change_property', 'remove_change_property')
         )
 
-    class PostProcessUpdateResId:
-        __metaclass__ = pmi.Proxy
-        pmiproxydefs = dict(
-            cls='espressopp.integrator.PostProcessUpdateResIdLocal',
-            pmicall=('add_molecule_size',)
-        )
-
     class PostProcessRemoveBond:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(cls='espressopp.integrator.PostProcessRemoveBondLocal')
@@ -338,7 +380,10 @@ if pmi.isController:
             cls='espressopp.integrator.ReactionLocal',
             pmicall=(
                 'add_postprocess',
-                'set_cutoff'
+                'set_reaction_cutoff',
+                'set_rate',
+                'get_rate',
+                'get_all_rates'
             ),
             pmiproperty=(
                 'type_1',
@@ -349,9 +394,9 @@ if pmi.isController:
                 'max_state_1',
                 'min_state_2',
                 'max_state_2',
-                'rate',
                 'intramolecular',
-                'active'
+                'active',
+                'cutoff'
                 )
             )
 
@@ -361,6 +406,12 @@ if pmi.isController:
                 cls='espressopp.integrator.DissociationReactionLocal',
                 pmicall=(
                     'add_postprocess',
+                    'set_rate',
+                    'get_rate',
+                    'get_all_rates',
+                    'set_diss_rate',
+                    'get_diss_rate',
+                    'get_all_diss_rates'
                 ),
                 pmiproperty=(
                     'type_1',
@@ -371,7 +422,6 @@ if pmi.isController:
                     'max_state_1',
                     'min_state_2',
                     'max_state_2',
-                    'rate',
                     'cutoff',
                     'diss_rate',
                     'active'

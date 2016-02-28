@@ -36,21 +36,76 @@ r"""
 
 .. function:: espressopp.VerletList.exclude(exclusionlist)
 
-		:param exclusionlist: 
-		:type exclusionlist: 
-		:rtype: 
+		:param exclusionlist: The static or dynamic exclusion list.
+		:type exclusionlist: If static then of type `list` if dynamic then `espressopp.DynamicExcludeList`
 
 .. function:: espressopp.VerletList.getAllPairs()
 
-		:rtype: 
+		:rtype: returns a list of all pairs
 
 .. function:: espressopp.VerletList.localSize()
 
-		:rtype: 
+		:rtype: returns local number of pairs
 
 .. function:: espressopp.VerletList.totalSize()
 
-		:rtype: 
+		:rtype: returns global number of pairs
+
+
+*********************************
+**espressopp.DynamicExcludeList**
+*********************************
+
+.. function:: espressopp.DynamicExcludeList(integrator, exlcusionlist=None)
+
+   :param integrator: The integrator object.
+   :type integrator: espressopp.integrator.MDIntegrator
+   :param exclusionlist: The optional initial list of exclusions.
+   :type exclusionlist: list
+
+.. function:: espressopp.DynamicExcludeList.exclude(pid1, pid2)
+
+   Adds pair of `(pid1, pid2)` to the exclude list.
+
+   :param pid1: The id of first particle.
+   :type pid1: int
+   :parma pid2: The id of second particle.
+   :type pid2: int
+
+.. function:: espressopp.DynamicExcludeList.unexclude(pid1, pid2)
+
+   Removes pair of `(pid1, pid2)` from the exclude list.
+
+   :param pid1: The id of first particle.
+   :type pid1: int
+   :parma pid2: The id of second particle.
+   :type pid2: int
+
+.. function:: espressopp.DynamicExcludeList.observe_tuple(fpl)
+
+   Add `espressopp.FixedPairList` to the observation list. Whenever new pair
+   will be added to that object, then this pair will also be added to the excluded list.
+
+   :param fpl: The fixed pair list object.
+   :type fpl: espressopp.FixedPairList
+
+.. function:: espressopp.DynamicExcludeList.observe_triple(ftl)
+
+   It is similar to the `observe_tuple` command, but observes `espressopp.FixedTripleList`.
+   Whenever new triplet is added `(pid1, pid2, pid3)` then the pairs `(pid1, pid2), (pid2, pid3), (pid1, pid3)`
+   are added to exclude list.
+
+   :param ftl: The fixed triple list object.
+   :type ftl: espressopp.FixedTripleList
+
+.. function:: espressopp.DynamicExcludeList.observe_quadruple(fql)
+
+   Observe `espressopp.FixedQuadrupleList`. The pairs `(pid1, pid2), (pid1, pid3), (pid1, pid4), (pid2, pid3)`,
+   `(pid2, pid4), (pid3, pid4)` are added to exclude list.
+
+   :param fql: The fixed quadruple list object.
+   :type fql: espressopp.FixedQuadrupleList
+
 """
 from espressopp import pmi
 import _espressopp 
