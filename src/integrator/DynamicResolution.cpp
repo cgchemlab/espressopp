@@ -284,7 +284,7 @@ void BasicDynamicResolutionType::registerPython() {
        .def("set_type_rate", &BasicDynamicResolutionType::SetTypeRate)
        .def("connect", &BasicDynamicResolutionType::connect)
        .def("disconnect", &BasicDynamicResolutionType::disconnect)
-       .def("add_postprocess", &BasicDynamicResolutionType::AddPostProcess);
+       .def("add_postprocess", &BasicDynamicResolutionType::addPostProcess);
 }
 
 void BasicDynamicResolutionType::UpdateWeights() {

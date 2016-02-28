@@ -23,6 +23,7 @@ do
 echo "Indenting file $file2indent"
 #!/bin/bash
 uncrustify -f "$file2indent" -c uncrustify.cfg -o indentoutput.tmp
+
 mv indentoutput.tmp "$file2indent"
 
 done
@@ -31,6 +32,7 @@ if [ -f "$1" ]; then
 echo "Indenting one file $1"
 #!/bin/bash
 uncrustify -f "$1" -c uncrustify.cfg -o indentoutput.tmp
+
 mv indentoutput.tmp "$1"
 
 else

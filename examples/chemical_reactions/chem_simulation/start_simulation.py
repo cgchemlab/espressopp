@@ -44,6 +44,16 @@ __doc__ = 'Run GROMACS-like simulation'
 
 
 def sort_trajectory(trj, ids):
+    """Performs sorting on HDF5 file. It is required because by default, H5MD file
+    can be in unsorted state and only /particles/{}/id/value inform about particle. id.
+
+    Args:
+        trj: The input HDF5 Dataset to sort.
+        ids: The input ids Dataset with particle ids for every time step.
+
+    Returns:
+        Sorted numpy array.
+    """
     print('Sorting trajectory')
     idd = [
         x[1] for x in sorted([(p_id, col_id) for col_id, p_id in enumerate(ids)],

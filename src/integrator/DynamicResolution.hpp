@@ -52,7 +52,7 @@ class BasicDynamicResolutionType : public Extension {
   /**
    * Define action after lambda reaches 1.0 or 0.0.
    */
-  void AddPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int when = 1) {
+  void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int when = 1) {
     if (when == 1) {
       post_process_1.push_back(pp);
     } else if (when == 0) {

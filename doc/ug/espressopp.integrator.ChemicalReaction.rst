@@ -2,15 +2,19 @@
 **Chemical reactions**
 **********************
 
+.. contents::
+   :depth: 2
+
 This extension enables the rate-controlled stochastic curing of polymer
 systems, either for chain growth of step growth, depending on the
 parameters.
 
+**Synthesis reaction**
+
 The variables typeA, typeB, minStateA, minStateB, maxStateA, maxStateB
 control the particles that enter the curing reaction
 
-.. math::
-  A^a + B^b \\rightarrow A^{a+deltaA}-B^{b+deltaB}
+    .. math:: A^a + B^b \xrightarrow[]{k} A^{a+deltaA}-B^{b+deltaB}
 
 where A and B may possess additional bonds not shown.
 
@@ -18,22 +22,34 @@ An extra bond is added between A and B whenever the state of A and B falls
 into the defined range by variables min/max state.
 The conditions are as follow:
 
-.. math::
-
-   a >= minStateA \\land stateA < maxStateA
+    .. math:: a >= minStateA \land stateA < maxStateA
 
 the same holds for the particle B. Both conditions for *A* and *B* have to match.
-The second condition is probabilistic:
 
-.. math::
+Apart from chemical state of particle, the distance between them is taken into account.
+There are two ways of defining distance, one is a typical static approach and second is based
+on decaying function that has maximum around desired distance and goes to 0.0 at far distance.
+This is ilustrated on the figure below.
 
-   k\Delta t \Phi < W
+    .. _fig_distance_condition:
+
+    .. figure:: _static/gauss_condition.png
+       :align: center
+
+       Distance criteria, a) based on normal distribution, b) static
+
+
+
+
+The third condition is probabilistic:
+
+    .. math:: k\Delta t \Phi < W
 
 where :math:`k` is a *kinetic rate*, :math:`\Delta t` is an integrator
 timestep, :math:`\Phi` is an interval and :math:`W` is a random number from
 uniform distribution.
 
-In addition if the intramolecular property is set to true (by default) then
+In addition, if the ``intramolecular`` property is set to true (by default) then
 the reaction only happen between heterogeneous molecules.
 
 The reaction proceeds by testing for all possible (A,B) pairs and
@@ -76,6 +92,9 @@ Add the extension to the integrator
 
 >>> integrator.addExtension(ar)
 
+More examples can be found in ``examples/chemical_reactions/``
+
+API definition
+###########################
 
 .. automodule:: espressopp.integrator.ChemicalReaction
-   :members:

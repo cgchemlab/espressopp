@@ -1,21 +1,21 @@
 /*
- Copyright (C) 2014-2016
-   Jakub Krajniak (jkrajniak at gmail.com)
+   Copyright (C) 2014-2016
+       Jakub Krajniak (jkrajniak at gmail.com)
 
- This file is part of ESPResSo++.
+   This file is part of ESPResSo++.
 
- ESPResSo++ is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+   ESPResSo++ is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
- ESPResSo++ is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+   ESPResSo++ is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http:  //www.gnu.org/licenses/>.
  */
 
 // ESPP_CLASS
@@ -45,81 +45,79 @@
 #include "ChemicalReaction.hpp"
 #include "ChemicalReactionPostProcess.hpp"
 
-
 namespace espressopp {
 namespace integrator {
-
-
 typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
 typedef std::vector<boost::unordered_multimap<longint, longint> > RevReactionPairList;
 
-
 /** Reaction scheme for polymer growth and curing/crosslinking
 
- This extension enables the rate-controlled stochastic curing of polymer
- systems, either for chain growth of step growth, depending on the
- parameters.
+   This extension enables the rate-controlled stochastic curing of polymer
+   systems, either for chain growth of step growth, depending on the
+   parameters.
 
- The variables type_1, type_2, min_state_1, min_state_2, max_state_1, max_state_2
- control the particles that enter the curing reaction
- \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
- where A and B may possess additional bonds not shown.
+   The variables type_1, type_2, min_state_1, min_state_2, max_state_1, max_state_2
+   control the particles that enter the curing reaction
+   \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
+   where A and B may possess additional bonds not shown.
 
- An extra bond is added between A and B whenever the state of A and B falls
- into the defined range by variables min/max state.
- The conditions are as follow:
- \f[ a >= minStateA \land stateA < maxStateA \f]
- the same holds for the particle B. Both condition should match.
+   An extra bond is added between A and B whenever the state of A and B falls
+   into the defined range by variables min/max state.
+   The conditions are as follow:
+   \f[ a >= minStateA \land stateA < maxStateA \f]
+   the same holds for the particle B. Both condition should match.
 
- In addition to that, there is also a probabilistic condition
- \f[ k\Delta t \Phi < W \f]
- where \f$k\f$ is a kinetic rate, \f$\Delta t\f$ is an integrator time step,
- \f$W\f$ is a number from uniform random number generator and \f$\Phi\f$ is
- an interval between invokation of the reactions.
+   In addition to that, there is also a probabilistic condition
+   \f[ k\Delta t \Phi < W \f]
+   where \f$k\f$ is a kinetic rate, \f$\Delta t\f$ is an integrator time step,
+   \f$W\f$ is a number from uniform random number generator and \f$\Phi\f$ is
+   an interval between invokation of the reactions.
 
- It is possible to exclude reactions between particles that are in the same
- molecule (like polymer chain etc.). This can be done by settings intramolecular
- property to false (default).
+   It is possible to exclude reactions between particles that are in the same
+   molecule (like polymer chain etc.). This can be done by settings intramolecular
+   property to false (default).
 
- The reaction proceeds by testing for all possible (A,B) pairs and
- selects them only at a given rate. It works in parallel, by gathering
- first the successful pairs between neigboring CPUs and ensuring that
- each particle enters only in one new bond per reaction step.
+   The reaction proceeds by testing for all possible (A,B) pairs and
+   selects them only at a given rate. It works in parallel, by gathering
+   first the successful pairs between neigboring CPUs and ensuring that
+   each particle enters only in one new bond per reaction step.
  */
 
 class ChemicalReaction : public Extension {
- public:
-  ChemicalReaction(shared_ptr<System> system,
-                   shared_ptr<VerletList> _verletList,
-                   shared_ptr<storage::DomainDecomposition> _domdec);
+public:
+  ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletList> _verletList,
+      shared_ptr<storage::DomainDecomposition> _domdec);
   ~ChemicalReaction();
 
   void set_interval(int interval) {
     *interval_ = interval;
   }
+
+  /// Gets interval between when reaction happens.
   int interval() {
     return *interval_;
   }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- private:
+private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
-  void AddReaction(boost::shared_ptr<integrator::Reaction> reaction);
+  void addReaction(boost::shared_ptr<integrator::Reaction> reaction);
 
   void React();
 
-  void SendMultiMap(integrator::ReactionMap &mm);  //NOLINT
-  void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
-  void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
-               integrator::ReactionMap& effective_candidates);  //NOLINT
-  void ApplyAR(std::set<Particle*>& modified_particles);
-  void ApplyDR(std::set<Particle*>& modified_particles);
+  void sendMultiMap(integrator::ReactionMap &mm);
+  void UniqueA(integrator::ReactionMap &potential_candidates);
+  void UniqueB(integrator::ReactionMap &potential_candidates,
+      integrator::ReactionMap &effective_candidates);
+  void ApplyAR(std::set<Particle *> &modified_particles);
+  void ApplyDR(std::set<Particle *> &modified_particles);
 
-  void UpdateGhost(const std::set<Particle*>& modified_particles);
+  void updateGhost(const std::set<Particle *> &modified_particles);
 
-  real current_cutoff_;
+  real current_cutoff_;  //!< Maximal cutoff use for VerletList.
 
   shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
   shared_ptr<real> dt_;  //!< Timestep from the integrator.
@@ -135,14 +133,12 @@ class ChemicalReaction : public Extension {
   integrator::ReactionMap potential_pairs_;  //!< Container for (A,B) potential partners/
   integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
 
-  ReactionList reaction_list_;  //<! Container for reactions.
-  ReactionList reverse_reaction_list_;  //<! Container for reverse reactions.
+  ReactionList reaction_list_;  // <! Container for reactions.
+  ReactionList reverse_reaction_list_;  // <! Container for reverse reactions.
 
   void connect();
   void disconnect();
 };
-
-
 }  // namespace integrator
 }  // namespace espressopp
 

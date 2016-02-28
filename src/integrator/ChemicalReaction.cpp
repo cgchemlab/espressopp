@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2014-2016
-   Jakub Krajniak (jkrajniak at gmail.com)
+       Jakub Krajniak (jkrajniak at gmail.com)
 
    This file is part of ESPResSo++.
 
@@ -19,6 +19,8 @@
  */
 
 #include "ChemicalReaction.hpp"
+
+#include <set>
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -52,7 +54,13 @@ void ReactionCutoffStatic::registerPython() {
 
   class_<ReactionCutoffStatic, bases<integrator::ReactionCutoff>,
   boost::shared_ptr<integrator::ReactionCutoffStatic> >
-    ("integrator_ReactionCutoffStatic", init<real, real>());
+    ("integrator_ReactionCutoffStatic", init<real, real>())
+        .add_property("min_cutoff",
+                      &ReactionCutoffStatic::min_cutoff,
+                      &ReactionCutoffStatic::set_min_cutoff)
+        .add_property("max_cutoff",
+                      &ReactionCutoffStatic::cutoff,
+                      &ReactionCutoffStatic::set_cutoff);
 }
 
 bool ReactionCutoffRandom::check(Particle &p1, Particle &p2) {
@@ -69,14 +77,20 @@ void ReactionCutoffRandom::registerPython() {
 
   class_<ReactionCutoffRandom, bases<integrator::ReactionCutoff>,
   boost::shared_ptr<integrator::ReactionCutoffRandom> >
-    ("integrator_ReactionCutoffRandom", init<real, real, longint>());
+    ("integrator_ReactionCutoffRandom", init<real, real, longint>())
+        .add_property("cutoff",
+                      &ReactionCutoffRandom::cutoff,
+                      &ReactionCutoffRandom::set_cutoff)
+        .add_property("sigma",
+                      &ReactionCutoffRandom::sigma,
+                      &ReactionCutoffRandom::set_sigma);
 }
 
 /** Checks if the particles pair is valid. */
-bool Reaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
-  LOG4ESPP_DEBUG(theLogger, "entering Reaction::IsValidPair");
+bool Reaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
+  LOG4ESPP_DEBUG(theLogger, "entering Reaction::isValidPair");
 
-  if (IsValidState(p1, p2, particle_order)) {
+  if (isValidState(p1, p2, particle_order)) {
     real W = (*rng_)();
     real p = rate_ * (*dt_) * (*interval_);
 
@@ -92,7 +106,7 @@ bool Reaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_or
 LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles has correct state. */
-bool Reaction::IsValidState(Particle &p1, Particle &p2, ParticlePair &correct_order) {
+bool Reaction::isValidState(Particle &p1, Particle &p2, ParticlePair &correct_order) {
   if ((p1.res_id() == p2.res_id()) && !intramolecular_)
     return false;
 
@@ -115,7 +129,7 @@ bool Reaction::IsValidState(Particle &p1, Particle &p2, ParticlePair &correct_or
       correct_order.second = &p1;
       return true;
     }
-  } else if (type_1_ != type_2_) {// inhomogenious case.
+  } else if (type_1_ != type_2_) {  // inhomogenious case.
     if (  (p1.type() == type_1_) && (p2.type() == type_2_)
        && ((p1_state >= min_state_1_) && (p1_state < max_state_1_))
        && ((p2_state >= min_state_2_) && (p2_state < max_state_2_))) {
@@ -134,7 +148,7 @@ bool Reaction::IsValidState(Particle &p1, Particle &p2, ParticlePair &correct_or
   return false;
 }
 
-bool Reaction::IsValidStateT_1(Particle &p) {
+bool Reaction::isValidState_T1(Particle &p) {
   if (p.type() != type_1_)
     throw std::runtime_error("Particle has wrong type.");
 
@@ -145,7 +159,7 @@ bool Reaction::IsValidStateT_1(Particle &p) {
   return p_state >= min_state_1_ && p_state < max_state_1_;
 }
 
-bool Reaction::IsValidStateT_2(Particle &p) {
+bool Reaction::isValidState_T2(Particle &p) {
   if (p.type() != type_2_)
     throw std::runtime_error("Particle has wrong type.");
 
@@ -156,7 +170,7 @@ bool Reaction::IsValidStateT_2(Particle &p) {
   return p_state >= min_state_2_ && p_state < max_state_2_;
 }
 
-std::set<Particle *> Reaction::PostProcess_T1(Particle &p, Particle &partner) {
+std::set<Particle *> Reaction::postProcess_T1(Particle &p, Particle &partner) {
   std::set<Particle *> output;
   std::vector<Particle *> ret;
 
@@ -170,7 +184,7 @@ std::set<Particle *> Reaction::PostProcess_T1(Particle &p, Particle &partner) {
   return output;
 }
 
-std::set<Particle *> Reaction::PostProcess_T2(Particle &p, Particle &partner) {
+std::set<Particle *> Reaction::postProcess_T2(Particle &p, Particle &partner) {
   std::set<Particle *> output;
   std::vector<Particle *> ret;
 
@@ -187,35 +201,34 @@ std::set<Particle *> Reaction::PostProcess_T2(Particle &p, Particle &partner) {
 void Reaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<Reaction, shared_ptr<integrator::Reaction> >
-    ("integrator_Reaction",
-
-      // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-      // min_state_2, max_state_2, cutoff, rate, fpl, intramolecular
-      init<int, int, int, int, int, int, int, int, real,
-      shared_ptr<FixedPairList>, bool>())
-    .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
-    .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
-    .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
-    .add_property("min_state_1", &Reaction::min_state_1, &Reaction::set_min_state_1)
-    .add_property("max_state_1", &Reaction::max_state_1, &Reaction::set_max_state_1)
-    .add_property("delta_2", &Reaction::delta_2, &Reaction::set_delta_2)
-    .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
-    .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
-    .add_property("rate", &Reaction::rate, &Reaction::set_rate)
-    .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
-    .add_property("active", &Reaction::active, &Reaction::set_active)
-    .def("add_postprocess", &Reaction::AddPostProcess)
-    .def("set_cutoff", &Reaction::SetReactionCutoff);
+      ("integrator_Reaction",
+          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
+          // min_state_2, max_state_2, cutoff, rate, fpl, intramolecular
+       init<int, int, int, int, int, int, int, int, real,
+            shared_ptr<FixedPairList>, bool>())
+      .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
+      .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
+      .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
+      .add_property("min_state_1", &Reaction::min_state_1, &Reaction::set_min_state_1)
+      .add_property("max_state_1", &Reaction::max_state_1, &Reaction::set_max_state_1)
+      .add_property("delta_2", &Reaction::delta_2, &Reaction::set_delta_2)
+      .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
+      .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
+      .add_property("rate", &Reaction::rate, &Reaction::set_rate)
+      .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
+      .add_property("active", &Reaction::active, &Reaction::set_active)
+      .def("add_postprocess", &Reaction::addPostProcess)
+      .def("set_cutoff", &Reaction::set_reaction_cutoff);
 }
 
 /** DissociationReaction */
 LOG4ESPP_LOGGER(DissociationReaction::theLogger, "DissociationReaction");
 
 /** Checks if the particles pair is valid. */
-bool DissociationReaction::IsValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
-  LOG4ESPP_DEBUG(theLogger, "entering DissociationReaction::IsValidPair");
+bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
+  LOG4ESPP_DEBUG(theLogger, "entering DissociationReaction::isValidPair");
 
-  if (IsValidState(p1, p2, particle_order)) {
+  if (isValidState(p1, p2, particle_order)) {
     real W = (*rng_)();
 
     if (rate_ > 0.0) {
@@ -284,7 +297,7 @@ void DissociationReaction::registerPython() {
     .add_property("diss_rate",
       &DissociationReaction::diss_rate, &DissociationReaction::set_diss_rate)
     .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
-    .def("add_postprocess", &DissociationReaction::AddPostProcess);
+    .def("add_postprocess", &DissociationReaction::addPostProcess);
 }
-}// namespace integrator
-}// namespace espressopp
+}  // namespace integrator
+}  // namespace espressopp

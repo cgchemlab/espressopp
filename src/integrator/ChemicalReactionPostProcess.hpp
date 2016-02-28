@@ -1,21 +1,21 @@
 /*
- Copyright (C) 2014-2016
+   Copyright (C) 2014-2016
    Jakub Krajniak (jkrajniak at gmail.com)
 
- This file is part of ESPResSo++.
+   This file is part of ESPResSo++.
 
- ESPResSo++ is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+   ESPResSo++ is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
- ESPResSo++ is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+   ESPResSo++ is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 // ESPP_CLASS
@@ -42,10 +42,8 @@
 #include "VerletList.hpp"
 #include "interaction/Potential.hpp"
 
-
 namespace espressopp {
 namespace integrator {
-
 typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
 
 /** Post process methods to the ChemicalReaction exteions.
@@ -63,20 +61,21 @@ typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticleProper
 
 /** Base class for PostProcess.**/
 class ChemicalReactionPostProcess {
- public:
+public:
   ChemicalReactionPostProcess() { }
+
   virtual ~ChemicalReactionPostProcess() { }
 
   /** The main method that is invoked on the particles that take part in chemical reactions.
    *
    *  We assume that we deal with binary reaction.
    */
-  virtual std::vector<Particle*> process(Particle &p, Particle &partner) = 0;
+  virtual std::vector<Particle *> process(Particle &p, Particle &partner) = 0;
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   shared_ptr<System> system_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
@@ -93,19 +92,20 @@ class ChemicalReactionPostProcess {
  *  - resolution (lambda parameter).
  */
 class PostProcessChangeProperty : public integrator::ChemicalReactionPostProcess {
- public:
-  std::vector<Particle*> process(Particle &p, Particle &partner);
+public:
+  std::vector<Particle *> process(Particle &p, Particle &partner);
+
   void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void RemoveChangeProperty(int type_id);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- private:
+private:
   TypeParticlePropertiesMap type_properties_;
+
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
-
 
 /*** PostProcess: remove bond.
  *
@@ -117,26 +117,28 @@ class PostProcessChangeProperty : public integrator::ChemicalReactionPostProcess
  * A(1) + B(2)-B(3) -> A(1)-B(2) + B(3)
  *
  * We have following reaction, molecule A of id 1 forming bond with B of id 2, but B(2) is already
- * bonded with B(3). With this extension, we define which bond list has to be updated, number of bonds that
+ * bonded with B(3). With this extension, we define which bond list has to be updated, number of
+ * bonds that
  * has to be removed.
  */
 class PostProcessRemoveBond : public integrator::ChemicalReactionPostProcess {
- public:
-  PostProcessRemoveBond(shared_ptr<FixedPairList> fpl, int nr) : fpl_(fpl), nr_(nr) {}
-  std::vector<Particle*> process(Particle &p, Particle &partner);
+public:
+  PostProcessRemoveBond(shared_ptr<FixedPairList> fpl, int nr):
+    fpl_(fpl), nr_(nr) { }
+
+  std::vector<Particle *> process(Particle &p, Particle &partner);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- private:
+private:
   shared_ptr<FixedPairList> fpl_;
+
   int nr_;
 
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
-
-
-}  // namespace integrator
-}  // namespace espressopp
+}// namespace integrator
+}// namespace espressopp
 
 #endif

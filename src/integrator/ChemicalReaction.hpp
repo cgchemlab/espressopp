@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2014-2016
-   Jakub Krajniak (jkrajniak at gmail.com)
+       Jakub Krajniak (jkrajniak at gmail.com)
 
    This file is part of ESPResSo++.
 
@@ -53,6 +53,11 @@ typedef std::pair<Particle *, Particle *> ParticlePair;
 
 const int kCrCommTag = 0xad;// @warning: this made problems when multiple extension will be enabled.
 
+/**  Defines reaction cut-off.
+
+ This is an abstract class that is used to define reaction cut-off distance. The distance can be
+ and static one (typical in that kind of approach) or e.g. based on probability.
+ */
 class ReactionCutoff {
 public:
   ReactionCutoff() { }
@@ -69,18 +74,45 @@ protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
+/** Defines static cut-off distance.
+
+    @param min_cutoff The minimum distance (inclusvie).
+    @param max_cutoff The maximum distance (exclusive).
+  */
 class ReactionCutoffStatic : public ReactionCutoff {
 public:
   ReactionCutoffStatic() {
-    set_cutoff(0.0, 0.0);
+    init_cutoff(0.0, 0.0);
   }
 
   ReactionCutoffStatic(real min_cutoff, real max_cutoff) {
-    set_cutoff(min_cutoff, max_cutoff);
+    init_cutoff(min_cutoff, max_cutoff);
   }
 
+  /** Checks if two particles matches with distance condition.
+
+      Conditions
+      \f[ r_{min} \le \|p1 - p2\| < r_{max} \f]
+
+      @param p1 Reference to particle 1.
+      @param p2 Reference to particle 2.
+      @retval bool True if condition matches otherwise False.
+   */
   bool check(Particle &p1, Particle &p2);
-  real cutoff() {return max_cutoff_; }
+
+  void set_cutoff(real s) {
+    max_cutoff_ = s;
+    max_cutoff_sqr_ = s*s;
+  }
+  real cutoff() {
+    return max_cutoff_;
+  }
+
+  void set_min_cutoff(real s) {
+    min_cutoff_ = s;
+    min_cutoff_sqr_ = s*s;
+  }
+  real min_cutoff() { return min_cutoff_; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -89,7 +121,7 @@ protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
 private:
-  void set_cutoff(real min_cutoff, real max_cutoff) {
+  void init_cutoff(real min_cutoff, real max_cutoff) {
     min_cutoff_ = min_cutoff;
     min_cutoff_sqr_ = min_cutoff * min_cutoff;
     max_cutoff_ = max_cutoff;
@@ -102,14 +134,51 @@ private:
   real max_cutoff_sqr_;
 };
 
+
+/** Defines probabilistic cut-off.
+
+    This condition takes the cut-off from normal distribution shifted by \f[ b_0 \f] distance.
+
+    \f[ \|p_1 - p_2\| < |W| + b_0 \f[
+    where \f[p_1\f[ and \f[p_2\f[ are positions of particle 1 and 2. The W is a number for
+    normal distribution with \[f\sigma=1.0\f[ and \f[\mu=0.0\f[ shifted by \f[b_0\f[.
+
+    @param eq_distance The value of \f[b_0\f[
+    @param eq_width The value of \f[\sigma\f[
+    @param seed The integer as a seed for random number generator.
+ */
 class ReactionCutoffRandom : public ReactionCutoff {
 public:
   ReactionCutoffRandom(real eq_distance, real eq_width, longint seed)
         :eq_width_(eq_width), eq_distance_(eq_distance), seed_(seed),
             generator_(boost::mt19937(seed), boost::normal_distribution<>(0.0, eq_width)) { }
 
+  /** Checks the condition.
+
+      Condition:
+      \f[ \|p_1 - p_2\| < |W| + b_0 \f[
+      where \f[p_1\f[ and \f[p_2\f[ are positions of particle 1 and 2. The W is a number for
+      normal distribution with \[f\sigma=1.0\f[ and \f[\mu=0.0\f[ shifted by \f[b_0\f[.
+
+      @param p1 The reference to particle 1.
+      @param p2 The reference to particle 2.
+      @retval True if condition is valid otherwise false.
+   */
   bool check(Particle &p1, Particle &p2);
-  real cutoff() {return eq_distance_ + 0.5 * eq_width_; }
+
+  void set_cutoff(real s) {
+    eq_distance_ = s;
+  }
+  real cutoff() {
+    return eq_distance_ + 0.5 * eq_width_;
+  }
+
+  void set_sigma(real s) {
+    eq_width_ = s;
+  }
+  real sigma() {
+    return eq_width_;
+  }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -121,7 +190,6 @@ private:
 
   real eq_distance_;
   real eq_width_;
-  longint interval_;
   longint seed_;
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator_;
 };
@@ -160,15 +228,13 @@ public:
    * @param max_state_1 The maximum state of particle A (less not equal to it).
    * @param min_state_2 The minimum state of particle B.
    * @param max_state_2 The maximum state of particle B.
-   * @param cutoff The reaction cutoff distance.
    * @param rate The reaction rate.
    * @param fpl The espressopp.FixedPairList with the new bonds that are added by reaction.
    * @param intramolecular If set to true then intramolecular bonds are allowed.
    *
    */
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int
-      min_state_2, int max_state_2, real rate, shared_ptr<FixedPairList> fpl, bool
-      intramolecular = false)
+      min_state_2, int max_state_2, real rate, shared_ptr<FixedPairList> fpl, bool intramolecular = false)
         :type_1_(type_1),
             type_2_(type_2),
             delta_1_(delta_1),
@@ -254,7 +320,7 @@ public:
    *     if set to 1 then applied only to type_1 particle,
    *     if set to 2 then applied only to type_2 particle.
    */
-  void AddPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int type = 0) {
+  void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int type = 0) {
     switch (type) {
       case 1:
         post_process_T1.push_back(pp); break;
@@ -267,21 +333,26 @@ public:
     }
   }
 
-  void SetReactionCutoff(shared_ptr<ReactionCutoff> rc) {
+  /** Sets reaction cutoff object.*/
+  void set_reaction_cutoff(shared_ptr<ReactionCutoff> rc) {
     reaction_cutoff_ = rc;
   }
 
+  shared_ptr<ReactionCutoff> reaction_cutoff(){
+    return reaction_cutoff_;
+  }
+
   /** Checks if the pair is valid. */
-  virtual bool IsValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
+  virtual bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
   /** Checks if the pair has valid state. */
-  bool IsValidState(Particle &p1, Particle &p2, ParticlePair &correct_order);
+  bool isValidState(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
-  bool IsValidStateT_1(Particle &p);
-  bool IsValidStateT_2(Particle &p);
+  bool isValidState_T1(Particle &p);
+  bool isValidState_T2(Particle &p);
 
-  std::set<Particle *> PostProcess_T1(Particle &p, Particle &partner);
-  std::set<Particle *> PostProcess_T2(Particle &p, Particle &partner);
+  std::set<Particle *> postProcess_T1(Particle &p, Particle &partner);
+  std::set<Particle *> postProcess_T2(Particle &p, Particle &partner);
 
   shared_ptr<FixedPairList> fixed_pair_list_;//!< Bond list.
 
@@ -361,7 +432,7 @@ public:
 
   real cutoff() {return break_cutoff_; }
 
-  bool IsValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
+  bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -370,8 +441,7 @@ protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
 private:
-
-  real diss_rate_;//!< Dissociation rate.
+  real diss_rate_;  //!< Dissociation rate.
   real break_cutoff_;
   real break_cutoff_sqr_;
 };
