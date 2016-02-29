@@ -78,9 +78,9 @@ void ReactionCutoffRandom::registerPython() {
   class_<ReactionCutoffRandom, bases<integrator::ReactionCutoff>,
   boost::shared_ptr<integrator::ReactionCutoffRandom> >
     ("integrator_ReactionCutoffRandom", init<real, real, longint>())
-        .add_property("cutoff",
-                      &ReactionCutoffRandom::cutoff,
-                      &ReactionCutoffRandom::set_cutoff)
+        .add_property("eq_distance",
+                      &ReactionCutoffRandom::eq_distance,
+                      &ReactionCutoffRandom::set_eq_distance)
         .add_property("sigma",
                       &ReactionCutoffRandom::sigma,
                       &ReactionCutoffRandom::set_sigma);

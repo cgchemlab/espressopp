@@ -168,6 +168,8 @@ from _espressopp import integrator_DissociationReaction
 from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessChangeProperty
 from _espressopp import integrator_PostProcessRemoveBond
+from _espressopp import integrator_PostProcessChangeNeighboursProperty
+from _espressopp import integrator_PostProcessChangePropertyOnState
 from _espressopp import integrator_ReactionCutoffStatic
 from _espressopp import integrator_ReactionCutoffRandom
 from _espressopp import integrator_ReactionCutoff
@@ -209,6 +211,30 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
     def remove_change_property(self, type_id):
         if pmi.workerIsActive():
             self.cxxclass.remove_change_property(self, type_id)
+
+
+class PostProcessChangeNeighboursPropertyLocal(integrator_PostProcessChangeNeighboursProperty,
+                                               integrator_ChemicalReactionPostProcess):
+    """Post process of reaction that changes particle property."""
+    def __init__(self, topology_manager):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_PostProcessChangeNeighboursProperty, topology_manager)
+
+    def add_change_property(self, type_id, prop, nb_level):
+        if pmi.workerIsActive():
+            self.cxxclass.add_change_property(self, type_id, prop, nb_level)
+
+
+class PostProcessChangePropertyOnStateLocal(integrator_PostProcessChangePropertyOnState,
+                                            integrator_ChemicalReactionPostProcess):
+    """Post process of reaction that changes particle property."""
+    def __init__(self):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_PostProcessChangePropertyOnState)
+
+    def add_change_property(self, type_id, prop, nb_level):
+        if pmi.workerIsActive():
+            self.cxxclass.add_change_property(self, type_id, prop, nb_level)
 
 
 class PostProcessRemoveBondLocal(integrator_PostProcessRemoveBond, integrator_ChemicalReactionPostProcess):
@@ -343,6 +369,31 @@ class DissociationReactionLocal(integrator_DissociationReaction):
         if pmi.workerIsActive():
             self.cxxclass.add_postprocess(self, post_process, reactant_switch)
 
+    def get_diss_rate(self, molecule, state):
+        if pmi.workerIsActive():
+            if molecule not in [1, 2]:
+                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
+            return self.cxxclass.get_diss_state(self, molecule == 1, state)
+
+    def set_diss_rate(self, molecule, state, rate):
+        if pmi.workerIsActive():
+            if molecule not in [1, 2]:
+                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
+            self.cxxclass.set_diss_state(self, molecule == 1, state, rate)
+
+    def get_rate(self, molecule, state):
+        if pmi.workerIsActive():
+            if molecule not in [1, 2]:
+                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
+            return self.cxxclass.get_rate(self, molecule == 1, state)
+
+    def set_rate(self, molecule, state):
+        if pmi.workerIsActive():
+            if molecule not in [1, 2]:
+                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
+            self.cxxclass.set_rate(self, molecule == 1, state)
+
+
 
 if pmi.isController:
     class ChemicalReaction(Extension):
@@ -362,17 +413,37 @@ if pmi.isController:
             pmicall=('add_change_property', 'remove_change_property')
         )
 
+    class PostProcessChangeNeighboursProperty:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.integrator.PostProcessChangeNeighboursPropertyLocal',
+            pmicall=('add_change_property', )
+        )
+
+    class PostProcessChangePropertyOnState:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.integrator.PostProcessChangePropertyOnStateLocal',
+            pmicall=('add_change_property', )
+        )
+
     class PostProcessRemoveBond:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(cls='espressopp.integrator.PostProcessRemoveBondLocal')
 
     class ReactionCutoffStatic:
         __metaclass__ = pmi.Proxy
-        pmiproxydefs = {'cls': 'espressopp.integrator.ReactionCutoffStaticLocal'}
+        pmiproxydefs = {
+            'cls': 'espressopp.integrator.ReactionCutoffStaticLocal',
+            'pmiproperty': ('min_cutoff', 'max_cutoff')
+        }
 
     class ReactionCutoffRandom:
         __metaclass__ = pmi.Proxy
-        pmiproxydefs = {'cls': 'espressopp.integrator.ReactionCutoffRandomLocal'}
+        pmiproxydefs = {
+            'cls': 'espressopp.integrator.ReactionCutoffRandomLocal',
+            'pmiproperty': ('sigma', 'eq_distance')
+        }
 
     class Reaction:
         __metaclass__ = pmi.Proxy
@@ -423,7 +494,6 @@ if pmi.isController:
                     'min_state_2',
                     'max_state_2',
                     'cutoff',
-                    'diss_rate',
                     'active'
                     )
                 )

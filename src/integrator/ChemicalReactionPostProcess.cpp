@@ -41,7 +41,7 @@ void ChemicalReactionPostProcess::registerPython() {
 
 /** PostProcess - change particle property */
 LOG4ESPP_LOGGER(PostProcessChangeProperty::theLogger, "PostProcessChangeProperty");
-void PostProcessChangeProperty::AddChangeProperty(int type_id,
+void PostProcessChangeProperty::addChangeProperty(int type_id,
     boost::shared_ptr<ParticleProperties>             new_property) {
   std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
 
@@ -54,7 +54,7 @@ void PostProcessChangeProperty::AddChangeProperty(int type_id,
 }
 
 /** Removes change property definition. */
-void PostProcessChangeProperty::RemoveChangeProperty(int type_id) {
+void PostProcessChangeProperty::removeChangeProperty(int type_id) {
   int remove_elements = type_properties_.erase(type_id);
 
 
@@ -118,8 +118,8 @@ void PostProcessChangeProperty::registerPython() {
   class_<PostProcessChangeProperty, bases<integrator::ChemicalReactionPostProcess>,
   boost::shared_ptr<integrator::PostProcessChangeProperty> >
     ("integrator_PostProcessChangeProperty", init<>())
-    .def("add_change_property", &PostProcessChangeProperty::AddChangeProperty)
-    .def("remove_change_property", &PostProcessChangeProperty::RemoveChangeProperty);
+    .def("add_change_property", &PostProcessChangeProperty::addChangeProperty)
+    .def("remove_change_property", &PostProcessChangeProperty::removeChangeProperty);
 }
 
 LOG4ESPP_LOGGER(PostProcessRemoveBond::theLogger, "PostProcessRemoveBond");
@@ -157,5 +157,75 @@ void PostProcessRemoveBond::registerPython() {
   boost::shared_ptr<integrator::PostProcessRemoveBond> >
     ("integrator_PostProcessRemoveBond", init<shared_ptr<FixedPairList>, int>());
 }
+
+
+LOG4ESPP_LOGGER(PostProcessChangeNeighboursProperty::theLogger, "PostProcessChangeNeighboursProperty");
+
+std::vector<Particle *> PostProcessChangeNeighboursProperty::process(Particle &p, Particle &partner) {
+
+  topology_manager_->invokeNeighbourPropertyChange(p);
+
+  return std::vector<Particle *>();
+}
+
+void PostProcessChangeNeighboursProperty::registerPython() {
+  using namespace espressopp::python;// NOLINT
+
+  class_<PostProcessChangeNeighboursProperty, bases<integrator::ChemicalReactionPostProcess>,
+         boost::shared_ptr<integrator::PostProcessChangeNeighboursProperty> >
+      ("integrator_PostProcessChangeNeighboursProperty", init<shared_ptr<integrator::TopologyManager> >())
+      .def("add_change_property", &PostProcessChangeNeighboursProperty::registerNeighbourPropertyChange);
+
+}
+
+LOG4ESPP_LOGGER(PostProcessChangePropertyOnState::theLogger, "PostProcessChangePropertyOnState");
+
+std::vector<Particle *> PostProcessChangePropertyOnState::process(Particle &p1, Particle &partner) {
+  std::vector<Particle* > ret_val;
+
+  boost::unordered_map<std::pair<longint, longint>, shared_ptr<ParticleProperties> >::const_iterator pp_it =
+      type_state_pp_.find(std::make_pair(p1.type(), p1.state()));
+
+  bool mod = false;
+  if (pp_it != type_state_pp_.end()) {
+    shared_ptr<ParticleProperties> pp = pp_it->second;
+    if (pp->type != NULL) {
+      p1.setType(pp->type);
+      mod = true;
+    }
+
+    if (pp->mass != NULL) {
+      p1.setMass(pp->mass);
+      mod = true;
+    }
+
+    if (pp->q != NULL) {
+      p1.setQ(pp->q);
+      mod = true;
+    }
+
+    if (pp->lambda != NULL) {
+      p1.setLambda(pp->lambda);
+      mod = true;
+    }
+
+    LOG4ESPP_DEBUG(theLogger, "Modified particle id=" << p1.id());
+  }
+
+  if (mod)
+    ret_val.push_back(&(p1));
+
+  return ret_val;
+}
+
+void PostProcessChangePropertyOnState::registerPython() {
+  using namespace espressopp::python;  // NOLINT
+
+  class_<PostProcessChangePropertyOnState, bases<integrator::ChemicalReactionPostProcess>,
+         boost::shared_ptr<integrator::PostProcessChangePropertyOnState> >
+      ("integrator_PostProcessChangePropertyOnState", init<>())
+      .def("add_change_property", &PostProcessChangePropertyOnState::addPropertyChange);
+}
+
 }// namespace integrator
 }// namespace espressopp

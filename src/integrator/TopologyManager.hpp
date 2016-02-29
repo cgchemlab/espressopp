@@ -78,6 +78,22 @@ class TopologyManager: public Extension {
   void registerQuadruple(shared_ptr<FixedQuadrupleList> fql,
                          longint type1, longint type2, longint type3, longint type4);
 
+
+  /**
+   * Register the action to change neighbour property separated by nb_level from the root.
+   *
+   * @param type_id The type of particle that is neighbour of root separated by nb_level edges.
+   * @param pp The new particle properties
+   */
+  void registerNeighbourPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level);
+
+  /**
+   * Interface for invoking property change of neighbour particles.
+   *
+   * @param root The root particle.
+   */
+  void invokeNeighbourPropertyChange(Particle &root);
+
   /**
    * Initialized topology by looking for bonds in registered PairLists and
    * build adjacent list. Then this list is distributed among cpus so
@@ -115,11 +131,6 @@ class TopologyManager: public Extension {
    */
   void onTupleAdded(longint pid1, longint pid2);
   void onTupleRemoved(longint pid1, longint pid2);
-  /**
-   * Process new bond.
-   */
-  void newBond(longint pid1, longint pid2);
-
   /**
    * Process removing of the bond.
    */
@@ -184,6 +195,14 @@ class TopologyManager: public Extension {
    */
 
   /**
+   * Look for nodes at certain distance with BFS algorithm.
+   *
+   * @param root The root node.
+   * @retval The list of node ids.
+   */
+  std::vector<longint> getNodesAtDistances(longint root);
+
+  /**
    * Connecting/Disconnecting to signals.
    */
   void connect();
@@ -199,7 +218,7 @@ class TopologyManager: public Extension {
 
   boost::signals2::connection aftIntV2_, aftCalcF_;
 
-  // Maping for tuples, triplets and quadruplets.
+  // Mapping for tuples, triplets and quadruplets.
   typedef boost::unordered_map<longint,
       boost::unordered_map<longint, shared_ptr<FixedPairList> > > TupleMap;
   typedef boost::unordered_map<
@@ -234,9 +253,14 @@ class TopologyManager: public Extension {
 
   /** Adjacent list. */
   GraphMap *graph_;
+  longint max_nb_distance_;
+  std::set<longint> nb_distances_;
+  std::map<longint, std::map<longint, shared_ptr<ParticleProperties> > > distance_type_pp_;
+  std::vector<longint> nb_distance_particles_;  //<! Stores the pairs distance; particle_id
 
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
+  void updateParticlePropertiesAtDistance(int id, int distance);
 };
 
 }  // end namespace integrator

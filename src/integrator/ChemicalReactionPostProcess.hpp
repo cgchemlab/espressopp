@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2014-2016
-   Jakub Krajniak (jkrajniak at gmail.com)
+       Jakub Krajniak (jkrajniak at gmail.com)
 
    This file is part of ESPResSo++.
 
@@ -39,6 +39,7 @@
 
 #include "integrator/Extension.hpp"
 #include "integrator/VelocityVerlet.hpp"
+#include "integrator/TopologyManager.hpp"
 #include "VerletList.hpp"
 #include "interaction/Potential.hpp"
 
@@ -91,12 +92,12 @@ protected:
  *  - partial charge
  *  - resolution (lambda parameter).
  */
-class PostProcessChangeProperty : public integrator::ChemicalReactionPostProcess {
+class PostProcessChangeProperty : public ChemicalReactionPostProcess {
 public:
   std::vector<Particle *> process(Particle &p, Particle &partner);
 
-  void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
-  void RemoveChangeProperty(int type_id);
+  void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
+  void removeChangeProperty(int type_id);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -107,7 +108,8 @@ private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
-/*** PostProcess: remove bond.
+
+/** PostProcess: remove bond.
  *
  * By this extension, it is possible to update espressopp.FixedPairList and remove bond(s) from this
  * list. T
@@ -121,7 +123,7 @@ private:
  * bonds that
  * has to be removed.
  */
-class PostProcessRemoveBond : public integrator::ChemicalReactionPostProcess {
+class PostProcessRemoveBond : public ChemicalReactionPostProcess {
 public:
   PostProcessRemoveBond(shared_ptr<FixedPairList> fpl, int nr):
     fpl_(fpl), nr_(nr) { }
@@ -133,12 +135,70 @@ public:
 
 private:
   shared_ptr<FixedPairList> fpl_;
-
-  int nr_;
+  int nr_;  //<! Number of bonds to remove from fpl_ fixed pair list.
 
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
-}// namespace integrator
-}// namespace espressopp
+
+
+/** Change property of the neighbour particles.
+ *
+ * @param tm The topology manager.
+ */
+class PostProcessChangeNeighboursProperty : public ChemicalReactionPostProcess {
+public:
+  PostProcessChangeNeighboursProperty(shared_ptr<TopologyManager> tm): topology_manager_(tm) { }
+
+  std::vector<Particle *> process(Particle &p, Particle &partner);
+
+  /** Register property change.
+   *
+   * @param type_id The particle type id.
+   * @param pp new ParticleProperties
+   * @param nb_level The number of edges that separates.
+   */
+  void registerNeighbourPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level) {
+    topology_manager_->registerNeighbourPropertyChange(type_id, pp, nb_level);
+  }
+
+  static void registerPython();
+
+private:
+  shared_ptr<TopologyManager> topology_manager_;
+
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
+/** Change property of particles whenever they end up in desired chemical state.*/
+class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
+ public:
+  PostProcessChangePropertyOnState() : ChemicalReactionPostProcess() { }
+
+  std::vector<Particle *> process(Particle &p, Particle &partner);
+
+  /** Register property change.
+   *
+   * The property of given particle will be changed whenever
+   * it will reach desired chemical state. This can be used e.g. to
+   * terminate reaction and switch particle type to follow other reaction.
+   *
+   * @param type_id The particle type id.
+   * @param pp new ParticleProperties
+   * @param state The number of edges that separates.
+   */
+  void addPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint state) {
+    type_state_pp_.insert(std::make_pair(std::make_pair(type_id, state), pp));
+  }
+
+  static void registerPython();
+
+ private:
+  boost::unordered_map<std::pair<longint, longint>, shared_ptr<ParticleProperties> > type_state_pp_;
+
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
+}  // namespace integrator
+}  // namespace espressopp
 
 #endif

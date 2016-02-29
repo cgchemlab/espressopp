@@ -172,9 +172,13 @@ public:
    */
   bool check(Particle &p1, Particle &p2);
 
-  void set_cutoff(real s) {
+  void set_eq_distance(real s) {
     eq_distance_ = s;
   }
+  real eq_distance() {
+    return eq_distance_;
+  }
+
   real cutoff() {
     return eq_distance_ + 0.5 * eq_width_;
   }
@@ -485,7 +489,9 @@ public:
 
   void set_cutoff(real cutoff) {break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff * cutoff; }
 
-  real cutoff() {return break_cutoff_; }
+  real cutoff() {
+    return break_cutoff_;
+  }
 
   bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
 

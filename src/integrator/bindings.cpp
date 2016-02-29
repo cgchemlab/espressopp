@@ -104,6 +104,8 @@ namespace espressopp {
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
 
+      TopologyManager::registerPython();
+
       ReactionCutoff::registerPython();
       ReactionCutoffStatic::registerPython();
       ReactionCutoffRandom::registerPython();
@@ -115,8 +117,9 @@ namespace espressopp {
       PostProcessReleaseParticles::registerPython();
       PostProcessJoinParticles::registerPython();
       PostProcessRemoveBond::registerPython();
+      PostProcessChangeNeighboursProperty::registerPython();
+      PostProcessChangePropertyOnState::registerPython();
 
-      TopologyManager::registerPython();
       EmptyExtension::registerPython();
     }
   }

@@ -78,6 +78,6 @@ if pmi.isController :
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.TopologyManagerLocal',
             pmicall = ['rebuild', 'observe_tuple', 'register_tuple', 'register_triplet',
-                       'register_quadruplet', 'initialize_topology'],
+                       'register_quadruplet', 'initialize_topology', 'exchange_data'],
             pmiinvoke = ['print_topology', 'get_neighbour_lists']
             )
