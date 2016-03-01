@@ -154,7 +154,6 @@ python::list DynamicExcludeList::getList() {
 
 void DynamicExcludeList::exclude(longint pid1, longint pid2) {
   LOG4ESPP_INFO(theLogger, "new exclude pair " << pid1 << "-" << pid2);
-  //exList->insert(std::make_pair(pid1, pid2));
 
   exList_add.push_back(pid1);
   exList_add.push_back(pid2);
@@ -163,9 +162,6 @@ void DynamicExcludeList::exclude(longint pid1, longint pid2) {
 void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
   exList_remove.push_back(pid1);
   exList_remove.push_back(pid2);
-
-  //exList->erase(std::make_pair(pid1, pid2));
-  //exList->erase(std::make_pair(pid2, pid1));
 }
 
 void DynamicExcludeList::registerPython() {
