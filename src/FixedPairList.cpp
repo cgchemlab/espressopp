@@ -190,7 +190,9 @@ namespace espressopp {
         onTupleAdded(pid1, pid2);
         LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
       }
+      LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
     }
+    LOG4ESPP_DEBUG(theLogger, "Leaving add with returnVal " << returnVal);
     return returnVal;
   }
 
@@ -436,5 +438,4 @@ namespace espressopp {
       .def("getLongtimeMaxBondSqr", &FixedPairList::getLongtimeMaxBondSqr)
       ;
   }
-
 }

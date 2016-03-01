@@ -236,7 +236,6 @@ void DynamicExcludeList::registerPython() {
     // make a connection to System to invoke rebuild on resort
     connect();
   }
-
   real VerletList::getVerletCutoff(){
     return cutVerlet;
   }

@@ -59,6 +59,10 @@ r"""
 .. function:: espressopp.FixedPairList.size()
 
 		:rtype: 
+
+.. function:: espressopp.FixedPairList.totalSize()
+
+        :rtype:
 """
 from espressopp import pmi
 import _espressopp 

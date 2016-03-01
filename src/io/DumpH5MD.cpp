@@ -21,14 +21,16 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <Python.h>
+#include <iostream>
+#include <object.h>
+#include <vector>
+#include "DumpH5MD.hpp"
 #include "types.hpp"
 #include "SystemAccess.hpp"
 #include "storage/Storage.hpp"
 #include "DumpH5MD.hpp"
 #include "iterator/CellListIterator.hpp"
-#include <iostream>
-#include <Python.h>
-#include <object.h>
 
 const char *get_format(double x) { return "d"; }
 const char *get_format(float x) { return "f"; }
