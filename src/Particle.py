@@ -33,7 +33,7 @@ r"""
 		:type storage: 
 """
 import _espressopp
-import esutil
+from espressopp.esutil import cxxinit
 import pmi
 from espressopp import toReal3DFromVector, toInt3DFromVector
 import mpi4py.MPI as MPI
