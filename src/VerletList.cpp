@@ -93,7 +93,6 @@ void DynamicExcludeList::observe_quadruple(shared_ptr<FixedQuadrupleList> fql) {
 void DynamicExcludeList::updateList() {
   LOG4ESPP_INFO(theLogger, "Update dynamic list.");
   // Collect state from all CPUs.
-  LOG4ESPP_INFO(theLogger, "Exclude dynamic list is dirty, exchange it.");
   std::vector<longint> out_buffer;
   std::vector<std::vector<longint> > in_buffer;
 
@@ -163,8 +162,6 @@ void DynamicExcludeList::registerPython() {
 
   class_<DynamicExcludeList, shared_ptr<DynamicExcludeList> >
       ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
-       .add_property("is_dirty", &DynamicExcludeList::getExListDirty,
-                     &DynamicExcludeList::setExListDirty)
        .add_property("size", &DynamicExcludeList::getSize)
        .def("exclude", &DynamicExcludeList::exclude)
        .def("observe_tuple", &DynamicExcludeList::observe_tuple)
