@@ -162,6 +162,9 @@ void ChemicalReaction::React() {
   // Now, accept new pairs.
   ApplyAR(modified_particles);
 
+  // Synchronize, all cpus should finish association part.
+  (*system.comm).barrier();
+
   // Update the ghost particles.
   updateGhost(modified_particles);
   LOG4ESPP_DEBUG(theLogger, "Finished react()");
@@ -477,7 +480,7 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
   // Gets the list of indexes of particle a. Gets only real particles, skip ghost.
   for (integrator::ReactionMap::iterator it = potential_candidates.begin();
       it != potential_candidates.end(); ++it) {
-    p = system.storage->lookupLocalParticle(it->first);
+    p = system.storage->lookupRealParticle(it->first);
 
     if ((p == NULL) || p->ghost())
       continue;
@@ -575,7 +578,7 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
   // Collect the b particle pairs. REQOPT
   for (integrator::ReactionMap::iterator it = potential_candidates.begin();
       it != potential_candidates.end(); ++it) {
-    p = system.storage->lookupLocalParticle(it->second.first);
+    p = system.storage->lookupRealParticle(it->second.first);
 
     if ((p == NULL) || p->ghost())
       continue;
@@ -709,11 +712,15 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     Particle *p1 = system.storage->lookupLocalParticle(it->first);
     Particle *p2 = system.storage->lookupLocalParticle(it->second.first);
 
-    LOG4ESPP_DEBUG(
-        theLogger,
-        "Checking pair: " << p1->id() << "(" << p1->state() << "-"
-                          << p2->id() << "(" << p2->state() << ") A.type="
-                          << p2->type() << " B.type=" << p2->type());
+#ifdef LOG4ESPP_DEBUG_ENABLED
+    if (p1 && p2) {
+      LOG4ESPP_DEBUG(
+          theLogger,
+          "Checking pair: " << p1->id() << "(" << p1->state() << "-"
+              << p2->id() << "(" << p2->state() << ") A.type="
+              << p2->type() << " B.type=" << p2->type());
+    }
+#endif
 
     bool valid_state = true;
 
