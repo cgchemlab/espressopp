@@ -348,7 +348,6 @@ namespace espressopp {
         if (p1 == NULL) {
           std::stringstream msg;
           msg << "onParticlesChanged error. Fixed Pair List particle p1 " << it->first << " does not exists here.";
-          msg << " p1: " << *p1;
           msg << " pair: " << it->first << "-" << it->second;
           err.setException( msg.str() );
           //std::runtime_error(err.str());
