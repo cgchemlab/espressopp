@@ -161,41 +161,35 @@ namespace espressopp {
         std::swap(p1, p2);
         std::swap(pid1, pid2);
       }
+    } else {
+      return false;
     }
 
-    if (!p1){
-      // Particle does not exist here, return false
-      returnVal = false;
-    } else {
-      if (!p2) {
-        std::stringstream msg;
-        msg << "bond particle p2 " << pid2 << " does not exists here and cannot be added";
-        throw std::runtime_error(msg.str());
+    if (p1->ghost() && p2->ghost()) {
+      return false;
+    }
+
+    // ADD THE GLOBAL PAIR
+    // see whether the particle already has pairs
+    bool found = false;
+    std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange =
+        globalPairs.equal_range(pid1);
+    if (equalRange.first != globalPairs.end()) {
+      // otherwise test whether the pair already exists
+      for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+        if (it->second == pid2)
+          found = true;
       }
     }
-    if (returnVal) {
-      // ADD THE GLOBAL PAIR
-      // see whether the particle already has pairs
-      bool found = false;
-      std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange =
-          globalPairs.equal_range(pid1);
-      if (equalRange.first != globalPairs.end()) {
-        // otherwise test whether the pair already exists
-        for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-          if (it->second == pid2)
-            found = true;
-        }
-      }
-      returnVal = !found;
-      if (!found) {
-        // add the pair locally
-        this->add(p1, p2);
-        // Update list of integers.
-        globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
-        // Throw signal onTupleAdded.
-        onTupleAdded(pid1, pid2);
-        LOG4ESPP_INFO(theLogger, "added fixed pair " << pid1 << "-" << pid2 << " to global pair list");
-      }
+    returnVal = !found;
+    if (!found) {
+      // add the pair locally
+      this->add(p1, p2);
+      // Update list of integers.
+      globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
+      // Throw signal onTupleAdded.
+      onTupleAdded(pid1, pid2);
+      LOG4ESPP_INFO(theLogger, "added fixed pair " << pid1 << "-" << pid2 << " to global pair list");
     }
     LOG4ESPP_DEBUG(theLogger, "Leaving add with returnVal " << returnVal);
     return returnVal;
