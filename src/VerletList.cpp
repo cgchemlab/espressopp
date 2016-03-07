@@ -137,12 +137,6 @@ void DynamicExcludeList::updateList() {
   exList_add.clear();
   LOG4ESPP_DEBUG(theLogger, "leave DynamicExcludeList::updateList");
 }
-void DynamicExcludeList::setExListDirty(bool val) {
-  if (!val) {
-    exList_remove.clear();
-    exList_add.clear();
-  }
-}
 
 python::list DynamicExcludeList::getList() {
   python::list return_list;
