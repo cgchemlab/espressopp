@@ -34,6 +34,7 @@ The simulation consists of the following steps:
 import espressopp
 
 import cPickle
+import logging
 import os
 import time
 
@@ -85,7 +86,7 @@ rho                = 0.8442
 L                  = pow(Npart/rho, 1.0/3.0)
 box                = (L, L, L)
 r_cutoff           = 2.5
-skin               = 0.1
+skin               = 1.5
 temperature        = 1.0
 dt                 = 0.005
 epsilon            = 1.0
@@ -126,7 +127,7 @@ print "equil_isteps       = ", equil_isteps
 
 
 system             = espressopp.System()
-system.rng         = espressopp.esutil.RNG()
+system.rng         = espressopp.esutil.RNG(12345)
 system.bc          = espressopp.bc.OrthorhombicBC(system.rng, box)
 system.skin        = skin
 NCPUs              = espressopp.MPI.COMM_WORLD.size
@@ -169,6 +170,8 @@ potential = interaction.setPotential(type1=0, type2=0,
                                          epsilon=epsilon, sigma=sigma, cutoff=r_cutoff, shift=0.0))
 system.addInteraction(interaction)
 system.storage.cellAdjust()
+
+system.storage.decompose()
 
 if not has_eq:
     # Run additional equilibration.
@@ -219,15 +222,19 @@ r_type_1.intramolecular=True
 ar.add_reaction(r_type_1)
 integrator.addExtension(ar)
 
-topology_manager = espressopp.integrator.TopologyManager(system)
-topology_manager.rebuild()
-topology_manager.observe_tuple(fpl_a_a)
-topology_manager.initialize_topology()
-integrator.addExtension(topology_manager)
+#topology_manager = espressopp.integrator.TopologyManager(system)
+#topology_manager.rebuild()
+#topology_manager.observe_tuple(fpl_a_a)
+#topology_manager.initialize_topology()
+#integrator.addExtension(topology_manager)
+
+#logging.getLogger('Reaction').setLevel(logging.DEBUG)
+#logging.getLogger('ChemicalReaction').setLevel(logging.DEBUG)
 
 print "starting benchmark..."
 t0 = time.time()
 for step in range(equil_nloops):
+    print step
     # perform equilibration_isteps integration steps
     integrator.run(equil_isteps)
     # print status information
@@ -235,3 +242,4 @@ t1 = time.time()
 time_file = open('benchmark_data.csv', 'a+')
 time_file.write('{:e}\n'.format(t1 - t0))
 print "finished"
+print "has: ", fpl_a_a.totalSize()
