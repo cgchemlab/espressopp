@@ -147,20 +147,26 @@ namespace espressopp {
 
   bool FixedPairList::iadd(longint pid1, longint pid2) {
     bool returnVal = true;
-    if (pid1 > pid2)
-      std::swap(pid1, pid2);
 
     System& system = storage->getSystemRef();
 
     // ADD THE LOCAL PAIR
-    Particle *p1 = storage->lookupRealParticle(pid1);
+    Particle *p1 = storage->lookupLocalParticle(pid1);
     Particle *p2 = storage->lookupLocalParticle(pid2);
+
+    // The assumption is that p1 will be a real particle and p2 can be real or ghost.
+    if (p1 && p2) {
+      if (p1->ghost() && !p2->ghost()) {
+        LOG4ESPP_DEBUG(theLogger, "p1 is ghost and p2 is real, swap pointers and pids");
+        std::swap(p1, p2);
+        std::swap(pid1, pid2);
+      }
+    }
 
     if (!p1){
       // Particle does not exist here, return false
-      returnVal=false;
-    }
-    else{
+      returnVal = false;
+    } else {
       if (!p2) {
         std::stringstream msg;
         msg << "bond particle p2 " << pid2 << " does not exists here and cannot be added";

@@ -751,7 +751,13 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if ((p1 != NULL) && (p2 != NULL) && valid_state) {
       LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-      reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+      bool added = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+      if (!added)
+        added = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+      if (!added) {
+        LOG4ESPP_ERROR(theLogger, "problem with adding pair " << it->first << it->second.first
+                                  << " p1:" << *p1 << " p2:" << *p2);
+      }
     }
   }
 
