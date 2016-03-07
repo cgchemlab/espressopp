@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
 import files_io
-import networkx as nx
 import sys
 
 __doc__ = "Tool functions."
@@ -54,35 +53,6 @@ class MyArgParser(argparse.ArgumentParser):
                 v = namespace.__dict__[k]
                 if v is not None:
                     of.write('{}={}\n'.format(k, v))
-
-
-def gen_bonded_tuples(g, num, bond_pair):
-    """Generates tuples of different size, based on the graph and input edge.
-
-    Args:
-        g: The networkx Graph object.
-        num: The length of the tuple.
-        bond_pair: The edge which has to be included in all tuples.
-
-    Returns:
-        The set of all tuples of defined length from graph `g`.
-    """
-    b0, b1 = bond_pair
-    paths = []
-    if num > 3:
-        for nb0 in g.edge[b0]:
-            paths.extend(nx.single_source_shortest_path(g, nb0, num-1).values())
-        for nb1 in g.edge[b1]:
-            paths.extend(nx.single_source_shortest_path(g, nb1, num-1).values())
-
-    paths.extend(nx.single_source_shortest_path(g, b0, num-1).values())
-    paths.extend(nx.single_source_shortest_path(g, b1, num-1).values())
-    output = set()
-    for b in paths:
-        if len(b) == num and b0 in b and b1 in b:
-            if tuple(reversed(b)) not in output:
-                output.add(tuple(b))
-    return output
 
 
 def get_graph(settings):
