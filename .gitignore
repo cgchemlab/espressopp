@@ -20,3 +20,9 @@ CTestTestfile.cmake
 contrib/boost/libespressopp_boost.a
 .ropeproject
 .idea
+Testing/
+testsuite/pi_water/esp.dat
+testsuite/pi_water/traj.xyz
+testsuite/tabulated/pot-cosine.txt
+testsuite/tabulated/pot-fene.txt
+testsuite/tabulated/pot-lj.txt

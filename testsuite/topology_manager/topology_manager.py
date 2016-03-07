@@ -75,6 +75,7 @@ class TestTopologyManager(unittest.TestCase):
     def test_add_new_bond(self):
         """Test if topology was updated after adding new bond."""
         self.fpl3.addBonds([(3, 5)])
+        self.topology_manager.exchange_data()
         nb_list = dict(self.topology_manager.get_neighbour_lists()[0])
         assert nb_list[1] == [2]
         assert set(nb_list[2]) == set([1, 4, 3])
@@ -89,13 +90,16 @@ class TestTopologyManager(unittest.TestCase):
         """Test content of triplets"""
         ftl_before = set(self.ftl.getTriples()[0])
         self.fpl3.addBonds([(3, 5)])
+        self.topology_manager.exchange_data()
         ftl_after = set(self.ftl.getTriples()[0])
         # Checks if triplet list is extended correctly
+        assert ftl_before != ftl_after
         assert not ((ftl_after - ftl_before) - set([(3, 5, 6), (2, 3, 5), (5, 3, 2), (6, 5, 3)]))
 
     def test_quadruplets(self):
         """Test the content of quadruplets."""
         self.fpl3.addBonds([(3, 5)])
+        self.topology_manager.exchange_data()
         # Checks quadruplets.
         new_quadruples = set(self.fql.getQuadruples()[0])
         assert not (new_quadruples - set([(5, 3, 2, 1), (5, 3, 2, 4), (3, 5, 6, 7),
@@ -106,6 +110,7 @@ class TestTopologyManager(unittest.TestCase):
     def test_merge_res_id(self):
         """Checks if two molecules will get the same res_id after bond is formed."""
         self.fpl3.addBonds([(3, 5)])
+        self.topology_manager.exchange_data()
         self.integrator.run(1)
         res_id_after = {self.system.storage.getParticle(i).res_id for i in range(1, self.N+1)}
         assert res_id_after == set([1])

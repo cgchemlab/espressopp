@@ -190,7 +190,9 @@ namespace espressopp {
         onTupleAdded(pid1, pid2);
         LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
       }
+      LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
     }
+    LOG4ESPP_DEBUG(theLogger, "Leaving add with returnVal " << returnVal);
     return returnVal;
   }
 
@@ -202,10 +204,10 @@ namespace espressopp {
     if (equalRange.first != globalPairs.end()) {
       for (GlobalPairs::iterator it = equalRange.first; it != equalRange.second;) {
         if (it->second == pid2) {
-          it = globalPairs.erase(it);
-          returnValue = true;
           LOG4ESPP_DEBUG(theLogger, "FPL, found " << it->first << " - " << it->second);
           onTupleRemoved(pid1, pid2);
+          it = globalPairs.erase(it);
+          returnValue = true;
         } else {
           it++;
         }
@@ -436,5 +438,4 @@ namespace espressopp {
       .def("getLongtimeMaxBondSqr", &FixedPairList::getLongtimeMaxBondSqr)
       ;
   }
-
 }

@@ -61,9 +61,9 @@ namespace espressopp {
 		*/
 		virtual bool add(longint pid1, longint pid2);
 		virtual bool iadd(longint pid1, longint pid2);
-	    virtual bool remove(longint pid1, longint pid2);
+	  virtual bool remove(longint pid1, longint pid2);
 
-	    virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
+	  virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
 		void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
 		virtual void onParticlesChanged();
 	    virtual void updateParticlesStorage();

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015
+  Copyright (C) 2015-2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -79,7 +79,7 @@ void FixDistances::connect() {
 void FixDistances::onParticlesChanged() {
   if (!has_types_)
     return;
-  std::vector<Particle*> affected_particles;
+  std::vector<std::pair<Particle*, Particle*> > affected_particles;
 
   System &system = getSystemRef();
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end(); ) {
@@ -87,7 +87,7 @@ void FixDistances::onParticlesChanged() {
     Particle *dst = system.storage->lookupRealParticle(it->second.first);
     if (anchor && dst) {
       if (anchor->type() != anchor_type_ || dst->type() != target_type_) {
-        affected_particles.push_back(dst);
+        affected_particles.push_back(std::make_pair(anchor, dst));
         it = distance_triplets_.erase(it);
       } else {
         ++it;
@@ -101,9 +101,10 @@ void FixDistances::onParticlesChanged() {
   if (affected_particles.size() > 0 && post_process_) {
     LOG4ESPP_DEBUG(theLogger, "Affected particles " << affected_particles.size());
     for (int i = 0; i < affected_particles.size(); i++) {
-      Particle *p1 = affected_particles[i];
+      Particle *anchor = affected_particles[i].first;
+      Particle *p1 = affected_particles[i].second;
       LOG4ESPP_DEBUG(theLogger, "particle " << p1->id() << " ghost: " << p1->ghost());
-      post_process_->process(*p1);
+      post_process_->process(*p1, *anchor);
       // reset force and velocity of released particle.
       p1->setV(Real3D(0.0, 0.0, 0.0));
       p1->setF(Real3D(0.0, 0.0, 0.0));
@@ -179,13 +180,11 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
       distance_triplets_.equal_range(anchor_id);
   std::vector<Particle*> tmp;
   int removed = 0;
-  for (Triplets::iterator it = equal_range.first; it != equal_range.second;) {
-    if (removed == nr_)
-      break;
+  for (Triplets::iterator it = equal_range.first; it != equal_range.second && removed < nr_;) {
     Particle *p1 = system.storage->lookupLocalParticle(it->second.first);
     if (p1) {
       if (post_process_) {
-        tmp = post_process_->process(*p1);
+        tmp = post_process_->process(*p1, *p_anchor);
         for (std::vector<Particle*>::iterator it = tmp.begin(); it != tmp.end(); ++it)
           mod_particles.push_back(*it);
       }
@@ -195,9 +194,6 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
       LOG4ESPP_DEBUG(theLogger, "set V=0,0,0 F=0,0,0" << p1->id());
       p1->setV(Real3D(0.0, 0.0, 0.0));
       p1->setF(Real3D(0.0, 0.0, 0.0));
-      LOG4ESPP_DEBUG(theLogger, "seted V=0,0,0 F=0,0,0" << p1->id());
-      if (it == equal_range.second)
-          LOG4ESPP_DEBUG(theLogger, "it == equal_range.second");
     } else {
       ++it;
     }
@@ -310,7 +306,7 @@ void FixDistances::registerPython() {
  */
 LOG4ESPP_LOGGER(PostProcessReleaseParticles::theLogger, "PostProcessReleaseParticles");
 
-std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p) {
+std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p, Particle &partner) {
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessReleaseParticles::operator()");
   return fd_->release_particle(p.id(), nr_);
 }
@@ -318,9 +314,31 @@ std::vector<Particle*> PostProcessReleaseParticles::process(Particle &p) {
 void PostProcessReleaseParticles::registerPython() {
   using namespace espressopp::python;  //NOLINT
 
-  class_<PostProcessReleaseParticles, bases<integrator::PostProcess>,
+  class_<PostProcessReleaseParticles, bases<integrator::ChemicalReactionPostProcess>,
       boost::shared_ptr<integrator::PostProcessReleaseParticles> >
   ("integrator_PostProcessReleaseParticles", init<shared_ptr<integrator::FixDistances>, int>());
+}
+
+/** Post process ater pairs were added.
+ *
+ * After the reaction is performed, the particle join the host particle.
+ */
+LOG4ESPP_LOGGER(PostProcessJoinParticles::theLogger, "PostProcessJoinParticles");
+
+std::vector<Particle*> PostProcessJoinParticles::process(Particle &p, Particle &partner) {
+  std::vector<Particle*> ret;
+  LOG4ESPP_DEBUG(theLogger, "Adding triplet anchor: " << partner.id() << " guest: " << p.id() << " at d=" << distance_);
+  fd_->add_triplet(partner.id(), p.id(), distance_);
+
+  return ret;
+}
+
+void PostProcessJoinParticles::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+
+  class_<PostProcessJoinParticles, bases<integrator::ChemicalReactionPostProcess>,
+         boost::shared_ptr<integrator::PostProcessJoinParticles> >
+      ("integrator_PostProcessJoinParticles", init<shared_ptr<integrator::FixDistances>, real>());
 }
 
 }  // end namespace integrator

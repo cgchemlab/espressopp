@@ -1,3 +1,5 @@
+#  Copyright (C) 2015
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #  Copyright (C) 2012,2013
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
@@ -76,6 +78,14 @@ Example (not complete):
 		:type number: 
 		:rtype: 
 
+.. function:: espressopp.System.removeInteractionByName(self, name)
+
+		:param name: The name of the interaction to remove.
+		:type name: str
+
+.. function:: espressopp.System.getAllInteractions()
+		:rtype: The dictionary with name as a key and Interaction object.
+
 .. function:: espressopp.System.scaleVolume(\*args)
 
 		:param \*args: 
@@ -125,7 +135,7 @@ class SystemLocal(_espressopp.System):
             ret_val = self.cxxclass.addInteraction(self, interaction)
             if name is not None:
                 if name in self._interaction2id:
-                    raise RuntimeException('Interaction with name {} already defined.'.format(name))
+                    raise RuntimeError('Interaction with name {} already defined.'.format(name))
                 self._interaction2id[name] = self._interaction_pid
             self._interaction_pid += 1
             return ret_val
@@ -138,7 +148,7 @@ class SystemLocal(_espressopp.System):
     def removeInteractionByName(self, name):
         if pmi.workerIsActive():
             if name not in self._interaction2id:
-                raise RuntimeException('Interaction {} not found'.format(name))
+                raise RuntimeError('Interaction {} not found'.format(name))
             interaction_id = self._interaction2id[name]
             self.cxxclass.removeInteraction(self, interaction_id)
             self._interaction2id = {
@@ -146,7 +156,7 @@ class SystemLocal(_espressopp.System):
                 for k, v in self._interaction2id.iteritems()
                 }
             self._interaction_pid = max(self._interaction2id.values()) + 1
-    
+
     def getAllInteractions(self):
         if pmi.workerIsActive():
             return {k: self.getInteraction(v) for k, v in self._interaction2id.items()}
@@ -167,6 +177,10 @@ class SystemLocal(_espressopp.System):
                     raise Error("Interaction number %i does not exist" % number)
             else:
                 raise Error("interaction list of system is empty")
+
+    def getInteractionByName(self, name):
+        if pmi.workerIsActive():
+            return self.getInteraction(self._interaction2id[name])
             
     def scaleVolume(self, *args):
 
@@ -207,6 +221,6 @@ if pmi.isController:
       pmiproperty = ['storage', 'bc', 'rng', 'skin', 'maxCutoff', 'integrator'],
       pmicall = ['addInteraction','removeInteraction', 'removeInteractionByName',
             'getInteraction', 'getNumberOfInteractions','scaleVolume', 'setTrace',
-            'getAllInteractions']
+            'getAllInteractions', 'getInteractionByName']
     )
 

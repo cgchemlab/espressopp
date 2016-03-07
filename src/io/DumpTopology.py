@@ -37,24 +37,11 @@ r"""
 
 .. function:: espressopp.io.DumpTopology.observe_tuple(fpl, name, particle_group)
 
-   Observers fixed pair list and stores list of bonds every time steps.
-
    :param fpl: The FixedPairList object.
    :type fpl: espressopp.FixedPairList
    :param name: The name of the tuple to store in H5MD file.
    :type name: str
    :param particle_group: The particle group to referee to.
-   :type particle_group: str
-
-.. function:: espressopp.io.DumpTopology.add_static_tuple(fpl, name, particle_group)
-
-   Stores data from fixed pair list once when the command is invoked.
-
-   :param fpl: The FixedPairList object.
-   :type fpl: espressopp.FixedPairList
-   :param name: The name of the tuple to store in H5MD file.
-   :type name: str
-   :param particle group: The particle group to referee to.
    :type particle_group: str
 
 .. function:: espressopp.io.DumpTopology.update()
@@ -95,7 +82,7 @@ from espressopp.esutil import cxxinit
 from espressopp import pmi
 from mpi4py import MPI
 
-from espressopp.ParticleAccess import *  #NOQA
+from espressopp.ParticleAccess import *
 from _espressopp import io_DumpTopology
 
 import collections

@@ -66,6 +66,7 @@ void espressopp::registerPython() {
   espressopp::ParticleProperties::registerPython();
   espressopp::ParticleGroup::registerPython();
   espressopp::System::registerPython();
+  espressopp::DynamicExcludeList::registerPython();
   espressopp::VerletList::registerPython();
   espressopp::VerletListAdress::registerPython();
   espressopp::VerletListTriple::registerPython();
@@ -97,8 +98,6 @@ void espressopp::registerPython() {
   espressopp::interaction::registerPython();
   espressopp::analysis::registerPython();
   espressopp::io::registerPython();
-
-  espressopp::DynamicExcludeList::registerPython();
 
   log4espp::PyLogger::registerPython();
 }

@@ -58,7 +58,7 @@
 #include "Settle.hpp"
 #include "VelocityVerletOnRadius.hpp"
 #include "AssociationReaction.hpp"
-#include "ChemicalReaction.hpp"
+#include "ChemicalReactionExt.hpp"
 #include "DynamicResolution.hpp"
 #include "TopologyManager.hpp"
 
@@ -104,14 +104,22 @@ namespace espressopp {
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
 
+      TopologyManager::registerPython();
+
+      ReactionCutoff::registerPython();
+      ReactionCutoffStatic::registerPython();
+      ReactionCutoffRandom::registerPython();
       Reaction::registerPython();
       DissociationReaction::registerPython();
       ChemicalReaction::registerPython();
-      PostProcess::registerPython();
+      ChemicalReactionPostProcess::registerPython();
       PostProcessChangeProperty::registerPython();
       PostProcessReleaseParticles::registerPython();
+      PostProcessJoinParticles::registerPython();
+      PostProcessRemoveBond::registerPython();
+      PostProcessChangeNeighboursProperty::registerPython();
+      PostProcessChangePropertyOnState::registerPython();
 
-      TopologyManager::registerPython();
       EmptyExtension::registerPython();
     }
   }

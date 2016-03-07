@@ -1,21 +1,21 @@
 /*
- Copyright (C) 2014-2016
-   Jakub Krajniak (jkrajniak at gmail.com)
+   Copyright (C) 2014-2016
+       Jakub Krajniak (jkrajniak at gmail.com)
 
- This file is part of ESPResSo++.
+   This file is part of ESPResSo++.
 
- ESPResSo++ is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+   ESPResSo++ is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
- ESPResSo++ is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+   ESPResSo++ is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 // ESPP_CLASS
@@ -24,6 +24,9 @@
 
 #include <boost/unordered_map.hpp>
 #include <boost/signals2.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/variate_generator.hpp>
 
 #include <utility>
 #include <map>
@@ -42,141 +45,304 @@
 #include "VerletList.hpp"
 #include "interaction/Potential.hpp"
 
+#include "ChemicalReactionPostProcess.hpp"
 
 namespace espressopp {
 namespace integrator {
 
-/** Simple particle properties structure. Shortcut of Particle::ParticleProperties*/
-typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
-typedef std::pair<Particle*, Particle*> ParticlePair;
+/// Stores reaction pair in correct order with reaction rate.
+struct ParticlePair {
+  Particle *first;
+  Particle *second;
+  real reaction_rate;
+};
 
-const int kCrCommTag = 0xad;
+const int kCrCommTag = 0xad;// @warning: this made problems when multiple extension will be enabled.
 
-/** PostProcess **/
-class PostProcess {
- public:
-  PostProcess() { }
-  virtual ~PostProcess() { }
-  virtual std::vector<Particle*> process(Particle& p) = 0;
+/**  Defines reaction cut-off.
+
+ This is an abstract class that is used to define reaction cut-off distance. The distance can be
+ and static one (typical in that kind of approach) or e.g. based on probability.
+ */
+class ReactionCutoff {
+public:
+  ReactionCutoff() { }
+
+  virtual ~ReactionCutoff() { }
+
+  virtual bool check(Particle &p1, Particle &p2) = 0;
+  virtual real cutoff() = 0;
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
-  shared_ptr<System> system_;
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
+/** Defines static cut-off distance.
 
-class PostProcessChangeProperty : public integrator::PostProcess {
- public:
-  std::vector<Particle*> process(Particle& p);
-  void AddChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
-  void RemoveChangeProperty(int type_id);
+    @param min_cutoff The minimum distance (inclusvie).
+    @param max_cutoff The maximum distance (exclusive).
+  */
+class ReactionCutoffStatic : public ReactionCutoff {
+public:
+  ReactionCutoffStatic() {
+    init_cutoff(0.0, 0.0);
+  }
+
+  ReactionCutoffStatic(real min_cutoff, real max_cutoff) {
+    init_cutoff(min_cutoff, max_cutoff);
+  }
+
+  /** Checks if two particles matches with distance condition.
+
+      Conditions
+      \f[ r_{min} \le \|p1 - p2\| < r_{max} \f]
+
+      @param p1 Reference to particle 1.
+      @param p2 Reference to particle 2.
+      @retval bool True if condition matches otherwise False.
+   */
+  bool check(Particle &p1, Particle &p2);
+
+  void set_cutoff(real s) {
+    max_cutoff_ = s;
+    max_cutoff_sqr_ = s*s;
+  }
+  real cutoff() {
+    return max_cutoff_;
+  }
+
+  void set_min_cutoff(real s) {
+    min_cutoff_ = s;
+    min_cutoff_sqr_ = s*s;
+  }
+  real min_cutoff() { return min_cutoff_; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- private:
-  TypeParticlePropertiesMap type_properties_;
+protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
+private:
+  void init_cutoff(real min_cutoff, real max_cutoff) {
+    min_cutoff_ = min_cutoff;
+    min_cutoff_sqr_ = min_cutoff * min_cutoff;
+    max_cutoff_ = max_cutoff;
+    max_cutoff_sqr_ = max_cutoff * max_cutoff;
+  }
+
+  real min_cutoff_;
+  real min_cutoff_sqr_;
+  real max_cutoff_;
+  real max_cutoff_sqr_;
 };
 
 
-/** Class for the chemical reactions. */
-class Reaction {
- public:
-  Reaction()
-      : type_1_(-1),
-        type_2_(-1),
-        delta_1_(-1),
-        delta_2_(-1),
-        min_state_1_(-1),
-        max_state_1_(-1),
-        min_state_2_(-1),
-        max_state_2_(-1),
-        rate_(0.0),
-        reverse_(false),
-        intramolecular_(false), active_(true) {
-    cutoff_ = 0.0;
-    cutoff_sqr_ = 0.0;
-    min_cutoff_ = 0.0;
-    min_cutoff_sqr_ = 0.0;
+/** Defines probabilistic cut-off.
+
+    This condition takes the cut-off from normal distribution shifted by \f[ b_0 \f] distance.
+
+    \f[ \|p_1 - p_2\| < |W| + b_0 \f[
+    where \f[p_1\f[ and \f[p_2\f[ are positions of particle 1 and 2. The W is a number for
+    normal distribution with \[f\sigma=1.0\f[ and \f[\mu=0.0\f[ shifted by \f[b_0\f[.
+
+    @param eq_distance The value of \f[b_0\f[
+    @param eq_width The value of \f[\sigma\f[
+    @param seed The integer as a seed for random number generator.
+ */
+class ReactionCutoffRandom : public ReactionCutoff {
+public:
+  ReactionCutoffRandom(real eq_distance, real eq_width, longint seed)
+        :eq_width_(eq_width), eq_distance_(eq_distance), seed_(seed),
+            generator_(boost::mt19937(seed), boost::normal_distribution<>(0.0, eq_width)) { }
+
+  /** Checks the condition.
+
+      Condition:
+      \f[ \|p_1 - p_2\| < |W| + b_0 \f[
+      where \f[p_1\f[ and \f[p_2\f[ are positions of particle 1 and 2. The W is a number for
+      normal distribution with \[f\sigma=1.0\f[ and \f[\mu=0.0\f[ shifted by \f[b_0\f[.
+
+      @param p1 The reference to particle 1.
+      @param p2 The reference to particle 2.
+      @retval True if condition is valid otherwise false.
+   */
+  bool check(Particle &p1, Particle &p2);
+
+  void set_eq_distance(real s) {
+    eq_distance_ = s;
+  }
+  real eq_distance() {
+    return eq_distance_;
   }
 
-  Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1,
-           int max_state_1, int min_state_2, int max_state_2, real cutoff,
-           real rate, shared_ptr<FixedPairList> fpl,
-           bool intramolecular = false)
-      : type_1_(type_1),
-        type_2_(type_2),
-        delta_1_(delta_1),
-        delta_2_(delta_2),
-        min_state_1_(min_state_1),
-        max_state_1_(max_state_1),
-        min_state_2_(min_state_2),
-        max_state_2_(max_state_2),
-        rate_(rate),
-        reverse_(false),
-        fixed_pair_list_(fpl),
-        intramolecular_(intramolecular),
-        active_(true) {
-    set_cutoff(cutoff);
-    set_min_cutoff(0.0);
+  real cutoff() {
+    return eq_distance_ + 0.5 * eq_width_;
   }
+
+  void set_sigma(real s) {
+    eq_width_ = s;
+  }
+  real sigma() {
+    return eq_width_;
+  }
+
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
+private:
+
+  real eq_distance_;
+  real eq_width_;
+  longint seed_;
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator_;
+};
+
+/** Base class for performing addition reaction.
+ *
+ * It modeled following reaction:
+ *
+ *  \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
+ *
+ **/
+class Reaction {
+public:
+  Reaction()
+        :type_1_(-1),
+            type_2_(-1),
+            delta_1_(-1),
+            delta_2_(-1),
+            min_state_1_(-1),
+            max_state_1_(-1),
+            min_state_2_(-1),
+            max_state_2_(-1),
+            reverse_(false),
+            intramolecular_(false), active_(true) { }
+
+  /*** Constructor of Reaction object.
+   *
+   * \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
+   *
+   * @param type_1 The type of A particle.
+   * @param type_2 The type of B particle.
+   * @param delta_1 The delta A.
+   * @param delta_2 The delta B.
+   * @param min_state_1 The minimum state of particle A (greater equal to it).
+   * @param max_state_1 The maximum state of particle A (less not equal to it).
+   * @param min_state_2 The minimum state of particle B.
+   * @param max_state_2 The maximum state of particle B.
+   * @param fpl The espressopp.FixedPairList with the new bonds that are added by reaction.
+   * @param intramolecular If set to true then intramolecular bonds are allowed.
+   *
+   */
+  Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int
+      min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, bool intramolecular = false)
+        :type_1_(type_1),
+            type_2_(type_2),
+            delta_1_(delta_1),
+            delta_2_(delta_2),
+            min_state_1_(min_state_1),
+            max_state_1_(max_state_1),
+            min_state_2_(min_state_2),
+            max_state_2_(max_state_2),
+            reverse_(false),
+            fixed_pair_list_(fpl),
+            intramolecular_(intramolecular),
+            active_(true) { }
+
   virtual ~Reaction() { }
 
-  void set_rate(real rate) { rate_ = rate; }
-  real rate() { return rate_; }
-
-  void set_cutoff(real cutoff) {
-    cutoff_ = cutoff;
-    cutoff_sqr_ = cutoff * cutoff;
+  virtual real cutoff() {
+    return reaction_cutoff_->cutoff();
   }
-  real cutoff() { return cutoff_; }
 
-  void set_min_cutoff(real cutoff) {
-    min_cutoff_ = cutoff;
-    min_cutoff_sqr_ = cutoff * cutoff;
+  void setRate(bool t1_t2, longint state, real rate) {
+    if (t1_t2)
+      state_rate_T1[state] = rate;
+    else
+      state_rate_T2[state] = rate;
   }
-  real min_cutoff() { return min_cutoff_; }
 
-  void set_type_1(int type_1) { type_1_ = type_1; }
-  int type_1() { return type_1_; }
+  real getRate(bool t1_t2, longint state) {
+    if (t1_t2)
+      return state_rate_T1[state];
+    else
+      return state_rate_T2[state];
+  }
 
-  void set_type_2(int type_2) { type_2_ = type_2; }
-  int type_2() { return type_2_; }
+  python::list getAllRates(bool t1_t2) {
+    python::list ret_val;
+    if (t1_t2) {
+      for (boost::unordered_map<longint, real>::iterator it = state_rate_T1.begin(); it != state_rate_T1.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    } else {
+      for (boost::unordered_map<longint, real>::iterator it = state_rate_T2.begin(); it != state_rate_T2.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    }
+  };
 
-  void set_delta_1(int delta_1) { delta_1_ = delta_1; }
-  int delta_1() { return delta_1_; }
+  void set_type_1(int type_1) {type_1_ = type_1; }
 
-  void set_delta_2(int delta_2) { delta_2_ = delta_2; }
-  int delta_2() { return delta_2_; }
+  int type_1() {return type_1_; }
 
-  void set_min_state_1(int min_state_1) { min_state_1_ = min_state_1; }
-  int min_state_1() { return min_state_1_; }
+  void set_type_2(int type_2) {type_2_ = type_2; }
 
-  void set_min_state_2(int min_state_2) { min_state_2_ = min_state_2; }
-  int min_state_2() { return min_state_2_; }
+  int type_2() {return type_2_; }
 
-  void set_max_state_1(int max_state_1) { max_state_1_ = max_state_1; }
-  int max_state_1() { return max_state_1_; }
+  void set_delta_1(int delta_1) {delta_1_ = delta_1; }
 
-  void set_max_state_2(int max_state_2) { max_state_2_ = max_state_2; }
-  int max_state_2() { return max_state_2_; }
+  int delta_1() {return delta_1_; }
 
-  void set_intramolecular(bool intramolecular) { intramolecular_ = intramolecular; }
-  bool intramolecular() { return intramolecular_; }
+  void set_delta_2(int delta_2) {delta_2_ = delta_2; }
 
-  void set_rng(const shared_ptr<esutil::RNG> rng) { rng_ = rng; }
-  void set_interval(shared_ptr<int> interval) { interval_ = interval; }
-  void set_dt(shared_ptr<real> dt) { dt_ = dt; }
-  void set_bc(bc::BC *bc) { bc_ = bc; }
+  int delta_2() {return delta_2_; }
 
-  bool reverse() { return reverse_; };
-  void set_reverse(bool r) { reverse_ = r; }
+  void set_min_state_1(int min_state_1) {min_state_1_ = min_state_1; }
 
-  bool active() { return active_; }
-  void set_active(bool s) { active_ = s; }
+  int min_state_1() {return min_state_1_; }
+
+  void set_min_state_2(int min_state_2) {min_state_2_ = min_state_2; }
+
+  int min_state_2() {return min_state_2_; }
+
+  void set_max_state_1(int max_state_1) {max_state_1_ = max_state_1; }
+
+  int max_state_1() {return max_state_1_; }
+
+  void set_max_state_2(int max_state_2) {max_state_2_ = max_state_2; }
+
+  int max_state_2() {return max_state_2_; }
+
+  void set_intramolecular(bool intramolecular) {intramolecular_ = intramolecular; }
+
+  bool intramolecular() {return intramolecular_; }
+
+  void set_rng(const shared_ptr<esutil::RNG> rng) {rng_ = rng; }
+
+  void set_interval(shared_ptr<int> interval) {interval_ = interval; }
+
+  void set_dt(shared_ptr<real> dt) {dt_ = dt; }
+
+  void set_bc(bc::BC *bc) {bc_ = bc; }
+
+  bool reverse() {return reverse_; };
+
+  void set_reverse(bool r) {reverse_ = r; }
+
+  bool active() {return active_; }
+
+  /** Activate the reaction*/
+  void set_active(bool s) {active_ = s; }
 
   /**
    * Define post-process method after reaction occures.
@@ -186,7 +352,7 @@ class Reaction {
    *     if set to 1 then applied only to type_1 particle,
    *     if set to 2 then applied only to type_2 particle.
    */
-  void AddPostProcess(const shared_ptr<integrator::PostProcess> pp, int type = 0) {
+  void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int type = 0) {
     switch (type) {
       case 1:
         post_process_T1.push_back(pp); break;
@@ -199,202 +365,149 @@ class Reaction {
     }
   }
 
+  /** Sets reaction cutoff object.*/
+  void set_reaction_cutoff(shared_ptr<ReactionCutoff> rc) {
+    reaction_cutoff_ = rc;
+  }
+
+  shared_ptr<ReactionCutoff> reaction_cutoff(){
+    return reaction_cutoff_;
+  }
+
   /** Checks if the pair is valid. */
-  virtual bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  virtual bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
+
   /** Checks if the pair has valid state. */
-  bool IsValidState(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  bool isValidState(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
-  bool IsValidStateT_1(Particle &p);
-  bool IsValidStateT_2(Particle &p);
+  bool isValidState_T1(Particle &p);
+  bool isValidState_T2(Particle &p);
 
-  std::set<Particle*> PostProcess_T1(Particle &p);
-  std::set<Particle*> PostProcess_T2(Particle &p);
+  std::set<Particle *> postProcess_T1(Particle &p, Particle &partner);
+  std::set<Particle *> postProcess_T2(Particle &p, Particle &partner);
 
-  shared_ptr<FixedPairList> fixed_pair_list_;  //!< Bond list.
+  shared_ptr<FixedPairList> fixed_pair_list_;//!< Bond list.
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
-  int type_1_;  //!< type of reactant A
-  int type_2_;  //!< type of reactant B
-  int min_state_1_;  //!< min state of reactant A
-  int min_state_2_;  //!< min state of reactant B
-  int max_state_1_;  //!< max state of reactant A
-  int max_state_2_;  //!< max state of reactant B
-  int delta_1_;  //!< state change for reactant A
-  int delta_2_;  //!< state change for reactant B
-  real rate_;  //!< reaction rate
-  real cutoff_;  //!< reaction cutoff
-  real cutoff_sqr_;  //!< reaction cutoff^2
-  real min_cutoff_;  //!< min reaction cutoff
-  real min_cutoff_sqr_;  //!< min reaction cutoff^2
-  bool active_ ;  //!< is reaction active, by default true
+  int type_1_;//!< type of reactant A
+  int type_2_;//!< type of reactant B
+  int min_state_1_;//!< min state of reactant A
+  int min_state_2_;//!< min state of reactant B
+  int max_state_1_;//!< max state of reactant A
+  int max_state_2_;//!< max state of reactant B
+  int delta_1_;//!< state change for reactant A
+  int delta_2_;//!< state change for reactant B
+  bool active_;//!< is reaction active, by default true
 
-  bool intramolecular_;  //!< Allow to intramolecular reactions.
+  bool intramolecular_;//!< Allow to intramolecular reactions.
 
-  bool reverse_;  //!< If true then reaction will break a bond.
+  bool reverse_;//!< If true then reaction will break a bond.
 
-  shared_ptr<esutil::RNG> rng_;  //!< random number generator
-  shared_ptr<int> interval_;  //!< number of steps between reaction loops
-  shared_ptr<real> dt_;  //!< timestep from the integrator
-  bc::BC *bc_;  //!< boundary condition
+  shared_ptr<esutil::RNG> rng_;//!< random number generator
+  shared_ptr<int> interval_;//!< number of steps between reaction loops
+  shared_ptr<real> dt_;//!< timestep from the integrator
 
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_T1;
-  std::vector<shared_ptr<integrator::PostProcess> > post_process_T2;
+  bc::BC *bc_;//!< boundary condition
+
+  boost::unordered_map<longint, real> state_rate_T1;  //!< Map chemical state to rate.
+  boost::unordered_map<longint, real> state_rate_T2;  //!< Map chemical state to rate.
+
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;
+
+  shared_ptr<ReactionCutoff> reaction_cutoff_;
 };
 
-
+/*** Defines dissociation reactions.
+ *
+ * This special type of reaction, modeling follwoing reaction:
+ *
+ * \f[ A:B -> A + B \f]
+ *
+ * When this reaction is invoked, the list of bonds between particles
+ * A and B is scanned, the bond is removed when those conditions occures:
+ *  - distance between A and B is larger than specific cut_off distance,
+ *  - the \f[ k\Delta t \Phi < W\f] when \f[k\f] is a rate
+ *
+ * It is also possible to remove the bond without checking if the distance exceed the bond
+ * by defining only the diss_rate. By default, this rate is set to 0
+ */
 class DissociationReaction : public Reaction {
- public:
-  DissociationReaction() : Reaction() {
-    cutoff_ = 0.0;
-    cutoff_sqr_ = 0.0;
+public:
+  DissociationReaction():
+    Reaction() {
+    break_cutoff_ = 0.0;
+    break_cutoff_sqr_ = 0.0;
     reverse_ = true;
   }
 
-  DissociationReaction(
-      int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1,
-      int min_state_2, int max_state_2,
-      real break_cutoff,
-      real break_rate,
-      shared_ptr<FixedPairList> fpl
-      ) : Reaction(type_1, type_2, delta_1, delta_2,
-          min_state_1, max_state_1, min_state_2, max_state_2, break_cutoff, break_rate, fpl,
-          true), diss_rate_(0.0) {
+  DissociationReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int
+      max_state_1, int min_state_2, int max_state_2, real break_cutoff,
+      shared_ptr<FixedPairList> fpl):
+    Reaction(type_1, type_2, delta_1, delta_2,
+        min_state_1, max_state_1, min_state_2, max_state_2, fpl,
+        true), break_cutoff_(break_cutoff) {
     reverse_ = true;
+    break_cutoff_sqr_ = break_cutoff_ * break_cutoff_;
   }
+
   virtual ~DissociationReaction() { }
 
-  real diss_rate() { return diss_rate_; }
-  void set_diss_rate(real s) { diss_rate_ = s; }
+  void setDissRate(bool t1_t2, longint state, real rate) {
+    if (t1_t2)
+      diss_rate_T1[state] = rate;
+    else
+      diss_rate_T2[state] = rate;
+  }
 
-  bool IsValidPair(Particle& p1, Particle& p2, ParticlePair &correct_order);
+  real getDissRate(bool t1_t2, longint state) {
+    if (t1_t2)
+      return diss_rate_T1[state];
+    else
+      return diss_rate_T2[state];
+  }
+
+  python::list getAllDissRates(bool t1_t2) {
+    python::list ret_val;
+    if (t1_t2) {
+      for (boost::unordered_map<longint, real>::iterator it = diss_rate_T1.begin(); it != diss_rate_T1.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    } else {
+      for (boost::unordered_map<longint, real>::iterator it = diss_rate_T2.begin(); it != diss_rate_T2.end(); ++it) {
+        ret_val.append(python::make_tuple(it->first, it->second));
+      }
+      return ret_val;
+    }
+  };
+
+  void set_cutoff(real cutoff) {break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff * cutoff; }
+
+  real cutoff() {
+    return break_cutoff_;
+  }
+
+  bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
- protected:
+protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
- private:
-  real diss_rate_;  //!< Dissociation rate.
-
+private:
+  boost::unordered_map<longint, real> diss_rate_T1;  //!< Dissociation rate based on state.
+  boost::unordered_map<longint, real> diss_rate_T2;  //!< Dissociation rate based on state.
+  real break_cutoff_;
+  real break_cutoff_sqr_;
 };
-
-/** Implements the synthesis reaction
- *
- * The reaction is in the form \f[ A + B \rightarrow A-B \f]
- *
- * In addtion the residue id of A molecule is transfer to B molecule so that
- * they have the same residue id. Other properties of A and B molecules remain the same.
- *
-class SynthesisReaction : public integrator::Reaction {
- public:
-  SynthesisReaction(int type_1, int type_2, int delta_1, int delta_2,
-                    int min_state_1, int min_state_2, int max_state_1,
-                    int max_state_2, real cutoff, real rate,
-                    bool intramolecular)
-      : Reaction(type_1, type_2, delta_1, delta_2, min_state_1, min_state_2,
-                 max_state_1, max_state_2, cutoff, rate, intramolecular) {
-  }
-
-  static void registerPython();
-};
- */
-
-
-typedef boost::unordered_multimap<longint, std::pair<longint, int> > ReactionMap;
-typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
-typedef std::vector<boost::unordered_multimap<longint, longint> > RevReactionPairList;
-
-
-/** Reaction scheme for polymer growth and curing/crosslinking
-
- This extension enables the rate-controlled stochastic curing of polymer
- systems, either for chain growth of step growth, depending on the
- parameters.
-
- The variables type_1, type_2, min_state_1, min_state_2, max_state_1, max_state_2
- control the particles that enter the curing reaction
- \f[ A^a + B^b \rightarrow A^{a+deltaA}-B^{b+deltaB} \f]
- where A and B may possess additional bonds not shown.
-
- An extra bond is added between A and B whenever the state of A and B falls
- into the defined range by variables min/max state.
- The condition is as follow:
- \f[ a >= minStateA \land stateA < maxStateA \f]
- the same holds for the particle B. Both condition should match.
- In addition if the intramolecular property is set to true (by default) then
- the reaction only happend between heterogenous molecules.
-
- The reaction proceeds by testing for all possible (A,B) pairs and
- selects them only at a given rate. It works in parallel, by gathering
- first the successful pairs between neigboring CPUs and ensuring that
- each particle enters only in one new bond per reaction step.
- */
-class ChemicalReaction : public Extension {
- public:
-  ChemicalReaction(shared_ptr<System> system,
-                   shared_ptr<VerletList> _verletList,
-                   shared_ptr<storage::DomainDecomposition> _domdec);
-  ~ChemicalReaction();
-
-  void set_interval(int interval) {
-    *interval_ = interval;
-  }
-  int interval() {
-    return *interval_;
-  }
-
-  void Initialize();
-  void AddReaction(boost::shared_ptr<integrator::Reaction> reaction);
-
-  void React();
-
-  void SendMultiMap(integrator::ReactionMap &mm);  //NOLINT
-  void UniqueA(integrator::ReactionMap& potential_candidates);  //NOLINT
-  void UniqueB(integrator::ReactionMap& potential_candidates,  //NOLINT
-      integrator::ReactionMap& effective_candidates);  //NOLINT
-  void ApplyAR(std::set<Particle*>& modified_particles);
-  void ApplyDR(std::set<Particle*>& modified_particles);
-
-  /** Register this class so it can be used from Python. */
-  static void registerPython();
-
- private:
-  static LOG4ESPP_DECL_LOGGER(theLogger);
-  void UpdateGhost(const std::set<Particle*>& modified_particles);
-
-  real current_cutoff_;
-
-  shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
-  shared_ptr<real> dt_;  //!< Timestep from the integrator.
-
-  shared_ptr<storage::DomainDecomposition> domdec_;
-  shared_ptr<espressopp::interaction::Potential> potential_;
-  shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
-  shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
-
-  boost::signals2::connection initialize_;
-  boost::signals2::connection react_;
-
-  integrator::ReactionMap potential_pairs_;  //!< Container for (A,B) potential partners/
-  integrator::ReactionMap effective_pairs_;  //!< Container for (A,B) effective partners.
-
-  ReactionList reaction_list_;  //<! Container for reactions.
-  ReactionList reverse_reaction_list_;  //<! Container for reverse reactions.
-
-  void connect();
-  void disconnect();
-};
-
-
-
-
-}  // namespace integrator
-}  // namespace espressopp
+}// namespace integrator
+}// namespace espressopp
 
 #endif
