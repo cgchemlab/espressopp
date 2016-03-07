@@ -70,14 +70,6 @@ def define_particles(system, integrator, Npart):
     system.removeInteraction(0)
     verletlist.disconnect()
 
-    # Save coordinate file
-    dump_particles = []
-    for pid in range(Npart):
-        p = system.storage.getParticle(pid)
-        dump_particles.append((pid, p.pos, p.v, p.res_id, p.state))
-    particle_prop = ('id', 'pos', 'v', 'res_id', 'state')
-    cPickle.dump((particle_prop, dump_particles), open('eq_conf.pck', 'wb'))
-
 
 # Settings
 Npart              = 32724
@@ -174,6 +166,14 @@ if not has_eq:
     for step in range(warmup_nloops):
         integrator.run(warmup_isteps)
     print('Finished equilibration')
+    # Save coordinate file
+    dump_particles = []
+    for pid in range(Npart):
+        p = system.storage.getParticle(pid)
+        dump_particles.append((pid, p.pos, p.v, p.res_id, p.state))
+    particle_prop = ('id', 'pos', 'v', 'res_id', 'state')
+    cPickle.dump((particle_prop, dump_particles), open('eq_conf.pck', 'wb'))
+    print('Saved configuration to eq_conf.pck')
 
 integrator.resetTimers()
 integrator.step = 0
@@ -186,5 +186,5 @@ for step in range(equil_nloops):
     # print status information
 t1 = time.time()
 time_file = open('benchmark_data.csv', 'a+')
-time_file.write('{:e}\n'.format(t1 - t1))
+time_file.write('{:e}\n'.format(t1 - t0))
 print "finished"
