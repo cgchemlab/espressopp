@@ -139,7 +139,7 @@ namespace espressopp {
         globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
         // Throw signal onTupleAdded.
         onTupleAdded(pid1, pid2);
-        LOG4ESPP_INFO(theLogger, "added fixed pair to global pair list");
+        LOG4ESPP_INFO(theLogger, "added fixed pair " << pid1 << "-" << pid2 << " to global pair list");
       }
     }
     return returnVal;
