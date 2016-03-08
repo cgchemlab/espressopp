@@ -74,6 +74,9 @@ namespace espressopp {
           exceptionMessage.clear();
         }
 
+        // Throw signal before throwing exception.
+        onException();
+
         // reset exception counter for next time
 
         noExceptions = 0;

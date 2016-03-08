@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include "mpi.hpp"
+#include "boost/signals2.hpp"
 
 namespace espressopp {
   namespace esutil {
@@ -97,6 +98,8 @@ namespace espressopp {
       */
 
       void checkException();
+
+      boost::signals2::signal0 <void> onException;
 
     private:    
 

@@ -332,11 +332,40 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "received fixed pair list after receive particles");
   }
 
+  void FixedPairList::handleException(std::vector<int> &pids) {
+    std::vector<std::vector<int> > all_pids;
+    System& system = storage->getSystemRef();
+
+    mpi::all_gather(*(system.comm), pids, all_pids);
+
+    Particle *p;
+    int cpus = 0;
+    for (std::vector<std::vector<int> >::iterator itv = all_pids.begin();
+         itv != all_pids.end(); ++itv) {
+      for (std::vector<int>::iterator it = itv->begin(); it != itv->end();
+           ++it) {
+        p = storage->lookupLocalParticle(*it);
+        if (p) {
+          std::cout << "CPU: " << cpus << " " << *it << " " << *p << std::endl;
+        }
+      }
+      cpus++;
+    }
+
+  }
+
   void FixedPairList::onParticlesChanged() {
     LOG4ESPP_INFO(theLogger, "rebuild local bond list from global\n");
 
     System& system = storage->getSystemRef();
     esutil::Error err(system.comm);
+
+    std::vector<int> pids;
+
+    boost::signals2::connection sigOnException;
+    sigOnException = err.onException.connect(
+        (boost::bind(&FixedPairList::handleException, this, pids))
+    );
     
     this->clear();
     longint lastpid1 = -1;
@@ -349,6 +378,7 @@ namespace espressopp {
           std::stringstream msg;
           msg << "onParticlesChanged error. Fixed Pair List particle p1 " << it->first << " does not exists here.";
           msg << " pair: " << it->first << "-" << it->second;
+          pids.push_back(it->first);
           err.setException( msg.str() );
           //std::runtime_error(err.str());
         }
@@ -361,11 +391,14 @@ namespace espressopp {
           msg << " p1: " << *p1;
           msg << " pair: " << it->first << "-" << it->second;
           //std::runtime_error(err.str());
+          pids.push_back(it->second);
           err.setException( msg.str() );
       }
       this->add(p1, p2);
     }
     err.checkException();
+
+    sigOnException.disconnect();
     
     LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
   }

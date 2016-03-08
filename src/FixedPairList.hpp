@@ -80,6 +80,8 @@ namespace espressopp {
 
 	    int totalSize();
 
+	    void handleException(std::vector<int> &pids);
+
 	  	boost::signals2::signal2 <void, longint, longint> onTupleAdded;
 	    boost::signals2::signal2 <void, longint, longint> onTupleRemoved;
 
