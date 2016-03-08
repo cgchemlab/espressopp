@@ -53,9 +53,6 @@ class DynamicExcludeList {
   python::list getList();
   int getSize() { return exList->size(); }
 
-  bool getExListDirty() { return exListDirty; }
-  void setExListDirty(bool val);
-
   void observe_tuple(shared_ptr<FixedPairList> fpl);
   void observe_triple(shared_ptr<FixedTripleList> ftl);
   void observe_quadruple(shared_ptr<FixedQuadrupleList> fql);
@@ -68,7 +65,6 @@ class DynamicExcludeList {
   // Helper lists.
   std::vector<longint> exList_add;
   std::vector<longint> exList_remove;
-  bool exListDirty;
   void updateList();
 
   boost::signals2::connection aftIntV;
