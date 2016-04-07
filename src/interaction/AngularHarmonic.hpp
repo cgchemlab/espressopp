@@ -43,7 +43,7 @@ namespace espressopp {
       static void registerPython();
 
       AngularHarmonic() : K(0.0), theta0(0.0) { }
-      AngularHarmonic(real _K, real _theta0) : K(_K), theta0(_theta0) { }
+      AngularHarmonic(real _K, real _theta0) : K(_K), theta0(_theta0), initialized(true) { }
 
       void setK(real _K) { K = _K; }
       real getK() const { return K; }

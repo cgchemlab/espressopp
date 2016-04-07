@@ -42,7 +42,7 @@ namespace espressopp {
       static void registerPython();
 
       DihedralHarmonicCos() : K(0.0), phi0(0.0) { }
-      DihedralHarmonicCos(real _K, real _phi0) : K(_K), phi0(_phi0) {
+      DihedralHarmonicCos(real _K, real _phi0) : K(_K), phi0(_phi0), initialized(true) {
         cos_phi0 = cos(phi0);
         if(cos_phi0 < -1.0) cos_phi0 = -1.0;
         else if(cos_phi0 >  1.0) cos_phi0 =  1.0;
