@@ -81,7 +81,7 @@ def define_particles(system, integrator, Npart):
 
 
 # Settings
-Npart              = 32724
+Npart              = 3272
 rho                = 0.8442
 L                  = pow(Npart/rho, 1.0/3.0)
 box                = (L, L, L)

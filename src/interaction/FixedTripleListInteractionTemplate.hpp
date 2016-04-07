@@ -187,7 +187,6 @@ namespace espressopp {
         const Particle &p2 = *it->second;
         const Particle &p3 = *it->third;
         //const Potential &potential = getPotential(p1.type(), p2.type());
-        const espressopp::bc::BC& bc = *getSystemRef().bc;
         Real3D dist12, dist32;
         bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
         bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
@@ -232,34 +231,6 @@ namespace espressopp {
       LOG4ESPP_INFO(theLogger, "compute the virial tensor of the triples");
 
       std::cout << "Warning! At the moment IK computeVirialTensor for fixed triples does'n work"<<std::endl;
-      
-      /*
-      Tensor wlocal(0.0);
-      const bc::BC& bc = *getSystemRef().bc;
-      for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it){
-        const Particle &p1 = *it->first;
-        const Particle &p2 = *it->second;
-        const Particle &p3 = *it->third;
-        
-        Real3D p2pos = p2.position();
-        
-        if(  (p2pos[0]>xmin && p2pos[0]<xmax && 
-              p2pos[1]>ymin && p2pos[1]<ymax && 
-              p2pos[2]>zmin && p2pos[2]<zmax) ){
-          Real3D r12, r32;
-          bc.getMinimumImageVectorBox(r12, p1.position(), p2.position());
-          bc.getMinimumImageVectorBox(r32, p3.position(), p2.position());
-          Real3D force12, force32;
-          potential->_computeForce(force12, force32, r12, r32);
-          wlocal += Tensor(r12, force12) + Tensor(r32, force32);
-        }
-      }
-      
-      // reduce over all CPUs
-      Tensor wsum(0.0);
-      boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal,6, (double*)&wsum, std::plus<double>());
-      w += wsum;
-       */
     }
     
     template < typename _AngularPotential > inline void
@@ -274,12 +245,7 @@ namespace espressopp {
     inline real
     FixedTripleListInteractionTemplate< _AngularPotential >::
     getMaxCutoff() {
-      /*real cutoff = 0.0;
-      for (int i = 0; i < ntypes; i++) {
-        for (int j = 0; j < ntypes; j++) {
-          cutoff = std::max(cutoff, getPotential(i, j).getCutoff());
-        }
-      }*/
+
       return potential->getCutoff();
     }
   }

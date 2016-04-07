@@ -26,6 +26,7 @@
 #include "InterpolationAkima.hpp"
 #include "InterpolationCubic.hpp"
 #include "FixedTripleListInteractionTemplate.hpp"
+#include "FixedTripleListTypesInteractionTemplate.hpp"
 
 namespace espressopp {
     namespace interaction {
@@ -52,6 +53,8 @@ namespace espressopp {
 
         typedef class FixedTripleListInteractionTemplate <TabulatedAngular>
                 FixedTripleListTabulatedAngular;
+        typedef class FixedTripleListTypesInteractionTemplate<TabulatedAngular>
+            FixedTripleListTypesTabulatedAngular;
 
         //////////////////////////////////////////////////
         // REGISTRATION WITH PYTHON
@@ -70,6 +73,14 @@ namespace espressopp {
                       shared_ptr <TabulatedAngular> >())
                 .def("setPotential", &FixedTripleListTabulatedAngular::setPotential)
                 .def("getFixedTripleList", &FixedTripleListTabulatedAngular::getFixedTripleList);
+
+            class_< FixedTripleListTypesTabulatedAngular, bases< Interaction > >
+                ("interaction_FixedTripleListTypesTabulatedAngular",
+                 init< shared_ptr<System>, shared_ptr<FixedTripleList> >())
+                .def("setPotential", &FixedTripleListTypesTabulatedAngular::setPotential)
+                .def("getPotential", &FixedTripleListTypesTabulatedAngular::getPotentialPtr)
+                .def("setFixedPairList", &FixedTripleListTypesTabulatedAngular::setFixedTripleList)
+                .def("getFixedPairList", &FixedTripleListTypesTabulatedAngular::getFixedTripleList);
         }
         
     } // ns interaction

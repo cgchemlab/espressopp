@@ -164,6 +164,7 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
 
 
 void TopologyManager::newEdge(longint pid1, longint pid2) {
+  /// Updates graph.
   if (graph_->count(pid1) == 0)
     graph_->insert(std::make_pair(pid1, new std::set<longint>()));
   if (graph_->count(pid2) == 0)

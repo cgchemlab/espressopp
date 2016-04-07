@@ -31,6 +31,7 @@
 #include "VerletListHadressInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
+#include "FixedPairListTypesInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -62,6 +63,7 @@ namespace espressopp {
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
+    typedef class FixedPairListTypesInteractionTemplate<Tabulated> FixedPairListTypesTabulated;
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
@@ -121,8 +123,15 @@ namespace espressopp {
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
-        
-        
+
+      class_<FixedPairListTypesTabulated, bases<Interaction> >
+          ("interaction_FixedPairListTypesTabulated",
+           init< shared_ptr<System>, shared_ptr<FixedPairList> >())
+          .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress> >())
+          .def("setPotential", &FixedPairListTypesTabulated::setPotential)
+          .def("getPotential", &FixedPairListTypesTabulated::getPotentialPtr)
+          .def("setFixedPairList", &FixedPairListTypesTabulated::setFixedPairList)
+          .def("getFixedPairList", &FixedPairListTypesTabulated::getFixedPairList);
     }
     
   }

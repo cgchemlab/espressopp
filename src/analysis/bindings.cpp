@@ -69,6 +69,7 @@
 #include "PotentialEnergy.hpp"
 #include "KineticEnergy.hpp"
 #include "NFixedListEntries.hpp"
+#include "ChemicalConversion.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -121,6 +122,7 @@ namespace espressopp {
       PotentialEnergy::registerPython();
       KineticEnergy::registerPython();
       NFixedPairListEntries::registerPython();
+          ChemicalConversion::registerPython();
     }
   }
 }

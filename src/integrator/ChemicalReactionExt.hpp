@@ -127,6 +127,7 @@ private:
 
   void updateGhost(const std::set<Particle *> &modified_particles);
 
+
   real current_cutoff_;  //!< Maximal cutoff use for VerletList.
 
   shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
