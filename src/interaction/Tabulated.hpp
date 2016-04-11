@@ -64,7 +64,6 @@ namespace espressopp {
                 setShift(0.0);
                 setCutoff(infinity);
               initialized = true;
-                //std::cout << "using tabulated potential " << filename << "\n";
             }
          
             Tabulated(int itype, const char* filename, real cutoff) {
@@ -73,7 +72,6 @@ namespace espressopp {
                 setShift(0.0);
                 setCutoff(cutoff);
               initialized = true;
-                //std::cout << "using tabulated potential " << filename << "\n";
             }
          
             /** Setter for the interpolation type */

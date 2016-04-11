@@ -44,7 +44,9 @@ class DihedralRB : public DihedralPotentialTemplate< DihedralRB > {
 
   DihedralRB() : K0(0.0), K1(0.0), K2(0.0), K3(0.0), K4(0.0), K5(0.0) { }
   DihedralRB(real _K0, real _K1, real _K2, real _K3, real _K4, real _K5)
-      : K0(_K0), K1(_K1), K2(_K2), K3(_K3), K4(_K4), K5(_K5), initialized(true) { }
+      : K0(_K0), K1(_K1), K2(_K2), K3(_K3), K4(_K4), K5(_K5) {
+    initialized = true;
+  }
 
   real _computeEnergyRaw(real _phi) const {
     // _phi should be in radians

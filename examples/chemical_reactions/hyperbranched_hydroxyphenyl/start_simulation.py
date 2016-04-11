@@ -28,8 +28,8 @@ import logging
 import random
 import shutil
 
-import numpy as np
-import gromacs_topology
+import gromacs_topology_new
+import files_io
 import reaction_parser
 import tools_sim
 
@@ -72,16 +72,20 @@ def main():  #NOQA
             print('Activating logger {}'.format(s))
             logging.getLogger(s.strip()).setLevel(logging.DEBUG)
 
-    table_groups = map(str.strip, args.table_groups.split(','))
     lj_cutoff = args.lj_cutoff
     cg_cutoff = args.cg_cutoff
     max_cutoff = max([lj_cutoff, cg_cutoff])
     dt = args.dt
 
     time0 = time.time()
-    input_conf = gromacs_topology.read(args.conf, args.top)
 
-    box = (input_conf.Lx, input_conf.Ly, input_conf.Lz)
+    gt = gromacs_topology_new.GromacsTopology(args.top)
+    gt.read()
+
+    input_conf = files_io.GROFile(args.conf)
+    input_conf.read()
+
+    box = input_conf.box
     print('Setup simulation...')
 
     # Tune simulation parameter according to arguments
@@ -98,62 +102,22 @@ def main():  #NOQA
     print('Skin: {}'.format(skin))
     print('RNG Seed: {}'.format(rng_seed))
 
-    part_prop, all_particles = gromacs_topology.genParticleList(
-        input_conf, use_velocity=True, use_charge=True)
-    print('Reads {} particles with properties {}'.format(len(all_particles), part_prop))
+    part_prop, particle_list = tools_sim.genParticleList(input_conf, gt)
+    print('Reads {} particles with properties {}'.format(len(particle_list), part_prop))
 
-    particle_list = []
-    if 'v' not in part_prop:
-        print('Generating velocities from Maxwell-Boltzmann distribution for T={}'.format(
-            args.temperature))
-        part_prop.append('v')
-        vx, vy, vz = espressopp.tools.velocities.gaussian(
-            args.temperature, len(all_particles), [x.mass for x in all_particles],
-            kb=kb)
-        ppid = 0
-        for p in all_particles:
-            t = list(p)
-            t.append(espressopp.Real3D(vx[ppid], vy[ppid], vz[ppid]))
-            particle_list.append(t)
-    else:
-        particle_list = map(list, all_particles)
-
-    if args.coord:
-        import h5py
-        print("Reading coordinates from {}".format(args.coord))
-        h5coord = h5py.File(args.coord)
-        pos = h5coord['/particles/{}/position/value'.format(h5md_group)][args.coord_frame]
-        try:
-            ids = h5coord['/particles/{}/id/value'.format(h5md_group)][args.coord_frame]
-            has_ids = True
-        except:
-            has_ids = False
-        pos = h5coord['/particles/{}/position/value'.format(h5md_group)][args.coord_frame]
-        if has_ids:
-            pos = sort_trajectory(pos, ids)
-
-        try:
-            species = h5coord['/particles/{}/species/value'.format(h5md_group)][args.coord_frame]
-        except:
-            species = h5coord['/particles/{}/species'.format(h5md_group)]
-        if has_ids:
-            species = sort_trajectory(species, ids)
-        try:
-            box = np.array(
-                h5coord['/particles/{}/box/edges/value'.format(h5md_group)][args.coord_frame])
-        except:
-            box = np.array(h5coord['/particles/{}/box/edges'.format(h5md_group)])
-        valid_species = {x[1] for x in all_particles}
-        ppid = 0
-        for pid, p in enumerate(pos):
-            if species[pid] in valid_species:
-                particle_list[ppid][2] = espressopp.Real3D(p)
-                ppid += 1
-        h5coord.close()
-
-    density = sum(input_conf.masses)*1.6605402 / (box[0] * box[1] * box[2])
+    density = sum(x[3] for x in particle_list)*1.6605402 / (box[0] * box[1] * box[2])
     print('Density: {} kg/m^3'.format(density))
     print('Box: {} nm'.format(box))
+
+    # Generate velocity.
+    print('Generating velocities from Maxwell-Boltzmann distribution T={}'.format(
+        args.temperature))
+    vx, vy, vz = espressopp.tools.velocities.gaussian(
+        args.temperature, len(particle_list), [x[3]*1.6605402 for x in particle_list],
+        kb=kb)
+    part_prop.append('v')
+    for i, p in enumerate(particle_list):
+        p.append(espressopp.Real3D(vx[i], vy[i], vz[i]))
 
     system = espressopp.System()
     system.rng = espressopp.esutil.RNG(rng_seed)
@@ -178,9 +142,8 @@ def main():  #NOQA
     system.storage.decompose()
 
 # In the case of butane is very easy to do
-    dynamic_exclusion_list = espressopp.DynamicExcludeList(integrator, input_conf.exclusions)
-
-    print('Excluded pairs from LJ interaction: {}'.format(len(input_conf.exclusions)))
+    dynamic_exclusion_list = espressopp.DynamicExcludeList(integrator, gt.exclusions)
+    print('Excluded pairs from LJ interaction: {}'.format(len(gt.exclusions)))
 
 # Exclude all bonded interaction from the lennard jones
     verletlist = espressopp.VerletList(
@@ -190,30 +153,9 @@ def main():  #NOQA
         )
 
 # define the potential, interaction_id = 0
-    vl_interaction = gromacs_topology.setLennardJonesInteractions(
-        system, input_conf.defaults, input_conf.atomtypeparams,
-        verletlist, lj_cutoff, input_conf.nonbond_params, table_groups=table_groups)
-    gromacs_topology.setTabulatedInteractions(
-        system, input_conf.atomtypeparams, vl=verletlist,
-        cutoff=cg_cutoff, interaction=vl_interaction, table_groups=table_groups)
-    bondedinteractions = gromacs_topology.setBondedInteractions(
-        system, input_conf.bondtypes, input_conf.bondtypeparams)
-    angleinteractions = gromacs_topology.setAngleInteractions(
-        system, input_conf.angletypes, input_conf.angletypeparams)
-    dihedralinteractions = gromacs_topology.setDihedralInteractions(
-        system, input_conf.dihedraltypes, input_conf.dihedraltypeparams)
-    pairinteractions = gromacs_topology.setPairInteractions(
-        system, input_conf.pairtypes, input_conf.pairtypeparams, lj_cutoff)
-    gromacs_topology.setCoulombInteractions(
-        system, verletlist, lj_cutoff, input_conf.atomtypeparams,
-        epsilon1=args.coulomb_epsilon1,
-        epsilon2=args.coulomb_epsilon2,
-        kappa=args.coulomb_kappa)
-
-    print('Bonds: {}'.format(sum(len(x) for x in input_conf.bondtypes.values())))
-    print('Angles: {}'.format(sum(len(x) for x in input_conf.angletypes.values())))
-    print('Dihedrals: {}'.format(sum(len(x) for x in input_conf.dihedraltypes.values())))
-    print('Pairs: {}'.format(sum(len(x) for x in input_conf.pairtypes.values())))
+    print('Bonds: {}'.format(len(gt.bonds)))
+    print('Angles: {}'.format(len(gt.angles)))
+    print('Dihedrals: {}'.format(len(gt.dihedrals)))
 
 # Define the thermostat
     temperature = args.temperature*kb
@@ -251,27 +193,46 @@ def main():  #NOQA
     print("Decomposing now ...")
     system.storage.decompose()
 
+    # Set potentials.
+    cr_observs = tools_sim.setNonbondedInteractions(system, gt, verletlist, lj_cutoff, cg_cutoff)
+    static_fpl, b_interaction = tools_sim.setBondInteractions(system, gt)
+    static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
+    #static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
+
+    print('Set Dynamic Exclusion lists.')
+    dynamic_exclusion_list.observe_tuple(static_fpl)
+    dynamic_exclusion_list.observe_triple(static_ftl)
+    #dynamic_exclusion_list.observe_quadruple(static_fql)
+
+    print('Set topology manager')
+    topology_manager = espressopp.integrator.TopologyManager(system)
+    topology_manager.rebuild()
+    topology_manager.observe_tuple(static_fpl)
+    topology_manager.initialize_topology()
+    topology_manager.register_tuple(static_fpl, 0, 0)
+    for t in gt.angleparams:
+        topology_manager.register_triplet(static_ftl, *t)
+    #for t in gt.dihedralparams:
+    #    topology_manager.register_quadruplet(static_fql, *t)
+    integrator.addExtension(topology_manager)
+
     # Set chemical reactions
     fpls = []
     if args.reactions:
         print('Set chemical reactions from: {}'.format(args.reactions))
         reaction_config = reaction_parser.parse_config(args.reactions)
-        ar, fpls, rs = reaction_parser.setup_reactions(
-            system, verletlist, input_conf, reaction_config)
+        sc = reaction_parser.SetupReactions(
+            system, verletlist, gt, topology_manager, reaction_config)
+
+        ar, fpls = sc.setup_reactions()
         output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
         print('Save copy of reaction config to: {}'.format(output_reaction_config))
         shutil.copyfile(args.reactions, output_reaction_config)
+        #integrator.addExtension(ar)
 
-    # Observe tuple lists
-    print('Setup DynamicExcludeList')
     for f in fpls:
+        topology_manager.observe_tuple(f)
         dynamic_exclusion_list.observe_tuple(f)
-    tools_sim.setDynamicExcludeList(
-        dynamic_exclusion_list,
-        bondedinteractions,
-        angleinteractions,
-        dihedralinteractions,
-        pairinteractions)
 
     energy_file = '{}_energy_{}.csv'.format(args.output_prefix, rng_seed)
     print('Energy saved to: {}'.format(energy_file))
@@ -288,93 +249,29 @@ def main():  #NOQA
         print('System analysis: adding {}'.format(label))
         system_analysis.add_observable(
             label, espressopp.analysis.PotentialEnergy(system, interaction))
-    for ff in fpls:
+    for (cr_type, _), obs in cr_observs.items():
         system_analysis.add_observable(
-            'fpl', espressopp.analysis.NFixedPairListEntries(system, ff))
+            'cr_{}'.format(cr_type), obs)
+    for fidx, f in enumerate(fpls):
+        system_analysis.add_observable(
+            'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
+    system_analysis.add_observable(
+        'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
+    system_analysis.add_observable(
+        'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
+    #system_analysis.add_observable(
+    #    'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
+
     ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, args.energy_collect)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
 
-    print('Setting TopologyManager')
-    topology_manager = espressopp.integrator.TopologyManager(system)
-    tools_sim.setTopologyManager(
-        input_conf, topology_manager, bondedinteractions, angleinteractions,
-        dihedralinteractions, pairinteractions)
-
-    topology_manager.rebuild()
-    for f in fpls:
-        topology_manager.observe_tuple(f)
-
-    topology_manager.initialize_topology()
-    integrator.addExtension(topology_manager)
-
-    h5md_output_file = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.output_file)
-    print('Save trajectory to: {}'.format(h5md_output_file))
-    traj_file = espressopp.io.DumpH5MD(
-        system, h5md_output_file,
-        group_name=h5md_group,
-        static_box=False,
-        author='Jakub Krajniak',
-        email='jkrajniak@gmail.com',
-        store_species=args.store_species,
-        store_state=args.store_state,
-        store_lambda=args.store_lambda)
-
-    traj_file.set_parameters({
-        'temperature': args.temperature})
-
-    print('Set topology writer')
-    dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
-    for i, f in enumerate(fpls):
-        dump_topol.observe_tuple(f, 'chem_fpl_{}'.format(i))
-
-    # Generates topology based on fixed pair lists.
-    for bid, bi in bondedinteractions.items():
-        f = bi.getFixedPairList()
-        dump_topol.add_static_tuple(f, 'fpl_{}'.format(bid))
-
-    dump_topol.dump()
-    dump_topol.update()
-    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 10)
-    integrator.addExtension(ext_dump)
-
-    print('Reset total velocity')
-    total_velocity = espressopp.analysis.TotalVelocity(system)
-    total_velocity.reset()
-
-    integrator.step = args.initial_step
-    traj_file.dump(integrator.step, integrator.step*dt)
-
-    k_trj_collect = int(math.ceil(float(args.trj_collect) / integrator_step))
-    k_energy_collect = int(math.ceil(float(args.energy_collect) / integrator_step))
-
-    print('Running simulation for {} steps'.format(sim_step*integrator_step))
-    print('Collect trajectory every {} step'.format(k_trj_collect*integrator_step))
-    print('Collect energy every {} step'.format(k_energy_collect*integrator_step))
-
-    system_analysis.dump()
+    print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.info()
-
-    if args.interactive:
-        import IPython
-        IPython.embed()
     for k in range(sim_step):
         integrator.run(integrator_step)
-        dump_topol.update()
-        if k == args.start_ar and args.reactions:
-            print('Activating ChemicalReaction')
-            integrator.addExtension(ar)
-        if k_energy_collect > 0 and k % k_energy_collect == 0:
-            system_analysis.info()
-        if k_trj_collect > 0 and k % k_trj_collect == 0:
-            int_step = args.initial_step + k*integrator_step
-            traj_file.dump(int_step, int_step*dt)
-        if k_trj_collect > 0 and k % 100 == 0:
-            traj_file.flush()
-    else:
-        dump_topol.update()
-        traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
-        traj_file.close()
+        system_analysis.info()
+        print dynamic_exclusion_list.size
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)

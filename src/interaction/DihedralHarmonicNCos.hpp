@@ -61,11 +61,12 @@ namespace espressopp {
       DihedralHarmonicNCos(real _K, real _phi0, int _multiplicity):
         K(_K),
         phi0(_phi0),
-        multiplicity(_multiplicity), initialized(true) {
+        multiplicity(_multiplicity){
 
         cos_phi0 = cos(phi0);
         if(cos_phi0 < -1.0) cos_phi0 = -1.0;
         else if(cos_phi0 >  1.0) cos_phi0 =  1.0;
+        initialized = true;
       }
 
       void setK(real _K) { K = _K; }

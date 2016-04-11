@@ -122,7 +122,9 @@ namespace espressopp {
       PotentialEnergy::registerPython();
       KineticEnergy::registerPython();
       NFixedPairListEntries::registerPython();
-          ChemicalConversion::registerPython();
+      NFixedTripleListEntries::registerPython();
+      NFixedQuadrupleListEntries::registerPython();
+      ChemicalConversion::registerPython();
     }
   }
 }

@@ -58,7 +58,7 @@ from espressopp.interaction.DihedralPotential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_TabulatedDihedral, \
                         interaction_FixedQuadrupleListTabulatedDihedral, \
-                        interaction_FixedQuadrupleListTypesTabulatedAngular
+                        interaction_FixedQuadrupleListTypesTabulatedDihedral
 
 
 class TabulatedDihedralLocal(DihedralPotentialLocal, interaction_TabulatedDihedral):
@@ -78,26 +78,26 @@ class FixedQuadrupleListTabulatedDihedralLocal(InteractionLocal, interaction_Fix
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotential(self, type1, type2, potential)
 
-class FixedQuadrupleListTypesTabulatedAngularLocal(InteractionLocal, interaction_FixedQuadrupleListTypesTabulatedAngular):
+class FixedQuadrupleListTypesTabulatedDihedralLocal(InteractionLocal, interaction_FixedQuadrupleListTypesTabulatedDihedral):
     def __init__(self, system, vl):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_FixedQuadrupleListTypesTabulatedAngular, system, vl)
+            cxxinit(self, interaction_FixedQuadrupleListTypesTabulatedDihedral, system, vl)
 
-    def setPotential(self, type1, type2, type3, potential):
+    def setPotential(self, type1, type2, type3, type4, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.setPotential(self, type1, type2, type3, potential)
+            self.cxxclass.setPotential(self, type1, type2, type3, type4, potential)
 
     def getPotential(self, type1, type2, type3):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getPotential(self, type1, type2, type3)
 
-    def setFixedPairList(self, fixedpairlist):
+    def setFixedQuadrupleList(self, fixedlist):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.setFixedPairList(self, fixedpairlist)
+            self.cxxclass.setFixedQuadrupleList(self, fixedlist)
 
-    def getFixedPairList(self):
+    def getFixedQuadrupleList(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            return self.cxxclass.getFixedPairList(self)
+            return self.cxxclass.getFixedQuadrupleList(self)
 
 if pmi.isController:
     class TabulatedDihedral(DihedralPotential):
@@ -114,9 +114,9 @@ if pmi.isController:
             pmicall = ['setPotential', 'getFixedQuadrupleList']
             )
 
-    class FixedQuadrupleListTypesTabulatedAngular(Interaction):
+    class FixedQuadrupleListTypesTabulatedDihedral(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.interaction.FixedQuadrupleListTypesTabulatedAngularLocal',
-            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+            cls =  'espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedralLocal',
+            pmicall = ['setPotential','getPotential','setFixedQuadrupleList','getFixedQuadrupleList']
         )

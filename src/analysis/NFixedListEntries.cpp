@@ -21,15 +21,13 @@
 #include "python.hpp"
 #include "NFixedListEntries.hpp"
 #include "FixedPairList.hpp"
+#include "FixedTripleList.hpp"
+#include "FixedQuadrupleList.hpp"
 
 using namespace espressopp;  //NOLINT
 
 namespace espressopp {
 namespace analysis {
-
-real NFixedPairListEntries::compute_real() const {
-  return fpl_->totalSize();
-}
 
 void NFixedPairListEntries::registerPython() {
   using namespace espressopp::python;  //NOLINT
@@ -38,5 +36,22 @@ void NFixedPairListEntries::registerPython() {
         init< shared_ptr<System>, shared_ptr<FixedPairList> >())
     .add_property("value", &NFixedPairListEntries::compute_real);
 }
+
+void NFixedTripleListEntries::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+  class_<NFixedTripleListEntries, bases<Observable> >
+      ("analysis_NFixedTripleListEntries",
+       init< shared_ptr<System>, shared_ptr<FixedTripleList> >())
+      .add_property("value", &NFixedTripleListEntries::compute_real);
+}
+
+void NFixedQuadrupleListEntries::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+  class_<NFixedQuadrupleListEntries, bases<Observable> >
+      ("analysis_NFixedQuadrupleListEntries",
+       init< shared_ptr<System>, shared_ptr<FixedQuadrupleList> >())
+      .add_property("value", &NFixedQuadrupleListEntries::compute_real);
+}
+
 }  // end namespace analysis
 }  // end namespace espressopp

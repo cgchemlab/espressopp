@@ -17,11 +17,11 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-*********************************************
+******************************************
 **espressopp.analysis.ChemicalConversion**
-*********************************************
+******************************************
 
-The object that computes the number of entries in FixedPairList.
+The object that computes the number of particles of given type.
 
 .. function:: espressopp.analysis.ChemicalConversion(system, particle_type, total_count)
 

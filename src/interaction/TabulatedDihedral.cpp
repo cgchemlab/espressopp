@@ -57,7 +57,7 @@ namespace espressopp {
             FixedQuadrupleListTabulatedDihedral;
 
         typedef class FixedQuadrupleListTypesInteractionTemplate<TabulatedDihedral>
-            FixedQuadrupleListTypesTabulatedAngular;
+            FixedQuadrupleListTypesTabulatedDihedral;
 
         //////////////////////////////////////////////////
         // REGISTRATION WITH PYTHON
@@ -67,7 +67,9 @@ namespace espressopp {
             
             class_ <TabulatedDihedral, bases <DihedralPotential> >
                 ("interaction_TabulatedDihedral", init <int, const char*>())
-                .add_property("filename", &TabulatedDihedral::getFilename, &TabulatedDihedral::setFilename);
+                .add_property("filename", &TabulatedDihedral::getFilename, &TabulatedDihedral::setFilename)
+                .def_pickle(TabulatedDihedral_pickle())
+                ;
             
             class_ <FixedQuadrupleListTabulatedDihedral, bases <Interaction> >
                 ("interaction_FixedQuadrupleListTabulatedDihedral",
@@ -77,13 +79,13 @@ namespace espressopp {
                 .def("setPotential", &FixedQuadrupleListTabulatedDihedral::setPotential)
                 .def("getFixedQuadrupleList", &FixedQuadrupleListTabulatedDihedral::getFixedQuadrupleList);
 
-            class_< FixedQuadrupleListTypesTabulatedAngular, bases< Interaction > >
-                ("interaction_FixedQuadrupleListTypesTabulatedAngular",
+            class_< FixedQuadrupleListTypesTabulatedDihedral, bases< Interaction > >
+                ("interaction_FixedQuadrupleListTypesTabulatedDihedral",
                  init< shared_ptr<System>, shared_ptr<FixedQuadrupleList> >())
-                .def("setPotential", &FixedQuadrupleListTypesTabulatedAngular::setPotential)
-                .def("getPotential", &FixedQuadrupleListTypesTabulatedAngular::getPotentialPtr)
-                .def("setFixedPairList", &FixedQuadrupleListTypesTabulatedAngular::setFixedQuadrupleList)
-                .def("getFixedPairList", &FixedQuadrupleListTypesTabulatedAngular::getFixedQuadrupleList);
+                .def("setPotential", &FixedQuadrupleListTypesTabulatedDihedral::setPotential)
+                .def("getPotential", &FixedQuadrupleListTypesTabulatedDihedral::getPotentialPtr)
+                .def("setFixedQuadrupleList", &FixedQuadrupleListTypesTabulatedDihedral::setFixedQuadrupleList)
+                .def("getFixedQuadrupleList", &FixedQuadrupleListTypesTabulatedDihedral::getFixedQuadrupleList);
 
         }
         

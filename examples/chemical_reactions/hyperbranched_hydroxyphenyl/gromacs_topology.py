@@ -1,3 +1,5 @@
+#  Copyright (C) 2015-2016
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #  Copyright (C) 2012,2013
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
@@ -21,7 +23,7 @@
 # The file was modyfied to support non-standard entries that appears in gromacs topology
 # file.
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 import espressopp
 from topology_helper import *
 
@@ -136,6 +138,7 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
         nonbonds = {}
 
         atnum_attype = {}
+        attypeid_atnum = {}
         wildcard_type = None  # Use for dihedrals. Special name 'X'.
 
         molecules=[]
@@ -193,6 +196,7 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
                 continue
 
             if readattypes:
+                atsymbol = ''
                 if line.strip() == "" or '[' in line: # end of atomtypes section
                     readattypes = False
                     atomtypes.update({'X': a})
@@ -212,8 +216,7 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
                             'eps': float(fields[7])
                             }
                         atnum_attype[attypename] = fields[1]
-                        if len(fields) == 9:
-                            tmpprop['state'] = int(fields[8])
+                        atsymbol = fields[1]
                     elif len(fields)==7:
                         tmpprop={
                                 "atnum":int(fields[1]),
@@ -223,8 +226,8 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
                                 "particletype":fields[4],
                                 "sig":float(fields[5]),
                                 "eps":float(fields[6])}
-                        if len(fields) == 8:
-                            tmpprop['state'] = int(fields[7])
+                        print tmpprop
+                        atsymbol = fields[0]
                     elif len(fields) == 8:
                         tmpprop = {
                             'atnum': fields[1],
@@ -233,8 +236,7 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
                             'sig': float(fields[6]),
                             'eps': float(fields[7])
                             }
-                        if len(fields) == 9:
-                            tmpprop['state'] = int(fields[8])
+                        atsymbol = fields[1]
                     else:
                         print('AA other: {}'.format(fields))
                         tmpprop={
@@ -245,12 +247,12 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
                             "sig": float(fields[4]),
                             "eps":float(fields[5])
                         }
-                        if len(fields) == 7:
-                            tmpprop['state'] = int(fields[6])
+                        atsymbol = fields[1]
 
                 if attypename not in atomtypes:
                     atomtypes.update({attypename:a}) # atomtypes is used when reading the "atoms" section
                     atomtypeparams.update({a:tmpprop})
+                    attypeid_atnum[a] = atsymbol
                     a += 1
             
             if 'atomstate' in line:
@@ -442,17 +444,20 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
             # find and store bonds
             bonds = storeBonds(f, types, bondtypes, bondtypeparams, bonds,
                                num_atoms_molecule, num_molecule_copies,
-                               molstartindex, exclusions, nrexcl, doRegularExcl)
+                               molstartindex, exclusions, nrexcl,
+                               attypeid_atnum,
+                               doRegularExcl)
 
             # find and store angles
             angles = storeAngles(f, types, angletypes, angletypeparams, angles,
-                                 num_atoms_molecule, num_molecule_copies, molstartindex)
+                                 num_atoms_molecule, num_molecule_copies, molstartindex,
+                                 attypeid_atnum)
 
             # find and store dihedrals
             dihedrals = storeDihedrals(f, types, dihedraltypes, dihedraltypeparams, dihedrals,
                                        num_atoms_molecule, num_molecule_copies,
                                        molstartindex, atomtypeparams,
-                                       wildcard_type)
+                                       wildcard_type, attypeid_atnum)
 
             pairs_1_4 = storePairs(f, defaults, types, pairtypeparams, use_pairtypeparams,
                                    atomtypeparams, pairs_1_4,
@@ -465,12 +470,12 @@ def read(gro_file, top_file="", doRegularExcl=True, defines=None):
             res_idx += num_molecule_copies
 
     # Update typeparams
-    use_keys = [s[0] for s in bonds]
-    bondtypeparams = {k: v for k, v in bondtypeparams.iteritems() if k in use_keys}
-    use_keys = [s[0] for s in angles]
-    angletypeparams = {k: v for k, v in angletypeparams.iteritems() if k in use_keys}
-    use_keys = [s[0] for s in dihedrals]
-    dihedraltypeparams = {k: v for k, v in dihedraltypeparams.iteritems() if k in use_keys}
+    # use_keys = [s[0] for s in bonds]
+    # bondtypeparams = {k: v for k, v in bondtypeparams.iteritems() if k in use_keys}
+    # use_keys = [s[0] for s in angles]
+    # angletypeparams = {k: v for k, v in angletypeparams.iteritems() if k in use_keys}
+    # use_keys = [s[0] for s in dihedrals]
+    # dihedraltypeparams = {k: v for k, v in dihedraltypeparams.iteritems() if k in use_keys}
 
     params = []
 
@@ -710,7 +715,8 @@ def storePairs(f, defaults, types, pairtypeparams,
     return pairs
 
 def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
-    num_molecule_copies, molstartindex, exclusions, nregxcl, doRegularExcl=True):
+    num_molecule_copies, molstartindex, exclusions, nregxcl, attypeid_atnum,
+               doRegularExcl=True):
     line = ''
     bonds_tmp = []
     top = False
@@ -742,7 +748,11 @@ def storeBonds(f, types, bondtypes, bondtypeparams, bonds, num_atoms_molecule,\
                     t1, t2 = types[pid1-1], types[pid2-1]
                     if t1 > t2:
                         t1, t2 = t2, t1
-                    bdtypeid = bondtypes[t1][t2]
+                    try:
+                        bdtypeid = bondtypes[t1][t2]
+                    except KeyError:
+                        t1, t2 = attypeid_atnum[t1], attypeid_atnum[t2]
+                        bdtypeid = bondtypes[t1][t2]
                 else:
                     temptype = ParseBondTypeParam(line)
                     bdtypeid = FindType(temptype, bondtypeparams)
@@ -785,7 +795,8 @@ def storeExclusions(exclusions, nrexcl, bonds, angles, dihedrals):
             for t in a:
                 exclusions.add(tuple(sorted([t[0], t[-1]])))
 
-def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecule, num_molecule_copies, molstartindex):
+def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecule, num_molecule_copies, molstartindex,
+                attypeid_atnum):
     line = ''
     angles_tmp = []
     pos = f.tell()
@@ -813,6 +824,10 @@ def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecul
                 pid1, pid2, pid3 = map(int, tmp[0:3])
                 if lookup:
                     t1, t2, t3 = types[pid1-1], types[pid2-1], types[pid3-1]
+                    if t1 not in angletypes and t3 not in angletypes:
+                        t1 = attypeid_atnum[t1]
+                        t2 = attypeid_atnum[t2]
+                        t3 = attypeid_atnum[t3]
                     try:
                         typeid = angletypes[t1][t2][t3]
                     except KeyError:
@@ -846,7 +861,7 @@ def storeAngles(f, types, angletypes, angletypeparams, angles, num_atoms_molecul
 
 def storeDihedrals(f, types, dihedraltypes, dihedraltypeparams, dihedrals,
                    num_atoms_molecule, num_molecule_copies, molstartindex,
-                   atomtypeparams, wildcard_type):
+                   atomtypeparams, wildcard_type, attypeid_atnum):
     line = ''
     dihedrals_tmp = []
     pos = f.tell()
@@ -898,6 +913,12 @@ def storeDihedrals(f, types, dihedraltypes, dihedraltypeparams, dihedrals,
                 pid1, pid2, pid3, pid4 = map(int, tmp[0:4])
                 if lookup:
                     t1, t2, t3, t4 = (types[x-1] for x in map(int, tmp[0:4]))
+                    if (t1 not in dihedraltypes or t2 not in dihedraltypes or 
+                        t3 not in dihedraltypes or t4 not in dihedraltypes):
+                        t1 = attypeid_atnum[t1]
+                        t2 = attypeid_atnum[t2]
+                        t3 = attypeid_atnum[t3]
+                        t4 = attypeid_atnum[t4]
                     try:
                         dihtypeid = check_type(t1, t2, t3, t4)
                     except KeyError:
