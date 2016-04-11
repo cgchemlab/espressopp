@@ -66,3 +66,4 @@ from espressopp.analysis.SystemMonitor import *
 from espressopp.analysis.PotentialEnergy import *
 from espressopp.analysis.KineticEnergy import *
 from espressopp.analysis.NFixedListEntries import *
+from espressopp.analysis.ChemicalConversion import *

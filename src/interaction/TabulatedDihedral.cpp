@@ -27,6 +27,7 @@
 #include "InterpolationCubic.hpp"
 #include "FixedTripleListInteractionTemplate.hpp"
 #include "FixedQuadrupleListInteractionTemplate.hpp"
+#include "FixedQuadrupleListTypesInteractionTemplate.hpp"
 
 namespace espressopp {
     namespace interaction {
@@ -53,7 +54,10 @@ namespace espressopp {
         }
 
         typedef class FixedQuadrupleListInteractionTemplate <TabulatedDihedral>
-                FixedQuadrupleListTabulatedDihedral;
+            FixedQuadrupleListTabulatedDihedral;
+
+        typedef class FixedQuadrupleListTypesInteractionTemplate<TabulatedDihedral>
+            FixedQuadrupleListTypesTabulatedAngular;
 
         //////////////////////////////////////////////////
         // REGISTRATION WITH PYTHON
@@ -65,13 +69,22 @@ namespace espressopp {
                 ("interaction_TabulatedDihedral", init <int, const char*>())
                 .add_property("filename", &TabulatedDihedral::getFilename, &TabulatedDihedral::setFilename);
             
-            class_ <FixedQuadrupleListTabulatedDihedral, bases <Interaction> > 
+            class_ <FixedQuadrupleListTabulatedDihedral, bases <Interaction> >
                 ("interaction_FixedQuadrupleListTabulatedDihedral",
                         init <shared_ptr<System>,
                               shared_ptr<FixedQuadrupleList>,
                               shared_ptr<TabulatedDihedral> >())
                 .def("setPotential", &FixedQuadrupleListTabulatedDihedral::setPotential)
                 .def("getFixedQuadrupleList", &FixedQuadrupleListTabulatedDihedral::getFixedQuadrupleList);
+
+            class_< FixedQuadrupleListTypesTabulatedAngular, bases< Interaction > >
+                ("interaction_FixedQuadrupleListTypesTabulatedAngular",
+                 init< shared_ptr<System>, shared_ptr<FixedQuadrupleList> >())
+                .def("setPotential", &FixedQuadrupleListTypesTabulatedAngular::setPotential)
+                .def("getPotential", &FixedQuadrupleListTypesTabulatedAngular::getPotentialPtr)
+                .def("setFixedPairList", &FixedQuadrupleListTypesTabulatedAngular::setFixedQuadrupleList)
+                .def("getFixedPairList", &FixedQuadrupleListTypesTabulatedAngular::getFixedQuadrupleList);
+
         }
         
     } // ns interaction

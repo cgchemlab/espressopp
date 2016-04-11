@@ -1,0 +1,67 @@
+[ defaults ]
+1 1
+
+[ atomtypes ]
+;name  at.num   mass      charge  ptype      c6           c12
+  MA    1   45.0178      0.000     A        0            0
+  M1    2   55.0099      0.000     A        0            0
+  M2    3   76.0979      0.000     A        0            0
+  MB    4   17.0074      0.000     A        0            0
+  PA    5   45.0178      0.000     A        0            0
+  P1    6   55.0099      0.000     A        0            0
+  P2    7   76.0979      0.000     A        0            0
+  PB    8   17.0074      0.000     A        0            0
+  RA    9   28.0104      0.000     A        0            0
+  RB    10  15.9994      0.000     A        0            0
+
+[ bondtypes ]
+; i j func
+MA M1 8 0 1.0 ; table_b0.xvg
+M1 M2 8 1 1.0 ; table_b1.xvg
+M2 MB 8 2 1.0 ; table_b2.xvg
+
+[ angletypes ]
+; i j k func
+MA M1 M2 8 0 1.0 ; table_a0.xvg
+M2 L1 M2 8 1 1.0 ; table_a1.xvg
+M1 M2 MB 8 2 1.0 ; table_a2.xvg
+
+[ dihedraltypes ]
+; i j k l func
+MA M1 M2 MB 8 0 1.0 ; table_d0.xvg
+M2 M1 M2 MB 8 1 1.0 ; table_d1.xvg
+M1 MA M2 M2 8 2 1.0 ; table_d2.xvg
+
+[ nonbond_params ]
+; i    j func          c6           c12
+ MA   MA      1 1    1.0
+ MA   M1      1 1    1.0
+ MA   M2      1 1    1.0
+ MA   MB      1 1    1.0
+ M1   M1      1 1    1.0
+ M1   M2      1 1    1.0
+ M1   MB      1 1    1.0
+ M2   M2      1 1    1.0
+ M2   MB      1 1    1.0
+ MB   MB      1 1    1.0
+ PA   PA      1 1    1.0
+ PA   P1      1 1    1.0
+ PA   P2      1 1    1.0
+ PA   PB      1 1    1.0
+ PA   RA      1 1    1.0
+ PA   RB      1 1    1.0
+ P1   P1      1 1    1.0
+ P1   P2      1 1    1.0
+ P1   PB      1 1    1.0
+ P1   RA      1 1    1.0
+ P1   RB      1 1    1.0
+ P2   P2      1 1    1.0
+ P2   PB      1 1    1.0
+ P2   RA      1 1    1.0
+ P2   RB      1 1    1.0
+ PB   PB      1 1    1.0
+ PB   RA      1 1    1.0
+ PB   RB      1 1    1.0
+ RA   RA      1 1    1.0
+ RA   RB      1 1    1.0
+ RB   RB      1 1    1.0

@@ -107,6 +107,7 @@ namespace espressopp {
     protected:
       real cutoff;
       real cutoffSqr;
+      bool initialized;
 
       Derived* derived_this() {
         return static_cast< Derived* >(this);
@@ -124,7 +125,7 @@ namespace espressopp {
     inline
     AngularPotentialTemplate< Derived >::
     AngularPotentialTemplate() 
-      : cutoff(infinity), cutoffSqr(infinity)
+      : cutoff(infinity), cutoffSqr(infinity), initialized(false)
     {}
 
     // Shift/cutoff handling
@@ -147,6 +148,8 @@ namespace espressopp {
     inline real
     AngularPotentialTemplate< Derived >::
     computeEnergy(const Particle &p1, const Particle &p2, const Particle &p3) const {
+      if (!initialized)
+        return 0.0;
       Real3D dist12 = p1.position() - p2.position();
       Real3D dist32 = p3.position() - p2.position();
       return computeEnergy(dist12, dist32);
@@ -156,6 +159,8 @@ namespace espressopp {
     inline real
     AngularPotentialTemplate< Derived >::
     computeEnergy(const Real3D& dist12, const Real3D& dist32) const {
+      if (!initialized)
+        return 0.0;
       real dist12Sqr = dist12 * dist12;
       real dist32Sqr = dist32 * dist32;
       real cos_theta = dist12 * dist32 / (sqrt(dist12Sqr) * sqrt(dist32Sqr));
@@ -166,6 +171,8 @@ namespace espressopp {
     inline real 
     AngularPotentialTemplate< Derived >::
     computeEnergy(real theta) const {
+      if (!initialized)
+        return 0.0;
       return _computeEnergy(theta); // a bug was here (it was: return computeEnergy(theta);)
     }
     
@@ -173,6 +180,8 @@ namespace espressopp {
     inline real 
     AngularPotentialTemplate< Derived >::
     _computeEnergy(const Particle &p1, const Particle &p2, const Particle &p3) const {
+      if (!initialized)
+        return 0.0;
       Real3D dist12 = p1.position() - p2.position();
       Real3D dist32 = p3.position() - p2.position();
       return _computeEnergy(dist12, dist32);
@@ -182,12 +191,13 @@ namespace espressopp {
     inline real
     AngularPotentialTemplate< Derived >::
     _computeEnergy(const Real3D& dist12, const Real3D& dist32) const {
-
+      if (!initialized)
+        return 0.0;
       real dist12_sqr = dist12 * dist12;
       real dist32_sqr = dist32 * dist32;
-      if (dist12_sqr >= cutoffSqr || dist32_sqr >= cutoffSqr )
+      if (dist12_sqr >= cutoffSqr || dist32_sqr >= cutoffSqr) {
         return 0.0;
-      else{
+      } else {
         real cos_theta = dist12 * dist32 / (sqrt(dist12_sqr) * sqrt(dist32_sqr));
         return _computeEnergy(acos(cos_theta));
       }
@@ -197,6 +207,8 @@ namespace espressopp {
     inline real
     AngularPotentialTemplate< Derived >::
     _computeEnergy(real theta) const {
+      if (!initialized)
+        return 0.0;
       return derived_this()->_computeEnergyRaw(theta);
     }
     
@@ -207,9 +219,11 @@ namespace espressopp {
     computeForce(Real3D& force12,
                  Real3D& force32,
                  const Particle &p1, const Particle &p2, const Particle &p3) const {
-      Real3D dist12 = p1.position() - p2.position();
-      Real3D dist32 = p3.position() - p2.position();
-      _computeForce(force12, force32, dist12, dist32);
+      if (initialized) {
+        Real3D dist12 = p1.position() - p2.position();
+        Real3D dist32 = p3.position() - p2.position();
+        _computeForce(force12, force32, dist12, dist32);
+      }
     }
 
     template < class Derived >
@@ -219,7 +233,9 @@ namespace espressopp {
                  Real3D& force32,
                  const Real3D& dist12,
                  const Real3D& dist32) const {
-      _computeForce(force12, force32, dist12, dist32);
+      if (initialized) {
+        _computeForce(force12, force32, dist12, dist32);
+      }
     }
 
     template < class Derived >
@@ -228,9 +244,11 @@ namespace espressopp {
     _computeForce(Real3D& force12,
                   Real3D& force32,
                   const Particle &p1, const Particle &p2, const Particle &p3) const {
-      Real3D dist12 = p1.position() - p2.position();
-      Real3D dist32 = p3.position() - p2.position();
-      _computeForce(force12, force32, dist12, dist32);
+      if (initialized) {
+        Real3D dist12 = p1.position() - p2.position();
+        Real3D dist32 = p3.position() - p2.position();
+        _computeForce(force12, force32, dist12, dist32);
+      }
     }
 
     template < class Derived >
@@ -240,8 +258,9 @@ namespace espressopp {
                   Real3D& force32,
                   const Real3D& dist12,
                   const Real3D& dist32) const {
-      
-      return derived_this()->_computeForceRaw(force12, force32, dist12, dist32);
+      if (initialized)
+        return derived_this()->_computeForceRaw(force12, force32, dist12, dist32);
+      return false;
     }
     
     // used for generating tabular angular potential
@@ -249,7 +268,9 @@ namespace espressopp {
     inline real
     AngularPotentialTemplate< Derived >::
     computeForce(real theta) const {
-      return derived_this()->_computeForceRaw(theta);
+      if (initialized)
+        return derived_this()->_computeForceRaw(theta);
+      return 0.0;
     }
     
   }

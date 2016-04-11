@@ -85,6 +85,8 @@
 #include "PotentialVSpherePair.hpp"
 #include "SingleParticlePotential.hpp"
 
+#include "MultiTabulated.hpp"
+
 namespace espressopp {
   namespace interaction {
     void registerPython() {
@@ -151,6 +153,8 @@ namespace espressopp {
       TersoffTripleTerm::registerPython();
       
       CoulombKSpaceP3M::registerPython();
+
+      MultiTabulated::registerPython();
     }
   }
 }

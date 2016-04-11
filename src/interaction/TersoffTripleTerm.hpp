@@ -74,7 +74,7 @@ namespace espressopp {
             B(_B), lambda2(_lambda2), R(_R), D(_D),
             n(_n), beta(_beta), m(_m), lambda3(_lambda3),
             gamma(_gamma), c(_c), d(_d), theta0(_theta0),
-            rc1(_cutoff1), rc2(_cutoff2) {
+            rc1(_cutoff1), rc2(_cutoff2), initialized(true) {
         preset();
       }
 
