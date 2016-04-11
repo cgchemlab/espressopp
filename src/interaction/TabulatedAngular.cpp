@@ -64,7 +64,8 @@ namespace espressopp {
             
             class_ <TabulatedAngular, bases <AngularPotential> >
                 ("interaction_TabulatedAngular", init <int, const char*>())
-                .add_property("filename", &TabulatedAngular::getFilename, &TabulatedAngular::setFilename);
+                .add_property("filename", &TabulatedAngular::getFilename, &TabulatedAngular::setFilename)
+                .def_pickle(TabulatedAngular_pickle());
             
             class_ <FixedTripleListTabulatedAngular, bases <Interaction> > 
                 ("interaction_FixedTripleListTabulatedAngular",
@@ -79,8 +80,8 @@ namespace espressopp {
                  init< shared_ptr<System>, shared_ptr<FixedTripleList> >())
                 .def("setPotential", &FixedTripleListTypesTabulatedAngular::setPotential)
                 .def("getPotential", &FixedTripleListTypesTabulatedAngular::getPotentialPtr)
-                .def("setFixedPairList", &FixedTripleListTypesTabulatedAngular::setFixedTripleList)
-                .def("getFixedPairList", &FixedTripleListTypesTabulatedAngular::getFixedTripleList);
+                .def("setFixedTripleList", &FixedTripleListTypesTabulatedAngular::setFixedTripleList)
+                .def("getFixedTripleList", &FixedTripleListTypesTabulatedAngular::getFixedTripleList);
         }
         
     } // ns interaction

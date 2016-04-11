@@ -3,65 +3,122 @@
 
 [ atomtypes ]
 ;name  at.num   mass      charge  ptype      c6           c12
-  MA    1   45.0178      0.000     A        0            0
-  M1    2   55.0099      0.000     A        0            0
-  M2    3   76.0979      0.000     A        0            0
-  MB    4   17.0074      0.000     A        0            0
-  PA    5   45.0178      0.000     A        0            0
-  P1    6   55.0099      0.000     A        0            0
-  P2    7   76.0979      0.000     A        0            0
-  PB    8   17.0074      0.000     A        0            0
-  RA    9   28.0104      0.000     A        0            0
+  MA    1  45.0178      0.000     A        0            0
+  M1    2  55.0099      0.000     A        0            0
+  M2    3  76.0979      0.000     A        0            0
+  MB    4  17.0074      0.000     A        0            0
+  PA    5  45.0178      0.000     A        0            0
+  P1    6  55.0099      0.000     A        0            0
+  P2    7  76.0979      0.000     A        0            0
+  PB    8  17.0074      0.000     A        0            0
+  RA    9  28.0104      0.000     A        0            0
   RB    10  15.9994      0.000     A        0            0
+
+[ atomstate ]
+MA 1
+MB 1
+PA 1
+PB 1
 
 [ bondtypes ]
 ; i j func
-MA M1 8 0 1.0 ; table_b0.xvg
-M1 M2 8 1 1.0 ; table_b1.xvg
-M2 MB 8 2 1.0 ; table_b2.xvg
+MA M1 8 0 1.0 ;b0
+M1 M2 8 1 1.0 ;b1
+M2 MB 8 2 1.0 ;b2
+RA P1 8 3 1.0 ;b3
+PA P1 8 4 1.0 ;b4
+P1 P2 8 5 1.0 ;b5
+P2 PB 8 6 1.0 ;b6
+P2 RB 8 7 1.0 ;b7
+RA RB 8 8 1.0 ;b8
 
 [ angletypes ]
 ; i j k func
-MA M1 M2 8 0 1.0 ; table_a0.xvg
-M2 L1 M2 8 1 1.0 ; table_a1.xvg
-M1 M2 MB 8 2 1.0 ; table_a2.xvg
+ MA M1 M2 8 0 1.0 ;a0
+ M2 M1 M2 8 1 1.0 ;a1
+ M1 M2 MB 8 2 1.0 ;a2
+ ;RA P1 P2 8 3 1.0 ;a3
+ ;PA P1 P2 8 4 1.0 ;a4
+ ;P2 P1 P2 8 5 1.0 ;a5
+ ;P1 P2 PB 8 6 1.0 ;a6
+ ;P1 P2 RB 8 7 1.0 ;a7
+ ;RA RB P2 8 8 1.0 ;a8
+ ;P1 RA RB 8 9 1.0 ;a9
 
 [ dihedraltypes ]
 ; i j k l func
-MA M1 M2 MB 8 0 1.0 ; table_d0.xvg
-M2 M1 M2 MB 8 1 1.0 ; table_d1.xvg
-M1 MA M2 M2 8 2 1.0 ; table_d2.xvg
+MA M1 M2 MB 8 0 1.0 ;d0
+M2 M1 M2 MB 8 1 1.0 ;d1
+RA P1 P2 PB 8 3 1.0 ;d3
+RA P1 P2 RB 8 4 1.0 ;d4
+PA P1 P2 RB 8 5 1.0 ;d5
+P2 P1 P2 PB 8 6 1.0 ;d6
+P2 P1 P2 RB 8 7 1.0 ;d7
+RA RB P2 P1 8 10 1.0 ;d10
+P1 RA RB P2 8 11 1.0 ;d11
+RB RA P1 P2 8 12 1.0 ;d12
+
+ [ dihedraltypes ]
+M1 MA M2 M2 8 2 1.0 ;d2
+P1 RA P2 P2 8 8 1.0 ;d8
+P1 PA P2 P2 8 9 1.0 ;d9
 
 [ nonbond_params ]
-; i    j func          c6           c12
- MA   MA      1 1    1.0
- MA   M1      1 1    1.0
- MA   M2      1 1    1.0
- MA   MB      1 1    1.0
- M1   M1      1 1    1.0
- M1   M2      1 1    1.0
- M1   MB      1 1    1.0
- M2   M2      1 1    1.0
- M2   MB      1 1    1.0
- MB   MB      1 1    1.0
- PA   PA      1 1    1.0
- PA   P1      1 1    1.0
- PA   P2      1 1    1.0
- PA   PB      1 1    1.0
- PA   RA      1 1    1.0
- PA   RB      1 1    1.0
- P1   P1      1 1    1.0
- P1   P2      1 1    1.0
- P1   PB      1 1    1.0
- P1   RA      1 1    1.0
- P1   RB      1 1    1.0
- P2   P2      1 1    1.0
- P2   PB      1 1    1.0
- P2   RA      1 1    1.0
- P2   RB      1 1    1.0
- PB   PB      1 1    1.0
- PB   RA      1 1    1.0
- PB   RB      1 1    1.0
- RA   RA      1 1    1.0
- RA   RB      1 1    1.0
- RB   RB      1 1    1.0
+; i    j func = 8, reads from table: table_{i}_{j}.xvg
+ MA   MA      8
+ MA   M1      8
+ MA   M2      8
+ MA   MB      8
+ M1   M1      8
+ M1   M2      8
+ M1   MB      8
+ M2   M2      8
+ M2   MB      8
+ MB   MB      8
+ PA   PA      8
+ PA   P1      8
+ PA   P2      8
+ PA   PB      8
+ PA   RA      8
+ PA   RB      8
+ P1   P1      8
+ P1   P2      8
+ P1   PB      8
+ P1   RA      8
+ P1   RB      8
+ P2   P2      8
+ P2   PB      8
+ P2   RA      8
+ P2   RB      8
+ PB   PB      8
+ PB   RA      8
+ PB   RB      8
+ RA   RA      8
+ RA   RB      8
+ RB   RB      8
+; list of mixed tables
+; i j func=5 nr tab_prefix atom_type ntotal min_cr max_cr default
+ MA   PA      9 0 coupl_0.5 RA 999 0.0 0.8 1
+ MA   PB      9 1 coupl_0.5 RA 999 0.0 0.8 1
+ MA   P1      9 2 coupl_0.5 RA 999 0.0 0.8 1
+ MA   P2      9 3 coupl_0.5 RA 999 0.0 0.8 1
+ MA   RA      9 4 coupl_0.5 RA 999 0.0 0.8 1
+ MA   RB      9 5 coupl_0.5 RA 999 0.0 0.8 1
+ MB   PA      9 6 coupl_0.5 RA 999 0.0 0.8 1
+ MB   PB      9 7 coupl_0.5 RA 999 0.0 0.8 1
+ MB   P1      9 8 coupl_0.5 RA 999 0.0 0.8 1
+ MB   P2      9 9 coupl_0.5 RA 999 0.0 0.8 1
+ MB   RA      9 10 coupl_0.5 RA 999 0.0 0.8 1
+ MB   RB      9 11 coupl_0.5 RA 999 0.0 0.8 1
+ M1   PA      9 12 coupl_0.5 RA 999 0.0 0.8 1
+ M1   PB      9 13 coupl_0.5 RA 999 0.0 0.8 1
+ M1   P1      9 14 coupl_0.5 RA 999 0.0 0.8 1
+ M1   P2      9 15 coupl_0.5 RA 999 0.0 0.8 1
+ M1   RA      9 16 coupl_0.5 RA 999 0.0 0.8 1
+ M1   RB      9 17 coupl_0.5 RA 999 0.0 0.8 1
+ M2   PA      9 18 coupl_0.5 RA 999 0.0 0.8 1
+ M2   PB      9 19 coupl_0.5 RA 999 0.0 0.8 1
+ M2   P1      9 20 coupl_0.5 RA 999 0.0 0.8 1
+ M2   P2      9 21 coupl_0.5 RA 999 0.0 0.8 1
+ M2   RA      9 22 coupl_0.5 RA 999 0.0 0.8 1
+ M2   RB      9 23 coupl_0.5 RA 999 0.0 0.8 0

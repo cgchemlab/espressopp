@@ -711,7 +711,7 @@ void TopologyManager::registerNeighbourPropertyChange(
 
 void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
   std::vector<longint> nb = getNodesAtDistances(root.id());
-  LOG4ESPP_DEBUG(theLogger, "inokgeNeighbourPropertyChange from root=" << root.id()
+  LOG4ESPP_DEBUG(theLogger, "inovokeNeighbourPropertyChange from root=" << root.id()
       << " generates=" << nb.size() << " of neighbour particles");
   nb_distance_particles_.insert(nb_distance_particles_.end(), nb.begin(), nb.end());
 }

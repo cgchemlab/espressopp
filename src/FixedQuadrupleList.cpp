@@ -448,6 +448,14 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "regenerated local fixed quadruple list from global list");
   }
 
+  int FixedQuadrupleList::totalSize() {
+    int local_size = globalQuadruples.size();
+    int global_size;
+    System& system = storage->getSystemRef();
+    mpi::all_reduce(*system.comm, local_size, global_size, std::plus<int>());
+    return global_size;
+  }
+
 
   /****************************************************
   ** REGISTRATION WITH PYTHON
@@ -466,6 +474,7 @@ namespace espressopp {
       ("FixedQuadrupleList", init< shared_ptr< storage::Storage > >())
       .def("add", pyAdd)
       .def("size", &FixedQuadrupleList::size)
+      .def("totalSize", &FixedQuadrupleList::totalSize)
       .def("getQuadruples",  &FixedQuadrupleList::getQuadruples)
      ;
   }

@@ -85,7 +85,7 @@ void MultiTabulated::registerPython() {
   using namespace espressopp::python;
 
   class_<MultiTabulated, bases<Potential> >
-      ("interaction_MultiTabulated", init<>())
+      ("interaction_MultiTabulated", init<real>())
       .def("register_table", &MultiTabulated::registerTableOnRange);
 
   class_<VerletListMultiTabulated, bases<Interaction> >

@@ -21,6 +21,7 @@ I/O library. Handles opening and writing different files."""
 import collections
 import logging
 import os
+import re
 
 import numpy
 
@@ -371,6 +372,13 @@ class GROMACSTopologyFile(TopologyFile):
     def __init__(self, file_name):
         super(GROMACSTopologyFile, self).__init__(file_name)
         self.parsers = {
+            'defaults': self._parse_defaults,
+            'atomtypes': self._parse_atomtypes,
+            'atomstate': self._parse_atomstate,
+            'nonbond_params': self._parse_nonbond_params,
+            'bondtypes': self._parse_bondtypes,
+            'angletypes': self._parse_angletypes,
+            'dihedraltypes': self._parse_dihedraltypes,
             'atoms': self._parse_atoms,
             'bonds': self._parse_bonds,
             'cross_bonds': self._parse_cross_bonds,
@@ -408,6 +416,11 @@ class GROMACSTopologyFile(TopologyFile):
             }
         self.current_charges = {}
         self.atomtypes = {}
+        self.atomstate = {}
+        self.nonbond_params = {}
+        self.bondtypes = {}
+        self.angletypes = {}
+        self.dihedraltypes = {}
         self.header_section = []
         self.defaults = None
         self.moleculetype = {}
@@ -453,8 +466,8 @@ class GROMACSTopologyFile(TopologyFile):
         visited_sections = set()
         section_name = None
         previous_section = None
-        for line in self.content:
-            line = line.strip()
+        for raw_line in self.content:
+            line = re.sub(';.*$', '', raw_line.strip())
             if line.startswith(';') or line.startswith('#') or len(line) == 0:
                 continue
             elif line.startswith('['):  # Section
@@ -475,7 +488,7 @@ class GROMACSTopologyFile(TopologyFile):
                     if raw_data:
                         current_parser(raw_data)  # pylint:disable=E1102
 
-    def write(self, filename=None):
+    def write(self, filename=None):  #NOQA
         """Updates the topology file.
 
         Args:
@@ -546,12 +559,103 @@ class GROMACSTopologyFile(TopologyFile):
         self.atoms_updated = False
 
     # Parsers for the data.
+    def _parse_defaults(self, raw_data):
+        self.defaults = {
+            'func': int(raw_data[0]),
+            'combinationrule': int(raw_data[1])
+            }
+        if len(raw_data) > 2:
+            self.defaults['gen_pairs'] = raw_data[2]
+            self.defaults['fudgeLJ'] = float(raw_data[3])
+            self.defaults['fudgeQQ'] = float(raw_data[4])
+
     def _parse_bonds(self, raw_data):
         atom_tuple = tuple(map(int, raw_data[0:2]))
         self.bonds[atom_tuple] = raw_data[2:]
 
         self.bonds_def[atom_tuple[0]].add(atom_tuple[1])
         self.bonds_def[atom_tuple[1]].add(atom_tuple[0])
+
+    def _parse_atomtypes(self, raw_data):
+        if len(raw_data) != 7:
+            raise RuntimeError("Wrong atomtypes format")
+        atom_type = raw_data[0]
+        atom_mass = float(raw_data[2])
+        atom_q = float(raw_data[3])
+
+        self.atomtypes[atom_type] = {
+            'name': atom_type,
+            'mass': atom_mass,
+            'charge': atom_q,
+            'type': raw_data[4],
+            'sigma': float(raw_data[5]),
+            'epsilon': float(raw_data[6])
+        }
+
+    def _parse_nonbond_params(self, raw_data):
+        i, j = raw_data[:2]
+        k = tuple(sorted(raw_data[:2]))
+        if k in self.nonbond_params:
+            raise RuntimeError('{} already exists, wrong topology'.format(k))
+        self.nonbond_params[k] = {
+            'func': int(raw_data[2]),
+            'params': raw_data[3:]}
+
+    def _parse_atomstate(self, raw_data):
+        atom_type = raw_data[0]
+        atom_state = int(raw_data[1])
+        self.atomtypes[atom_type]['state'] = atom_state
+
+    def _parse_bondtypes(self, raw_data):
+        i, j = raw_data[:2]
+        if i not in self.bondtypes:
+            self.bondtypes[i] = {}
+        if j not in self.bondtypes:
+            self.bondtypes[j] = {}
+
+        self.bondtypes[i][j] = {
+            'func': int(raw_data[2]),
+            'params': raw_data[3:]
+        }
+        self.bondtypes[j][i] = self.bondtypes[i][j]
+
+    def _parse_angletypes(self, raw_data):
+        i, j, k = raw_data[:3]
+        if i not in self.angletypes:
+            self.angletypes[i] = {}
+        if j not in self.angletypes[i]:
+            self.angletypes[i][j] = {}
+        if k not in self.angletypes:
+            self.angletypes[k] = {}
+        if j not in self.angletypes[k]:
+            self.angletypes[k][j] = {}
+
+        self.angletypes[i][j][k] = {
+            'func': int(raw_data[3]),
+            'params': raw_data[4:]
+        }
+        self.angletypes[k][j][i] = self.angletypes[i][j][k]
+
+    def _parse_dihedraltypes(self, raw_data):
+        i, j, k, l = raw_data[:4]
+        if i not in self.dihedraltypes:
+            self.dihedraltypes[i] = {}
+        if j not in self.dihedraltypes[i]:
+            self.dihedraltypes[i][j] = {}
+        if k not in self.dihedraltypes[i][j]:
+            self.dihedraltypes[i][j][k] = {}
+        if l not in self.dihedraltypes:
+            self.dihedraltypes[l] = {}
+        if k not in self.dihedraltypes[l]:
+            self.dihedraltypes[l][k] = {}
+        if j not in self.dihedraltypes[l][k]:
+            self.dihedraltypes[l][k][j] = {}
+
+        self.dihedraltypes[i][j][k][l] = {
+            'func': int(raw_data[4]),
+            'params': raw_data[5:]
+        }
+        self.dihedraltypes[l][k][j][i] = self.dihedraltypes[i][j][k][l]
 
     def _parse_atoms(self, raw_data):
         at = TopoAtom()
@@ -613,8 +717,7 @@ class GROMACSTopologyFile(TopologyFile):
         self.moleculetype['nrexcl'] = raw_data[1]
 
     def _parse_molecules(self, raw_data):
-        self.molecules['name'] = raw_data[0]
-        self.molecules['mol'] = raw_data[1]
+        self.molecules[raw_data[0]] = int(raw_data[1])
 
     def _parse_system(self, raw_data):
         self.system_name = raw_data[0]
@@ -846,7 +949,6 @@ class LammpsReader(object):
                     self._read_atom(line, update=True)
                 else:
                     self.current_section = None
-
 
     # Parsers section
     def _read_header(self, input_line):

@@ -3,7 +3,7 @@
 # Copyright (c) 2016 Jakub Krajniak <jkrajniak@gmail.com>
 #
 # Distributed under terms of the GNU GPLv3 license.
-# 
+#
 
 import os
 import shutil
@@ -11,6 +11,8 @@ import sys
 
 table_pattern = sys.argv[1]
 table_inc = int(sys.argv[2])
+
+print('Table pattern: {}, table increment: {}'.format(table_pattern, table_inc))
 
 table_files = sorted([x for x in os.listdir('.') if table_pattern in x])
 table_files.reverse()

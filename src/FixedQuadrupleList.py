@@ -65,17 +65,14 @@ class FixedQuadrupleListLocal(_espressopp.FixedQuadrupleList):
 
 
     def __init__(self, storage):
-
         if pmi.workerIsActive():
             cxxinit(self, _espressopp.FixedQuadrupleList, storage)
 
     def add(self, pid1, pid2, pid3, pid4):
-
         if pmi.workerIsActive():
             return self.cxxclass.add(self, pid1, pid2, pid3, pid4)
 
     def size(self):
-
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
@@ -103,6 +100,6 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedQuadrupleListLocal',
             localcall = [ "add" ],
-            pmicall = [ "addQuadruples" ],
+            pmicall = [ "addQuadruples", "totalSize"],
             pmiinvoke = ["getQuadruples", "size"]
             )

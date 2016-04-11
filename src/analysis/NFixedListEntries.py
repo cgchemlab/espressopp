@@ -36,18 +36,46 @@ from espressopp import pmi
 
 from espressopp.analysis.Observable import *  # NOQA
 from _espressopp import analysis_NFixedPairListEntries
+from _espressopp import analysis_NFixedTripleListEntries
+from _espressopp import analysis_NFixedQuadrupleListEntries
 
 
 class NFixedPairListEntriesLocal(ObservableLocal, analysis_NFixedPairListEntries):
     """The (local) compute of potential energy."""
-    def __init__(self, system, fixed_pair_list):
+    def __init__(self, system, fl):
         if pmi.workerIsActive():
-            cxxinit(self, analysis_NFixedPairListEntries, system, fixed_pair_list)
+            cxxinit(self, analysis_NFixedPairListEntries, system, fl)
+
+class NFixedTripleListEntriesLocal(ObservableLocal, analysis_NFixedTripleListEntries):
+    """The (local) compute of potential energy."""
+    def __init__(self, system, fl):
+        if pmi.workerIsActive():
+            cxxinit(self, analysis_NFixedTripleListEntries, system, fl)
+
+class NFixedQuadrupleListEntriesLocal(ObservableLocal, analysis_NFixedQuadrupleListEntries):
+    """The (local) compute of potential energy."""
+    def __init__(self, system, fl):
+        if pmi.workerIsActive():
+            cxxinit(self, analysis_NFixedQuadrupleListEntries, system, fl)
 
 if pmi.isController:
     class NFixedPairListEntries(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.NFixedPairListEntriesLocal',
+            pmiproperty=['value']
+        )
+
+    class NFixedTripleListEntries(Observable):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.analysis.NFixedTripleListEntriesLocal',
+            pmiproperty=['value']
+        )
+
+    class NFixedQuadrupleListEntries(Observable):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.analysis.NFixedQuadrupleListEntriesLocal',
             pmiproperty=['value']
         )
