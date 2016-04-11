@@ -332,59 +332,12 @@ namespace espressopp {
     LOG4ESPP_INFO(theLogger, "received fixed pair list after receive particles");
   }
 
-  void FixedPairList::handleException(std::vector<int> &pids) {
-    std::cout << "Problems: " << pids.size() << std::endl;
-    std::vector<std::vector<int> > all_pids;
-    System& system = storage->getSystemRef();
-
-    mpi::all_gather(*(system.comm), pids, all_pids);
-    /// Look for particles.
-    std::vector<std::string> outmsg;
-    std::stringstream ss;
-    Particle *p;
-    int current_cpu = system.comm->rank();
-    for (std::vector<std::vector<int> >::iterator itv = all_pids.begin();
-         itv != all_pids.end(); ++itv) {
-      for (std::vector<int>::iterator it = itv->begin(); it != itv->end();
-         ++it) {
-        p = storage->lookupLocalParticle(*it);
-        if (p) {
-          ss << *it << " found on CPU " << current_cpu << " " << *p << std::endl;
-          std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange =
-            globalPairs.equal_range(*it);
-          for (GlobalPairs::iterator itp = equalRange.first; itp != equalRange.second; ++itp) {
-            ss << "pair: " << itp->first << "-" << itp->second << std::endl;
-          }
-        } else {
-          ss << *it << " not found on CPU " << current_cpu << std::endl;
-        }
-      }
-    }
-    
-    /// Let's send it to root.
-    if (current_cpu == 0) {
-      mpi::gather(*(system.comm), ss.str(), outmsg, 0);
-      
-      for (std::vector<std::string>::iterator it = outmsg.begin(); it != outmsg.end(); ++it) {
-          std::cout << *it << std::endl;
-      }
-    } else {
-      mpi::gather(*(system.comm), ss.str(), 0);
-    }
-
-    system.comm->barrier();
-  }
-
   void FixedPairList::onParticlesChanged() {
     LOG4ESPP_INFO(theLogger, "rebuild local bond list from global\n");
 
     System& system = storage->getSystemRef();
     esutil::Error err(system.comm);
 
-    std::vector<int> pids;
-
-    boost::signals2::connection sigOnException;
-    
     this->clear();
     longint lastpid1 = -1;
     Particle *p1;
@@ -396,8 +349,6 @@ namespace espressopp {
           std::stringstream msg;
           msg << "onParticlesChanged error. Fixed Pair List particle p1 " << it->first << " does not exists here.";
           msg << " pair: " << it->first << "-" << it->second;
-          pids.push_back(it->first);
-          pids.push_back(it->second);
           err.setException( msg.str() );
           //std::runtime_error(err.str());
         }
@@ -410,19 +361,12 @@ namespace espressopp {
           msg << " p1: " << *p1;
           msg << " pair: " << it->first << "-" << it->second;
           //std::runtime_error(err.str());
-          pids.push_back(it->first);
-          pids.push_back(it->second);
           err.setException( msg.str() );
       }
       this->add(p1, p2);
     }
-    sigOnException = err.onException.connect(
-        (boost::bind(&FixedPairList::handleException, this, pids))
-    );
 
     err.checkException();
-
-    sigOnException.disconnect();
     
     LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
   }

@@ -1,40 +1,6 @@
-"""
-This is an example for an MD simulation of a simple Lennard-Jones fluid
-with ESPResSo++. We will start with particles at random positions within
-the simulation box interacting via a shifted Lennard-Jones type potential
-with an interaction cutoff at 2.5.
-Newtons equations of motion are integrated with a Velocity-Verlet integrator.
-The canonical (NVT) ensemble is realized by using a Langevin thermostat.
-In order to prevent explosion due to strongly overlapping volumes of
-random particles the system needs to be warmed up first.
-Warm-up is accomplished by using a repelling-only LJ interaction
-(cutoff=1.12246, shift=0.25) with a force capping at radius 0.6
-and initial small LJ epsilon value of 0.1.
-During warmup epsilon is gradually increased to its final value 1.0.
-After warm-up the system is equilibrated using the full uncapped  LJ Potential.
-
-If a system still explodes during warmup or equilibration, warmup time
-could be increased by increasing warmup_nloops and the capradius could
-be set to another value. Depending on the system (number of particles, density, ...)
-it could also be necessary to vary sigma during warmup.
-
-The simulation consists of the following steps:
-
-  1. specification of the main simulation parameters
-  2. setup of the system, random number generator and parallelisation
-  3. setup of the integrator and simulation ensemble
-  4. adding the particles
-  5. setting up interaction potential for the warmup
-  6. running the warmup loop
-  7. setting up interaction potential for the equilibration
-  8. running the equilibration loop
-  9. writing configuration to a file
-"""
-
 import espressopp
 
 import cPickle
-import logging
 import os
 import time
 
@@ -42,10 +8,10 @@ import time
 def define_particles(system, integrator, Npart):
     print "adding ", Npart, " particles to the system ..."
     particle_list = []
-    particle_prop = ('id', 'type', 'pos', 'res_id', 'state')
+    particle_prop = ('id', 'pos', 'res_id', 'state')
     for pid in range(Npart):
         pos = system.bc.getRandomPos()
-        particle_list.append((pid, 0, pos, pid, 2))
+        particle_list.append((pid, pos, pid, 1))
     system.storage.addParticles(particle_list, *particle_prop)
     system.storage.decompose()
 
@@ -71,37 +37,19 @@ def define_particles(system, integrator, Npart):
     system.removeInteraction(0)
     verletlist.disconnect()
 
+
+def save_conf(system, Npart, filename='eq_conf.pck'):
     # Save coordinate file
     dump_particles = []
     for pid in range(Npart):
         p = system.storage.getParticle(pid)
         dump_particles.append((pid, p.type, p.pos, p.v, p.res_id, p.state))
     particle_prop = ('id', 'type', 'pos', 'v', 'res_id', 'state')
-    cPickle.dump((particle_prop, dump_particles), open('eq_conf.pck', 'wb'))
-
+    cPickle.dump((particle_prop, dump_particles), open(filename, 'wb'))
+    print('Saved configuration to {}'.format(filename))
 
 # Settings
-Npart              = 32724
-rho                = 0.8442
-L                  = pow(Npart/rho, 1.0/3.0)
-box                = (L, L, L)
-r_cutoff           = 2.5
-skin               = 1.5
-temperature        = 1.0
-dt                 = 0.005
-epsilon            = 1.0
-sigma              = 1.0
-
-warmup_cutoff      = pow(2.0, 1.0/6.0)
-warmup_nloops      = 100
-warmup_isteps      = 200
-total_warmup_steps = warmup_nloops * warmup_isteps
-epsilon_start      = 0.1
-epsilon_end        = 1.0
-epsilon_delta      = (epsilon_end - epsilon_start) / warmup_nloops
-capradius          = 0.6
-equil_nloops       = 100
-equil_isteps       = 100
+execfile('conf.py')
 
 print espressopp.Version().info()
 print "Npart              = ", Npart
@@ -124,6 +72,7 @@ print "epsilon_delta      = ", epsilon_delta
 print "capradius          = ", capradius
 print "equil_nloops       = ", equil_nloops
 print "equil_isteps       = ", equil_isteps
+print "eq_conf            = ", eq_conf
 
 
 system             = espressopp.System()
@@ -152,10 +101,10 @@ if (temperature != None):
   integrator.addExtension(thermostat)
 
 # Read particles or equilibrate it.
-has_eq = os.path.exists('eq_conf.pck')
+has_eq = os.path.exists(eq_conf)
 if has_eq:
-    print('Reading EQ configuration from eq_conf.pck')
-    particle_prop, particle_list = cPickle.load(open('eq_conf.pck', 'rb'))
+    print('Reading EQ configuration from {}'.format(eq_conf))
+    particle_prop, particle_list = cPickle.load(open(eq_conf, 'rb'))
     system.storage.addParticles(particle_list, *particle_prop)
 else:
     print('EQ configuration not found, running equilibration process for N={}'.format(Npart))
@@ -168,7 +117,7 @@ interaction = espressopp.interaction.VerletListLennardJones(verletlist)
 potential = interaction.setPotential(type1=0, type2=0,
                                      potential=espressopp.interaction.LennardJones(
                                          epsilon=epsilon, sigma=sigma, cutoff=r_cutoff, shift=0.0))
-system.addInteraction(interaction)
+system.addInteraction(interaction, 'lj')
 system.storage.cellAdjust()
 
 system.storage.decompose()
@@ -198,12 +147,13 @@ interHarmonic = espressopp.interaction.FixedPairListHarmonic(
 fpl_a_a.addBonds([])
 system.addInteraction(interHarmonic, 'harmonic')
 dynamic_ex_list.observe_tuple(fpl_a_a)
+system.storage.decompose()
 
 ar = espressopp.integrator.ChemicalReaction(
     system,
     verletlist,
     system.storage,
-    10)
+    100)
 
 r_type_1 = espressopp.integrator.Reaction(
     type_1=0,
@@ -214,9 +164,9 @@ r_type_1 = espressopp.integrator.Reaction(
     max_state_1=3,
     min_state_2=1,
     max_state_2=3,
-    rate=10.0,
+    rate=0.5,
     fpl=fpl_a_a,
-    cutoff=1.5)
+    cutoff=1.1)
 
 r_type_1.intramolecular=True
 ar.add_reaction(r_type_1)
@@ -229,17 +179,73 @@ integrator.addExtension(ar)
 #integrator.addExtension(topology_manager)
 
 #logging.getLogger('Reaction').setLevel(logging.DEBUG)
+#espressopp.PLogger.set('ChemicalReaction', 'DEBUG')
+#espressopp.PLogger.set('FixedPairList', 'DEBUG')
 #logging.getLogger('ChemicalReaction').setLevel(logging.DEBUG)
+#logging.getLogger('FixedPairList').setLevel(logging.DEBUG)
+#logging.getLogger('DynamicExcludeList').setLevel(logging.DEBUG)
+
+system_analysis = espressopp.analysis.SystemMonitor(
+    system,
+    integrator,
+    espressopp.analysis.SystemMonitorOutputCSV('energy.csv'))
+temp_comp = espressopp.analysis.Temperature(system)
+system_analysis.add_observable('T', temp_comp)
+system_analysis.add_observable(
+    'Ekin', espressopp.analysis.KineticEnergy(system, temp_comp))
+
+for label, interaction in sorted(system.getAllInteractions().items()):
+    system_analysis.add_observable(
+        label,
+        espressopp.analysis.PotentialEnergy(system, interaction))
+
+system_analysis.add_observable(
+    'fpl', espressopp.analysis.NFixedPairListEntries(system, fpl_a_a))
+
+ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, 10)
+integrator.addExtension(ext_analysis)
+
+print('set up dump_h5md')
+traj_file = espressopp.io.DumpH5MD(
+    system,
+    'traj.h5',
+    group_name='atoms',
+    static_box=False,
+    author='xxx',
+    email='xxx',
+    store_species=True,
+    store_state=True)
+
+dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
+dump_topol.observe_tuple(fpl_a_a, 'fpl_a_a')
+
+dump_topol.dump()
+dump_topol.update()
+
+ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 100)
+integrator.addExtension(ext_dump)
 
 print "starting benchmark..."
+system_analysis.dump()
+system_analysis.info()
+traj_file.dump(integrator.step, integrator.step*dt)
 t0 = time.time()
 for step in range(equil_nloops):
-    print step
-    # perform equilibration_isteps integration steps
     integrator.run(equil_isteps)
-    # print status information
+    system_analysis.info()
+    traj_file.dump(integrator.step, integrator.step*dt)
+    dump_topol.update()
+    if step % 10 == 0:
+        traj_file.flush()
+else:
+    system_analysis.dump()
+    system_analysis.info()
+    dump_topol.update()
+    traj_file.dump(equil_isteps*equil_nloops, equil_isteps*equil_nloops*dt)
+    traj_file.close()
 t1 = time.time()
 time_file = open('benchmark_data.csv', 'a+')
-time_file.write('{:e}\n'.format(t1 - t0))
+time_file.write('{} {:e}\n'.format(NCPUs, t1 - t0))
+
+save_conf(system, Npart, 'state.pck')
 print "finished"
-print "has: ", fpl_a_a.totalSize()
