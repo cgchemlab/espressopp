@@ -76,7 +76,7 @@ class Array4D: private std::vector<T> {
     Super::clear();
   }
 
-  /** \brief Creates a 3-dimensional \p n x \p m x \p l x \p k array,
+  /** \brief Creates a 3-dimensional \p n x \p m x \p p x \p q array,
   initialising the values with copies of \a t. */
   void init(size_type n, size_type m, size_type l, size_type k, const T &t = T()) {
     Super::clear();
@@ -84,7 +84,7 @@ class Array4D: private std::vector<T> {
   }
 
   /** \brief Changes the size of the Array4D so that the size
-  becomes \p n x \p m x \p l x \p k array.
+  becomes \p n x \p m x \p p x \p q array.
 
   \attention The elements of the Array4D are not initialised
   consistently, so the values are undefined. The \p t parameter
@@ -103,18 +103,14 @@ class Array4D: private std::vector<T> {
 
   /** \brief Returns the \a n -size of the array. */
   size_type size_n() const { return n; }
-  /** \brief Returns the \a n -size of the array. */
-  size_type size_x() const { return n; }
 
   /** \brief Returns the \a m -size  of the array. */
   size_type size_m() const { return m; }
-  /** \brief Returns the \a m -size  of the array. */
-  size_type size_y() const { return m; }
 
-  /** \brief Returns the \a l -size  of the array. */
+  /** \brief Returns the \a p -size  of the array. */
   size_type size_p() const { return p; }
 
-  /** \brief Returns the \a k -size of the array. */
+  /** \brief Returns the \a q -size of the array. */
   size_type size_q() const { return q; }
 
   /** \brief \c true if the \c Array4D's size is 0 x 0 x 0 x 0. */
@@ -306,7 +302,7 @@ class Array4D<T, enlarge>: public Array4D<T, exception> {
     this->prototype = prototype;
   }
 
-  /** \brief Returns the element at position \p i x \p j x \p k.
+  /** \brief Returns the element at position \p i x \p j x \p p x \p q.
 
   When the element doesn't exist, the Array4D is automatically
   extended so that the element exists. The new elements are

@@ -88,24 +88,32 @@ namespace espressopp {
          
             real _computeEnergySqrRaw(real distSqr) const {
                 // make an interpolation
-                if (interpolationType!=0) 
+                if (interpolationType!=0) {
+                  try {
                     return table->getEnergy(sqrt(distSqr));
-                else
-                    return 0;
-                /*else {
-                    throw std::runtime_error("Tabulated potential table not available.");
-                    //return 0.0;
-                }*/
+                  } catch (std::exception &e) {
+                    std::cout << "Error in Tabulated.hpp computeEnergy, filename=" << filename << std::endl;
+                    std::cout << e.what() << std::endl;
+                    throw e;
+                  }
+                } else {
+                  return 0;
+                }
             }
          
             bool _computeForceRaw(Real3D& force, const Real3D& dist, real distSqr) const {
-                real ffactor;
+                real ffactor = 0.0;
                 if (interpolationType!=0){ 
                    real distrt = sqrt(distSqr);
-                   ffactor = table->getForce(distrt);
-                   ffactor /= distrt;
-                }
-                else {
+                   try {
+                     ffactor = table->getForce(distrt);
+                     ffactor /= distrt;
+                   } catch (std::exception &e) {
+                     std::cout << "Error in Tabulated.hpp computeForce, filename=" << filename << std::endl;
+                     std::cout << e.what() << std::endl;
+                     throw e;
+                   }
+                } else {
                     //throw std::runtime_error("Tabulated potential table not available.");
                     return false;
                 }

@@ -93,11 +93,15 @@ def process_general(cfg):
 
 def process_group(cfg):
     cfg = dict(cfg)
-    return {'potential': cfg['potential'],
-            'potential_options': dict([s.split('=') for s in cfg['potential_options'].split(',')]),
-            'reaction_list': [],
-            'extensions': {s.strip(): None for s in cfg['extensions'].split(',')}
-            }
+    return_gr = {'potential': cfg['potential'],
+                 'potential_options': dict(
+                     [s.split('=') for s in cfg['potential_options'].split(',')]),
+                 'reaction_list': [],
+                 'extensions': {}
+                 }
+    if 'extensions' in cfg:
+        return_gr['extensions'] = {s.strip(): None for s in cfg['extensions'].split(',')}
+    return return_gr
 
 
 def process_extension(cfg):
@@ -158,6 +162,8 @@ class SetupReactions:
             r_class = espressopp.integrator.DissociationReaction
         else:
             r_class = espressopp.integrator.Reaction
+        rt1 = rl['type_1']['name']
+        rt2 = rl['type_2']['name']
         r = r_class(
             type_1=self.name2type[rl['type_1']['name']],
             type_2=self.name2type[rl['type_2']['name']],
@@ -171,7 +177,8 @@ class SetupReactions:
             fpl=fpl,
             cutoff=float(chem_reaction['cutoff'])
         )
-        print('Setup reaction: {}-{}'.format(rl['type_1']['name'], rl['type_2']['name']))
+        print('Setup reaction: {}({})-{}({})'.format(
+            rt1, self.name2type[rt1], rt2, self.name2type[rt2]))
         if not chem_reaction['reverse']:
             r.intramolecular = bool(chem_reaction['intramolecular'])
         if 'min_cutoff' in chem_reaction:
@@ -188,6 +195,7 @@ class SetupReactions:
             t1_old = self.name2type[rl['type_1']['name']]
             t1_new = self.name2type[rl['type_1']['new_type']]
             if t1_old != t1_new:
+                print('Reaction: {}-{}, change type {}->{}'.format(rt1, rt2, t1_old, t1_new))
                 new_property = self.topol.gt.atomtypes[rl['type_1']['new_type']]
                 r_pp.add_change_property(
                     t1_old,
@@ -197,6 +205,7 @@ class SetupReactions:
             t2_old = self.name2type[rl['type_2']['name']]
             t2_new = self.name2type[rl['type_2']['new_type']]
             if t2_old != t2_new:
+                print('Reaction: {}-{}, change type {}->{}'.format(rt1, rt2, t2_old, t2_new))
                 new_property = self.topol.gt.atomtypes[rl['type_2']['new_type']]
                 r_pp.add_change_property(
                     t2_old,
@@ -217,6 +226,7 @@ class SetupReactions:
             for old_type, new_type in type_transfers:
                 old_type, nb_level = old_type.split(':')
                 if old_type != new_type:
+                    print('Change property {}->{} nb={}'.format(old_type, new_type, nb_level))
                     t1_old = self.name2type[old_type]
                     t1_new = self.name2type[new_type]
                     new_property = self.topol.gt.atomtypes[new_type]
@@ -238,11 +248,12 @@ class SetupReactions:
 
     def setup_reactions(self):
         """Setup reactions."""
+        self.ar_interval = int(self.cfg['general']['interval'])
         ar = espressopp.integrator.ChemicalReaction(
             self.system,
             self.vl,
             self.system.storage,
-            int(self.cfg['general']['interval']))
+            self.ar_interval)
 
         fpls = []
 
@@ -259,15 +270,14 @@ class SetupReactions:
             self.system.addInteraction(interaction, 'fpl_{}'.format(group_name))
 
             # Setting the post process extensions.
-            extensions = []  # self._prepare_group_postprocess(reaction_group['extensions'])
+            extensions = self._prepare_group_postprocess(reaction_group['extensions'])
 
             print('Setting chemical reactions in group')
             for chem_reaction in reaction_group['reaction_list']:
                 r = self.setup_reaction(chem_reaction, fpl)
                 if r is not None:
                     for pp in extensions:
-                        pass
-                        # r.add_postprocess(pp)
+                        r.add_postprocess(pp)
                     ar.add_reaction(r)
         return ar, fpls
 

@@ -102,23 +102,23 @@ P1 PA P2 P2 8 9 1.0 ;d9
  MA   PB      9 1 coupl_0.5 RA 999 0.0 0.8 1
  MA   P1      9 2 coupl_0.5 RA 999 0.0 0.8 1
  MA   P2      9 3 coupl_0.5 RA 999 0.0 0.8 1
- MA   RA      9 4 coupl_0.5 RA 999 0.0 0.8 1
- MA   RB      9 5 coupl_0.5 RA 999 0.0 0.8 1
+; MA   RA      9 4 coupl_0.5 RA 999 0.0 0.8 1
+; MA   RB      9 5 coupl_0.5 RA 999 0.0 0.8 1
  MB   PA      9 6 coupl_0.5 RA 999 0.0 0.8 1
  MB   PB      9 7 coupl_0.5 RA 999 0.0 0.8 1
  MB   P1      9 8 coupl_0.5 RA 999 0.0 0.8 1
  MB   P2      9 9 coupl_0.5 RA 999 0.0 0.8 1
- MB   RA      9 10 coupl_0.5 RA 999 0.0 0.8 1
- MB   RB      9 11 coupl_0.5 RA 999 0.0 0.8 1
+; MB   RA      9 10 coupl_0.5 RA 999 0.0 0.8 1
+; MB   RB      9 11 coupl_0.5 RA 999 0.0 0.8 1
  M1   PA      9 12 coupl_0.5 RA 999 0.0 0.8 1
  M1   PB      9 13 coupl_0.5 RA 999 0.0 0.8 1
  M1   P1      9 14 coupl_0.5 RA 999 0.0 0.8 1
  M1   P2      9 15 coupl_0.5 RA 999 0.0 0.8 1
- M1   RA      9 16 coupl_0.5 RA 999 0.0 0.8 1
- M1   RB      9 17 coupl_0.5 RA 999 0.0 0.8 1
+; M1   RA      9 16 coupl_0.5 RA 999 0.0 0.8 1
+; M1   RB      9 17 coupl_0.5 RA 999 0.0 0.8 1
  M2   PA      9 18 coupl_0.5 RA 999 0.0 0.8 1
  M2   PB      9 19 coupl_0.5 RA 999 0.0 0.8 1
  M2   P1      9 20 coupl_0.5 RA 999 0.0 0.8 1
  M2   P2      9 21 coupl_0.5 RA 999 0.0 0.8 1
- M2   RA      9 22 coupl_0.5 RA 999 0.0 0.8 1
- M2   RB      9 23 coupl_0.5 RA 999 0.0 0.8 0
+; M2   RA      9 22 coupl_0.5 RA 999 0.0 0.8 1
+; M2   RB      9 23 coupl_0.5 RA 999 0.0 0.8 0

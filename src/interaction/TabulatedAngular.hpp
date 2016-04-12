@@ -70,15 +70,23 @@ namespace espressopp {
                 }
              
                 real _computeEnergyRaw(real theta) const {
-                    if (table)
-                        return table->getEnergy(theta);
-                    else
-                        throw std::runtime_error("Tabulated angular potential table not available.");
+                  if (table) {
+                    try {
+                      return table->getEnergy(theta);
+                    } catch (std::exception &e) {
+                      std::cout << "Error in TabulatedAngular.hpp computeEnergy, filename=" << filename << std::endl;
+                      std::cout << e.what() << std::endl;
+                      throw e;
+                    }
+                  } else {
+                    throw std::runtime_error("Tabulated angular potential table not available.");
+                  }
                 }
              
                 bool _computeForceRaw(Real3D& force12, Real3D& force32,
                                       const Real3D& dist12, const Real3D& dist32) const {
                     if (table) {
+                      try {
                         real dist12_sqr = dist12 * dist12;
                         real dist32_sqr = dist32 * dist32;
                         real dist1232 = sqrt(dist12_sqr) * sqrt(dist32_sqr);
@@ -94,6 +102,11 @@ namespace espressopp {
 
                         force12 = a11 * dist12 + a12 * dist32;
                         force32 = a22 * dist32 + a12 * dist12;
+                      } catch (std::exception &e) {
+                        std::cout << "Error in TabulatedAngular.hpp computeForce, filename=" << filename << std::endl;
+                        std::cout << e.what() << std::endl;
+                        throw e;
+                      }
                     }
                     else {
                         throw std::runtime_error("Tabulated angular potential table not available.");
@@ -102,7 +115,13 @@ namespace espressopp {
                 }
              
                 real _computeForceRaw(real theta) const {
+                  try {
                     return table->getForce(theta);
+                  }  catch (std::exception &e) {
+                    std::cout << "Error in TabulatedAngular.hpp computeForceRaw, filename=" << filename << std::endl;
+                    std::cout << e.what() << std::endl;
+                    throw e;
+                  }
                 }
              
         }; // class

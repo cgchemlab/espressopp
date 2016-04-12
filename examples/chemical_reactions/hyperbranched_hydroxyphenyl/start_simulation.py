@@ -109,6 +109,8 @@ def main():  #NOQA
     print('Density: {} kg/m^3'.format(density))
     print('Box: {} nm'.format(box))
 
+    print gt.atomsym_atomtype
+
     # Generate velocity.
     print('Generating velocities from Maxwell-Boltzmann distribution T={}'.format(
         args.temperature))
@@ -196,12 +198,12 @@ def main():  #NOQA
     # Set potentials.
     cr_observs = tools_sim.setNonbondedInteractions(system, gt, verletlist, lj_cutoff, cg_cutoff)
     static_fpl, b_interaction = tools_sim.setBondInteractions(system, gt)
-    static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
+    #static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
     #static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
 
     print('Set Dynamic Exclusion lists.')
     dynamic_exclusion_list.observe_tuple(static_fpl)
-    dynamic_exclusion_list.observe_triple(static_ftl)
+    #dynamic_exclusion_list.observe_triple(static_ftl)
     #dynamic_exclusion_list.observe_quadruple(static_fql)
 
     print('Set topology manager')
@@ -210,14 +212,15 @@ def main():  #NOQA
     topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
     topology_manager.register_tuple(static_fpl, 0, 0)
-    for t in gt.angleparams:
-        topology_manager.register_triplet(static_ftl, *t)
+    #for t in gt.angleparams:
+    #    topology_manager.register_triplet(static_ftl, *t)
     #for t in gt.dihedralparams:
     #    topology_manager.register_quadruplet(static_fql, *t)
     integrator.addExtension(topology_manager)
 
     # Set chemical reactions
     fpls = []
+    cr_interval = 0
     if args.reactions:
         print('Set chemical reactions from: {}'.format(args.reactions))
         reaction_config = reaction_parser.parse_config(args.reactions)
@@ -228,7 +231,8 @@ def main():  #NOQA
         output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
         print('Save copy of reaction config to: {}'.format(output_reaction_config))
         shutil.copyfile(args.reactions, output_reaction_config)
-        #integrator.addExtension(ar)
+        integrator.addExtension(ar)
+        cr_interval = sc.ar_interval
 
     for f in fpls:
         topology_manager.observe_tuple(f)
@@ -255,23 +259,62 @@ def main():  #NOQA
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-    system_analysis.add_observable(
-        'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
-    system_analysis.add_observable(
-        'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
+    #system_analysis.add_observable(
+    #    'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
+    #system_analysis.add_observable(
+    #    'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
     #system_analysis.add_observable(
     #    'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
 
-    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, args.energy_collect)
+    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
 
+    print('Configure H5MD trajectory writer')
+    h5md_output_file = '{}_{}_traj.h5'.format(args.output_prefix, rng_seed)
+    traj_file = espressopp.io.DumpH5MD(
+        system,
+        h5md_output_file,
+        group_name='atoms',
+        static_box=False,
+        author='XXX',
+        email='xxx',
+        store_species=True,
+        store_state=True)
+    traj_file.set_parameters({
+        'temperature': args.temperature
+    })
+    print('Set topology writer')
+    dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
+    for i, f in enumerate(fpls):
+        dump_topol.observe_tuple(f, 'chem_bonds_{}'.format(i))
+
+    dump_topol.add_static_tuple(static_fpl, 'bonds')
+    dump_topol.dump()
+    dump_topol.update()
+    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, cr_interval)
+    integrator.addExtension(ext_dump)
+
+    print('Reset total velocity')
+    total_velocity = espressopp.analysis.TotalVelocity(system)
+    total_velocity.reset()
+
+    traj_file.dump(0, 0)
+
     print('Running {} steps'.format(sim_step*integrator_step))
+    system_analysis.dump()
     system_analysis.info()
     for k in range(sim_step):
         integrator.run(integrator_step)
         system_analysis.info()
-        print dynamic_exclusion_list.size
+        total_velocity.reset()
+        dump_topol.update()
+        traj_file.dump(k*integrator_step, k*integrator_step*dt)
+        traj_file.flush()
+    else:
+        dump_topol.update()
+        traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
+        traj_file.close()
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)

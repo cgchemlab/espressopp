@@ -202,8 +202,8 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
             elif func == 8:
                 table_name = 'table_{}_{}.xvg'.format(type_1, type_2)
             elif func == 1:
-                sig_1, eps_1 = atomparams[type_1]['sig'], atomparams[type_1]['eps']
-                sig_2, eps_2 = atomparams[type_2]['sig'], atomparams[type_2]['eps']
+                sig_1, eps_1 = atomparams[type_1]['sigma'], atomparams[type_1]['epsilon']
+                sig_2, eps_2 = atomparams[type_2]['sigma'], atomparams[type_2]['epsilon']
                 sig, eps = combination(sig_1, eps_1, sig_2, eps_2, combinationrule)
             elif func == 9:
                 tab_name = 'table_{}_{}.xvg'.format(param['params'][1], param['params'][0])
@@ -222,8 +222,8 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
                     cr_max,
                     cr_default])
         else:
-            sig_1, eps_1 = atomparams[type_1]['sig'], atomparams[type_1]['eps']
-            sig_2, eps_2 = atomparams[type_2]['sig'], atomparams[type_2]['eps']
+            sig_1, eps_1 = atomparams[type_1]['sigma'], atomparams[type_1]['epsilon']
+            sig_2, eps_2 = atomparams[type_2]['sigma'], atomparams[type_2]['epsilon']
             sig, eps = combination(sig_1, eps_1, sig_2, eps_2, combinationrule)
         # Standard interaction.
         if sig > 0 and eps > 0:
@@ -404,7 +404,7 @@ def _args():
                         help='Number of simulation steps')
     parser.add_argument('--int_step', default=1000, type=int, help='Steps in integrator')
     parser.add_argument('--rng_seed', type=int, help='Seed for RNG', required=False,
-                        default=random.randint(1000, 10000))
+                        default=12345)  # random.randint(1000, 10000))
     parser.add_argument('--output_prefix',
                         default='sim', type=str,
                         help='Prefix for output files')

@@ -660,19 +660,24 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   while (!Q.empty()) {
     current = Q.front();
     new_distance = visitedDistance[current] + 1;
-    std::set<longint> *adj = graph_->at(current);
-    for (std::set<longint>::iterator ia = adj->begin(); ia != adj->end(); ++ia) {
-      node = *ia;
-      if (visitedDistance.count(node) == 0) {
-        if (nb_distances_.count(new_distance) == 1) {
-          nb_at_distance.push_back(new_distance);
-          nb_at_distance.push_back(node);
+    try {
+      std::set<longint> *adj = graph_->at(current);
+      for (std::set<longint>::iterator ia = adj->begin(); ia != adj->end(); ++ia) {
+        node = *ia;
+        if (visitedDistance.count(node) == 0) {
+          if (nb_distances_.count(new_distance) == 1) {
+            nb_at_distance.push_back(new_distance);
+            nb_at_distance.push_back(node);
+          }
+          if (new_distance < max_nb_distance_) {
+            Q.push(node);
+          }
+          visitedDistance.insert(std::make_pair(node, new_distance));
         }
-        if (new_distance < max_nb_distance_) {
-          Q.push(node);
-        }
-        visitedDistance.insert(std::make_pair(node, new_distance));
       }
+    } catch (...) {
+      std::cout << "Exception graph_->at(current) = " << current << std::endl;
+      throw new std::runtime_error("Exception graph_->at");
     }
     Q.pop();
   }

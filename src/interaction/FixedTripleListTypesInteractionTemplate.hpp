@@ -35,10 +35,6 @@
 
 #include "storage/Storage.hpp"
 
-//In FixedTripleListInteractionTemplate.hpp, one potential is used for the entire FixedTripleList.
-//Here, the potential used for each FixedPair comes from an array of potentials, as a function of the types of the two particles in the FixedPair (i.e. same as how it works in VerletListInteractionTemplate.hpp)
-//This is needed e.g. for non-bonded fixed-pair interactions, such as 1-4 LJ and Coulomb interactions in protein forcefields.
-
 namespace espressopp {
 namespace interaction {
 template<typename _Potential>
@@ -68,7 +64,7 @@ class FixedTripleListTypesInteractionTemplate : public Interaction, SystemAccess
 
   void setPotential(int type1, int type2, int type3, const Potential &potential) {
     // typeX+1 because i<ntypes
-    ntypes = std::max(ntypes, std::max(std::max(type1 + 1, type2 + 1), type3+1));
+    ntypes = std::max(ntypes, std::max(std::max(type1 + 1, type2 + 1), type3 + 1));
     potentialArray.at(type1, type2, type3) = potential;
     if (type1 != type3) { // add potential in the other direction
       potentialArray.at(type3, type2, type1) = potential;
