@@ -11,7 +11,7 @@ import numpy as np
 
 import gromacs_topology_new
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser('Mix table')
 parser.add_argument('--top', default='topol.top')
 parser.add_argument('--scaling', type=float, default=0.5)
 parser.add_argument('--constant', type=float, default=0.0)
@@ -91,8 +91,7 @@ for (t1, t2), params in topol.topol.nonbond_params.items():
     if params['func'] == 9 or params['func'] == 10:
         mono_tab = convertGromacsESPP(np.loadtxt('table_{}_{}.xvg'.format(t1, t1)))
         poly_tab = convertGromacsESPP(np.loadtxt('table_{}_{}.xvg'.format(t2, t2)))
-        out_name = 'table_{}_{}.pot'.format(
-            params['params'][1], params['params'][0])
+        out_name = 'table_{}_{}.pot'.format(params['params'][1], params['params'][0])
         if args.mix_type == 0:
             mixed_table = mix_arithmetic(mono_tab, poly_tab, args.scaling)
         elif args.mix_type == 1:
