@@ -40,8 +40,6 @@ h5md_group = 'atoms'
 
 __doc__ = 'Run GROMACS-like simulation'
 
-# Do not to modify lines below.
-
 
 def sort_trajectory(trj, ids):
     """Performs sorting on HDF5 file. It is required because by default, H5MD file
@@ -95,6 +93,7 @@ def main():  #NOQA
     if args.skin:
         skin = args.skin
 
+    # Seed for RNG
     rng_seed = args.rng_seed
     if not args.rng_seed:
         rng_seed = random.randint(10, 1000000)
@@ -108,8 +107,6 @@ def main():  #NOQA
     density = sum(x[3] for x in particle_list)*1.6605402 / (box[0] * box[1] * box[2])
     print('Density: {} kg/m^3'.format(density))
     print('Box: {} nm'.format(box))
-
-    print gt.atomsym_atomtype
 
     # Generate velocity.
     print('Generating velocities from Maxwell-Boltzmann distribution T={}'.format(
@@ -143,7 +140,7 @@ def main():  #NOQA
     system.storage.addParticles(particle_list, *part_prop)
     system.storage.decompose()
 
-# In the case of butane is very easy to do
+# Dynamic exclude list, depends on the new create bonds as well.
     dynamic_exclusion_list = espressopp.DynamicExcludeList(integrator, gt.exclusions)
     print('Excluded pairs from LJ interaction: {}'.format(len(gt.exclusions)))
 
@@ -175,6 +172,7 @@ def main():  #NOQA
         raise Exception('Wrong thermostat keyword: `{}`'.format(args.thermostat))
     integrator.addExtension(thermostat)
 
+# Pressure coupling if needed,
     pressure_comp = espressopp.analysis.Pressure(system)
     if args.pressure:
         pressure = args.pressure * 0.060221374  # convert from bars to gromacs units kj/mol/nm^3
@@ -198,13 +196,13 @@ def main():  #NOQA
     # Set potentials.
     cr_observs = tools_sim.setNonbondedInteractions(system, gt, verletlist, lj_cutoff, cg_cutoff)
     static_fpl, b_interaction = tools_sim.setBondInteractions(system, gt)
-    #static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
-    #static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
+    static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
+    static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
 
     print('Set Dynamic Exclusion lists.')
     dynamic_exclusion_list.observe_tuple(static_fpl)
-    #dynamic_exclusion_list.observe_triple(static_ftl)
-    #dynamic_exclusion_list.observe_quadruple(static_fql)
+    dynamic_exclusion_list.observe_triple(static_ftl)
+    dynamic_exclusion_list.observe_quadruple(static_fql)
 
     print('Set topology manager')
     topology_manager = espressopp.integrator.TopologyManager(system)
@@ -212,13 +210,13 @@ def main():  #NOQA
     topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
     topology_manager.register_tuple(static_fpl, 0, 0)
-    #for t in gt.angleparams:
-    #    topology_manager.register_triplet(static_ftl, *t)
-    #for t in gt.dihedralparams:
-    #    topology_manager.register_quadruplet(static_fql, *t)
+    for t in gt.angleparams:
+        topology_manager.register_triplet(static_ftl, *t)
+    for t in gt.dihedralparams:
+        topology_manager.register_quadruplet(static_fql, *t)
     integrator.addExtension(topology_manager)
 
-    # Set chemical reactions
+    # Set chemical reactions, parser in reaction_parser.py
     fpls = []
     cr_interval = 0
     if args.reactions:
@@ -238,6 +236,7 @@ def main():  #NOQA
         topology_manager.observe_tuple(f)
         dynamic_exclusion_list.observe_tuple(f)
 
+# Define SystemMonitor that will store data from observables into a .csv file.
     energy_file = '{}_energy_{}.csv'.format(args.output_prefix, rng_seed)
     print('Energy saved to: {}'.format(energy_file))
     system_analysis = espressopp.analysis.SystemMonitor(
@@ -256,15 +255,17 @@ def main():  #NOQA
     for (cr_type, _), obs in cr_observs.items():
         system_analysis.add_observable(
             'cr_{}'.format(cr_type), obs)
+# Those observables below are only for DEBUG purpose, it counts the number of entries
+# in the pair, triple and quadruple lists.
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-    #system_analysis.add_observable(
-    #    'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
-    #system_analysis.add_observable(
-    #    'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
-    #system_analysis.add_observable(
-    #    'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
+    system_analysis.add_observable(
+        'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
+    system_analysis.add_observable(
+        'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
+    system_analysis.add_observable(
+        'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
 
     ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
     integrator.addExtension(ext_analysis)
@@ -315,6 +316,11 @@ def main():  #NOQA
         dump_topol.update()
         traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
         traj_file.close()
+
+    # Saves the excluded lists.
+    exclude_list = dynamic_exclusion_list.get_list()
+    import cPickle
+    cPickle.dump(exclude_list, open('exclude_list.pck', 'wb'))
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
