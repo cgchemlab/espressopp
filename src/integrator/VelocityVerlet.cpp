@@ -89,12 +89,12 @@ namespace espressopp {
       // Before start make sure that particles are on the right processor
       if (resortFlag) {
         VT_TRACER("resort");
-        // time = timeIntegrate.getElapsedTime();
+        time = timeIntegrate.getElapsedTime();
         LOG4ESPP_INFO(theLogger, "resort particles");
         storage.decompose();
         maxDist = 0.0;
         resortFlag = false;
-        // timeResort += timeIntegrate.getElapsedTime();
+        timeResort += timeIntegrate.getElapsedTime();
       }
 
       bool recalcForces = true;  // TODO: more intelligent
@@ -179,16 +179,10 @@ namespace espressopp {
       }
 
       timeRun = timeIntegrate.getElapsedTime();
-      timeLost = timeRun - (timeComm1 + timeComm2 + timeInt1 + timeInt2 + timeResort);
-      // Substract the timeForceComp.
-      for (int i =0; i < timeForceComp.size(); i++)
-        timeLost -= timeForceComp[i];
-
       LOG4ESPP_INFO(theLogger, "finished run");
     }
 
     void VelocityVerlet::resetTimers() {
-      timeForce  = 0.0;
       // Prepare the force comp timers if the size is not valid.
       System& system = getSystemRef();
       const InteractionList& srIL = system.shortRangeInteractions;
@@ -219,61 +213,57 @@ namespace espressopp {
     }
 
 
-    void VelocityVerlet::printTimers() {
-
-      using namespace std;
-      real pct;
-
-      cout << endl;
-      cout << "run = " << setiosflags(ios::fixed) << setprecision(1) << timeRun << endl;
-      pct = 100.0 * (timeForceComp[0] / timeRun);
-      cout << "pair (%) = " << timeForceComp[0] << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeForceComp[1] / timeRun);
-      cout << "FENE (%) = " << timeForceComp[1] << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeForceComp[2] / timeRun);
-      cout << "angle (%) = " << timeForceComp[2] << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeComm1 / timeRun);
-      cout << "comm1 (%) = " << timeComm1 << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeComm2 / timeRun);
-      cout << "comm2 (%) = " << timeComm2 << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeInt1 / timeRun);
-      cout << "int1 (%) = " << timeInt1 << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeInt2 / timeRun);
-      cout << "int2 (%) = " << timeInt2 << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeResort / timeRun);
-      cout << "resort (%) = " << timeResort << " (" << pct << ")" << endl;
-      pct = 100.0 * (timeLost / timeRun);
-      cout << "other (%) = " << timeLost << " (" << pct << ")" << endl;
-      cout << endl;
-    }
-
-    void VelocityVerlet::loadTimers(std::vector<real> &return_vector) {
+    void VelocityVerlet::loadTimers(std::vector<real> &return_vector, std::vector<std::string> &labels) {
 
       return_vector.push_back(timeRun);
-      for (int i = 0; i < timeForceComp.size(); i++)
+      labels.push_back("timeRun");
+      for (int i = 0; i < timeForceComp.size(); i++) {
+        std::stringstream ss;
+        ss << "f" << i;
         return_vector.push_back(timeForceComp[i]);
+        labels.push_back(ss.str());
+      }
 
       // signal timers.
-      return_vector.push_back(
-          timeRunInitS + timeRecalc1S + timeRecalc2S + timeBefIntPS +
-          timeAftIntPS + timeAftCalcFS + timeBefIntVS + timeAftIntVS
-          );
+      return_vector.push_back(timeRunInitS);
+      return_vector.push_back(timeRecalc1S);
+      return_vector.push_back(timeRecalc2S);
+      return_vector.push_back(timeBefIntPS);
+      return_vector.push_back(timeAftIntPS);
+      return_vector.push_back(timeAftCalcFS);
+      return_vector.push_back(timeBefIntVS);
+      return_vector.push_back(timeAftIntVS);
 
       return_vector.push_back(timeComm1);
       return_vector.push_back(timeComm2);
       return_vector.push_back(timeInt1);
       return_vector.push_back(timeInt2);
       return_vector.push_back(timeResort);
-      return_vector.push_back(timeLost);
+
+      labels.push_back("timeRunInitS");
+      labels.push_back("timeRecalc1S");
+      labels.push_back("timeRecalc2S");
+      labels.push_back("timeBefIntPS");
+      labels.push_back("timeAftIntPS");
+      labels.push_back("timeAftCalcFS");
+      labels.push_back("timeBefIntVS");
+      labels.push_back("timeAftIntVS");
+
+      labels.push_back("timeComm1");
+      labels.push_back("timeComm2");
+      labels.push_back("timeInt1");
+      labels.push_back("timeInt2");
+      labels.push_back("timeResort");
     }
 
     static boost::python::object wrapGetTimers(class VelocityVerlet* obj) {
       std::vector<real> timers;
-      obj->loadTimers(timers);
+      std::vector<std::string> labels;
+      obj->loadTimers(timers, labels);
 
       boost::python::list return_list;
       for (int i = 0; i < timers.size(); i++) {
-        return_list.append(timers[i]);
+        return_list.append(boost::python::make_tuple(labels[i], timers[i]));
       }
       return return_list;
     }

@@ -60,6 +60,8 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
 
   reaction_list_ = ReactionList();
   reverse_reaction_list_ = ReactionList();
+
+  resetTimers();
 }
 
 ChemicalReaction::~ChemicalReaction() {
@@ -115,6 +117,7 @@ void ChemicalReaction::React() {
   potential_pairs_.clear();
   effective_pairs_.clear();
 
+  wallTimer.startMeasure();
   // loop over VL pairs
   for (PairList::Iterator it(verlet_list_->getPairs()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
@@ -137,7 +140,9 @@ void ChemicalReaction::React() {
       }
     }
   }
+  timeLoopPair += wallTimer.stopMeasure();
 
+  wallTimer.startMeasure();
   sendMultiMap(potential_pairs_);
 
   // Here, reduce number of partners to each A to 1
@@ -152,21 +157,29 @@ void ChemicalReaction::React() {
 
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
+  timeComm += wallTimer.stopMeasure();
 
+  wallTimer.startMeasure();
   // First, remove pairs.
   ApplyDR(modified_particles);
+  timeApplyDR += wallTimer.stopMeasure();
 
   // Synchronize, all cpus should finish dissocition part.
   (*system.comm).barrier();
 
+  wallTimer.startMeasure();
   // Now, accept new pairs.
   ApplyAR(modified_particles);
+  timeApplyAR += wallTimer.stopMeasure();
 
   // Synchronize, all cpus should finish association part.
   (*system.comm).barrier();
 
+  wallTimer.startMeasure();
   // Update the ghost particles.
   updateGhost(modified_particles);
+  timeUpdateGhost += wallTimer.stopMeasure();
+
   LOG4ESPP_DEBUG(theLogger, "Finished react()");
   LOG4ESPP_DEBUG(theLogger, "Leaving react()");
 }
@@ -776,6 +789,17 @@ void ChemicalReaction::connect() {
     boost::bind(&ChemicalReaction::React, this), boost::signals2::at_front);
 }
 
+python::list ChemicalReaction::getTimers() {
+  python::list ret;
+  ret.append(python::make_tuple("timeComm", timeComm));
+  ret.append(python::make_tuple("timeUpdateGhost", timeUpdateGhost));
+  ret.append(python::make_tuple("timeApplyAR", timeApplyAR));
+  ret.append(python::make_tuple("timeApplyDR", timeApplyDR));
+  ret.append(python::make_tuple("timeLoopPair", timeLoopPair));
+
+  return ret;
+}
+
 /****************************************************
 ** REGISTRATION WITH PYTHON
 ****************************************************/
@@ -788,6 +812,7 @@ void ChemicalReaction::registerPython() {
     .def("connect", &ChemicalReaction::connect)
     .def("disconnect", &ChemicalReaction::disconnect)
     .def("add_reaction", &ChemicalReaction::addReaction)
+    .def("get_timers", &ChemicalReaction::getTimers)
     .add_property(
       "interval",
       &ChemicalReaction::interval,

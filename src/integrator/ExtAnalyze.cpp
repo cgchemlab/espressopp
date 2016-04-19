@@ -53,9 +53,15 @@ namespace espressopp {
     //void ExtAnalyze::performMeasurement() {
     void ExtAnalyze::perform_action() {
       LOG4ESPP_INFO(theLogger, "performing measurement in integrator");
+      wallTimer.startMeasure();
       if (integrator->getStep() % interval == 0) {
           particle_access->perform_action();
       }
+      timer_ += wallTimer.stopMeasure();
+    }
+
+    real ExtAnalyze::getTimer() {
+      return timer_;
     }
 
     /****************************************************
@@ -65,6 +71,7 @@ namespace espressopp {
       using namespace espressopp::python;
       class_<ExtAnalyze, shared_ptr<ExtAnalyze>, bases<Extension> >
         ("integrator_ExtAnalyze", init< shared_ptr< ParticleAccess > , int >())
+        .add_property("timer", &ExtAnalyze::getTimer)
         .def("connect", &ExtAnalyze::connect)
         .def("disconnect", &ExtAnalyze::disconnect)
         ;

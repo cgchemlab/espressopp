@@ -32,6 +32,7 @@ import gromacs_topology_new
 import files_io
 import reaction_parser
 import tools_sim
+import tools
 
 # GROMACS units, kJ/mol K
 kb = 0.0083144621
@@ -103,6 +104,8 @@ def main():  #NOQA
 
     part_prop, particle_list = tools_sim.genParticleList(input_conf, gt)
     print('Reads {} particles with properties {}'.format(len(particle_list), part_prop))
+
+    particle_ids = [x[0] for x in particle_list]
 
     density = sum(x[3] for x in particle_list)*1.6605402 / (box[0] * box[1] * box[2])
     print('Density: {} kg/m^3'.format(density))
@@ -206,7 +209,6 @@ def main():  #NOQA
 
     print('Set topology manager')
     topology_manager = espressopp.integrator.TopologyManager(system)
-    topology_manager.rebuild()
     topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
     topology_manager.register_tuple(static_fpl, 0, 0)
@@ -267,7 +269,7 @@ def main():  #NOQA
     #system_analysis.add_observable(
     #    'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
 
-    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
+    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, 10) #cr_interval)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
 
@@ -302,6 +304,18 @@ def main():  #NOQA
 
     traj_file.dump(0, 0)
 
+    # Set properties of output topology. Clean data and set single molecule.
+    if len(gt.topol.molecules) > 1:
+        raise RuntimeError('Supports only single molecule name')
+    gt.topol.molecules[gt.topol.molecules.keys()[0]] = 1
+    gt.topol.atoms = {}
+    gt.topol.angles = {}
+    gt.topol.bonds = {}
+    gt.topol.dihedrals = {}
+    gt.topol.pairs = {}
+    file_name = 'abc'
+    fpls.append(static_fpl)
+
     print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.dump()
     system_analysis.info()
@@ -310,13 +324,15 @@ def main():  #NOQA
         system_analysis.info()
         total_velocity.reset()
         dump_topol.update()
-        traj_file.dump(k*integrator_step, k*integrator_step*dt)
-        traj_file.flush()
-        for (cr_type, _), obs in cr_observs.items():
-            gro_file_name = 'cr_coord_{}_value_{}.gro'.format(cr_type, obs.value)
-            dump_coord = espressopp.io.DumpGRO(
-                system, integrator, filename=gro_file_name, unfolded=True, append=False)
-            dump_coord.dump()
+        #traj_file.dump(k*integrator_step, k*integrator_step*dt)
+        #traj_file.flush()
+        #for (cr_type, _), obs in cr_observs.items():
+        #    file_name = 'cr_coord_{}_value_{}'.format(cr_type, obs.value)
+        #    dump_coord = espressopp.io.DumpGRO(
+        #        system, integrator, filename='{}.gro'.format(file_name), unfolded=True, append=False)
+        #    dump_coord.dump()
+        #    #tools.dump_topol('{}.top'.format(file_name), gt, system, particle_ids,
+        #    #                 fpls, [], [], [])
     else:
         dump_topol.update()
         traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
@@ -333,6 +349,8 @@ def main():  #NOQA
     print('finished!')
     print('total time: {}'.format(time.time()-time0))
     espressopp.tools.analyse.final_info(system, integrator, verletlist, time0, time.time())
+
+    print topology_manager.get_timers()
 
 
 if __name__ == '__main__':

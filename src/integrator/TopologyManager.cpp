@@ -43,7 +43,13 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
   LOG4ESPP_INFO(theLogger, "TopologyManager");
   type = Extension::all;
   graph_ = new GraphMap();
+  res_graph_ = new GraphMap();
+
+  residues_ = new GraphMap();
+
   update_angles_dihedrals = false;
+
+  wallTimer.reset();
 }
 
 TopologyManager::~TopologyManager() {
@@ -54,6 +60,18 @@ TopologyManager::~TopologyManager() {
       delete it->second;
   }
   delete graph_;
+
+  for (GraphMap::iterator it = res_graph_->begin(); it != res_graph_->end(); ++it) {
+    if (it->second)
+      delete it->second;
+  }
+  delete res_graph_;
+
+  for (GraphMap::iterator it = residues_->begin(); it != residues_->end(); ++it) {
+    if (it->second)
+      delete it->second;
+  }
+  delete residues_;
 }
 
 void TopologyManager::connect() {
@@ -99,25 +117,76 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
 void TopologyManager::InitializeTopology() {
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
+  EdgesVector res_ids;
+  EdgesVector output;
+  std::map<longint, std::set<int> > tmp_resGraph;
+  std::vector<std::pair<longint, longint> > local_resid;
+
   for (std::vector< shared_ptr<FixedPairList> >::iterator it = tuples_.begin();
        it != tuples_.end(); ++it) {
     for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
       edges.push_back(std::make_pair(p1.id(), p2.id()));
+      // Manage bond between residues.
+      bool foundResBond = false;
+      if (tmp_resGraph.count(p1.res_id()) > 0)
+        if (tmp_resGraph.at(p1.res_id()).count(p2.res_id()) > 0)
+          foundResBond = true;
+      else if (tmp_resGraph.count(p2.res_id()) > 0)
+          if (tmp_resGraph.at(p2.res_id()).count(p1.res_id()) > 0)
+            foundResBond = true;
+
+      if (!foundResBond) {
+        res_ids.push_back(std::make_pair(p1.res_id(), p2.res_id()));
+        tmp_resGraph[p1.res_id()].insert(p2.res_id());
+        tmp_resGraph[p2.res_id()].insert(p1.res_id());
+      }
+      local_resid.push_back(std::make_pair(p1.id(), p1.res_id()));
+      local_resid.push_back(std::make_pair(p2.id(), p2.res_id()));
     }
   }
-  LOG4ESPP_DEBUG(theLogger, "Scatter " << edges.size());
+  output.push_back(std::make_pair(edges.size(), res_ids.size()));
+  output.push_back(std::make_pair(local_resid.size(), 0));
+  output.insert(output.end(), edges.begin(), edges.end());
+  output.insert(output.end(), res_ids.begin(), res_ids.end());
+  output.insert(output.end(), local_resid.begin(), local_resid.end());
+
+  LOG4ESPP_DEBUG(theLogger, "Scatter " << output.size());
   // Scatter edges lists all over all nodes. This is costful operation but
   // it is simpler than moving part of graphs all around.
-  std::vector<EdgesVector> global_edges;
-  mpi::all_gather(*(system_->comm), edges, global_edges);
+  std::vector<EdgesVector> global_output;
+  mpi::all_gather(*(system_->comm), output, global_output);
 
   // Build a graph. The same on every CPU.
-  for (std::vector<EdgesVector>::iterator itv = global_edges.begin();
-       itv != global_edges.end(); ++itv) {
-    for (EdgesVector::iterator it = itv->begin(); it != itv->end(); ++it) {
+  for (std::vector<EdgesVector>::iterator itv = global_output.begin();
+       itv != global_output.end(); ++itv) {
+    EdgesVector::iterator it = itv->begin();
+    // collects the size of data structures.
+    longint edges_size = it->first;
+    longint resid_size = it->second;
+    it++;
+    longint local_resid_size = it->first;
+    it++;
+
+    // Create the edge list between atoms.
+    for (longint i = 0; i < edges_size; ++it, i++) {
       newEdge(it->first, it->second);
+    }
+
+    // Create the edge list between residues.
+    for (longint i = 0; i < resid_size; ++it, i++) {
+      newResEdge(it->first, it->second);
+    }
+
+    // Create the mapping particle_id->residue_id and residue_id->particle_list
+    for (longint i = 0; i < local_resid_size; ++it, i++) {
+      longint pid = it->first;
+      longint rid = it->second;
+      pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
+      if (residues_->count(rid) == 0)
+        residues_->insert(std::make_pair(rid, new std::set<longint>()));
+      residues_->at(rid)->insert(pid);
     }
   }
 }
@@ -154,11 +223,7 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
   Particle *p2 = system_->storage->lookupLocalParticle(pid2);
   if (!p1 || !p2)
     return;
-  // Update res_id, if bond joins two molecules with different res_id then merge the sets.
-  // p2.res_id() <- p1.res_id()
-  if (p1->res_id() != p2->res_id()) {
-    merge_sets_.push_back(std::make_pair(p1->res_id(), p2->res_id()));
-  }
+
   newEdges_.push_back(std::make_pair(pid1, pid2));
 }
 
@@ -172,7 +237,11 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   graph_->at(pid1)->insert(pid2);
   graph_->at(pid2)->insert(pid1);
 
+  // newResidueEdge
+  newResEdge(pid_rid[pid1], pid_rid[pid2]);
+
   // Generate angles, dihedrals, based on updated graph.
+  wallTimer.startMeasure();
   if (update_angles_dihedrals) {
     std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
     std::set<Triplets> *triplets = new std::set<Triplets>();
@@ -182,6 +251,17 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     defineDihedrals(*quadruplets);
     define14tuples(*quadruplets);
   }
+  timeGenerateAnglesDihedrals += wallTimer.stopMeasure();
+}
+
+void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
+  /// Updates residue graph.
+  if (res_graph_->count(rpid1) == 0)
+    res_graph_->insert(std::make_pair(rpid1, new std::set<longint>()));
+  if (res_graph_->count(rpid2) == 0)
+    res_graph_->insert(std::make_pair(rpid2, new std::set<longint>()));
+  res_graph_->at(rpid1)->insert(rpid2);
+  res_graph_->at(rpid2)->insert(rpid1);
 }
 
 void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
@@ -189,9 +269,7 @@ void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
   Particle *p2 = system_->storage->lookupLocalParticle(pid2);
   if (!p1 || !p2)
     return;
-  if (p1->res_id() == p2->res_id()) {
-    split_sets_.push_back(std::make_pair(p1->res_id(), std::make_pair(pid1, pid2)));
-  }
+
   removedEdges_.push_back(std::make_pair(pid1, pid2));
 }
 
@@ -202,6 +280,29 @@ void TopologyManager::deleteEdge(longint pid1, longint pid2) {
     graph_->at(pid1)->erase(pid2);
   if (graph_->count(pid2) > 0)
     graph_->at(pid2)->erase(pid1);
+
+  // If edge removed, check if there is still edge between residues.
+  longint rid1 = pid_rid[pid1];
+  longint rid2 = pid_rid[pid2];
+  // Get list of particles in given residues.
+  std::set<longint> *Pset1 = residues_->at(rid1);
+  std::set<longint> *Pset2 = residues_->at(rid2);
+
+  // Scan through the bonds that can be created between two residues and check if bond exitst.
+  // if not then remove bond between residues.
+  bool hasBond = false;
+  for (std::set<longint>::iterator it1 = Pset1->begin(); !hasBond && it1 != Pset1->end(); ++it1) {
+    for (std::set<longint>::iterator it2 = Pset2->begin(); !hasBond && it2 != Pset2->end(); ++it2) {
+      longint ppid1 = *it1;
+      longint ppid2 = *it2;
+      if (graph_->count(ppid1) == 1 && graph_->at(ppid1)->count(ppid2) == 1)
+        hasBond = true;
+    }
+  }
+  if (!hasBond) {
+    res_graph_->at(rid1)->erase(rid2);
+    res_graph_->at(rid2)->erase(rid1);
+  }
 }
 
 void TopologyManager::removeBond(longint pid1, longint pid2) {
@@ -216,6 +317,7 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
   }
 
   // Generate list of angles/dihedrals to remove, based on the graph.
+  wallTimer.startMeasure();
   if (update_angles_dihedrals) {
     std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
     std::set <Triplets> *triplets = new std::set<Triplets>();
@@ -234,6 +336,77 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
       (*it)->updateParticlesStorage();
     }
   }
+  timeGenerateAnglesDihedrals += wallTimer.stopMeasure();
+}
+
+void TopologyManager::exchangeData() {
+  LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
+  wallTimer.startMeasure();
+
+  // Collect all message from other CPUs. Both for res_id and new graph edges.
+  typedef std::vector<std::vector<longint> > GlobalMerge;
+  GlobalMerge global_merge_sets;
+
+  // Pack data
+  // Format: vector of pairs.
+  // 0: size of merge_sets, size of new_edges;
+  // 1: size of split_sets, size of removed_edges;
+  // 2..size_of_merge_sets
+  std::vector<longint> output;
+  //output.push_back(merge_sets_.size());  // vector of sets of particles to merge.
+  output.push_back(nb_distance_particles_.size() / 2);  // vector of particles to updates.
+  output.push_back(newEdges_.size());  // vector of new edges.
+  output.push_back(removedEdges_.size());  // vector of edges to remove.
+
+  output.insert(output.end(), nb_distance_particles_.begin(), nb_distance_particles_.end());
+
+  for (std::vector<std::pair<longint, longint> >::iterator it = newEdges_.begin();
+       it != newEdges_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second);
+  }
+
+  for (std::vector<std::pair<longint, longint> >::iterator it = removedEdges_.begin();
+       it != removedEdges_.end(); ++it) {
+    output.push_back(it->first);
+    output.push_back(it->second);
+  }
+
+  // Send and gather data from all nodes.
+  mpi::all_gather(*(system_->comm), output, global_merge_sets);
+
+  // Merge data from other nodes.
+  longint f1, f2, f3, merge_set_size, new_edge_size, split_set_size, remove_edge_size, nb_distance_particles_size;
+  for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
+    for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
+      //merge_set_size = *(itm++);
+      nb_distance_particles_size = *(itm++);
+      new_edge_size = *(itm++);
+      remove_edge_size = *(itm++);
+
+      for (int i = 0; i < nb_distance_particles_size; i++) {
+        int distance = *(itm++);
+        int particle_id = *(itm++);
+        updateParticlePropertiesAtDistance(particle_id, distance);
+      }
+      for (int i = 0; i < new_edge_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        newEdge(f1, f2);
+      }
+      for (int i = 0; i < remove_edge_size; i++) {
+        f1 = *(itm++);
+        f2 = *(itm++);
+        deleteEdge(f1, f2);
+      }
+    }
+  }
+  newEdges_.clear();
+  removedEdges_.clear();
+  nb_distance_particles_.clear();
+
+  timeExchangeData += wallTimer.stopMeasure();
+  LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
 }
 
 void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
@@ -482,172 +655,6 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
   }
 }
 
-void TopologyManager::exchangeData() {
-  LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
-  // Collect all message from other CPUs. Both for res_id and new graph edges.
-  typedef std::vector<std::vector<longint> > GlobalMerge;
-  GlobalMerge global_merge_sets;
-
-  // Pack data
-  // Format: vector of pairs.
-  // 0: size of merge_sets, size of new_edges;
-  // 1: size of split_sets, size of removed_edges;
-  // 2..size_of_merge_sets
-  // size_of_merge_sets+2...size_of_merge_sets+size_of_new_edges
-  //
-  std::vector<longint> output;
-  output.push_back(merge_sets_.size());  // vector of sets of particles to merge.
-  output.push_back(nb_distance_particles_.size() / 2);  // vector of particles to updates.
-  output.push_back(newEdges_.size());  // vector of new edges.
-  output.push_back(removedEdges_.size());  // vector of edges to remove.
-  output.push_back(split_sets_.size());  // vector of sets to split.
-
-  for (std::vector<std::pair<longint, longint> >::iterator it = merge_sets_.begin();
-      it != merge_sets_.end(); ++it) {
-    output.push_back(it->first);
-    output.push_back(it->second);
-  }
-
-  output.insert(output.end(), nb_distance_particles_.begin(), nb_distance_particles_.end());
-
-  for (std::vector<std::pair<longint, longint> >::iterator it = newEdges_.begin();
-      it != newEdges_.end(); ++it) {
-    output.push_back(it->first);
-    output.push_back(it->second);
-  }
-
-  for (std::vector<std::pair<longint, longint> >::iterator it = removedEdges_.begin();
-      it != removedEdges_.end(); ++it) {
-    output.push_back(it->first);
-    output.push_back(it->second);
-  }
-
-  for (std::vector<std::pair<longint, std::pair<longint, longint> > >::iterator it = split_sets_.begin();
-       it != split_sets_.end(); ++it) {
-    output.push_back(it->first);
-    output.push_back(it->second.first);
-    output.push_back(it->second.second);
-  }
-
-  // Send and gather data from all nodes.
-  mpi::all_gather(*(system_->comm), output, global_merge_sets);
-
-  // Merge data from other nodes.
-  longint f1, f2, f3, merge_set_size, new_edge_size, split_set_size, remove_edge_size, nb_distance_particles_size;
-  for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
-    for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
-      merge_set_size = *(itm++);
-      nb_distance_particles_size = *(itm++);
-      new_edge_size = *(itm++);
-      split_set_size = *(itm++);
-      remove_edge_size = *(itm++);
-      for (int i = 0; i < merge_set_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        mergeResIdSets(f1, f2);
-      }
-      for (int i = 0; i < nb_distance_particles_size; i++) {
-        int distance = *(itm++);
-        int particle_id = *(itm++);
-        updateParticlePropertiesAtDistance(particle_id, distance);
-      }
-      for (int i = 0; i < new_edge_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        newEdge(f1, f2);
-      }
-      for (int i = 0; i < remove_edge_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        deleteEdge(f1, f2);
-      }
-      for (int i = 0; i < split_set_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        f3 = *(itm++);
-        splitResIdSets(f1, f2, f3);
-      }
-    }
-  }
-  merge_sets_.clear();
-  newEdges_.clear();
-  removedEdges_.clear();
-  split_sets_.clear();
-  nb_distance_particles_.clear();
-  LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
-}
-
-void TopologyManager::mergeResIdSets(longint res_id_a, longint res_id_b) {
-  LOG4ESPP_DEBUG(theLogger, "merge sets A:" << res_id_a << " with B:" << res_id_b);
-  if (res_id_a == res_id_b)
-    return;
-
-  if (res_particle_ids_[res_id_b]->begin() == res_particle_ids_[res_id_b]->end())
-    return;
-
-  shared_ptr<PSet> setA = res_particle_ids_[res_id_a];
-
-  shared_ptr<PSet> setB = res_particle_ids_[res_id_b];
-  assert (setB != NULL);
-  // Merge two sets.
-  for (PSet::iterator it = setB->begin(); it != setB->end(); ++it) {
-    setA->insert(*it);
-    Particle *p = system_->storage->lookupLocalParticle(*it);
-    if (p) {
-      p->setResId(res_id_a);
-    }
-  }
-  res_particle_ids_[res_id_b] = res_particle_ids_[res_id_a];
-  LOG4ESPP_DEBUG(theLogger, "leaving merge sets A:" << res_id_a << " with B:" << res_id_b);
-  //delete setB;  // free memory as this set was copied to res_id_a.
-}
-
-void TopologyManager::splitResIdSets(longint res_id, longint pid1, longint pid2) {
-  LOG4ESPP_DEBUG(theLogger, "spliting set " << res_id << " pid1=" << pid1 << " pid2=" << pid2);
-
-  shared_ptr<PSet> setA = res_particle_ids_[res_id];
-  longint max_res_id = (--res_particle_ids_.end())->first;
-
-  PSet set_1;
-  PSet set_2;
-
-  std::cout << "splitResIdSets not implemented!!!" << std::endl;
-
-}
-
-void TopologyManager::Rebuild() {
-  LOG4ESPP_DEBUG(theLogger, "entering Rebuild");
-  for (ResParticleIds::iterator it = res_particle_ids_.begin();
-       it != res_particle_ids_.end(); ++it) {
-    delete &(*it->second);
-  }
-  res_particle_ids_.clear();
-  // Collect local particle ids.
-  CellList cl = system_->storage->getRealCells();
-  for (CellListIterator it(cl); it.isValid(); ++it) {
-    Particle &p = *it;
-    if (!res_particle_ids_[p.res_id()])
-      res_particle_ids_[p.res_id()] = make_shared<PSet>();
-    res_particle_ids_[p.res_id()]->insert(p.id());
-  }
-  // Sync among CPUs.
-  std::vector<ResParticleIds> global_res_particle_ids;
-  mpi::all_gather(*(system_->comm), res_particle_ids_, global_res_particle_ids);
-  // Update local storage.
-  for (std::vector<ResParticleIds>::iterator it = global_res_particle_ids.begin();
-       it != global_res_particle_ids.end(); ++it) {
-    for (ResParticleIds::iterator itp = it->begin(); itp != it->end(); ++itp) {
-      for (PSet::iterator itps = itp->second->begin(); itps != itp->second->end(); ++itps) {
-        if (!res_particle_ids_[itp->first])
-          res_particle_ids_[itp->first] = make_shared<PSet>();
-        res_particle_ids_[itp->first]->insert(*itps);
-      }
-    }
-  }
-  LOG4ESPP_DEBUG(theLogger, "leaving Rebuild");
-}
-
-
 std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
@@ -685,25 +692,6 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
 }
 
 
-void TopologyManager::registerPython() {
-  using namespace espressopp::python;
-
-  class_<TopologyManager, shared_ptr<TopologyManager>, bases<Extension> >
-      ("integrator_TopologyManager", init<shared_ptr<System> >())
-      .def("connect", &TopologyManager::connect)
-      .def("disconnect", &TopologyManager::disconnect)
-      .def("rebuild", &TopologyManager::Rebuild)
-      .def("observe_tuple", &TopologyManager::observeTuple)
-      .def("register_tuple", &TopologyManager::registerTuple)
-      .def("register_triple", &TopologyManager::registerTriple)
-      .def("register_quadruple", &TopologyManager::registerQuadruple)
-      .def("initialize", &TopologyManager::InitializeTopology)
-      .def("exchange_data", &TopologyManager::exchangeData)
-      .def("print_topology", &TopologyManager::PrintTopology)
-      .def("get_neighbour_lists", &TopologyManager::getNeighbourLists);
-}
-
-
 void TopologyManager::registerNeighbourPropertyChange(
       longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level) {
   LOG4ESPP_DEBUG(theLogger, "register property change for type_id=" << type_id
@@ -715,10 +703,12 @@ void TopologyManager::registerNeighbourPropertyChange(
 
 
 void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
+  wallTimer.startMeasure();
   std::vector<longint> nb = getNodesAtDistances(root.id());
   LOG4ESPP_DEBUG(theLogger, "inovokeNeighbourPropertyChange from root=" << root.id()
       << " generates=" << nb.size() << " of neighbour particles");
   nb_distance_particles_.insert(nb_distance_particles_.end(), nb.begin(), nb.end());
+  timeUpdateNeighbourProperty += wallTimer.stopMeasure();
 }
 
 void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) {
@@ -749,6 +739,42 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
       }
     }
   }
+}
+
+bool TopologyManager::isResiduesConnected(longint rid1, longint rid2) {
+  wallTimer.startMeasure();
+  bool ret = (res_graph_->count(rid1) == 1 && res_graph_->at(rid1)->count(rid2) == 1);
+  timeIsResidueConnected += wallTimer.stopMeasure();
+  return ret;
+}
+
+
+void TopologyManager::registerPython() {
+  using namespace espressopp::python;
+
+  class_<TopologyManager, shared_ptr<TopologyManager>, bases<Extension> >
+      ("integrator_TopologyManager", init<shared_ptr<System> >())
+      .def("connect", &TopologyManager::connect)
+      .def("disconnect", &TopologyManager::disconnect)
+      .def("observe_tuple", &TopologyManager::observeTuple)
+      .def("register_tuple", &TopologyManager::registerTuple)
+      .def("register_triple", &TopologyManager::registerTriple)
+      .def("register_quadruple", &TopologyManager::registerQuadruple)
+      .def("initialize", &TopologyManager::InitializeTopology)
+      .def("exchange_data", &TopologyManager::exchangeData)
+      .def("print_topology", &TopologyManager::PrintTopology)
+      .def("get_neighbour_lists", &TopologyManager::getNeighbourLists)
+      .def("get_timers", &TopologyManager::getTimers)
+      ;
+}
+python::list TopologyManager::getTimers() {
+  python::list ret;
+  ret.append(python::make_tuple("timeExchangeData", timeExchangeData));
+  ret.append(python::make_tuple("timeGenerateAnglesDihedrals", timeGenerateAnglesDihedrals));
+  ret.append(python::make_tuple("timeUpdateNeighbourProperty", timeUpdateNeighbourProperty));
+  ret.append(python::make_tuple("timeIsResidueConnected", timeIsResidueConnected));
+
+  return ret;
 }
 
 }  // end namespace integrator

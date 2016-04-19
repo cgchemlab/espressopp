@@ -36,6 +36,7 @@
 #include "Particle.hpp"
 #include "SystemAccess.hpp"
 #include "esutil/ESPPIterator.hpp"
+#include "esutil/Timer.hpp"
 
 #include "integrator/Extension.hpp"
 #include "integrator/VelocityVerlet.hpp"
@@ -127,7 +128,6 @@ private:
 
   void updateGhost(const std::set<Particle *> &modified_particles);
 
-
   real current_cutoff_;  //!< Maximal cutoff use for VerletList.
 
   shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
@@ -138,7 +138,6 @@ private:
   shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
   shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
 
-  boost::signals2::connection initialize_;
   boost::signals2::connection react_;
 
   integrator::ReactionMap potential_pairs_;  //!< Container for (A,B) potential partners/
@@ -149,8 +148,27 @@ private:
 
   void connect();
   void disconnect();
+
+  ///Timers
+  esutil::WallTimer wallTimer;  //!< used for timing
+
+  real timeComm;
+  real timeUpdateGhost;
+  real timeApplyAR;
+  real timeApplyDR;
+  real timeLoopPair;
+
+  void resetTimers() {
+    timeComm = 0.0;
+    timeUpdateGhost = 0.0;
+    timeApplyAR = 0.0;
+    timeApplyDR = 0.0;
+    timeLoopPair = 0.0;
+  }
+
+  python::list getTimers();
+
 };
 }  // namespace integrator
 }  // namespace espressopp
-
 #endif

@@ -32,6 +32,7 @@
 #include "FixedTripleList.hpp"
 #include "FixedQuadrupleList.hpp"
 #include "System.hpp"
+#include "esutil/Timer.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -94,6 +95,8 @@ class TopologyManager: public Extension {
    */
   void invokeNeighbourPropertyChange(Particle &root);
 
+  bool isResiduesConnected(longint rid1, longint rid2);
+
   /**
    * Initialized topology by looking for bonds in registered PairLists and
    * build adjacent list. Then this list is distributed among cpus so
@@ -109,11 +112,6 @@ class TopologyManager: public Extension {
    * Get neighbour list.
    */
   python::list getNeighbourLists();
-
-  /**
-   * Rebuild the map of particle_id -> res_id and sync among cpus.
-   */
-  void Rebuild();
 
   static void registerPython();
 
@@ -180,17 +178,6 @@ class TopologyManager: public Extension {
   void exchangeData();
 
   /**
-   * Merge two sets that holds mapping particle_id -> res_id
-   * and update res_id of corresponding particles.
-   */
-  void mergeResIdSets(longint res_id_a, longint res_id_b);
-
-  /**
-   * Split sets into two.
-   */
-  void splitResIdSets(longint res_id, longint pid1, longint pid2);
-
-  /**
    * BFS on graph, looking for connected components to update res_id after edge is removed.
    */
 
@@ -209,12 +196,6 @@ class TopologyManager: public Extension {
   void disconnect();
 
   shared_ptr<System> system_;
-  /// Stores mapping: key -> res_id, value->set of particle ids with given res_id.
-  ResParticleIds res_particle_ids_;
-  std::vector<std::pair<longint, longint> > merge_sets_;
-  /// Holds sets to split, triplet: res_id, pid1, pid2.
-  typedef std::vector<std::pair<longint, std::pair<longint, longint> > > SplitSets;
-  SplitSets split_sets_;
 
   boost::signals2::connection aftIntV2_, aftCalcF_;
 
@@ -251,16 +232,42 @@ class TopologyManager: public Extension {
   EdgesVector newEdges_;
   EdgesVector removedEdges_;
 
+  // Residues data.
+  std::map<longint, longint> pid_rid;  // particle_id -> res_id;
+  GraphMap *residues_;
+  void newResEdge(longint first, longint second);
+
   /** Adjacent list. */
   GraphMap *graph_;
+  GraphMap *res_graph_;
+
+  /** Data for DFS */
   longint max_nb_distance_;
   std::set<longint> nb_distances_;
   std::map<longint, std::map<longint, shared_ptr<ParticleProperties> > > distance_type_pp_;
   std::vector<longint> nb_distance_particles_;  //<! Stores the pairs distance; particle_id
 
+  void updateParticlePropertiesAtDistance(int id, int distance);
+
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
-  void updateParticlePropertiesAtDistance(int id, int distance);
+
+  /** Timers. */
+  esutil::WallTimer wallTimer;  //!< used for timing
+
+  real timeExchangeData;
+  real timeGenerateAnglesDihedrals;
+  real timeUpdateNeighbourProperty;
+  real timeIsResidueConnected;
+
+  void resetTimers() {
+    timeExchangeData = 0.0;
+    timeGenerateAnglesDihedrals = 0.0;
+    timeUpdateNeighbourProperty = 0.0;
+    timeIsResidueConnected = 0.0;
+  }
+
+  python::list getTimers();
 };
 
 }  // end namespace integrator

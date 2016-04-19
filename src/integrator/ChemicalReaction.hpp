@@ -197,7 +197,6 @@ protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
 private:
-
   real eq_distance_;
   real eq_width_;
   longint seed_;
@@ -223,7 +222,9 @@ public:
             min_state_2_(-1),
             max_state_2_(-1),
             reverse_(false),
-            intramolecular_(false), active_(true) { }
+            intramolecular_(false),
+            active_(true),
+            intraresidual_(true) { }
 
   /*** Constructor of Reaction object.
    *
@@ -254,7 +255,8 @@ public:
             reverse_(false),
             fixed_pair_list_(fpl),
             intramolecular_(intramolecular),
-            active_(true) { }
+            active_(true),
+            intraresidual_(true) { }
 
   virtual ~Reaction() { }
 
@@ -326,6 +328,14 @@ public:
   void set_intramolecular(bool intramolecular) {intramolecular_ = intramolecular; }
 
   bool intramolecular() {return intramolecular_; }
+
+  void set_interaresidual(bool i) { intraresidual_ = i; }
+
+  bool intraresidual() { return intraresidual_; }
+
+  void setTopologyManager(shared_ptr<TopologyManager> tm) {
+    topology_manager_ = tm;
+  }
 
   void set_rng(const shared_ptr<esutil::RNG> rng) {rng_ = rng; }
 
@@ -417,10 +427,13 @@ protected:
   boost::unordered_map<longint, real> state_rate_T1;  //!< Map chemical state to rate.
   boost::unordered_map<longint, real> state_rate_T2;  //!< Map chemical state to rate.
 
-  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;
-  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;  //!<List of post-process methods.
+  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;  //!<List of post-process methods.
 
   shared_ptr<ReactionCutoff> reaction_cutoff_;
+
+  bool intraresidual_;  //!<Allows to intraresidual bonds if set to true;
+  shared_ptr<TopologyManager> topology_manager_;
 };
 
 /*** Defines dissociation reactions.

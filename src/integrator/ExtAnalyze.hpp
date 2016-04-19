@@ -28,6 +28,7 @@
 #include "logging.hpp"
 #include "Extension.hpp"
 #include "boost/signals2.hpp"
+#include "esutil/Timer.hpp"
 //#include "analysis/AnalysisBase.hpp"
 #include "ParticleAccess.hpp"
 
@@ -53,6 +54,10 @@ namespace espressopp {
 
         shared_ptr< ParticleAccess > particle_access;
         int interval;
+
+        esutil::WallTimer wallTimer;  //!< used for timing
+        real timer_;
+        real getTimer();
 
         /** Logger */
         static LOG4ESPP_DECL_LOGGER(theLogger);

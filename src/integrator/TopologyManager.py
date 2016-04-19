@@ -42,10 +42,6 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             cxxinit(self, integrator_TopologyManager, system)
 
-    def rebuild(self):
-        if pmi.workerIsActive():
-            self.cxxclass.rebuild(self)
-
     def observe_tuple(self, fpl):
         if pmi.workerIsActive():
             self.cxxclass.observe_tuple(self, fpl)
@@ -77,7 +73,8 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.TopologyManagerLocal',
-            pmicall = ['rebuild', 'observe_tuple', 'register_tuple', 'register_triplet',
-                       'register_quadruplet', 'initialize_topology', 'exchange_data'],
+            pmicall = ['observe_tuple', 'register_tuple', 'register_triplet',
+                       'register_quadruplet', 'initialize_topology', 'exchange_data',
+                       'get_timers'],
             pmiinvoke = ['print_topology', 'get_neighbour_lists']
             )

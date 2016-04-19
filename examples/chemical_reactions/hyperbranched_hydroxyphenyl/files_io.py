@@ -533,6 +533,7 @@ class GROMACSTopologyFile(TopologyFile):
         for line in self.content:
             tmp_line = line.strip()
             if tmp_line.startswith('['):  # section part
+                new_data.append('\n')  # space before section name
                 new_data.append(line)
                 previous_section = current_section
                 current_section = tmp_line.replace('[', '').replace(']', '').strip()
@@ -552,6 +553,8 @@ class GROMACSTopologyFile(TopologyFile):
                         new_data.extend(['%s\n' % x for x in output_writer])
                     new_data.extend(['\n'])
                     skip_lines = True
+        # Add missing new lines if not present
+        new_data = ['{}\n'.format(x) if not x.endswith('\n') else x for x in new_data]
 
         logger.info('Writing topology file %s...', filename)
         output_file.writelines(new_data)
@@ -565,9 +568,14 @@ class GROMACSTopologyFile(TopologyFile):
             'combinationrule': int(raw_data[1])
             }
         if len(raw_data) > 2:
-            self.defaults['gen_pairs'] = raw_data[2]
+            self.defaults['gen-pairs'] = raw_data[2]
             self.defaults['fudgeLJ'] = float(raw_data[3])
             self.defaults['fudgeQQ'] = float(raw_data[4])
+        else:
+            self.defaults['gen-pairs'] = 'no'
+            self.defaults['fudgeLJ'] = 1.0
+            self.defaults['fudgeQQ'] = 1.0
+        self.defaults['nbfunc'] = 1
 
     def _parse_bonds(self, raw_data):
         atom_tuple = tuple(map(int, raw_data[0:2]))
@@ -787,7 +795,7 @@ class GROMACSTopologyFile(TopologyFile):
     def _write_defaults(self):
         if self.defaults:
             return [
-                '{nbfunc} {comb-rule} {gen-pairs} {fudgeLJ} {fudgeQQ}'.format(**self.defaults)
+                '{nbfunc} {combinationrule} {gen-pairs} {fudgeLJ} {fudgeQQ}'.format(**self.defaults)
             ]
         return []
 
@@ -798,7 +806,7 @@ class GROMACSTopologyFile(TopologyFile):
         return [self.system_name]
 
     def _write_molecules(self):
-        return ['{name} {mol}'.format(**self.molecules)]
+        return ['{} {}'.format(*self.molecules.items()[0])]
 
     def _write_default(self, datas=None, check_in=None):  # pylint:disable=R0201
         if check_in is None:

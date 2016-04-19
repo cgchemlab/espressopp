@@ -115,6 +115,13 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ParticlePair &correct_or
   if ((p1.res_id() == p2.res_id()) && !intramolecular_)
     return false;
 
+  if (!intraresidual_) {  // do not allow to intraresidual bonds (bonds between already bonded residuals)
+    if (!topology_manager_)
+      throw std::runtime_error("TopologyManager not set but check for intraresidual bond enabled.");
+    if (topology_manager_->isResiduesConnected(p1.res_id(), p2.res_id()))
+      return false;
+  }
+
   int p1_state = p1.state();
   int p2_state = p2.state();
 
@@ -220,13 +227,15 @@ void Reaction::registerPython() {
       .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
       .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
       .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
+      .add_property("intraresidual", &Reaction::intraresidual, &Reaction::set_interaresidual)
       .add_property("active", &Reaction::active, &Reaction::set_active)
       .add_property("cutoff", &Reaction::cutoff)
       .def("add_postprocess", &Reaction::addPostProcess)
       .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
       .def("set_rate", &Reaction::setRate)
       .def("get_rate", &Reaction::getRate)
-      .def("get_all_rates", &Reaction::getAllRates);
+      .def("get_all_rates", &Reaction::getAllRates)
+      .def("set_topology_manager", &Reaction::setTopologyManager);
 }
 
 /** DissociationReaction */
@@ -279,14 +288,11 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ParticlePair 
 void DissociationReaction::registerPython() {
   LOG4ESPP_DEBUG(theLogger, "register dissociation reaction");
   using namespace espressopp::python;// NOLINT
-  class_<DissociationReaction, bases<Reaction>, shared_ptr<integrator::DissociationReaction>
-  >
+  class_<DissociationReaction, bases<Reaction>, shared_ptr<integrator::DissociationReaction> >
       ("integrator_DissociationReaction",
-
-          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
-          // max_state_2, break_cutoff, fpl
-       init<int, int, int, int, int, int, int, int, real, shared_ptr
-           <FixedPairList> >())
+        // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
+        // max_state_2, break_cutoff, fpl
+       init<int, int, int, int, int, int, int, int, real, shared_ptr<FixedPairList> >())
       .add_property("type_1",
                     &DissociationReaction::type_1, &DissociationReaction::set_type_1)
       .add_property("type_2",
@@ -304,9 +310,6 @@ void DissociationReaction::registerPython() {
       .add_property("min_state_2",
                     &DissociationReaction::min_state_2,
                     &DissociationReaction::set_min_state_2)
-      .add_property("intramolecular",
-                    &DissociationReaction::intramolecular,
-                    &DissociationReaction::set_intramolecular)
       .add_property("max_state_2",
                     &DissociationReaction::max_state_2,
                     &DissociationReaction::set_max_state_2)

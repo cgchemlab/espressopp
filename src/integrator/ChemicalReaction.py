@@ -316,6 +316,10 @@ class ReactionLocal(integrator_Reaction):
         if pmi.workerIsActive():
             self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
 
+    def set_topology_manager(self, tm):
+        if pmi.workerIsActive():
+            self.cxxclass.set_topology_manager(self, tm)
+
 
 class DissociationReactionLocal(integrator_DissociationReaction):
     """DissociationReaction reaction."""
@@ -394,7 +398,6 @@ class DissociationReactionLocal(integrator_DissociationReaction):
             self.cxxclass.set_rate(self, molecule == 1, state)
 
 
-
 if pmi.isController:
     class ChemicalReaction(Extension):
         __metaclass__ = pmi.Proxy
@@ -402,7 +405,7 @@ if pmi.isController:
             cls='espressopp.integrator.ChemicalReactionLocal',
             pmiproperty=('interval',),
             pmicall=(
-                'add_reaction',
+                'add_reaction', 'get_timers'
                 )
             )
 
@@ -454,7 +457,8 @@ if pmi.isController:
                 'set_reaction_cutoff',
                 'set_rate',
                 'get_rate',
-                'get_all_rates'
+                'get_all_rates',
+                'set_topology_manager'
             ),
             pmiproperty=(
                 'type_1',
@@ -466,6 +470,7 @@ if pmi.isController:
                 'min_state_2',
                 'max_state_2',
                 'intramolecular',
+                'intraresidual',
                 'active',
                 'cutoff'
                 )
@@ -482,7 +487,7 @@ if pmi.isController:
                     'get_all_rates',
                     'set_diss_rate',
                     'get_diss_rate',
-                    'get_all_diss_rates'
+                    'get_all_diss_rates',
                 ),
                 pmiproperty=(
                     'type_1',

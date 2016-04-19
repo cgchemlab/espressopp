@@ -70,7 +70,7 @@ def info(system, integrator, per_atom=False, valid_types=None):
 
 def final_info(system, integrator, vl, start_time, end_time):
   NPart  = espressopp.analysis.NPart(system).compute()
-  espressopp.tools.timers.show(integrator.getTimers(), precision=3)
+  espressopp.tools.timers.show(integrator.getTimers(), system)
   sys.stdout.write('Total # of neighbors = %d\n' % vl.totalSize())
   sys.stdout.write('Ave neighs/atom = %.1f\n' % (vl.totalSize() / float(NPart)))
   sys.stdout.write('Neighbor list builds = %d\n' % vl.builds)

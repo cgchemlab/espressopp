@@ -18,8 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import argparse
-import files_io
-import sys
+from files_io import TopoAtom
 
 __doc__ = "Tool functions."
 
@@ -55,38 +54,40 @@ class MyArgParser(argparse.ArgumentParser):
                     of.write('{}={}\n'.format(k, v))
 
 
-def get_graph(settings):
-    """Build graph based on settings file. Useful for GROMACS."""
-    gro = files_io.GROFile(settings.cg_configuration['file'])
-    gro.read()
+def dump_topol(file_name, topol, system, particle_ids, bonds, angles, dihedrals, pairs):
+    # Get current atom set.
+    atoms = {}
+    for atid in particle_ids:
+        p = system.storage.getParticle(atid)
+        atom_params = topol.atom_type_params[p.type]
+        topo_atom = TopoAtom()
+        topo_atom.atom_id = atid
+        topo_atom.atom_type = atom_params['type']
+        topo_atom.chain_name = atom_params['molecule']
+        topo_atom.name = 'T{}'.format(p.type)
+        topo_atom.mass = atom_params['mass']
+        topo_atom.charge = atom_params['charge']
+        topo_atom.chain_idx = p.res_id
+        topol.topol.atoms[atid] = topo_atom
 
-    g = nx.Graph(box=gro.box)
-    for at_id, at in gro.atoms.iteritems():
-        g.add_node(
-            at_id,
-            name=at.name,
-            res_id=at.chain_idx,
-            position=at.position,
-            chain_name=at.chain_name)
+    for fpl in bonds:
+        for bp in fpl.getBonds():
+            for b12 in bp:
+                topol.topol.new_data['bonds'][b12] = []
 
-    # Adding edges
-    for mol in gro.chains:
-        try:
-            cg_bonds = settings.cg_molecules[mol].molecule_topology.get('bond')
-        except KeyError:
-            print(('\nError:\nMolecule \'{}\' not found in input CG trajectory'
-                   '(valid molecule\' names: {})\nExit, nothing to do.'
-                   ).format(mol, settings.cg_molecules.keys()))
-            sys.exit(1)
-        if cg_bonds:
-            for chain_idx in gro.chains[mol]:
-                for bond_name, bond_def in cg_bonds.iteritems():
-                    for b1, b2 in bond_def['list']:
-                        a1 = gro.chains[mol][chain_idx][b1]
-                        a2 = gro.chains[mol][chain_idx][b2]
-                        g.add_edge(a1.atom_id, a2.atom_id, params=bond_def['params'])
-    # Update degree
-    for n_id in g.node:
-        g.node[n_id]['degree'] = g.degree(n_id)
+    for ftl in angles:
+        for bt in ftl.getTriples():
+            for b123 in bt:
+                topol.topol.angles[b123] = []
 
-    return g
+    for fql in dihedrals:
+        for bq in fql.getQuadruples():
+            for b1234 in bq:
+                topol.topol.dihedrals[b1234] = []
+
+    for fpr in pairs:
+        for bl in fpr.getBonds():
+            for b12 in bl:
+                topol.topol.pairs[b12] = []
+
+    topol.topol.write(file_name)

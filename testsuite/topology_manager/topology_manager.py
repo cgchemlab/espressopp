@@ -55,7 +55,6 @@ class TestTopologyManager(unittest.TestCase):
         topology_manager.register_triplet(self.ftl, 0)
         topology_manager.register_quadruplet(self.fql, 0)
         topology_manager.register_quadruplet(self.fql2, 0, 0, 0, 1)
-        topology_manager.rebuild()
         topology_manager.initialize_topology()
         self.integrator.addExtension(topology_manager)
 

@@ -23,36 +23,35 @@
 
 import sys
 
-def show(alltimers, precision=1, show_singals=False):
+def show(alltimers, system):
     """Prints the timers data collected from all nodes.
 
     Args:
         alltimers: The timers.
-        precision: The precision.
+        system: The system object.
     """
-
-    fmt1 = '%.' + str(precision) + 'f\n'
-    fmt2 = '%.' + str(precision) + 'f (%.'+ str(precision) + 'f)\n'
-    t=[]
+    skip_timers = ['timeRun']
     nprocs = len(alltimers)
-    ntimers = len(alltimers[0])
-    for ntimer in range(ntimers):
-        t.append(0.0)
-        for k in range(nprocs):
-            t[ntimer] += alltimers[k][ntimer]
-        t[ntimer] /= nprocs
+    timers = {k: 0.0 for k, _ in alltimers[0]}
+    alltimers = [{k: float(v) for k, v in ntimer if k not in skip_timers} for ntimer in alltimers]
+    for ntimer in alltimers:
+        for k, v in ntimer.items():
+            timers[k] += v
+    total_t = 0.0
+    for k in timers:
+        total_t += timers[k]
+        timers[k] /= nprocs
+    t = total_t / nprocs
 
     # There is a set of timers each for the interaction. The order is the same as the
     # interactions in the system object.
-    sys.stdout.write('Run      time (%) = ' + fmt1 % t[0])
-    for e_idx, i in enumerate(range(1, len(t)-7)):
-        sys.stdout.write(('e%04d    time (%%) = ' % e_idx) + fmt2 % (t[i], 100*t[i]/t[0]))
+    sys.stdout.write('{:25} time {:3.6f}\n'.format('Run', t))
 
-    sys.stdout.write('Signals  time (%) = ' + fmt2 % (t[-7], 100*t[-7]/t[0]))
-    sys.stdout.write('Comm1    time (%) = ' + fmt2 % (t[-6], 100*t[-6]/t[0]))
-    sys.stdout.write('Comm2    time (%) = ' + fmt2 % (t[-5], 100*t[-5]/t[0]))
-    sys.stdout.write('Int1     time (%) = ' + fmt2 % (t[-4], 100*t[-4]/t[0]))
-    sys.stdout.write('Int2     time (%) = ' + fmt2 % (t[-3], 100*t[-3]/t[0]))
-    sys.stdout.write('Resort   time (%) = ' + fmt2 % (t[-2], 100*t[-2]/t[0]))
-    sys.stdout.write('Other    time (%) = ' + fmt2 % (t[-1], 100*t[-1]/t[0]))
+    for k, v in sorted(timers.items()):
+        if k.startswith('f'):
+            lbl = system.getNameOfInteraction(int(k.replace('f', '')))
+        else:
+            lbl = k
+        sys.stdout.write('{:25} time {:3.6f} ({:3.0f} %)\n'.format(lbl, v, 100*v/t))
+
     sys.stdout.write('\n')

@@ -181,7 +181,13 @@ class SystemLocal(_espressopp.System):
     def getInteractionByName(self, name):
         if pmi.workerIsActive():
             return self.getInteraction(self._interaction2id[name])
-            
+
+    def getNameOfInteraction(self, number):
+        if pmi.workerIsActive():
+            for name, iid in self._interaction2id.items():
+                if iid == number:
+                    return name
+
     def scaleVolume(self, *args):
 
         if pmi.workerIsActive():
@@ -221,6 +227,6 @@ if pmi.isController:
       pmiproperty = ['storage', 'bc', 'rng', 'skin', 'maxCutoff', 'integrator'],
       pmicall = ['addInteraction','removeInteraction', 'removeInteractionByName',
             'getInteraction', 'getNumberOfInteractions','scaleVolume', 'setTrace',
-            'getAllInteractions', 'getInteractionByName']
+            'getAllInteractions', 'getInteractionByName', 'getNameOfInteraction']
     )
 
