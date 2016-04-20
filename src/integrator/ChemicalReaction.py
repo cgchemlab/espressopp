@@ -488,6 +488,7 @@ if pmi.isController:
                     'set_diss_rate',
                     'get_diss_rate',
                     'get_all_diss_rates',
+                    'set_topology_manager'
                 ),
                 pmiproperty=(
                     'type_1',

@@ -61,6 +61,7 @@ def process_reaction(reaction):
         'rate': float(reaction['rate']),
         'cutoff': float(reaction['cutoff']),
         'intramolecular': eval(reaction.get('intramolecular', 'False')),
+        'intraresidual': eval(reaction.get('intraresidual', 'False'))
         }
 
     try:
@@ -181,6 +182,7 @@ class SetupReactions:
             rt1, self.name2type[rt1], rt2, self.name2type[rt2]))
         if not chem_reaction['reverse']:
             r.intramolecular = bool(chem_reaction['intramolecular'])
+            r.intraresidual = bool(chem_reaction['intraresidual'])
         if 'min_cutoff' in chem_reaction:
             r.min_cutoff = float(chem_reaction['min_cutoff'])
         if 'diss_rate' in chem_reaction:
@@ -278,6 +280,7 @@ class SetupReactions:
                 if r is not None:
                     for pp in extensions:
                         r.add_postprocess(pp)
+                    r.set_topology_manager(self.tm)
                     ar.add_reaction(r)
         return ar, fpls
 
