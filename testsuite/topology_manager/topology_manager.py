@@ -106,13 +106,12 @@ class TestTopologyManager(unittest.TestCase):
         # Check if second quadruple is empty as types does not match.
         assert not self.fql2.getQuadruples()[0]
 
-    def test_merge_res_id(self):
-        """Checks if two molecules will get the same res_id after bond is formed."""
+    def test_residues_bonds(self):
+        """Test if residues are updated correctly."""
         self.fpl3.addBonds([(3, 5)])
         self.topology_manager.exchange_data()
-        self.integrator.run(1)
-        res_id_after = {self.system.storage.getParticle(i).res_id for i in range(1, self.N+1)}
-        assert res_id_after == set([1])
+        assert self.topology_manager.is_residue_connected(1,2)
+
 
 if __name__ == '__main__':
     unittest.main()

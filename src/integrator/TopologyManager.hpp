@@ -107,6 +107,8 @@ class TopologyManager: public Extension {
    * Print adjacent list.
    */
   void PrintTopology();
+  void PrintResTopology();
+  void PrintResidues();
 
   /**
    * Get neighbour list.

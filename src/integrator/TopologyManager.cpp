@@ -183,7 +183,8 @@ void TopologyManager::InitializeTopology() {
     for (longint i = 0; i < local_resid_size; ++it, i++) {
       longint pid = it->first;
       longint rid = it->second;
-      pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
+      pid_rid[pid] = rid;
+      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
       if (residues_->count(rid) == 0)
         residues_->insert(std::make_pair(rid, new std::set<longint>()));
       residues_->at(rid)->insert(pid);
@@ -203,6 +204,36 @@ void TopologyManager::PrintTopology() {
   }
 }
 
+void TopologyManager::PrintResTopology() {
+  for (GraphMap::iterator it = res_graph_->begin(); it != res_graph_->end(); ++it) {
+    if (it->second != NULL) {
+      std::cout << it->first << ": ";
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        std::cout << *itv << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+}
+
+void TopologyManager::PrintResidues() {
+  for (GraphMap::iterator it = residues_->begin(); it != residues_->end(); ++it) {
+    if (it->second != NULL) {
+      std::cout << it->first << ": ";
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        std::cout << *itv << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+
+  std::cout << "Map PID->RID" << std::endl;
+  for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
+    std::cout << it->first << ": " << it->second << std::endl;
+  }
+
+}
+
 python::list TopologyManager::getNeighbourLists() {
   python::list nodes;
   for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
@@ -219,6 +250,7 @@ python::list TopologyManager::getNeighbourLists() {
 
 
 void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
+  LOG4ESPP_DEBUG(theLogger, "onTupleAdded pid1=" << pid1 << " pid2=" << pid2);
   Particle *p1 = system_->storage->lookupRealParticle(pid1);
   Particle *p2 = system_->storage->lookupLocalParticle(pid2);
   if (!p1 || !p2)
@@ -255,6 +287,7 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
 }
 
 void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
+  LOG4ESPP_DEBUG(theLogger, "newResEdge rpid1=" << rpid1 << " rpid2=" << rpid2);
   /// Updates residue graph.
   if (res_graph_->count(rpid1) == 0)
     res_graph_->insert(std::make_pair(rpid1, new std::set<longint>()));
@@ -763,8 +796,11 @@ void TopologyManager::registerPython() {
       .def("initialize", &TopologyManager::InitializeTopology)
       .def("exchange_data", &TopologyManager::exchangeData)
       .def("print_topology", &TopologyManager::PrintTopology)
+      .def("print_res_topology", &TopologyManager::PrintResTopology)
+      .def("print_residues", &TopologyManager::PrintResidues)
       .def("get_neighbour_lists", &TopologyManager::getNeighbourLists)
       .def("get_timers", &TopologyManager::getTimers)
+      .def("is_residue_connected", &TopologyManager::isResiduesConnected)
       ;
 }
 python::list TopologyManager::getTimers() {

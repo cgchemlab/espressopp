@@ -68,6 +68,10 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             self.cxxclass.initialize(self)
 
+    def is_residue_connected(self, rid1, rid2):
+        if pmi.workerIsActive():
+            return self.cxxclass.is_residue_connected(self, rid1, rid2)
+
 if pmi.isController :
     class TopologyManager(object):
         __metaclass__ = pmi.Proxy
@@ -75,6 +79,7 @@ if pmi.isController :
             cls =  'espressopp.integrator.TopologyManagerLocal',
             pmicall = ['observe_tuple', 'register_tuple', 'register_triplet',
                        'register_quadruplet', 'initialize_topology', 'exchange_data',
-                       'get_timers'],
-            pmiinvoke = ['print_topology', 'get_neighbour_lists']
+                       'get_timers', 'is_residue_connected'
+                      ],
+            pmiinvoke = ['print_topology', 'print_res_topology', 'print_residues', 'get_neighbour_lists']
             )
