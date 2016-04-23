@@ -94,6 +94,8 @@ try:
 except ImportError:
     print 'missing pyh5md'
 
+import time as py_time
+
 
 class DumpH5MDLocal(io_DumpH5MD):
     def __init__(self, system, filename, group_name='all',
@@ -202,8 +204,12 @@ class DumpH5MDLocal(io_DumpH5MD):
             self.res_id = part.trajectory(
                 'res_id', (self.chunk_size, ), np.int,
                 chunks=(1, self.chunk_size), fillvalue=-1)
-
+	
         self._system_data()
+
+	self.commTimer = 0.0
+	self.updateTimer = 0.0
+	self.writeTimer = 0.0
 
     def _system_data(self):
         """Stores specific information about simulation."""
@@ -216,6 +222,13 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.system.integrator is not None:
             parameters['dt'] = self.system.integrator.dt
         self.set_parameters(parameters)
+
+    def getTimers(self):
+        if pmi.workerIsActive():
+            return {'commTimer': self.commTimer,
+                    'updateTimer': self.updateTimer,
+                    'writeTimer': self.writeTimer
+                   }
 
     def set_parameters(self, paramters):
         if 'parameters' not in self.file.f:
@@ -270,7 +283,11 @@ class DumpH5MDLocal(io_DumpH5MD):
     def dump(self, step, time):
         if not pmi.workerIsActive():
             return
+        time0 = py_time.time()
         self.update()
+        self.updateTimer += (py_time.time() - time0)
+
+        time0 = py_time.time()
         NLocal = np.array(self.NLocal, 'i')
         NMaxLocal = np.array(0, 'i')
         MPI.COMM_WORLD.Allreduce(NLocal, NMaxLocal, op=MPI.MAX)
@@ -278,7 +295,9 @@ class DumpH5MDLocal(io_DumpH5MD):
         total_size = MPI.COMM_WORLD.size*cpu_size
         idx_0 = MPI.COMM_WORLD.rank*cpu_size
         idx_1 = idx_0+NLocal
+        self.commTimer += (py_time.time() - time0)
 
+        time0 = py_time.time()
         # Store ids. Always!
         id_ar = np.asarray(self.getId())
         if total_size > self.id_e.value.shape[1]:
@@ -353,6 +372,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.res_id.value.shape[1]:
                 self.res_id.value.resize(total_size, axis=1)
             self.res_id.append(res_id, step, time, region=(idx_0, idx_1))
+        self.writeTimer += (py_time.time() - time0)
 
     def close(self):
         if pmi.workerIsActive():
@@ -371,5 +391,6 @@ if pmi.isController:
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge', 'getResId',
                      'dump', 'clear_buffers', 'flush', 'get_file', 'close', 'set_parameters'],
+            pmiinvoke = ['getTimers'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
                          'store_charge', 'store_res_id', 'store_lambda'])
