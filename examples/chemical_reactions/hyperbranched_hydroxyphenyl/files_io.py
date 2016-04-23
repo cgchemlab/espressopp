@@ -540,7 +540,7 @@ class GROMACSTopologyFile(TopologyFile):
                 if previous_section == 'dihedrals' and current_section == 'dihedrals':
                     current_section = 'improper_dihedrals'
                 section_writer = self.writers.get(current_section)
-                print('{}: Writing section {}'.format(filename, current_section))
+                # print('{}: Writing section {}'.format(filename, current_section))
                 skip_lines = False
             elif tmp_line.startswith(';') or tmp_line.startswith('#'):
                 new_data.append(line)

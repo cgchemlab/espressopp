@@ -264,12 +264,6 @@ def main():  #NOQA
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-    system_analysis.add_observable(
-        'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
-    system_analysis.add_observable(
-        'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
-    system_analysis.add_observable(
-        'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
 
     ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
     integrator.addExtension(ext_analysis)
@@ -328,7 +322,8 @@ def main():  #NOQA
         system_analysis.info()
         dump_topol.update()
         traj_file.dump(k*integrator_step, k*integrator_step*dt)
-        traj_file.flush()
+        if k % 100 == 0:
+            traj_file.flush()
         for (cr_type, _), obs in cr_observs.items():
             if last_cr_value.get(cr_type, -1) == obs.value:
                 last_cr_value[cr_type] = obs.value
