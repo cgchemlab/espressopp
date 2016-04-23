@@ -227,8 +227,10 @@ class SetupReactions:
                 x.split('->') for x in cfg['type_transfers'].split(',')]
             for old_type, new_type in type_transfers:
                 old_type, nb_level = old_type.split(':')
+                nb_level = int(nb_level)
                 if old_type != new_type:
-                    print('Change property {}->{} nb={}'.format(old_type, new_type, nb_level))
+                    print('Change property {}->{} nb={} and {}'.format(
+                        old_type, new_type, nb_level, nb_level+1))
                     t1_old = self.name2type[old_type]
                     t1_new = self.name2type[new_type]
                     new_property = self.topol.gt.atomtypes[new_type]
@@ -236,7 +238,14 @@ class SetupReactions:
                         t1_old,
                         espressopp.ParticleProperties(
                             t1_new, new_property['mass'], new_property['charge']),
-                        int(nb_level))
+                        nb_level
+                    )
+                    pp.add_change_property(
+                        t1_old,
+                        espressopp.ParticleProperties(
+                            t1_new, new_property['mass'], new_property['charge']),
+                        nb_level+1
+                    )
             return pp
 
         class_to_cfg = {

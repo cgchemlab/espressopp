@@ -90,16 +90,10 @@ namespace espressopp {
             int index = static_cast<int>((r - inner) * invdelta);
 
             if (index < 0) {
-              std::stringstream ss;
-              ss << "Distance " << r << " out of range " << inner << " - " << inner + (N-1) * delta;
-              LOG4ESPP_ERROR(theLogger, ss.str());
-              throw std::runtime_error(ss.str());
+              index = 0;
             }
             if (index >= N) {
-              std::stringstream ss;
-              ss << "Distance " << r << " out of range " << inner << " - "
-                << inner + (N-1)*delta;
-              throw std::runtime_error(ss.str());
+              index = N;
             }
                 
             real b = (r - radius[index]) * invdelta;

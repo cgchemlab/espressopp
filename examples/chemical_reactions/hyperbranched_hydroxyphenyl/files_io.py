@@ -556,7 +556,7 @@ class GROMACSTopologyFile(TopologyFile):
         # Add missing new lines if not present
         new_data = ['{}\n'.format(x) if not x.endswith('\n') else x for x in new_data]
 
-        logger.info('Writing topology file %s...', filename)
+        logger.debug('Writing topology file %s...', filename)
         output_file.writelines(new_data)
         output_file.close()
         self.atoms_updated = False
