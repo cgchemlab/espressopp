@@ -199,23 +199,25 @@ def main():  #NOQA
     # Set potentials.
     cr_observs = tools_sim.setNonbondedInteractions(system, gt, verletlist, lj_cutoff, cg_cutoff)
     static_fpl, b_interaction = tools_sim.setBondInteractions(system, gt)
-    #static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
-    #static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
+    static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
+    static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
 
     print('Set Dynamic Exclusion lists.')
     dynamic_exclusion_list.observe_tuple(static_fpl)
-    #dynamic_exclusion_list.observe_triple(static_ftl)
-    #dynamic_exclusion_list.observe_quadruple(static_fql)
+    dynamic_exclusion_list.observe_triple(static_ftl)
+    dynamic_exclusion_list.observe_quadruple(static_fql)
 
     print('Set topology manager')
     topology_manager = espressopp.integrator.TopologyManager(system)
     topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
     topology_manager.register_tuple(static_fpl, 0, 0)
-    #for t in gt.angleparams:
-    #    topology_manager.register_triplet(static_ftl, *t)
-    #for t in gt.dihedralparams:
-    #    topology_manager.register_quadruplet(static_fql, *t)
+    for t in gt.angleparams:
+        print('Register angles for type: {}'.format(t))
+        topology_manager.register_triplet(static_ftl, *t)
+    for t in gt.dihedralparams:
+        print('Register dihedral for type: {}'.format(t))
+        topology_manager.register_quadruplet(static_fql, *t)
     integrator.addExtension(topology_manager)
 
     # Set chemical reactions, parser in reaction_parser.py
@@ -262,14 +264,8 @@ def main():  #NOQA
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-    system_analysis.add_observable(
-        'cnt_fpl', espressopp.analysis.NFixedPairListEntries(system, static_fpl))
-    #system_analysis.add_observable(
-    #    'cnt_ftl', espressopp.analysis.NFixedTripleListEntries(system, static_ftl))
-    #system_analysis.add_observable(
-    #    'cnt_fql', espressopp.analysis.NFixedQuadrupleListEntries(system, static_fql))
 
-    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, 10) #cr_interval)
+    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
 
@@ -313,30 +309,46 @@ def main():  #NOQA
     gt.topol.bonds = {}
     gt.topol.dihedrals = {}
     gt.topol.pairs = {}
-    file_name = 'abc'
     fpls.append(static_fpl)
 
     print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.dump()
     system_analysis.info()
+
+    last_cr_value = {}
+
     for k in range(sim_step):
         integrator.run(integrator_step)
         system_analysis.info()
-        total_velocity.reset()
         dump_topol.update()
-        #traj_file.dump(k*integrator_step, k*integrator_step*dt)
-        #traj_file.flush()
-        #for (cr_type, _), obs in cr_observs.items():
-        #    file_name = 'cr_coord_{}_value_{}'.format(cr_type, obs.value)
-        #    dump_coord = espressopp.io.DumpGRO(
-        #        system, integrator, filename='{}.gro'.format(file_name), unfolded=True, append=False)
-        #    dump_coord.dump()
-        #    #tools.dump_topol('{}.top'.format(file_name), gt, system, particle_ids,
-        #    #                 fpls, [], [], [])
+        traj_file.dump(k*integrator_step, k*integrator_step*dt)
+        if k % 100 == 0:
+            traj_file.flush()
+        for (cr_type, _), obs in cr_observs.items():
+            if last_cr_value.get(cr_type, -1) == obs.value:
+                last_cr_value[cr_type] = obs.value
+                continue
+            last_cr_value[cr_type] = obs.value
+            file_name = '{}_cr_coord_{}_value_{}'.format(args.output_prefix, cr_type, obs.value)
+            dump_coord = espressopp.io.DumpGRO(
+                system, integrator, filename='{}.gro'.format(file_name),
+                unfolded=True, append=False)
+            dump_coord.dump()
+            tools.dump_topol(
+                '{}.top'.format(file_name), gt, system, particle_ids,
+                fpls, [static_ftl], [static_fql], [])
     else:
         dump_topol.update()
         traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
         traj_file.close()
+        for (cr_type, _), obs in cr_observs.items():
+            file_name = 'cr_coord_{}_value_{}'.format(cr_type, obs.value)
+            dump_coord = espressopp.io.DumpGRO(
+                system, integrator, filename='{}.gro'.format(file_name),
+                unfolded=True, append=False)
+            dump_coord.dump()
+            tools.dump_topol('{}.top'.format(file_name), gt, system, particle_ids,
+                             fpls, [static_ftl], [static_fql], [])
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)

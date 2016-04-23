@@ -540,7 +540,7 @@ class GROMACSTopologyFile(TopologyFile):
                 if previous_section == 'dihedrals' and current_section == 'dihedrals':
                     current_section = 'improper_dihedrals'
                 section_writer = self.writers.get(current_section)
-                print('{}: Writing section {}'.format(filename, current_section))
+                # print('{}: Writing section {}'.format(filename, current_section))
                 skip_lines = False
             elif tmp_line.startswith(';') or tmp_line.startswith('#'):
                 new_data.append(line)
@@ -556,7 +556,7 @@ class GROMACSTopologyFile(TopologyFile):
         # Add missing new lines if not present
         new_data = ['{}\n'.format(x) if not x.endswith('\n') else x for x in new_data]
 
-        logger.info('Writing topology file %s...', filename)
+        logger.debug('Writing topology file %s...', filename)
         output_file.writelines(new_data)
         output_file.close()
         self.atoms_updated = False

@@ -2,7 +2,7 @@
   Copyright (c) 2015
       Pierre de Buyl
 
-  Copyright (c) 2015
+  Copyright (c) 2015,2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -29,7 +29,6 @@
 #include "types.hpp"
 #include "SystemAccess.hpp"
 #include "storage/Storage.hpp"
-#include "DumpH5MD.hpp"
 #include "iterator/CellListIterator.hpp"
 
 const char *get_format(double x) { return "d"; }

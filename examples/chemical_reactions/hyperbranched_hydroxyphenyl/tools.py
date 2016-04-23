@@ -56,17 +56,16 @@ class MyArgParser(argparse.ArgumentParser):
 
 def dump_topol(file_name, topol, system, particle_ids, bonds, angles, dihedrals, pairs):
     # Get current atom set.
-    atoms = {}
     for atid in particle_ids:
         p = system.storage.getParticle(atid)
-        atom_params = topol.atom_type_params[p.type]
+        atom_type_params = topol.gt.atomtypes[topol.atomtype_atomsym[p.type]]
         topo_atom = TopoAtom()
         topo_atom.atom_id = atid
-        topo_atom.atom_type = atom_params['type']
-        topo_atom.chain_name = atom_params['molecule']
+        topo_atom.atom_type = atom_type_params['name']
+        topo_atom.chain_name = topol.gt.molecules.keys()[0]
         topo_atom.name = 'T{}'.format(p.type)
-        topo_atom.mass = atom_params['mass']
-        topo_atom.charge = atom_params['charge']
+        topo_atom.mass = atom_type_params['mass']
+        topo_atom.charge = atom_type_params['charge']
         topo_atom.chain_idx = p.res_id
         topol.topol.atoms[atid] = topo_atom
 

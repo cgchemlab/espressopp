@@ -16,7 +16,7 @@ parser.add_argument('--top', default='topol.top')
 parser.add_argument('--scaling', type=float, default=0.5)
 parser.add_argument('--constant', type=float, default=0.0)
 parser.add_argument('--mix_type', type=int, default=0, choices=[0, 1],
-                    help='coupling type, 1 for arithmetic, 2 for geometric')
+                    help='coupling type, 0 for arithmetic, 1 for geometric')
 
 args = parser.parse_args()
 
@@ -57,9 +57,11 @@ def mix_arithmetic(tab1, tab2, coupling):
             out_tab = np.array(tab2)
         if (tab1[:, 0][:out_tab.shape[0]] != tab2[:, 0][:out_tab.shape[0]]).all():
             raise RuntimeError('Both r columns should be the same')
-        max_length = out_tab.shape[0]
     else:
         out_tab = np.array(tab1)
+    max_length = out_tab.shape[0]
+    if max_length == 0:
+        raise RuntimeError('The length of output table is zero???')
     out_tab[:, 1] = coupling*tab1[:max_length, 1] + (1.0-coupling)*tab2[:max_length, 1]
     out_tab[:, 2] = coupling*tab1[:max_length, 2] + (1.0-coupling)*tab2[:max_length, 2]
     return out_tab
@@ -74,9 +76,11 @@ def mix_geometric(tab1, tab2, coupling, constant):
             out_tab = np.array(tab2)
         if (tab1[:, 0][:out_tab.shape[0]] != tab2[:, 0][:out_tab.shape[0]]).all():
             raise RuntimeError('Both r columns should be the same')
-        max_length = out_tab.shape[0]
     else:
         out_tab = np.array(tab1)
+    max_length = out_tab.shape[0]
+    if max_length == 0:
+        raise RuntimeError('The length of output table is zero???')
     e1 = tab1[:max_length, 1]
     e2 = tab2[:max_length, 1]
     f1 = tab1[:max_length, 2]
