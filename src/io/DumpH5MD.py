@@ -1,8 +1,9 @@
+# Copyright (c) 2015,2016
+#     Jakub Krajniak (jkrajniak at gmail.com)
+#
 # Copyright (c) 2015
 #     Pierre de Buyl
 #
-# Copyright (c) 2015-2016
-#     Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
 #
