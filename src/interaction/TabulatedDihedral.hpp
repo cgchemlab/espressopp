@@ -131,7 +131,7 @@ namespace espressopp {
                         else if (cos_phi < -1.0) cos_phi = -1.0;
 
                         real phi = acos(cos_phi);
-                        real coef1 = table->getForce(phi);
+                        real coef1 = -1.0*table->getForce(phi);
 
                         /** Calculates force in Cartesian coordinates.
                          * base on: http://www.ccp5.ac.uk/DL_POLY_CLASSIC/MANUALS/USRMAN.pdf
