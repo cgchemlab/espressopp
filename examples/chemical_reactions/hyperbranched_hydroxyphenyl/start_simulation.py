@@ -34,6 +34,8 @@ import reaction_parser
 import tools_sim
 import tools
 
+import os
+
 # GROMACS units, kJ/mol K
 kb = 0.0083144621
 
@@ -202,10 +204,15 @@ def main():  #NOQA
     static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
     static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
 
+    dynamic_ftl, _ = tools_sim.setAngleInteractions(system, gt, True, 'dynamic_angles')
+    dynamic_fql, _ = tools_sim.setDihedralInteractions(system, gt, True, 'dynamic_dih')
+
     print('Set Dynamic Exclusion lists.')
     dynamic_exclusion_list.observe_tuple(static_fpl)
     dynamic_exclusion_list.observe_triple(static_ftl)
     dynamic_exclusion_list.observe_quadruple(static_fql)
+    dynamic_exclusion_list.observe_triple(dynamic_ftl)
+    dynamic_exclusion_list.observe_quadruple(dynamic_fql)
 
     print('Set topology manager')
     topology_manager = espressopp.integrator.TopologyManager(system)
@@ -214,32 +221,35 @@ def main():  #NOQA
     topology_manager.register_tuple(static_fpl, 0, 0)
     for t in gt.angleparams:
         print('Register angles for type: {}'.format(t))
-        topology_manager.register_triplet(static_ftl, *t)
+        topology_manager.register_triplet(dynamic_ftl, *t)
     for t in gt.dihedralparams:
         print('Register dihedral for type: {}'.format(t))
-        topology_manager.register_quadruplet(static_fql, *t)
+        topology_manager.register_quadruplet(dynamic_fql, *t)
     integrator.addExtension(topology_manager)
 
     # Set chemical reactions, parser in reaction_parser.py
     fpls = []
     cr_interval = 0
     if args.reactions:
-        print('Set chemical reactions from: {}'.format(args.reactions))
-        reaction_config = reaction_parser.parse_config(args.reactions)
-        sc = reaction_parser.SetupReactions(
-            system, verletlist, gt, topology_manager, reaction_config)
+        if os.path.exists(args.reactions):
+            print('Set chemical reactions from: {}'.format(args.reactions))
+            reaction_config = reaction_parser.parse_config(args.reactions)
+            sc = reaction_parser.SetupReactions(
+                system, verletlist, gt, topology_manager, reaction_config)
 
-        ar, fpls = sc.setup_reactions()
-        output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
-        print('Save copy of reaction config to: {}'.format(output_reaction_config))
-        shutil.copyfile(args.reactions, output_reaction_config)
-        integrator.addExtension(ar)
-        cr_interval = sc.ar_interval
+            ar, fpls = sc.setup_reactions()
+            output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
+            print('Save copy of reaction config to: {}'.format(output_reaction_config))
+            shutil.copyfile(args.reactions, output_reaction_config)
+            integrator.addExtension(ar)
+            cr_interval = sc.ar_interval
+            integrator_step = cr_interval
+        else:
+            cr_interval = integrator_step
 
     for f in fpls:
         topology_manager.observe_tuple(f)
         dynamic_exclusion_list.observe_tuple(f)
-
 # Define SystemMonitor that will store data from observables into a .csv file.
     energy_file = '{}_energy_{}.csv'.format(args.output_prefix, rng_seed)
     print('Energy saved to: {}'.format(energy_file))
@@ -264,7 +274,6 @@ def main():  #NOQA
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-
     ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
@@ -279,7 +288,10 @@ def main():  #NOQA
         author='XXX',
         email='xxx',
         store_species=True,
-        store_state=True)
+        store_res_id=True,
+        store_charge=True,
+        store_state=True,
+        chunk_size=750)
     traj_file.set_parameters({
         'temperature': args.temperature
     })
@@ -315,41 +327,14 @@ def main():  #NOQA
     system_analysis.dump()
     system_analysis.info()
 
-    last_cr_value = {}
-
     for k in range(sim_step):
         integrator.run(integrator_step)
         system_analysis.info()
-        dump_topol.update()
         traj_file.dump(k*integrator_step, k*integrator_step*dt)
-        if k % 100 == 0:
-            traj_file.flush()
-        for (cr_type, _), obs in cr_observs.items():
-            if last_cr_value.get(cr_type, -1) == obs.value:
-                last_cr_value[cr_type] = obs.value
-                continue
-            last_cr_value[cr_type] = obs.value
-            file_name = '{}_cr_coord_{}_value_{}'.format(args.output_prefix, cr_type, obs.value)
-            dump_coord = espressopp.io.DumpGRO(
-                system, integrator, filename='{}.gro'.format(file_name),
-                unfolded=True, append=False)
-            dump_coord.dump()
-            tools.dump_topol(
-                '{}.top'.format(file_name), gt, system, particle_ids,
-                fpls, [static_ftl], [static_fql], [])
-    else:
         dump_topol.update()
-        traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
-        traj_file.close()
-        for (cr_type, _), obs in cr_observs.items():
-            file_name = 'cr_coord_{}_value_{}'.format(cr_type, obs.value)
-            dump_coord = espressopp.io.DumpGRO(
-                system, integrator, filename='{}.gro'.format(file_name),
-                unfolded=True, append=False)
-            dump_coord.dump()
-            tools.dump_topol('{}.top'.format(file_name), gt, system, particle_ids,
-                             fpls, [static_ftl], [static_fql], [])
-
+        if k % 10 == 0:
+            traj_file.flush()
+        
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
     dump_gro = espressopp.io.DumpGRO(

@@ -73,7 +73,6 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
                 r = r / sigma
             e = f / epsilon
             f = fd*sigma / epsilon
-
             if (not angle and not dihedral and r != 0) or \
                 (angle and r <= math.pi and r >= 0) or \
                     (dihedral and r >= -math.pi and r <= math.pi):

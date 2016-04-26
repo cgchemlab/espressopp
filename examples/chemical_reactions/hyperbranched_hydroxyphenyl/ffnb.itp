@@ -56,20 +56,20 @@ PL RA PB PB 8 5 1.0 ;d5
  MA   ML      8
  MA   MB      8
  ML   ML      8
- ML   MB      8
+ MB   ML      8
  MB   MB      8
- FA   FA      8
- FA   LN      8
- FA   FB      8
- FA   RA      8
- FA   RB      8
- LN   LN      8
- LN   FB      8
- LN   RA      8
- LN   RB      8
- FB   FB      8
- FB   RA      8
- FB   RB      8
+ PA   PA      8
+ PA   PL      8
+ PA   PB      8
+ PA   RA      8
+ PA   RB      8
+ PL   PL      8
+ PB   PL      8
+ PL   RA      8
+ PL   RB      8
+ PB   PB      8
+ PB   RA      8
+ PB   RB      8
  RA   RA      8
  RA   RB      8
  RB   RB      8
