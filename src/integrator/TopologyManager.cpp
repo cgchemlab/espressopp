@@ -781,6 +781,11 @@ bool TopologyManager::isResiduesConnected(longint rid1, longint rid2) {
   return ret;
 }
 
+bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {
+  bool ret = (graph_->count(pid1) == 1 && graph_->at(pid1)->count(pid2) == 1);
+  return ret;
+}
+
 
 void TopologyManager::registerPython() {
   using namespace espressopp::python;
@@ -801,6 +806,7 @@ void TopologyManager::registerPython() {
       .def("get_neighbour_lists", &TopologyManager::getNeighbourLists)
       .def("get_timers", &TopologyManager::getTimers)
       .def("is_residue_connected", &TopologyManager::isResiduesConnected)
+      .def("is_particle_connected", &TopologyManager::isParticleConnected)
       ;
 }
 python::list TopologyManager::getTimers() {
