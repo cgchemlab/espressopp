@@ -88,9 +88,20 @@ namespace espressopp {
             index = static_cast<int>((r - inner) * invdelta);
             if (index < 0) {
               index = 0;
+              LOG4ESPP_ERROR(
+                  theLogger,
+                  "Distance " << r << " out of range " 
+                              << inner << " - " << inner + (N-1)*delta 
+                              << " using first value!");
+              
             }
             if (index >= N) {
-             index = N;
+              index = N;
+              LOG4ESPP_ERROR(
+                  theLogger,
+                  "Distance " << r << " out of range " 
+                              << inner << " - " << inner + (N-1)*delta 
+                              << " using last value!");
             }
             
             real z = r - radius[index];
