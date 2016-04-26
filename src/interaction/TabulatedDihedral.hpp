@@ -69,17 +69,10 @@ namespace espressopp {
                 }
              
                 real _computeEnergyRaw(real phi) const {
-                    if (table) {
-                        try {
-                            return table->getEnergy(phi);
-                        } catch (std::exception &e) {
-                            std::cout << "Error in TabulatedDihedral.hpp computeEnergy, filename="
-                                << filename << std::endl;
-                            throw e;
-                        }
-                    } else {
+                    if (table)
+                        return table->getEnergy(phi);
+                    else
                         throw std::runtime_error("Tabulated dihedral potential table not available.");
-                    }
                 }
 
                 // Kroneker delta function
@@ -178,18 +171,10 @@ namespace espressopp {
                 }
              
                 real _computeForceRaw(real phi) const {
-                    if (table) {
-                        try {
-                            return table->getForce(phi);
-                        } catch (std::exception &e) {
-                            std::cout << "Error in TabulatedDihedral.hpp computeForceRaw, filename="
-                                << filename << std::endl;
-                            std::cout << e.what() << std::endl;
-                            throw e;
-                        }
-                    } else {
+                    if (table)
+                        return table->getForce(phi);
+                    else
                         throw std::runtime_error("Tabulated dihedral potential table not available.");
-                    }
                 }
              
         }; // class

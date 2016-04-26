@@ -25,6 +25,8 @@ import random
 
 import tools as general_tools
 
+import topology_helper
+
 __doc__ = 'The tools for the simulation.'
 
 
@@ -236,7 +238,7 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
             espp_tab_name = '{}.pot'.format(table_name.replace('.xvg', ''))
             if not os.path.exists(espp_tab_name):
                 print('Convert {} to {}'.format(table_name, espp_tab_name))
-                espressopp.tools.convert.gromacs.convertTable(table_name, espp_tab_name)
+                topology_helper.convertTable(table_name, espp_tab_name)
             tab_interaction.setPotential(
                 type1=t1, type2=t2,
                 potential=espressopp.interaction.Tabulated(
@@ -254,7 +256,7 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
                 espp_tab_name = '{}.pot'.format(tab_name.replace('.xvg', ''))
                 if not os.path.exists(espp_tab_name):
                     print('Convert {} to {}'.format(tab_name, espp_tab_name))
-                    espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+                    topology_helper.convertTable(tab_name, espp_tab_name)
                 mp_tab.register_table(espp_tab_name, 2, cr_obs, cr_min, cr_max, cr_default)
             print('Set multi tabulated potential {}-{}'.format(mt1, mt2))
             multi_tab_interaction.setPotential(
@@ -263,9 +265,10 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
     return cr_observs
 
 
-def setBondInteractions(system, gt):
+def setBondInteractions(system, gt, only_interaction=False, name='bonds'):
     fpl = espressopp.FixedPairList(system.storage)
-    fpl.addBonds(gt.bonds)
+    if not only_interaction:
+        fpl.addBonds(gt.bonds)
     tab_interaction = espressopp.interaction.FixedPairListTypesTabulated(system, fpl)
     for (t1, t2), param in gt.bondparams.items():
         if param['func'] != 8:
@@ -274,17 +277,18 @@ def setBondInteractions(system, gt):
         tab_name = 'table_b{}.xvg'.format(param['params'][0])
         if not os.path.exists(espp_tab_name):
             print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            topology_helper.convertTable(tab_name, espp_tab_name)
         tab_interaction.setPotential(
             type1=t1, type2=t2,
             potential=espressopp.interaction.Tabulated(2, espp_tab_name))
-    system.addInteraction(tab_interaction, 'bonds')
+    system.addInteraction(tab_interaction, name)
     return fpl, tab_interaction
 
 
-def setAngleInteractions(system, gt):
+def setAngleInteractions(system, gt, only_interaction=False, name='angles'):
     fpl = espressopp.FixedTripleList(system.storage)
-    fpl.addTriples(gt.angles)
+    if not only_interaction:
+        fpl.addTriples(gt.angles)
     tab_interaction = espressopp.interaction.FixedTripleListTypesTabulatedAngular(system, fpl)
     for (t1, t2, t3), param in gt.angleparams.items():
         if param['func'] != 8:
@@ -293,17 +297,18 @@ def setAngleInteractions(system, gt):
         tab_name = 'table_a{}.xvg'.format(param['params'][0])
         if not os.path.exists(espp_tab_name):
             print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            topology_helper.convertTable(tab_name, espp_tab_name)
         tab_interaction.setPotential(
             type1=t1, type2=t2, type3=t3,
             potential=espressopp.interaction.TabulatedAngular(2, espp_tab_name))
-    system.addInteraction(tab_interaction, 'angles')
+    system.addInteraction(tab_interaction, name)
     return fpl, tab_interaction
 
 
-def setDihedralInteractions(system, gt):
+def setDihedralInteractions(system, gt, only_interaction=False, name='dihedrals'):
     fpl = espressopp.FixedQuadrupleList(system.storage)
-    fpl.addQuadruples(gt.dihedrals)
+    if not only_interaction:
+        fpl.addQuadruples(gt.dihedrals)
     tab_interaction = espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedral(system, fpl)
     for (t1, t2, t3, t4), param in gt.dihedralparams.items():
         if param['func'] != 8:
@@ -312,11 +317,11 @@ def setDihedralInteractions(system, gt):
         tab_name = 'table_d{}.xvg'.format(param['params'][0])
         if not os.path.exists(espp_tab_name):
             print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            topology_helper.convertTable(tab_name, espp_tab_name)
         tab_interaction.setPotential(
             type1=t1, type2=t2, type3=t3, type4=t4,
             potential=espressopp.interaction.TabulatedDihedral(2, espp_tab_name))
-    system.addInteraction(tab_interaction, 'dihedrals')
+    system.addInteraction(tab_interaction, name)
     return fpl, tab_interaction
 
 

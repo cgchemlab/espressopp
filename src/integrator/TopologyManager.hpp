@@ -97,6 +97,8 @@ class TopologyManager: public Extension {
 
   bool isResiduesConnected(longint rid1, longint rid2);
 
+  bool isParticleConnected(longint pid1, longint pid2);
+
   /**
    * Initialized topology by looking for bonds in registered PairLists and
    * build adjacent list. Then this list is distributed among cpus so

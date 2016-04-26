@@ -122,6 +122,12 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ParticlePair &correct_or
       return false;
   }
 
+  if (!topology_manager_)
+    throw std::runtime_error("TopologyManager not set!");
+
+  if (topology_manager_->isParticleConnected(p1.id(), p2.id()))
+    return false;
+
   int p1_state = p1.state();
   int p2_state = p2.state();
 

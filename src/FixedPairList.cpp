@@ -181,6 +181,13 @@ namespace espressopp {
           found = true;
       }
     }
+    equalRange = globalPairs.equal_range(pid2);
+    if (equalRange.first != globalPairs.end()) {
+      for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+        if (it->second == pid1)
+          found = true;
+      }
+    }
     returnVal = !found;
     if (!found) {
       // add the pair locally
