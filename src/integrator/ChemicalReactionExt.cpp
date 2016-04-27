@@ -749,7 +749,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
       }
     }
 
-    if (p2 != NULL) {
+    if (p2 != NULL && valid_state) {
       if (reaction->isValidState_T2(*p2)) {
         p2->setState(p2->getState() + reaction->delta_2());
         tmp = reaction->postProcess_T2(*p2, *p1);
@@ -763,7 +763,8 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if ((p1 != NULL) && (p2 != NULL) && valid_state) {
-      reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+      //reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+      reaction->topology_manager_->onTupleAdded(it->first, it->second.first);
     }
   }
 

@@ -397,7 +397,7 @@ public:
   std::set<Particle *> postProcess_T2(Particle &p, Particle &partner);
 
   shared_ptr<FixedPairList> fixed_pair_list_;//!< Bond list.
-
+  shared_ptr<TopologyManager> topology_manager_;
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
@@ -433,7 +433,6 @@ protected:
   shared_ptr<ReactionCutoff> reaction_cutoff_;
 
   bool intraresidual_;  //!<Allows to intraresidual bonds if set to true;
-  shared_ptr<TopologyManager> topology_manager_;
 };
 
 /*** Defines dissociation reactions.
