@@ -100,6 +100,12 @@ class TopologyManager: public Extension {
   bool isParticleConnected(longint pid1, longint pid2);
 
   /**
+   * Handle signal from FixedPairList that new bond was created.
+   */
+  void onTupleAdded(longint pid1, longint pid2);
+  void onTupleRemoved(longint pid1, longint pid2);
+
+  /**
    * Initialized topology by looking for bonds in registered PairLists and
    * build adjacent list. Then this list is distributed among cpus so
    * everyone has the same adjacent list.
@@ -128,11 +134,6 @@ class TopologyManager: public Extension {
   typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
 
-  /**
-   * Handle signal from FixedPairList that new bond was created.
-   */
-  void onTupleAdded(longint pid1, longint pid2);
-  void onTupleRemoved(longint pid1, longint pid2);
   /**
    * Process removing of the bond.
    */

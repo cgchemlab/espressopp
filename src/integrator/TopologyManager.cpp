@@ -251,11 +251,6 @@ python::list TopologyManager::getNeighbourLists() {
 
 void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
   LOG4ESPP_DEBUG(theLogger, "onTupleAdded pid1=" << pid1 << " pid2=" << pid2);
-  Particle *p1 = system_->storage->lookupRealParticle(pid1);
-  Particle *p2 = system_->storage->lookupLocalParticle(pid2);
-  if (!p1 || !p2)
-    return;
-
   newEdges_.push_back(std::make_pair(pid1, pid2));
 }
 
@@ -298,10 +293,6 @@ void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
 }
 
 void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
-  Particle *p1 = system_->storage->lookupRealParticle(pid1);
-  Particle *p2 = system_->storage->lookupLocalParticle(pid2);
-  if (!p1 || !p2)
-    return;
 
   removedEdges_.push_back(std::make_pair(pid1, pid2));
 }
