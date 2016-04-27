@@ -212,6 +212,7 @@ for step in range(equil_nloops):
     dump_topol.update()
     if step % 10 == 0:
         traj_file.flush()
+    print traj_file.getTimers()
     # print status information
 else:
     system_analysis.dump()

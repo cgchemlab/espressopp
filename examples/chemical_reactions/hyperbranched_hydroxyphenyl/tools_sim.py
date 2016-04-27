@@ -409,7 +409,7 @@ def _args():
                         help='Number of simulation steps')
     parser.add_argument('--int_step', default=1000, type=int, help='Steps in integrator')
     parser.add_argument('--rng_seed', type=int, help='Seed for RNG', required=False,
-                        default=12345)  # random.randint(1000, 10000))
+                        default=random.randint(1000, 10000))
     parser.add_argument('--output_prefix',
                         default='sim', type=str,
                         help='Prefix for output files')

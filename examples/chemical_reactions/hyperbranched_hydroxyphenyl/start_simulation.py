@@ -105,7 +105,8 @@ def main():  #NOQA
     print('RNG Seed: {}'.format(rng_seed))
 
     part_prop, particle_list = tools_sim.genParticleList(input_conf, gt)
-    print('Reads {} particles with properties {}'.format(len(particle_list), part_prop))
+    NPart = len(particle_list)
+    print('Reads {} particles with properties {}'.format(NPart, part_prop))
 
     particle_ids = [x[0] for x in particle_list]
 
@@ -291,7 +292,7 @@ def main():  #NOQA
         store_res_id=True,
         store_charge=True,
         store_state=True,
-        chunk_size=750)
+        chunk_size=int(NPart/MPI.COMM_WORLD.size))
     traj_file.set_parameters({
         'temperature': args.temperature
     })
@@ -309,31 +310,22 @@ def main():  #NOQA
     print('Reset total velocity')
     total_velocity = espressopp.analysis.TotalVelocity(system)
     total_velocity.reset()
-
-    traj_file.dump(0, 0)
-
-    # Set properties of output topology. Clean data and set single molecule.
-    if len(gt.topol.molecules) > 1:
-        raise RuntimeError('Supports only single molecule name')
-    gt.topol.molecules[gt.topol.molecules.keys()[0]] = 1
-    gt.topol.atoms = {}
-    gt.topol.angles = {}
-    gt.topol.bonds = {}
-    gt.topol.dihedrals = {}
-    gt.topol.pairs = {}
-    fpls.append(static_fpl)
-
-    print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.dump()
+    print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.info()
-
     for k in range(sim_step):
-        integrator.run(integrator_step)
-        system_analysis.info()
         traj_file.dump(k*integrator_step, k*integrator_step*dt)
+        system_analysis.info()
         dump_topol.update()
+        integrator.run(integrator_step)
         if k % 10 == 0:
             traj_file.flush()
+    else:
+        traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
+        dump_topol.update()
+        traj_file.flush()
+        traj_file.close()
+        
         
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
