@@ -314,19 +314,11 @@ def main():  #NOQA
     print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.info()
     for k in range(sim_step):
-        traj_file.dump(k*integrator_step, k*integrator_step*dt)
         system_analysis.info()
-        dump_topol.update()
+        print k, fpls[0].totalSize()
+        print k, fpls[0].getAllBonds()
         integrator.run(integrator_step)
-        if k % 10 == 0:
-            traj_file.flush()
-    else:
-        traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*dt)
-        dump_topol.update()
-        traj_file.flush()
-        traj_file.close()
-        
-        
+
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
     dump_gro = espressopp.io.DumpGRO(
