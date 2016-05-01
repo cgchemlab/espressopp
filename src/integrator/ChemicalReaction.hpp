@@ -51,10 +51,11 @@ namespace espressopp {
 namespace integrator {
 
 /// Stores reaction pair in correct order with reaction rate.
-struct ParticlePair {
+struct ReactedPair {
   Particle *first;
   Particle *second;
   real reaction_rate;
+  real r_sqr;
 };
 
 const int kCrCommTag = 0xad;// @warning: this made problems when multiple extension will be enabled.
@@ -70,7 +71,7 @@ public:
 
   virtual ~ReactionCutoff() { }
 
-  virtual bool check(Particle &p1, Particle &p2) = 0;
+  virtual bool check(Particle &p1, Particle &p2, real &r_sqr) = 0;
   virtual real cutoff() = 0;
 
   /** Register this class so it can be used from Python. */
@@ -104,7 +105,7 @@ public:
       @param p2 Reference to particle 2.
       @retval bool True if condition matches otherwise False.
    */
-  bool check(Particle &p1, Particle &p2);
+  bool check(Particle &p1, Particle &p2, real &r_sqr);
 
   void set_cutoff(real s) {
     max_cutoff_ = s;
@@ -168,9 +169,10 @@ public:
 
       @param p1 The reference to particle 1.
       @param p2 The reference to particle 2.
+      @param r The reference to computed distance.
       @retval True if condition is valid otherwise false.
    */
-  bool check(Particle &p1, Particle &p2);
+  bool check(Particle &p1, Particle &p2, real &r_sqr);
 
   void set_eq_distance(real s) {
     eq_distance_ = s;
@@ -385,10 +387,10 @@ public:
   }
 
   /** Checks if the pair is valid. */
-  virtual bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
+  virtual bool isValidPair(Particle &p1, Particle &p2, ReactedPair &correct_order);
 
   /** Checks if the pair has valid state. */
-  bool isValidState(Particle &p1, Particle &p2, ParticlePair &correct_order);
+  bool isValidState(Particle &p1, Particle &p2, ReactedPair &correct_order);
 
   bool isValidState_T1(Particle &p);
   bool isValidState_T2(Particle &p);
@@ -505,7 +507,7 @@ public:
     return break_cutoff_;
   }
 
-  bool isValidPair(Particle &p1, Particle &p2, ParticlePair &correct_order);
+  bool isValidPair(Particle &p1, Particle &p2, ReactedPair &correct_order);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();

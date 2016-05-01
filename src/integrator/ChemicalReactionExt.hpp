@@ -52,10 +52,12 @@ namespace integrator {
 struct ReactionDef {
   longint reaction_id;
   real reaction_rate;
+  real reaction_r_sqr;
 
-  ReactionDef(longint r_id, real rr) {
+  ReactionDef(longint r_id, real rr, real r_sqr) {
     reaction_id = r_id;
     reaction_rate = rr;
+    reaction_r_sqr = r_sqr;
   }
 };
 
@@ -98,7 +100,7 @@ typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
 class ChemicalReaction : public Extension {
 public:
   ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletList> _verletList,
-      shared_ptr<storage::DomainDecomposition> _domdec);
+      shared_ptr<storage::DomainDecomposition> _domdec, shared_ptr<TopologyManager> tm);
   ~ChemicalReaction();
 
   void set_interval(int interval) {
@@ -146,6 +148,8 @@ private:
   ReactionList reaction_list_;  // <! Container for reactions.
   ReactionList reverse_reaction_list_;  // <! Container for reverse reactions.
 
+  shared_ptr<TopologyManager> tm_;  //<! TopologyManager object.
+
   void connect();
   void disconnect();
 
@@ -168,6 +172,7 @@ private:
 
   python::list getTimers();
 
+  void printMultiMap(ReactionMap &rmap, std::string comment);
 };
 }  // namespace integrator
 }  // namespace espressopp

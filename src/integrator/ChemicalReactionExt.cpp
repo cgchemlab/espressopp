@@ -42,10 +42,10 @@ LOG4ESPP_LOGGER(ChemicalReaction::theLogger, "ChemicalReaction");
  * @param domdec The espressopp.storage.DomainDecomposition object.
  */
 ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletList> verletList,
-    shared_ptr<storage::DomainDecomposition> domdec)
+    shared_ptr<storage::DomainDecomposition> domdec, shared_ptr<TopologyManager> tm)
       :Extension(system),
           verlet_list_(verletList),
-          domdec_(domdec) {
+          domdec_(domdec), tm_(tm) {
   type = Extension::Reaction;
 
   current_cutoff_ = verletList->getVerletCutoff() - system->getSkin();
@@ -80,6 +80,7 @@ void ChemicalReaction::addReaction(boost::shared_ptr<integrator::Reaction> react
   reaction->set_dt(dt_);
   reaction->set_interval(interval_);
   reaction->set_rng(rng_);
+  reaction->setTopologyManager(tm_);
 
   bc::BC &bc = *getSystemRef().bc;
 
@@ -124,22 +125,24 @@ void ChemicalReaction::React() {
     Particle &p2 = *it->second;
     int reaction_idx_ = 0;
 
-    for (ReactionList::iterator it = reaction_list_.begin();
-        it != reaction_list_.end(); ++it, ++reaction_idx_) {
+    for (ReactionList::iterator it = reaction_list_.begin(); it != reaction_list_.end(); ++it, ++reaction_idx_) {
       if (!(*it)->active())  // if raction is not active, skip it.
         continue;
 
-      ParticlePair p;
+      ReactedPair p;
 
       if ((*it)->isValidPair(p1, p2, p)) {
         potential_pairs_.insert(
             std::make_pair(p.first->id(),
                            std::make_pair(
                                p.second->id(),
-                               ReactionDef(reaction_idx_, p.reaction_rate))));
+                               ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr)
+                           )
+            )
+        );
       }
     }
-  }
+  } // end loop over VL pairs
   timeLoopPair += wallTimer.stopMeasure();
 
   wallTimer.startMeasure();
@@ -149,7 +152,6 @@ void ChemicalReaction::React() {
   // Also, keep only non-ghost A
   UniqueA(potential_pairs_);
   sendMultiMap(potential_pairs_);
-
   // Here, reduce number of partners to each B to 1
   // Also, keep only non-ghost B
   UniqueB(potential_pairs_, effective_pairs_);
@@ -188,12 +190,24 @@ void ChemicalReaction::React() {
    neighbours. The parallel scheme is taken from
    storage::DomainDecomposition::doGhostCommunication
  */
+
+void ChemicalReaction::printMultiMap(ReactionMap &rmap, std::string comment) {
+  System &system = getSystemRef();
+  for (integrator::ReactionMap::iterator it = rmap.begin(); it != rmap.end(); it++) {
+    std::cout << comment << "mm on\t" << system.comm->rank() << "\t" << it->first << "\t" << it->second.first
+        << "\t" << it->second.second.reaction_id << "\t"
+        << it->second.second.reaction_rate << "\t" << it->second.second.reaction_r_sqr << std::endl;
+  }
+}
+
 void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
   LOG4ESPP_DEBUG(theLogger, "Entering sendMultiMap");
 
-  InBuffer in_buffer_0(*getSystem()->comm);
-  InBuffer in_buffer_1(*getSystem()->comm);
-  OutBuffer out_buffer(*getSystem()->comm);
+  System &system = getSystemRef();
+
+  InBuffer in_buffer_0(*system.comm);
+  InBuffer in_buffer_1(*system.comm);
+  OutBuffer out_buffer(*system.comm);
   const storage::NodeGrid &node_grid = domdec_->getNodeGrid();
 
   // Prepare out buffer with the reactions that potential will happen on this node.
@@ -202,12 +216,12 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
   in_buffer_1.reset();
 
   // Fill out_buffer from mm.
-  int tmp = mm.size();
+  int array_size = mm.size();
   int a, b, c;
 
-  real d;
+  real d, r_sqr;
 
-  out_buffer.write(tmp);
+  out_buffer.write(array_size);
 
   for (integrator::ReactionMap::iterator it = mm.begin(); it != mm.end();
       it++) {
@@ -215,11 +229,16 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
     b = it->second.first;  // particle id
     c = it->second.second.reaction_id;  // reaction id
     d = it->second.second.reaction_rate; // reaction rate for this pair.
+    r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
     out_buffer.write(a);
     out_buffer.write(b);
     out_buffer.write(c);
     out_buffer.write(d);
+    out_buffer.write(r_sqr);
+
   }
+
+  LOG4ESPP_DEBUG(theLogger, "OutBuffer.size=" << out_buffer.getSize());
 
   /* direction loop: x, y, z.
      Here we could in principle build in a one sided ghost
@@ -227,7 +246,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
      value. */
 
   int data_length, idx_a, idx_b, reaction_idx, direction_size;
-  real reaction_rate;
+  real reaction_rate, reaction_r_sqr;
 
   for (int direction = 0; direction < 3; ++direction) {
     /* inverted processing order for ghost force communication,
@@ -300,14 +319,24 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
           in_buffer_0.read(idx_b);
           in_buffer_0.read(reaction_idx);
           in_buffer_0.read(reaction_rate);
+          in_buffer_0.read(reaction_r_sqr);
         } else {
           in_buffer_1.read(idx_a);
           in_buffer_1.read(idx_b);
           in_buffer_1.read(reaction_idx);
           in_buffer_1.read(reaction_rate);
+          in_buffer_1.read(reaction_r_sqr);
         }
 
-        mm.insert(std::make_pair(idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate))));
+        mm.insert(
+            std::make_pair(
+                idx_a,
+                std::make_pair(
+                    idx_b,
+                    ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr)
+                )
+            )
+        );
       }
     }
 
@@ -495,7 +524,7 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
       it != potential_candidates.end(); ++it) {
     p = system.storage->lookupRealParticle(it->first);
 
-    if ((p == NULL) || p->ghost())
+    if (p == NULL)
       continue;
 
     a_indexes.insert(it->first);
@@ -512,7 +541,8 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
     LocalRateIdx::local_iterator idx_b_reaction_id;
 
     // Iterators for the equal_range.
-    std::pair<integrator::ReactionMap::iterator, integrator::ReactionMap::iterator> candidates_b;
+    std::pair<integrator::ReactionMap::iterator,
+              integrator::ReactionMap::iterator> candidates_b;
 
     // Iterate over the ids of particle A, looking for the particle B
     for (boost::unordered_set<longint>::iterator it = a_indexes.begin();
@@ -593,7 +623,7 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
       it != potential_candidates.end(); ++it) {
     p = system.storage->lookupRealParticle(it->second.first);
 
-    if ((p == NULL) || p->ghost())
+    if (p == NULL)
       continue;
 
     b_indexes.insert(it->second.first);
@@ -679,7 +709,7 @@ void ChemicalReaction::ApplyDR(std::set<Particle *> &modified_particles) {
     for (FixedPairList::PairList::Iterator itp(*((*it)->fixed_pair_list_)); itp.isValid(); ++itp) {
       Particle &p1 = *itp->first;
       Particle &p2 = *itp->second;
-      ParticlePair p;
+      ReactedPair p;
 
       if ((*it)->isValidPair(p1, p2, p)) {
         // Ok we will remove this pair.
@@ -765,13 +795,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     if ((p1 != NULL) && (p2 != NULL) && valid_state) {
       if (!(p1->ghost() && p2->ghost())) {
         LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-        bool added = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-        if (!added)
-          added = reaction->fixed_pair_list_->iadd(it->second.first, it->first);
-        if (!added) {
-          LOG4ESPP_ERROR(theLogger, "problem with adding pair " << it->first << it->second.first
-              << " p1:" << *p1 << " p2:" << *p2);
-        }
+        reaction->fixed_pair_list_->iadd(it->first, it->second.first);
       }
     }
   }
@@ -808,7 +832,7 @@ void ChemicalReaction::registerPython() {
   class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >(
       "integrator_ChemicalReaction",
       init<shared_ptr<System>, shared_ptr<VerletList>,
-      shared_ptr<storage::DomainDecomposition> >())
+      shared_ptr<storage::DomainDecomposition>, shared_ptr<TopologyManager> >())
     .def("connect", &ChemicalReaction::connect)
     .def("disconnect", &ChemicalReaction::disconnect)
     .def("add_reaction", &ChemicalReaction::addReaction)

@@ -310,6 +310,7 @@ namespace espressopp {
       return comm.isend(receiver, tag, buf, pos);
     }
 
+    longint getSize() { return usedSize; }
   };
 }
 #endif

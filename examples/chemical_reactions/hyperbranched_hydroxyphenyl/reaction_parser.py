@@ -264,6 +264,7 @@ class SetupReactions:
             self.system,
             self.vl,
             self.system.storage,
+            self.tm,
             self.ar_interval)
 
         fpls = []
@@ -289,7 +290,6 @@ class SetupReactions:
                 if r is not None:
                     for pp in extensions:
                         r.add_postprocess(pp)
-                    r.set_topology_manager(self.tm)
                     ar.add_reaction(r)
         return ar, fpls
 

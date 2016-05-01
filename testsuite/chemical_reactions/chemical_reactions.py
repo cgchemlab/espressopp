@@ -40,13 +40,12 @@ class ESPPTestCase(unittest.TestCase):
         topology_manager = espressopp.integrator.TopologyManager(system)
         topology_manager = topology_manager
         topology_manager.observe_tuple(self.fpl1)
-        topology_manager.rebuild()
         topology_manager.initialize_topology()
         self.topology_manager = topology_manager
         self.integrator.addExtension(topology_manager)
 
         self.ar = espressopp.integrator.ChemicalReaction(
-            system, vl, system.storage, 5)
+            system, vl, system.storage, topology_manager, 1)
         self.integrator.addExtension(self.ar)
 
 
@@ -247,6 +246,52 @@ class TestCaseChangePropertyOnState(ESPPTestCase):
 
         p_types = [self.system.storage.getParticle(x).type for x in range(1, 3)]
         assert p_types == [5, 5]
+
+
+class TestCaseMultipleNodes(ESPPTestCase):
+    def test_node(self):
+        particle_list = [
+            (3, 1, espressopp.Real3D(2.5, 2.5, 4.9), 3, 1),
+            (4, 1, espressopp.Real3D(2.5, 2.5, 5.1), 4, 1)
+        ]
+        self.system.storage.addParticles(particle_list, *self.part_prop)
+        self.system.storage.decompose()
+
+        print 'node p1', self.system.storage.mapPositionToNodeClipped(
+            espressopp.Real3D(2.5, 2.5, 4.9))
+        print 'node p2', self.system.storage.mapPositionToNodeClipped(
+            espressopp.Real3D(2.5, 2.5, 5.1))
+        r_type_1 = espressopp.integrator.Reaction(
+            type_1=1,
+            type_2=2,
+            delta_1=1,
+            delta_2=1,
+            min_state_1=1,
+            max_state_1=3,
+            min_state_2=1,
+            max_state_2=3,
+            rate=400.0,
+            fpl=self.fpl1,
+            cutoff=1.0)
+        r_type_2 = espressopp.integrator.Reaction(
+            type_1=1,
+            type_2=2,
+            delta_1=1,
+            delta_2=1,
+            min_state_1=1,
+            max_state_1=3,
+            min_state_2=1,
+            max_state_2=3,
+            rate=400.0,
+            fpl=self.fpl1,
+            cutoff=1.0)
+        self.ar.add_reaction(r_type_1)
+        self.ar.add_reaction(r_type_2)
+        fpl1_before = self.fpl1.getBonds()
+        print fpl1_before
+        self.integrator.run(2)
+        fpl1_after = self.fpl1.getBonds()
+        print fpl1_after
 
 
 if __name__ == '__main__':

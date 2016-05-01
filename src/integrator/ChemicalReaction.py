@@ -177,17 +177,18 @@ from _espressopp import integrator_ReactionCutoff
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
     """Chemical Reaction integrator extension."""
-    def __init__(self, system, vl, domdec, interval=None):
+    def __init__(self, system, vl, domdec, topology_manager, interval=None):
         """Chemical reaction extension.
 
         Args:
           system: The espressopp.System object.
           vl: The verlet list.
           domdec: The domain decomposition object.
+          topology_manager: The TopologyManager object.
           interval: The timestep where the extension will be run.
         """
         if pmi.workerIsActive():
-            cxxinit(self, integrator_ChemicalReaction, system, vl, domdec)
+            cxxinit(self, integrator_ChemicalReaction, system, vl, domdec, topology_manager)
             if interval is not None:
                 self.interval = interval
 
@@ -315,10 +316,6 @@ class ReactionLocal(integrator_Reaction):
         """Set cutoff object."""
         if pmi.workerIsActive():
             self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
-
-    def set_topology_manager(self, tm):
-        if pmi.workerIsActive():
-            self.cxxclass.set_topology_manager(self, tm)
 
 
 class DissociationReactionLocal(integrator_DissociationReaction):
@@ -458,7 +455,6 @@ if pmi.isController:
                 'set_rate',
                 'get_rate',
                 'get_all_rates',
-                'set_topology_manager'
             ),
             pmiproperty=(
                 'type_1',
@@ -488,7 +484,6 @@ if pmi.isController:
                     'set_diss_rate',
                     'get_diss_rate',
                     'get_all_diss_rates',
-                    'set_topology_manager'
                 ),
                 pmiproperty=(
                     'type_1',

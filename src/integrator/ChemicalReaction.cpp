@@ -42,11 +42,11 @@ void ReactionCutoff::registerPython() {
     ("integrator_ReactionCutoff", no_init);
 }
 
-bool ReactionCutoffStatic::check(Particle &p1, Particle &p2) {
+bool ReactionCutoffStatic::check(Particle &p1, Particle &p2, real &r_sqr) {
   Real3D distance = p1.position() - p2.position();
-  real distance_2 = distance.sqr();
+  r_sqr = distance.sqr();
 
-  return distance_2 >= min_cutoff_sqr_ && distance_2 < max_cutoff_sqr_;
+  return r_sqr >= min_cutoff_sqr_ && r_sqr < max_cutoff_sqr_;
 }
 
 void ReactionCutoffStatic::registerPython() {
@@ -63,13 +63,13 @@ void ReactionCutoffStatic::registerPython() {
                       &ReactionCutoffStatic::set_cutoff);
 }
 
-bool ReactionCutoffRandom::check(Particle &p1, Particle &p2) {
+bool ReactionCutoffRandom::check(Particle &p1, Particle &p2, real &r_sqr) {
   real random_cutoff_ = fabs(generator_()) + eq_distance_;
   real random_cutoff_sqr_ = random_cutoff_ * random_cutoff_;
   Real3D distance = p1.position() - p2.position();
-  real distance_2 = distance.sqr();
+  r_sqr = distance.sqr();
 
-  return distance_2 < random_cutoff_sqr_;
+  return r_sqr < random_cutoff_sqr_;
 }
 
 void ReactionCutoffRandom::registerPython() {
@@ -87,7 +87,7 @@ void ReactionCutoffRandom::registerPython() {
 }
 
 /** Checks if the particles pair is valid. */
-bool Reaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
+bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering Reaction::isValidPair");
 
   if (isValidState(p1, p2, particle_order)) {
@@ -98,8 +98,9 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_or
     p *= (*dt_) * (*interval_);
 
     particle_order.reaction_rate = p;
+    particle_order.r_sqr = 0.0;
 
-    if ((W < p) && reaction_cutoff_->check(p1, p2)) {
+    if ((W < p) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
       LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
       return true;
     }
@@ -111,7 +112,7 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_or
 LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles has correct state. */
-bool Reaction::isValidState(Particle &p1, Particle &p2, ParticlePair &correct_order) {
+bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_order) {
   if ((p1.res_id() == p2.res_id()) && !intramolecular_)
     return false;
 
@@ -132,7 +133,7 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ParticlePair &correct_or
   int p2_state = p2.state();
 
   // States has to be always positive or zero.
-  assert(p1_state >= 0 && p2_state >= 0);
+  // assert(p1_state >= 0 && p2_state >= 0);
 
   // Case when both types are the same.
   if ((type_1_ == type_2_) && (p1.type() == type_1_) && (p1.type() == p2.type())) {
@@ -147,7 +148,7 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ParticlePair &correct_or
       correct_order.second = &p1;
       return true;
     }
-  } else if (type_1_ != type_2_) {  // inhomogenious case.
+  } else if (type_1_ != type_2_) {  // inhomogeneous case.
     if (  (p1.type() == type_1_) && (p2.type() == type_2_)
        && ((p1_state >= min_state_1_) && (p1_state < max_state_1_))
        && ((p2_state >= min_state_2_) && (p2_state < max_state_2_))) {
@@ -240,15 +241,14 @@ void Reaction::registerPython() {
       .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
       .def("set_rate", &Reaction::setRate)
       .def("get_rate", &Reaction::getRate)
-      .def("get_all_rates", &Reaction::getAllRates)
-      .def("set_topology_manager", &Reaction::setTopologyManager);
+      .def("get_all_rates", &Reaction::getAllRates);
 }
 
 /** DissociationReaction */
 LOG4ESPP_LOGGER(DissociationReaction::theLogger, "DissociationReaction");
 
 /** Checks if the particles pair is valid. */
-bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ParticlePair &particle_order) {
+bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering DissociationReaction::isValidPair");
 
   if (isValidState(p1, p2, particle_order)) {

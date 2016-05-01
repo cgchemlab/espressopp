@@ -99,7 +99,7 @@ namespace espressopp {
 
     System& system = storage->getSystemRef();
     esutil::Error err(system.comm);
-    
+
     // ADD THE LOCAL PAIR
     Particle *p1 = storage->lookupRealParticle(pid1);
     Particle *p2 = storage->lookupLocalParticle(pid2);
@@ -117,7 +117,7 @@ namespace espressopp {
     }
 
     err.checkException();
-    
+
     if (returnVal) {
       // ADD THE GLOBAL PAIR
       // see whether the particle already has pairs
@@ -147,61 +147,46 @@ namespace espressopp {
 
   bool FixedPairList::iadd(longint pid1, longint pid2) {
     bool returnVal = true;
+    if (pid1 > pid2)
+      std::swap(pid1, pid2);
 
     System& system = storage->getSystemRef();
 
     // ADD THE LOCAL PAIR
-    Particle *p1 = storage->lookupLocalParticle(pid1);
+    Particle *p1 = storage->lookupRealParticle(pid1);
     Particle *p2 = storage->lookupLocalParticle(pid2);
 
-    // The assumption is that p1 will be a real particle and p2 can be real or ghost.
-    if (p1 && p2) {
-      if (p1->ghost() && !p2->ghost()) {
-        LOG4ESPP_DEBUG(theLogger, "p1 is ghost and p2 is real, swap pointers and pids");
-        std::swap(p1, p2);
-        std::swap(pid1, pid2);
-      }
-    } else {
-      return false;
+    if (!p1) {
+      // Particle does not exist here, return false
+      returnVal = false;
+    } else if (!p2) {
+        returnVal = false;
     }
 
-    if (p1->ghost() && p2->ghost()) {
-      return false;
-    }
-
-    // ADD THE GLOBAL PAIR
-    // see whether the particle already has pairs
-    bool found = false;
-    std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange =
-        globalPairs.equal_range(pid1);
-    if (equalRange.first != globalPairs.end()) {
-      // otherwise test whether the pair already exists
-      for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (it->second == pid2)
-          found = true;
-      }
-    }
-    if (!found) {
-      found = false;
-      equalRange = globalPairs.equal_range(pid2);
+    if (returnVal) {
+      // ADD THE GLOBAL PAIR
+      // see whether the particle already has pairs
+      bool found = false;
+      std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange =
+          globalPairs.equal_range(pid1);
       if (equalRange.first != globalPairs.end()) {
+        // otherwise test whether the pair already exists
         for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-          if (it->second == pid1)
+          if (it->second == pid2)
             found = true;
         }
       }
+      returnVal = !found;
+      if (!found) {
+        // add the pair locally
+        this->add(p1, p2);
+        // Update list of integers.
+        globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
+        // Throw signal onTupleAdded.
+        onTupleAdded(pid1, pid2);
+        LOG4ESPP_INFO(theLogger, "added fixed pair " << pid1 << "-" << pid2 << " to global pair list");
+      }
     }
-    returnVal = !found;
-    if (!found) {
-      // add the pair locally
-      this->add(p1, p2);
-      // Update list of integers.
-      globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
-      // Throw signal onTupleAdded.
-      onTupleAdded(pid1, pid2);
-      LOG4ESPP_INFO(theLogger, "added fixed pair " << pid1 << "-" << pid2 << " to global pair list");
-    }
-    LOG4ESPP_DEBUG(theLogger, "Leaving add with returnVal " << returnVal);
     return returnVal;
   }
 

@@ -70,7 +70,7 @@ if pmi.isController:
     class DomainDecomposition(Storage):
         pmiproxydefs = dict(
           cls = 'espressopp.storage.DomainDecompositionLocal',  
-          pmicall = ['getCellGrid', 'getNodeGrid', 'cellAdjust']
+          pmicall = ['getCellGrid', 'getNodeGrid', 'cellAdjust', 'mapPositionToNodeClipped']
         )
         def __init__(self, system, 
                      nodeGrid='auto', 
