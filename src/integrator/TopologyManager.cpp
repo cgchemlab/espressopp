@@ -372,12 +372,7 @@ void TopologyManager::exchangeData() {
   GlobalMerge global_merge_sets;
 
   // Pack data
-  // Format: vector of pairs.
-  // 0: size of merge_sets, size of new_edges;
-  // 1: size of split_sets, size of removed_edges;
-  // 2..size_of_merge_sets
   std::vector<longint> output;
-  //output.push_back(merge_sets_.size());  // vector of sets of particles to merge.
   output.push_back(nb_distance_particles_.size() / 2);  // vector of particles to updates.
   output.push_back(newEdges_.size());  // vector of new edges.
   output.push_back(removedEdges_.size());  // vector of edges to remove.

@@ -402,9 +402,6 @@ def _args():
     parser.add_argument('--node_grid')
     parser.add_argument('--skin', type=float, default=0.16,
                         help='Skin value for Verlet list')
-    parser.add_argument('--coord', help='Input coordinate h5md file')
-    parser.add_argument('--coord_frame', default=-1, type=int,
-                        help='Time frame of input coordinate h5md file')
     parser.add_argument('--run', type=int, default=10000,
                         help='Number of simulation steps')
     parser.add_argument('--int_step', default=1000, type=int, help='Steps in integrator')
@@ -436,6 +433,8 @@ def _args():
                         help='Collect trajectory every (step)')
     parser.add_argument('--energy_collect', default=1000, type=int,
                         help='Collect energy every (step)')
+    parser.add_argument('--topol_collect', default=1000, type=int,
+                        help='Collect topology every (step)')
     parser.add_argument('--dt', default=0.001, type=float,
                         help='Integrator time step')
     parser.add_argument('--lj_cutoff', default=1.2, type=float,
@@ -446,19 +445,14 @@ def _args():
                         help='Epsilon_1 for coulomb interactions')
     parser.add_argument('--coulomb_epsilon2', default=80.0, type=float,
                         help='Epsilon_2 for coulomb interactions')
-    parser.add_argument('--coulomb_kappa', default=1.0, type=float,
+    parser.add_argument('--coulomb_kappa', default=0.0, type=float,
                         help='Kappa paramter for coulomb interactions')
-    parser.add_argument('--table_groups', default='A,B',
-                        help='Name of CG groups to read from tables')
-    parser.add_argument('--initial_step', default=0,
-                        help='Initial integrator step (useful for continue simulation',
-                        type=int)
+    parser.add_argument('--coulomb_cutoff', default=0.9, type=float,
+                        help='Coulomb cut-off')
     parser.add_argument('--reactions', default='reaction.cfg',
                         help='Configuration file with chemical reactions')
     parser.add_argument('--debug', default=None, help='Turn on logging mechanism')
     parser.add_argument('--start_ar', default=0, type=int, help='When to start chemical reactions')
-    parser.add_argument('--interactive', default=False, type=ast.literal_eval,
-                        help='Run interactive mode')
     parser.add_argument('--store_species', default=False, type=ast.literal_eval,
                         help='Store particle types')
     parser.add_argument('--store_state', default=True, type=ast.literal_eval,

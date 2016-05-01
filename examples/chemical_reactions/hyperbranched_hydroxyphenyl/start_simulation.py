@@ -245,8 +245,10 @@ def main():  #NOQA
             integrator.addExtension(ar)
             cr_interval = sc.ar_interval
             integrator_step = cr_interval
-        else:
-            cr_interval = integrator_step
+            sim_step = args.run / integrator_step
+            args.topol_collect = cr_interval
+    else:
+        cr_interval = integrator_step
 
     for f in fpls:
         topology_manager.observe_tuple(f)
@@ -270,8 +272,6 @@ def main():  #NOQA
     for (cr_type, _), obs in cr_observs.items():
         system_analysis.add_observable(
             'cr_{}'.format(cr_type), obs)
-# Those observables below are only for DEBUG purpose, it counts the number of entries
-# in the pair, triple and quadruple lists.
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
@@ -288,10 +288,11 @@ def main():  #NOQA
         static_box=False,
         author='XXX',
         email='xxx',
-        store_species=True,
+        store_species=args.store_species,
         store_res_id=True,
-        store_charge=True,
-        store_state=True,
+        store_charge=False,
+        store_state=args.store_state,
+        store_lambda=args.store_lambda,
         chunk_size=int(NPart/MPI.COMM_WORLD.size))
     traj_file.set_parameters({
         'temperature': args.temperature
@@ -304,20 +305,32 @@ def main():  #NOQA
     dump_topol.add_static_tuple(static_fpl, 'bonds')
     dump_topol.dump()
     dump_topol.update()
-    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, cr_interval)
+    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
     integrator.addExtension(ext_dump)
+
+    k_trj_collect = int(math.ceil(args.trj_collect/float(integrator_step)))
+    k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
 
     print('Reset total velocity')
     total_velocity = espressopp.analysis.TotalVelocity(system)
     total_velocity.reset()
     system_analysis.dump()
+    traj_file.dump(0, 0)
     print('Running {} steps'.format(sim_step*integrator_step))
-    system_analysis.info()
     for k in range(sim_step):
         system_analysis.info()
-        print k, fpls[0].totalSize()
-        print k, fpls[0].getAllBonds()
+        if k % k_trj_collect == 0:
+            traj_file.dump(k*integrator_step, k*integrator_step*args.dt)
+        if k % k_trj_flush == 0:
+            traj_file.flush()   # Write HDF5 to disk.
         integrator.run(integrator_step)
+
+    system_analysis.info()
+    traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*args.dt)
+    dump_topol.dump()
+    dump_topol.update()
+    traj_file.flush()
+    traj_file.close()
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
@@ -332,6 +345,8 @@ def main():  #NOQA
     espressopp.tools.analyse.final_info(system, integrator, verletlist, time0, time.time())
 
     print topology_manager.get_timers()
+
+    print traj_file.getTimers()
 
 
 if __name__ == '__main__':
