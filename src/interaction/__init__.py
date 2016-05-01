@@ -92,3 +92,4 @@ from espressopp.interaction.HarmonicTrap import *
 from espressopp.interaction.LennardJones93Wall import *
 
 from espressopp.interaction.MultiTabulated import *
+from espressopp.interaction.MixedTabulated import *

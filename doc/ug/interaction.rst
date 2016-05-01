@@ -54,3 +54,4 @@ interaction
    espressopp.interaction.VSphereSelf.rst
    espressopp.interaction.Zero.rst
    espressopp.interaction.LennardJones93.rst
+   espressopp.interaction.MixedTabulated.rst
