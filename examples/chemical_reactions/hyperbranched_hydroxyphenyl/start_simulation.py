@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import espressopp  # NOQA
+import h5py
 import math  # NOQA
 try:
     import MPI
@@ -82,6 +83,7 @@ def main():  #NOQA
 
     gt = gromacs_topology_new.GromacsTopology(args.top)
     gt.read()
+
 
     input_conf = files_io.GROFile(args.conf)
     input_conf.read()
@@ -180,6 +182,7 @@ def main():  #NOQA
 
 # Pressure coupling if needed,
     pressure_comp = espressopp.analysis.Pressure(system)
+    pressure = 0.0
     if args.pressure:
         pressure = args.pressure * 0.060221374  # convert from bars to gromacs units kj/mol/nm^3
         if args.barostat == 'lv':
@@ -231,6 +234,8 @@ def main():  #NOQA
     # Set chemical reactions, parser in reaction_parser.py
     fpls = []
     cr_interval = 0
+    has_reaction = False
+    chemical_reaction_ext = None
     if args.reactions:
         if os.path.exists(args.reactions):
             print('Set chemical reactions from: {}'.format(args.reactions))
@@ -242,11 +247,12 @@ def main():  #NOQA
             output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
             print('Save copy of reaction config to: {}'.format(output_reaction_config))
             shutil.copyfile(args.reactions, output_reaction_config)
-            integrator.addExtension(ar)
+            chemical_reaction_ext = ar
             cr_interval = sc.ar_interval
             integrator_step = cr_interval
             sim_step = args.run / integrator_step
             args.topol_collect = cr_interval
+            has_reaction = True
     else:
         cr_interval = integrator_step
 
@@ -294,9 +300,9 @@ def main():  #NOQA
         store_state=args.store_state,
         store_lambda=args.store_lambda,
         chunk_size=int(NPart/MPI.COMM_WORLD.size))
-    traj_file.set_parameters({
-        'temperature': args.temperature
-    })
+    #h5 = h5py.File(h5md_output_file, 'r+')
+    #h5.close()
+
     print('Set topology writer')
     dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
     for i, f in enumerate(fpls):
@@ -310,6 +316,10 @@ def main():  #NOQA
 
     k_trj_collect = int(math.ceil(args.trj_collect/float(integrator_step)))
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
+    print('Store trajectory every {} steps'.format(args.trj_collect))
+
+    k_enable_reactions = int(math.ceil(args.start_ar/float(integrator_step)))
+    print('Enable chemical reactions at {} step'.format(args.start_ar))
 
     print('Reset total velocity')
     total_velocity = espressopp.analysis.TotalVelocity(system)
@@ -323,6 +333,10 @@ def main():  #NOQA
             traj_file.dump(k*integrator_step, k*integrator_step*args.dt)
         if k % k_trj_flush == 0:
             traj_file.flush()   # Write HDF5 to disk.
+        if k_enable_reactions == k:
+            print('Enabling chemical reactions')
+            integrator.addExtension(ar)
+
         integrator.run(integrator_step)
 
     system_analysis.info()
@@ -331,6 +345,26 @@ def main():  #NOQA
     dump_topol.update()
     traj_file.flush()
     traj_file.close()
+
+    # Write some parameters of the simulation.
+    h5 = h5py.File(h5md_output_file, 'r+')
+    if 'parameters' not in h5:
+        h5.create_group('parameters')
+    g_params = h5['/parameters']
+    sim_params = {
+        'thermostat': args.thermostat,
+        'thermostat_gamma': args.thermostat_gamma,
+        'temperature': args.temperature,
+        'barostat': args.barostat if args.pressure else 'no',
+        'pressure': pressure,
+        'total_steps': sim_step*integrator_step,
+        'total_time': sim_step*integrator_step*args.dt
+    }
+    for k, v in sim_params.items():
+        g_params.attrs[k] = v
+    tools.save_forcefield(h5, gt)
+    h5.close()
+
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)

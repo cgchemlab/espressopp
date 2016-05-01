@@ -232,54 +232,68 @@ class DumpH5MDLocal(io_DumpH5MD):
                    }
 
     def set_parameters(self, paramters):
-        if 'parameters' not in self.file.f:
-            self.file.f.create_group('parameters')
-        g_params = self.file.f['parameters']
-        for k, v in paramters.iteritems():
-            g_params.attrs[k] = v
+        if pmi.workerIsActive():
+            if 'parameters' not in self.file.f:
+                self.file.f.create_group('parameters')
+            g_params = self.file.f['parameters']
+            for k, v in paramters.iteritems():
+                g_params.attrs[k] = v
 
     def get_file(self):
-        return self.file.f
+        if pmi.workerIsActive():
+            return self.file.f
 
     def update(self):
         if pmi.workerIsActive():
             self.cxxclass.update(self)
 
     def clear_buffers(self):
-        self.cxxclass.clear_buffers(self)
+        if pmi.workerIsActive():
+            self.cxxclass.clear_buffers(self)
 
     def getPosition(self):
-        return self.cxxclass.getPosition(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getPosition(self)
 
     def getImage(self):
-        return self.cxxclass.getImage(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getImage(self)
 
     def getVelocity(self):
-        return self.cxxclass.getVelocity(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getVelocity(self)
 
     def getForce(self):
-        return self.cxxclass.getForce(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getForce(self)
 
     def getId(self):
-        return self.cxxclass.getId(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getId(self)
 
     def getSpecies(self):
-        return self.cxxclass.getSpecies(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getSpecies(self)
 
     def getState(self):
-        return self.cxxclass.getState(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getState(self)
 
     def getCharge(self):
-        return self.cxxclass.getCharge(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getCharge(self)
 
     def getMass(self):
-        return self.cxxclass.getMass(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getMass(self)
 
     def getLambdaAdr(self):
-        return self.cxxclass.getLambda(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getLambda(self)
 
     def getResId(self):
-        return self.cxxclass.getResId(self)
+        if pmi.workerIsActive():
+            return self.cxxclass.getResId(self)
 
     def dump(self, step, time):
         if not pmi.workerIsActive():

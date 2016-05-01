@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import argparse
+import numpy as np
+
 from files_io import TopoAtom
 
 __doc__ = "Tool functions."
@@ -90,3 +92,20 @@ def dump_topol(file_name, topol, system, particle_ids, bonds, angles, dihedrals,
                 topol.topol.pairs[b12] = []
 
     topol.topol.write(file_name)
+
+def save_forcefield(h5, gt):
+    """Saves force-field to H5MD file under the /parameters/forcefield group."""
+    if 'force_field' not in h5['/parameters']:
+        g_ff = h5['/parameters'].create_group('force_field')
+    g_ff = h5['/parameters/force_field']
+    atomtypes = []
+    for at_sym, atd in gt.topol.atomtypes.items():
+        atomtypes.append([
+            gt.atomsym_atomtype[at_sym], at_sym, atd['mass'],
+            atd['charge'], atd['epsilon'], atd['sigma'],
+            atd['type']])
+    atomtypes = np.array(atomtypes)
+    d_atomtypes = g_ff.create_dataset('atomtypes', data=atomtypes)
+    d_atomtypes.attrs['keys'] = [
+        'type_id', 'name', 'mass', 'charge', 'epsilon', 'sigma', 'type']
+
