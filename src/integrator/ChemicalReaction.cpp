@@ -93,7 +93,8 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_ord
   if (isValidState(p1, p2, particle_order)) {
     real W = (*rng_)();
     // Gets state dependent reaction rate.
-    real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.first->state()];
+    //real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.second->state()];
+    real p = rate_;
     // Multiply by time step and interval.
     p *= (*dt_) * (*interval_);
 
@@ -224,7 +225,7 @@ void Reaction::registerPython() {
           // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
           // min_state_2, max_state_2, fpl, intramolecular
        init<int, int, int, int, int, int, int, int,
-            shared_ptr<FixedPairList>, bool>())
+            shared_ptr<FixedPairList>, real, bool>())
       .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
       .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
       .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
@@ -237,11 +238,9 @@ void Reaction::registerPython() {
       .add_property("intraresidual", &Reaction::intraresidual, &Reaction::set_interaresidual)
       .add_property("active", &Reaction::active, &Reaction::set_active)
       .add_property("cutoff", &Reaction::cutoff)
+      .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .def("add_postprocess", &Reaction::addPostProcess)
-      .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
-      .def("set_rate", &Reaction::setRate)
-      .def("get_rate", &Reaction::getRate)
-      .def("get_all_rates", &Reaction::getAllRates);
+      .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff);
 }
 
 /** DissociationReaction */
@@ -255,7 +254,7 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &
     real W = (*rng_)();
 
     // Gets state dependent reaction rate.
-    real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.second->state()];
+    real p = rate_;
     // Multiply by time step and interval.
     p *= (*dt_) * (*interval_);
     // Set the reaction rate.
@@ -279,7 +278,8 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &
 
     // Break the bond randomly.
 
-    real p_diss_rate = diss_rate_T1[particle_order.first->state()] * diss_rate_T2[particle_order.second->state()];
+    // real p_diss_rate = diss_rate_T1[particle_order.first->state()] * diss_rate_T2[particle_order.second->state()];
+    real p_diss_rate = diss_rate_;
     p_diss_rate *= (*dt_) * (*interval_);
 
     if (W < p_diss_rate) {
@@ -297,8 +297,8 @@ void DissociationReaction::registerPython() {
   class_<DissociationReaction, bases<Reaction>, shared_ptr<integrator::DissociationReaction> >
       ("integrator_DissociationReaction",
         // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
-        // max_state_2, break_cutoff, fpl
-       init<int, int, int, int, int, int, int, int, real, shared_ptr<FixedPairList> >())
+        // max_state_2, break_cutoff, fpl, rate
+       init<int, int, int, int, int, int, int, int, real, shared_ptr<FixedPairList>, real >())
       .add_property("type_1",
                     &DissociationReaction::type_1, &DissociationReaction::set_type_1)
       .add_property("type_2",
@@ -319,15 +319,11 @@ void DissociationReaction::registerPython() {
       .add_property("max_state_2",
                     &DissociationReaction::max_state_2,
                     &DissociationReaction::set_max_state_2)
+      .add_property("rate", &DissociationReaction::rate, &DissociationReaction::set_rate)
+      .add_property("diss_rate", &DissociationReaction::diss_rate, &DissociationReaction::set_diss_rate)
       .add_property("cutoff", &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
       .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
-      .def("add_postprocess", &DissociationReaction::addPostProcess)
-      .def("set_rate", &DissociationReaction::setRate)
-      .def("get_rate", &DissociationReaction::getRate)
-      .def("get_all_rates", &DissociationReaction::getAllRates)
-      .def("set_diss_rate", &DissociationReaction::setDissRate)
-      .def("get_diss_rate", &DissociationReaction::getDissRate)
-      .def("get_all_diss_rates", &DissociationReaction::getAllDissRates);
+      .def("add_postprocess", &DissociationReaction::addPostProcess);
 }
 }  // namespace integrator
 }  // namespace espressopp

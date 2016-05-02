@@ -276,30 +276,10 @@ class ReactionLocal(integrator_Reaction):
                 min_state_2,
                 max_state_2,
                 fpl,
+                rate,
                 False
             )
             self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
-
-            if isinstance(rate, tuple):
-                r_t1 = rate[0]
-                r_t2 = rate[1]
-                t1_elements = max_state_1 - min_state_1
-                t2_elements = max_state_2 - min_state_2
-                if len(r_t1) < t1_elements:
-                    raise Exception('Number of rate elements for type 1 is not sufficient, required: {}'.format(
-                                    t1_elements))
-                if len(r_t2) < t2_elements:
-                    raise Exception('Number of rate elements for type 2 is not sufficient, required: {}'.format(
-                                                    t2_elements))
-                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
-                    self.cxxclass.set_rate(self, True, s1, r_t1[idx])
-                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
-                    self.cxxclass.set_rate(self, False, s2, r_t2[idx])
-            else:
-                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
-                    self.cxxclass.set_rate(self, True, s1, rate)
-                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
-                    self.cxxclass.set_rate(self, False, s2, rate)
 
     def add_postprocess(self, post_process, reactant_switch=0):
         """Add new post process to the reaction.
@@ -335,30 +315,11 @@ class DissociationReactionLocal(integrator_DissociationReaction):
                 min_state_2,
                 max_state_2,
                 cutoff,
-                fpl
+                fpl,
+                rate
             )
             self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
 
-            if isinstance(rate, tuple):
-                r_t1 = rate[0]
-                r_t2 = rate[1]
-                t1_elements = max_state_1 - min_state_1
-                t2_elements = max_state_2 - min_state_2
-                if len(r_t1) < t1_elements:
-                    raise Exception('Number of rate elements for type 1 is not sufficient, required: {}'.format(
-                                    t1_elements))
-                if len(r_t2) < t2_elements:
-                    raise Exception('Number of rate elements for type 2 is not sufficient, required: {}'.format(
-                                                    t2_elements))
-                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
-                    self.cxxclass.set_rate(self, True, s1, r_t1[idx])
-                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
-                    self.cxxclass.set_rate(self, False, s2, r_t2[idx])
-            else:
-                for idx, s1 in enumerate(range(min_state_1, max_state_1)):
-                    self.cxxclass.set_rate(self, True, s1, rate)
-                for idx, s2 in enumerate(range(min_state_2, max_state_2)):
-                    self.cxxclass.set_rate(self, False, s2, rate)
 
     def add_postprocess(self, post_process, reactant_switch=0):
         """Add new post process to the reaction.
@@ -369,31 +330,6 @@ class DissociationReactionLocal(integrator_DissociationReaction):
         """
         if pmi.workerIsActive():
             self.cxxclass.add_postprocess(self, post_process, reactant_switch)
-
-    def get_diss_rate(self, molecule, state):
-        if pmi.workerIsActive():
-            if molecule not in [1, 2]:
-                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
-            return self.cxxclass.get_diss_state(self, molecule == 1, state)
-
-    def set_diss_rate(self, molecule, state, rate):
-        if pmi.workerIsActive():
-            if molecule not in [1, 2]:
-                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
-            self.cxxclass.set_diss_state(self, molecule == 1, state, rate)
-
-    def get_rate(self, molecule, state):
-        if pmi.workerIsActive():
-            if molecule not in [1, 2]:
-                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
-            return self.cxxclass.get_rate(self, molecule == 1, state)
-
-    def set_rate(self, molecule, state):
-        if pmi.workerIsActive():
-            if molecule not in [1, 2]:
-                raise Exception('molecule parameter should 1 or 2 (indicating which molecule type)')
-            self.cxxclass.set_rate(self, molecule == 1, state)
-
 
 if pmi.isController:
     class ChemicalReaction(Extension):
@@ -452,9 +388,6 @@ if pmi.isController:
             pmicall=(
                 'add_postprocess',
                 'set_reaction_cutoff',
-                'set_rate',
-                'get_rate',
-                'get_all_rates',
             ),
             pmiproperty=(
                 'type_1',
@@ -468,7 +401,8 @@ if pmi.isController:
                 'intramolecular',
                 'intraresidual',
                 'active',
-                'cutoff'
+                'cutoff',
+                'rate',
                 )
             )
 
@@ -478,12 +412,6 @@ if pmi.isController:
                 cls='espressopp.integrator.DissociationReactionLocal',
                 pmicall=(
                     'add_postprocess',
-                    'set_rate',
-                    'get_rate',
-                    'get_all_rates',
-                    'set_diss_rate',
-                    'get_diss_rate',
-                    'get_all_diss_rates',
                 ),
                 pmiproperty=(
                     'type_1',
@@ -495,6 +423,8 @@ if pmi.isController:
                     'min_state_2',
                     'max_state_2',
                     'cutoff',
-                    'active'
+                    'active',
+                    'rate',
+                    'diss_rate'
                     )
                 )

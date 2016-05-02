@@ -226,7 +226,8 @@ public:
             reverse_(false),
             intramolecular_(false),
             active_(true),
-            intraresidual_(true) { }
+            intraresidual_(true),
+            rate_(0.0) { }
 
   /*** Constructor of Reaction object.
    *
@@ -245,7 +246,7 @@ public:
    *
    */
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int
-      min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, bool intramolecular = false)
+      min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate, bool intramolecular)
         :type_1_(type_1),
             type_2_(type_2),
             delta_1_(delta_1),
@@ -258,7 +259,8 @@ public:
             fixed_pair_list_(fpl),
             intramolecular_(intramolecular),
             active_(true),
-            intraresidual_(true) { }
+            intraresidual_(true),
+            rate_(rate) { }
 
   virtual ~Reaction() { }
 
@@ -266,34 +268,8 @@ public:
     return reaction_cutoff_->cutoff();
   }
 
-  void setRate(bool t1_t2, longint state, real rate) {
-    if (t1_t2)
-      state_rate_T1[state] = rate;
-    else
-      state_rate_T2[state] = rate;
-  }
-
-  real getRate(bool t1_t2, longint state) {
-    if (t1_t2)
-      return state_rate_T1[state];
-    else
-      return state_rate_T2[state];
-  }
-
-  python::list getAllRates(bool t1_t2) {
-    python::list ret_val;
-    if (t1_t2) {
-      for (boost::unordered_map<longint, real>::iterator it = state_rate_T1.begin(); it != state_rate_T1.end(); ++it) {
-        ret_val.append(python::make_tuple(it->first, it->second));
-      }
-      return ret_val;
-    } else {
-      for (boost::unordered_map<longint, real>::iterator it = state_rate_T2.begin(); it != state_rate_T2.end(); ++it) {
-        ret_val.append(python::make_tuple(it->first, it->second));
-      }
-      return ret_val;
-    }
-  };
+  real rate() { return rate_; }
+  void set_rate(real s_) { rate_ = s_; }
 
   void set_type_1(int type_1) {type_1_ = type_1; }
 
@@ -426,8 +402,7 @@ protected:
 
   bc::BC *bc_;//!< boundary condition
 
-  boost::unordered_map<longint, real> state_rate_T1;  //!< Map chemical state to rate.
-  boost::unordered_map<longint, real> state_rate_T2;  //!< Map chemical state to rate.
+  real rate_; //<! Global rate.
 
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;  //!<List of post-process methods.
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;  //!<List of post-process methods.
@@ -462,44 +437,18 @@ public:
 
   DissociationReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int
       max_state_1, int min_state_2, int max_state_2, real break_cutoff,
-      shared_ptr<FixedPairList> fpl):
+      shared_ptr<FixedPairList> fpl, real rate):
     Reaction(type_1, type_2, delta_1, delta_2,
-        min_state_1, max_state_1, min_state_2, max_state_2, fpl,
-        true), break_cutoff_(break_cutoff) {
+        min_state_1, max_state_1, min_state_2, max_state_2, fpl, 
+        rate, true), break_cutoff_(break_cutoff) {
     reverse_ = true;
     break_cutoff_sqr_ = break_cutoff_ * break_cutoff_;
   }
 
   virtual ~DissociationReaction() { }
 
-  void setDissRate(bool t1_t2, longint state, real rate) {
-    if (t1_t2)
-      diss_rate_T1[state] = rate;
-    else
-      diss_rate_T2[state] = rate;
-  }
-
-  real getDissRate(bool t1_t2, longint state) {
-    if (t1_t2)
-      return diss_rate_T1[state];
-    else
-      return diss_rate_T2[state];
-  }
-
-  python::list getAllDissRates(bool t1_t2) {
-    python::list ret_val;
-    if (t1_t2) {
-      for (boost::unordered_map<longint, real>::iterator it = diss_rate_T1.begin(); it != diss_rate_T1.end(); ++it) {
-        ret_val.append(python::make_tuple(it->first, it->second));
-      }
-      return ret_val;
-    } else {
-      for (boost::unordered_map<longint, real>::iterator it = diss_rate_T2.begin(); it != diss_rate_T2.end(); ++it) {
-        ret_val.append(python::make_tuple(it->first, it->second));
-      }
-      return ret_val;
-    }
-  };
+  real diss_rate() { return diss_rate_; }
+  void set_diss_rate(real s_) { diss_rate_ = s_; }
 
   void set_cutoff(real cutoff) {break_cutoff_ = cutoff; break_cutoff_sqr_ = cutoff * cutoff; }
 
@@ -516,8 +465,7 @@ protected:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
 private:
-  boost::unordered_map<longint, real> diss_rate_T1;  //!< Dissociation rate based on state.
-  boost::unordered_map<longint, real> diss_rate_T2;  //!< Dissociation rate based on state.
+  real diss_rate_;
   real break_cutoff_;
   real break_cutoff_sqr_;
 };
