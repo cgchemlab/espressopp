@@ -64,6 +64,27 @@ def sort_trajectory(trj, ids):
     return trj[idd]
 
 
+def sort_file(h5):
+    """Sort data file."""
+    atom_groups = [ag for ag in h5['/particles'] if 'id' in h5['/particles/{}/'.format(ag)]]
+    T = len(h5['/particles/{}/id/value'.format(atom_groups[0])])
+    # Iterate over time frames.
+    for t in xrange(T):
+        sys.stdout.write('Progress: {:.2f} %\r'.format(100.0*float(t)/T))
+        sys.stdout.flush()
+        for ag in atom_groups:
+            ids = h5['/particles/{}/id/value'.format(ag)]
+            idd = [
+                x[1] for x in sorted(
+                    [(p_id, col_id) for col_id, p_id in enumerate(ids[t])],
+                    key=lambda y: (True, y[0]) if y[0] == -1 else (False, y[0]))
+                ]
+            for k in h5['/particles/{}/'.format(ag)].keys():
+                if 'value' in h5['/particles/{}/{}'.format(ag, k)].keys():
+                    path = '/particles/{}/{}/value'.format(ag, k)
+                    h5[path][t] = h5[path][t][idd]
+
+
 def main():  #NOQA
     args = tools_sim._args().parse_args()
 
@@ -363,8 +384,10 @@ def main():  #NOQA
     for k, v in sim_params.items():
         g_params.attrs[k] = v
     tools.save_forcefield(h5, gt)
-    h5.close()
 
+    # Sort H5MD file afterwards.
+    sort_file(h5)
+    h5.close()
 
     # Saves output file.
     output_gro_file = '{}_{}_confout.gro'.format(args.output_prefix, rng_seed)
@@ -376,11 +399,11 @@ def main():  #NOQA
 
     print('finished!')
     print('total time: {}'.format(time.time()-time0))
-    espressopp.tools.analyse.final_info(system, integrator, verletlist, time0, time.time())
-
+    print('Some timers')
     print topology_manager.get_timers()
 
     print traj_file.getTimers()
+    espressopp.tools.analyse.final_info(system, integrator, verletlist, time0, time.time())
 
 
 if __name__ == '__main__':
