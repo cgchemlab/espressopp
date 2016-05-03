@@ -321,8 +321,6 @@ def main():  #NOQA
         store_state=args.store_state,
         store_lambda=args.store_lambda,
         chunk_size=int(NPart/MPI.COMM_WORLD.size))
-    #h5 = h5py.File(h5md_output_file, 'r+')
-    #h5.close()
 
     print('Set topology writer')
     dump_topol = espressopp.io.DumpTopology(system, integrator, traj_file)
