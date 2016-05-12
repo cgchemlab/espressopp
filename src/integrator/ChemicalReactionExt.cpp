@@ -22,6 +22,8 @@
 
 #include <utility>
 #include <set>
+#include <numeric>
+#include <math.h>
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -45,7 +47,7 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
     shared_ptr<storage::DomainDecomposition> domdec, shared_ptr<TopologyManager> tm)
       :Extension(system),
           verlet_list_(verletList),
-          domdec_(domdec), tm_(tm) {
+          domdec_(domdec), tm_(tm), is_nearest_(false) {
   type = Extension::Reaction;
 
   current_cutoff_ = verletList->getVerletCutoff() - system->getSkin();
@@ -60,6 +62,8 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
 
   reaction_list_ = ReactionList();
   reverse_reaction_list_ = ReactionList();
+
+  bond_limit_ = -1;
 
   resetTimers();
 }
@@ -533,11 +537,12 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
   // For each active idx1, pick a partner
   if (a_indexes.size() > 0) {
     int idx_a;
-    real max_reaction_rate;
+    real rc;
+    real max_rc;
 
-    // rate => idx_b, ReactionDef(reaction_id, reaction_rate)
+    // reaction_coordinate => idx_b, ReactionDef(reaction_id, reaction_rate) or r_sqr distance
     typedef boost::unordered_multimap<real, std::pair<longint, ReactionDef > > LocalRateIdx;
-    LocalRateIdx rate_idx_b;
+    LocalRateIdx rc_idx_b;
     LocalRateIdx::local_iterator idx_b_reaction_id;
 
     // Iterators for the equal_range.
@@ -549,39 +554,52 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
         it != a_indexes.end(); ++it) {
       idx_a = *it;
 
+      // Group the candidates by the reaction rate.
+      if (is_nearest_)  // silly
+        max_rc = 10e18;
+      else
+        max_rc = -1;
+
       // Select all possible candidates
       candidates_b = potential_candidates.equal_range(idx_a);
 
-      // Group the candidates by the reaction rate.
-      max_reaction_rate = -1;
-      rate_idx_b.clear();
+      rc_idx_b.clear();
 
       for (integrator::ReactionMap::iterator jt = candidates_b.first;
           jt != candidates_b.second; ++jt) {
         boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(jt->second.second.reaction_id);
         real reaction_rate = jt->second.second.reaction_rate;
+        real reaction_r_sqr = jt->second.second.reaction_r_sqr;
 
-        if (reaction_rate > max_reaction_rate) {
-          max_reaction_rate = reaction_rate;
+        if (is_nearest_) {
+          if (reaction_r_sqr < max_rc)
+            max_rc = reaction_r_sqr;
+        } else {
+          if (reaction_rate > max_rc)
+            max_rc = reaction_rate;
         }
 
-        // rate => (idx_b, reaction_id)
-        rate_idx_b.insert(
-            std::make_pair(
-                reaction_rate,
-                std::make_pair(jt->second.first, jt->second.second)));
+        // Use reaction coordinate, distance of reaction rate.
+        if (is_nearest_)
+          rc = reaction_r_sqr;
+        else
+          rc = reaction_rate;
+
+        // rc => (idx_b, reaction_id)
+        rc_idx_b.insert(std::make_pair(rc, std::make_pair(jt->second.first, jt->second.second)));
       }
 
       // Found reaction with the maximum rate. If there are several candidates with the same
       // rate, then we choose randomly.
-      if (max_reaction_rate != -1) {
-        int bucket_size = rate_idx_b.count(max_reaction_rate);
+      if (max_rc != -1) {
+        int bucket_size = rc_idx_b.count(max_rc);
 
-        // Pick up random number in given range.
-        int pick_offset = (*rng_)(bucket_size);
+        int pick_offset = 0;
+        if (bucket_size > 1)
+          // Pick up random number in given range.
+          pick_offset = (*rng_)(bucket_size);
 
-        idx_b_reaction_id = rate_idx_b.begin(
-          rate_idx_b.bucket(max_reaction_rate));
+        idx_b_reaction_id = rc_idx_b.begin(rc_idx_b.bucket(max_rc));
 
         std::advance(idx_b_reaction_id, pick_offset);
 
@@ -636,10 +654,11 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
 
   if (b_indexes.size() > 0) {
     int idx_b;
-    real max_reaction_rate;
+    real max_rc;
+    real rc;
 
     // rate => idx_a, reaction_id, reaction_rate
-    RateParticleIdx rate_idx_a;
+    RateParticleIdx rc_idx_a;
     RateParticleIdx::local_iterator idx_a_reaction_id;
     std::pair<integrator::ReactionMap::iterator,
     integrator::ReactionMap::iterator> candidates_a;
@@ -648,32 +667,47 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
       idx_b = *it;
 
       candidates_a = reverse_candidates.equal_range(idx_b);
-      max_reaction_rate = -1;
-      rate_idx_a.clear();
+      // Group the candidates by the reaction rate.
+      if (is_nearest_)  // silly
+        max_rc = 10e18;
+      else
+        max_rc = -1;
+
+      rc_idx_a.clear();
 
       for (integrator::ReactionMap::iterator jt = candidates_a.first;
           jt != candidates_a.second; ++jt) {
         boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(jt->second.second.reaction_id);
         real reaction_rate = jt->second.second.reaction_rate;
+        real reaction_r_sqr = jt->second.second.reaction_r_sqr;
 
-        if (reaction_rate > max_reaction_rate) {
-          max_reaction_rate = reaction_rate;
+        if (is_nearest_) {
+          if (reaction_r_sqr < max_rc)
+            max_rc = reaction_r_sqr;
+        } else {
+          if (reaction_rate > max_rc)
+            max_rc = reaction_rate;
         }
 
-        rate_idx_a.insert(
-            std::make_pair(
-            reaction_rate,
-            std::make_pair(jt->second.first, jt->second.second)));
+        // Use reaction coordinate, distance of reaction rate.
+        if (is_nearest_)
+          rc = reaction_r_sqr;
+        else
+          rc = reaction_rate;
+
+        rc_idx_a.insert(
+            std::make_pair(rc, std::make_pair(jt->second.first, jt->second.second)));
       }
 
       // Found reaction with the maximum rate. If there are several candidates
       // then select randomly.
-      if (max_reaction_rate > -1) {
-        int bucket_size = rate_idx_a.count(max_reaction_rate);
-        int pick_offset = (*rng_)(bucket_size);
+      if (max_rc != -1) {
+        int bucket_size = rc_idx_a.count(max_rc);
+        int pick_offset = 0;
+        if (bucket_size > 1)
+          pick_offset = (*rng_)(bucket_size);
 
-        idx_a_reaction_id = rate_idx_a.begin(
-          rate_idx_a.bucket(max_reaction_rate));
+        idx_a_reaction_id = rc_idx_a.begin(rc_idx_a.bucket(max_rc));
 
         std::advance(idx_a_reaction_id, pick_offset);
 
@@ -747,8 +781,43 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
   LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
 
+  // Limit number of bonds created on each of interval steps.
+  longint local_bond_count = effective_pairs_.size();  // by default no limit;
+  if (bond_limit_ > 0) {
+    local_bond_count = 0;
+    for (ReactionMap::const_iterator it = effective_pairs_.begin();
+         it != effective_pairs_.end(); it++) {
+      Particle *p1 = system.storage->lookupLocalParticle(it->first);
+      Particle *p2 = system.storage->lookupLocalParticle(it->second.first);
+
+      if (p1 && p2)
+        if (!(p1->ghost() && p2->ghost()))
+          local_bond_count++;
+    }
+    // We need to get the number of bonds on each of cpus and then redistribute
+    // the correct fraction.
+    std::vector<longint> global_bond_count;
+    if (system.comm->rank() == 0) {
+      mpi::gather(*(system.comm), local_bond_count, global_bond_count, 0);
+      real total_number = std::accumulate(global_bond_count.begin(), global_bond_count.end(), 0.0);
+      longint rank_index = 0;
+      // Calculate new value of local_bond_count for every process.
+      for (std::vector<longint>::iterator itgb = global_bond_count.begin(); itgb != global_bond_count.end();
+           rank_index++, ++itgb) {
+        *itgb = floor(*itgb / total_number) * bond_limit_;
+      }
+      mpi::scatter(*(system.comm), global_bond_count, local_bond_count);
+    } else {
+      mpi::gather(*(system.comm), local_bond_count, global_bond_count, 0);
+
+      // Get the new value of local_bond_count.
+      mpi::scatter(*(system.comm), local_bond_count, 0);
+    }
+  }
+  LOG4ESPP_DEBUG(theLogger, "local_bond_count=" << local_bond_count << " bond_limit_=" << bond_limit_);
+
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
-      it != effective_pairs_.end(); it++) {
+      it != effective_pairs_.end() && local_bond_count != 0; it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
 
     // Change the state of A and B.
@@ -795,11 +864,16 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     if ((p1 != NULL) && (p2 != NULL) && valid_state) {
       if (!(p1->ghost() && p2->ghost())) {
         LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-        reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+        bool ret_add = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+        // If bond is created, decrease the bond counter;
+        if (ret_add)
+          local_bond_count--;
       }
     }
   }
 
+  if (local_bond_count > 0)
+    LOG4ESPP_ERROR(theLogger, "local_bond_count=" << local_bond_count << " after processing bonds != 0");
   LOG4ESPP_DEBUG(theLogger, "Leaving applyAR");
   LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
 }
@@ -840,7 +914,16 @@ void ChemicalReaction::registerPython() {
     .add_property(
       "interval",
       &ChemicalReaction::interval,
-      &ChemicalReaction::set_interval);
+      &ChemicalReaction::set_interval)
+    .add_property(
+      "nearest_mode",
+      &ChemicalReaction::is_nearest,
+      &ChemicalReaction::set_is_nearest)
+    .add_property(
+      "bond_limit",
+      &ChemicalReaction::bond_limit,
+      &ChemicalReaction::set_bond_limit
+    );
 }
 }// namespace integrator
 }// namespace espressopp

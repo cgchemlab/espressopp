@@ -177,7 +177,8 @@ from _espressopp import integrator_ReactionCutoff
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
     """Chemical Reaction integrator extension."""
-    def __init__(self, system, vl, domdec, topology_manager, interval=None):
+    def __init__(self, system, vl, domdec, topology_manager, nearest_mode=False,
+                 interval=None):
         """Chemical reaction extension.
 
         Args:
@@ -185,12 +186,14 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
           vl: The verlet list.
           domdec: The domain decomposition object.
           topology_manager: The TopologyManager object.
+          nearest_mode: If set to True then nearest atoms are connected instead of the random.
           interval: The timestep where the extension will be run.
         """
         if pmi.workerIsActive():
             cxxinit(self, integrator_ChemicalReaction, system, vl, domdec, topology_manager)
             if interval is not None:
                 self.interval = interval
+            self.nearest_mode = nearest_mode
 
     def add_reaction(self, reaction):
         """Adds the reaction to the list."""
@@ -336,7 +339,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.ChemicalReactionLocal',
-            pmiproperty=('interval',),
+            pmiproperty=('interval','nearest_mode', 'bond_limit'),
             pmicall=(
                 'add_reaction', 'get_timers'
                 )

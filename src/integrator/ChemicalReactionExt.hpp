@@ -112,6 +112,12 @@ public:
     return *interval_;
   }
 
+  bool is_nearest() { return is_nearest_; }
+  void set_is_nearest(bool s_) { is_nearest_ = s_; }
+
+  longint bond_limit() { return bond_limit_; }
+  void set_bond_limit(longint s_) { bond_limit_ = s_; }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
@@ -149,6 +155,10 @@ private:
   ReactionList reverse_reaction_list_;  // <! Container for reverse reactions.
 
   shared_ptr<TopologyManager> tm_;  //<! TopologyManager object.
+
+  bool is_nearest_;  //!< If set to True then nearest neighbour is taken instead of random particle.
+
+  longint bond_limit_;
 
   void connect();
   void disconnect();
