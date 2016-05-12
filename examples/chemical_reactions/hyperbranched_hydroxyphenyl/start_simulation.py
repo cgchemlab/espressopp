@@ -398,7 +398,7 @@ def main():  #NOQA
 
     print('finished!')
     print('total time: {}'.format(time.time()-time0))
-    print('Some timers')
+    print('Some timers:')
     print topology_manager.get_timers()
 
     print traj_file.getTimers()

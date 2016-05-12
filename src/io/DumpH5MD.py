@@ -441,7 +441,6 @@ if pmi.isController:
             pmi.call(self.pmiobject, "close")
             # Sort file if flag is set to true.
             if self.pmiobject.sorted:
-                print('Sorting file')
                 h5 = h5py.File(self.pmiobject.filename, 'r+')
                 sort_file(h5)
                 print('File sorted')
