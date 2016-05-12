@@ -4,7 +4,6 @@
 # Copyright (c) 2015
 #     Pierre de Buyl
 #
-#
 #  This file is part of ESPResSo++.
 #
 #  ESPResSo++ is free software: you can redistribute it and/or modify
