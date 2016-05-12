@@ -90,8 +90,10 @@ from espressopp import pmi
 from _espressopp import io_DumpH5MD
 from mpi4py import MPI
 import numpy as np
+import sys
 try:
     import pyh5md
+    import h5py
 except ImportError:
     print 'missing pyh5md'
 
@@ -112,7 +114,8 @@ class DumpH5MDLocal(io_DumpH5MD):
                  is_adress=False,
                  author='xxx',
                  email='xxx',
-                 chunk_size=256):
+                 chunk_size=256,
+                 sorted=True):
         """
         Args:
             system: The system object.
@@ -132,11 +135,13 @@ class DumpH5MDLocal(io_DumpH5MD):
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 256)
+            sorted: If set to True then HDF5 will be sorted on close.
         """
         if not pmi.workerIsActive():
             return
         cxxinit(self, io_DumpH5MD, system, is_adress)
 
+        self.filename = filename
         self.group_name = group_name
         self.store_position = store_position
         self.store_species = store_species
@@ -148,6 +153,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.store_res_id = store_res_id
         self.static_box = static_box
         self.chunk_size = chunk_size
+        self.sorted = sorted
 
         self.system = system
         self.file = pyh5md.H5MD_File(filename, 'w', driver='mpio', comm=MPI.COMM_WORLD,
@@ -399,13 +405,44 @@ class DumpH5MDLocal(io_DumpH5MD):
 
 
 if pmi.isController:
+    def sort_file(h5):
+        """Sort data file."""
+        atom_groups = [ag for ag in h5['/particles'] if 'id' in h5['/particles/{}/'.format(ag)]]
+        T = len(h5['/particles/{}/id/value'.format(atom_groups[0])])
+        # Iterate over time frames.
+        for t in xrange(T):
+            sys.stdout.write('Progress: {:.2f} %\r'.format(100.0*float(t)/T))
+            sys.stdout.flush()
+            for ag in atom_groups:
+                ids = h5['/particles/{}/id/value'.format(ag)]
+                idd = [
+                    x[1] for x in sorted(
+                        [(p_id, col_id) for col_id, p_id in enumerate(ids[t])],
+                        key=lambda y: (True, y[0]) if y[0] == -1 else (False, y[0]))
+                    ]
+                for k in h5['/particles/{}/'.format(ag)].keys():
+                    if 'value' in h5['/particles/{}/{}'.format(ag, k)].keys():
+                        path = '/particles/{}/{}/value'.format(ag, k)
+                        h5[path][t] = h5[path][t][idd]
+
     class DumpH5MD(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.io.DumpH5MDLocal',
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge', 'getResId',
-                     'dump', 'clear_buffers', 'flush', 'get_file', 'close', 'set_parameters'],
+                     'dump', 'clear_buffers', 'flush', 'get_file', 'set_parameters'],
             pmiinvoke = ['getTimers'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
                          'store_charge', 'store_res_id', 'store_lambda'])
+
+        def close(self):
+            print('Closing file')
+            pmi.call(self.pmiobject, "close")
+            # Sort file if flag is set to true.
+            if self.pmiobject.sorted:
+                print('Sorting file')
+                h5 = h5py.File(self.pmiobject.filename, 'r+')
+                sort_file(h5)
+                print('File sorted')
+                h5.close()

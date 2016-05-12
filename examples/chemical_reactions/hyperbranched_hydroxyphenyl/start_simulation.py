@@ -36,6 +36,7 @@ import tools_sim
 import tools
 
 import os
+import sys
 
 # GROMACS units, kJ/mol K
 kb = 0.0083144621
