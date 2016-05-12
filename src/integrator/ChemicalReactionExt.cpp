@@ -784,6 +784,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
   // Limit number of bonds created on each of interval steps.
   longint local_bond_count = effective_pairs_.size();  // by default no limit;
   if (bond_limit_ > 0) {
+    LOG4ESPP_ERROR(theLogger, "bond_limit_=" << bond_limit_);
     local_bond_count = 0;
     for (ReactionMap::const_iterator it = effective_pairs_.begin();
          it != effective_pairs_.end(); it++) {
@@ -794,19 +795,28 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
         if (!(p1->ghost() && p2->ghost()))
           local_bond_count++;
     }
+    LOG4ESPP_ERROR(theLogger, "local_bond_count=" << local_bond_count << " r=" << system.comm->rank());
     // We need to get the number of bonds on each of cpus and then redistribute
     // the correct fraction.
     std::vector<longint> global_bond_count;
     if (system.comm->rank() == 0) {
       mpi::gather(*(system.comm), local_bond_count, global_bond_count, 0);
-      real total_number = std::accumulate(global_bond_count.begin(), global_bond_count.end(), 0.0);
+      
+      real total_number = static_cast<real>(std::accumulate(global_bond_count.begin(), global_bond_count.end(), 0.0));
+      LOG4ESPP_ERROR(theLogger, "total_number=" << total_number);
       longint rank_index = 0;
       // Calculate new value of local_bond_count for every process.
+      longint used_bonds = bond_limit_;
       for (std::vector<longint>::iterator itgb = global_bond_count.begin(); itgb != global_bond_count.end();
            rank_index++, ++itgb) {
-        *itgb = floor(*itgb / total_number) * bond_limit_;
+        longint b = (*itgb);
+        *itgb = round(((*itgb) / total_number) * bond_limit_);
+        if (*itgb == 0 && b > 0 && used_bonds > 1)
+            *itgb = 1;
+        used_bonds = used_bonds - *itgb;
+        LOG4ESPP_ERROR(theLogger, "bound_limit_=" << *itgb << " on rank=" << rank_index << " was=" << b << " tot=" << total_number);
       }
-      mpi::scatter(*(system.comm), global_bond_count, local_bond_count);
+      mpi::scatter(*(system.comm), global_bond_count, local_bond_count, 0);
     } else {
       mpi::gather(*(system.comm), local_bond_count, global_bond_count, 0);
 
@@ -814,7 +824,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
       mpi::scatter(*(system.comm), local_bond_count, 0);
     }
   }
-  LOG4ESPP_DEBUG(theLogger, "local_bond_count=" << local_bond_count << " bond_limit_=" << bond_limit_);
+  LOG4ESPP_ERROR(theLogger, "local_bond_count=" << local_bond_count << " bond_limit_=" << bond_limit_);
 
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
       it != effective_pairs_.end() && local_bond_count != 0; it++) {
