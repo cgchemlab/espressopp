@@ -785,7 +785,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
   // Limit number of bonds created on each of interval steps.
   longint local_bond_count = effective_pairs_.size();  // by default no limit;
   if (bond_limit_ > 0) {
-    LOG4ESPP_ERROR(theLogger, "bond_limit_=" << bond_limit_);
     local_bond_count = 0;
     // Calculate number of bonds that could be created at this CPU.
     for (ReactionMap::const_iterator it = effective_pairs_.begin();
@@ -797,7 +796,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
         if (!(p1->ghost() && p2->ghost()))
           local_bond_count++;
     }
-    LOG4ESPP_ERROR(theLogger, "local_bond_count=" << local_bond_count << " r=" << system.comm->rank());
 
     // We need to get the number of bonds on each of cpus and then redistribute
     // the correct fraction.
@@ -809,11 +807,10 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
       longint total_count = std::accumulate(global_bond_count.begin(), global_bond_count.end(), 0);
       longint bonds_left = total_count > bond_limit_ ? bond_limit_ : total_count;
 
-
       std::vector<longint> global_bond_limit;
       global_bond_limit.resize(global_bond_count.size(), 0);
 
-      // At least one bond on each of CPUs
+      // At least one bond on each of CPUs, then redistribute one by one.
       while (bonds_left > 0) {
         longint rank_index = 0;
         for (std::vector<longint>::iterator it = global_bond_count.begin();
@@ -882,40 +879,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
         }
       }
     }
-
-//    if (p1 != NULL) {
-//      if (reaction->isValidState_T1(*p1)) {
-//        p1->setState(p1->getState() + reaction->delta_1());
-//        tmp = reaction->postProcess_T1(*p1, *p2);
-//
-//        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-//          modified_particles.insert(*pit);
-//      } else {
-//        valid_state = false;
-//      }
-//    }
-//
-//    if (p2 != NULL && valid_state) {
-//      if (reaction->isValidState_T2(*p2)) {
-//        p2->setState(p2->getState() + reaction->delta_2());
-//        tmp = reaction->postProcess_T2(*p2, *p1);
-//
-//        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-//          modified_particles.insert(*pit);
-//      } else {
-//        valid_state = false;
-//      }
-//    }
-
-    /** Make sense only if both particles exists here, otherwise waste of CPU time. */
-//    if ((p1 != NULL) && (p2 != NULL) && valid_state) {
-//      //if (!(p1->ghost() && p2->ghost())) {
-//        LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-//        bool ra = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-//      //}
-//      if (ra)
-//        local_bond_count--;
-//    }
   }
 
   LOG4ESPP_DEBUG(theLogger, "Leaving applyAR");
