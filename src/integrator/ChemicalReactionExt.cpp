@@ -832,7 +832,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
       mpi::scatter(*(system.comm), local_bond_count, 0);
     }
   }
-  LOG4ESPP_ERROR(theLogger, "local_bond_count=" << local_bond_count << " bond_limit_=" << bond_limit_);
 
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
       it != effective_pairs_.end() && local_bond_count != 0; it++) {
