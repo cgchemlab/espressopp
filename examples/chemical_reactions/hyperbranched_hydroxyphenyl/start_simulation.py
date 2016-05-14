@@ -29,10 +29,6 @@ import logging
 import random
 import shutil
 
-import gromacs_topology_new
-import files_io
-import reaction_parser
-import tools_sim
 import tools
 
 import os
@@ -87,9 +83,9 @@ def sort_file(h5):
 
 
 def main():  #NOQA
-    args = tools_sim._args().parse_args()
+    args = tools._args().parse_args()
 
-    tools_sim._args().save_to_file('{}params.out'.format(args.output_prefix), args)
+    tools._args().save_to_file('{}params.out'.format(args.output_prefix), args)
 
     if args.debug:
         for s in args.debug.split(','):
@@ -103,11 +99,11 @@ def main():  #NOQA
 
     time0 = time.time()
 
-    gt = gromacs_topology_new.GromacsTopology(args.top)
+    gt = espressopp.tools.chemlab.gromacs_topology.GromacsTopology(args.top)
     gt.read()
 
 
-    input_conf = files_io.GROFile(args.conf)
+    input_conf = espressopp.tools.chemlab.files_io.GROFile(args.conf)
     input_conf.read()
 
     box = input_conf.box
@@ -128,7 +124,7 @@ def main():  #NOQA
     print('Skin: {}'.format(skin))
     print('RNG Seed: {}'.format(rng_seed))
 
-    part_prop, particle_list = tools_sim.genParticleList(input_conf, gt)
+    part_prop, particle_list = espressopp.tools.chemlab.gromacs_topology.genParticleList(input_conf, gt)
     NPart = len(particle_list)
     print('Reads {} particles with properties {}'.format(NPart, part_prop))
 
@@ -225,13 +221,14 @@ def main():  #NOQA
     system.storage.decompose()
 
     # Set potentials.
-    cr_observs = tools_sim.setNonbondedInteractions(system, gt, verletlist, lj_cutoff, cg_cutoff)
-    static_fpl, b_interaction = tools_sim.setBondInteractions(system, gt)
-    static_ftl, _ = tools_sim.setAngleInteractions(system, gt)
-    static_fql, _ = tools_sim.setDihedralInteractions(system, gt)
+    cr_observs = espressopp.tools.chemlab.gromacs_topology.setNonbondedInteractions(
+        system, gt, verletlist, lj_cutoff, cg_cutoff)
+    static_fpl, b_interaction = espressopp.tools.chemlab.gromacs_topology.setBondInteractions(system, gt)
+    static_ftl, _ = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt)
+    static_fql, _ = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt)
 
-    dynamic_ftl, _ = tools_sim.setAngleInteractions(system, gt, True, 'dynamic_angles')
-    dynamic_fql, _ = tools_sim.setDihedralInteractions(system, gt, True, 'dynamic_dih')
+    dynamic_ftl, _ = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt, True, 'dynamic_angles')
+    dynamic_fql, _ = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt, True, 'dynamic_dih')
 
     print('Set Dynamic Exclusion lists.')
     dynamic_exclusion_list.observe_tuple(static_fpl)
@@ -261,8 +258,8 @@ def main():  #NOQA
     if args.reactions:
         if os.path.exists(args.reactions):
             print('Set chemical reactions from: {}'.format(args.reactions))
-            reaction_config = reaction_parser.parse_config(args.reactions)
-            sc = reaction_parser.SetupReactions(
+            reaction_config = espressopp.tools.chemlab.reaction_parser.parse_config(args.reactions)
+            sc = espressopp.tools.chemlab.reaction_parser.SetupReactions(
                 system, verletlist, gt, topology_manager, reaction_config)
 
             ar, fpls = sc.setup_reactions()

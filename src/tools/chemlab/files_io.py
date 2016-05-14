@@ -1,20 +1,20 @@
-"""
-Copyright (C) 2014-2016 Jakub Krajniak <jkrajniak@gmail.com>
-
-Backmapper is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-I/O library. Handles opening and writing different files."""
+#  Copyright (C) 2016
+#      Jakub Krajniak (jkrajniak at gmail.com)
+#
+#  This file is part of ESPResSo++.
+#
+#  ESPResSo++ is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  ESPResSo++ is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import collections
 import logging
@@ -498,7 +498,6 @@ class GROMACSTopologyFile(TopologyFile):
 
         new_data = []
         current_section = None
-        previous_section = None
         skip_lines = False
         section_writer = None
 
@@ -538,7 +537,6 @@ class GROMACSTopologyFile(TopologyFile):
                 if previous_section == 'dihedrals' and current_section == 'dihedrals':
                     current_section = 'improper_dihedrals'
                 section_writer = self.writers.get(current_section)
-                # print('{}: Writing section {}'.format(filename, current_section))
                 skip_lines = False
             elif tmp_line.startswith(';') or tmp_line.startswith('#'):
                 new_data.append(line)
