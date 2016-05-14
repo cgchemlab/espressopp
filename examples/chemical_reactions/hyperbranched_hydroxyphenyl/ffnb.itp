@@ -75,18 +75,19 @@ PL RA PB PB 8 5 1.0 ;d5
  RB   RB      8
 ; list of mixed tables
 ; i j func=9 nr tab_prefix atom_type ntotal min_cr max_cr default
- MA   PA      9 0 coupl_0.5 RA 999 0.0 0.8 1
- MA   PL      9 1 coupl_0.5 RA 999 0.0 0.8 1
- MA   PB      9 2 coupl_0.5 RA 999 0.0 0.8 1
- MA   RA      9 3 coupl_0.5 RA 999 0.0 0.8 1
- MA   RB      9 4 coupl_0.5 RA 999 0.0 0.8 1
- MB   PA      9 5 coupl_0.5 RA 999 0.0 0.8 1
- MB   PL      9 6 coupl_0.5 RA 999 0.0 0.8 1
- MB   PB      9 7 coupl_0.5 RA 999 0.0 0.8 1
- MB   RA      9 8 coupl_0.5 RA 999 0.0 0.8 1
- MB   RB      9 9 coupl_0.5 RA 999 0.0 0.8 1
- ML   PA      9 10 coupl_0.5 RA 999 0.0 0.8 1
- ML   PL      9 11 coupl_0.5 RA 999 0.0 0.8 1
- ML   PB      9 12 coupl_0.5 RA 999 0.0 0.8 1
- ML   RA      9 13 coupl_0.5 RA 999 0.0 0.8 1
- ML   RB      9 14 coupl_0.5 RA 999 0.0 0.8 1
+; l j func=10 table1 table2 atom_type ntotal
+ MA   PA   10  table_PA_PA.xvg   table_MA_MA.xvg   RA 1000
+ MA   PL   10  table_PL_PL.xvg   table_MA_MA.xvg   RA 1000
+ MA   PB   10  table_PB_PB.xvg   table_MA_MA.xvg   RA 1000
+ MA   RA   10  table_RA_RA.xvg   table_MA_MA.xvg   RA 1000
+ MA   RB   10  table_RB_RB.xvg   table_MA_MA.xvg   RA 1000
+ MB   PA   10  table_PA_PA.xvg   table_MB_MB.xvg   RA 1000
+ MB   PL   10  table_PL_PL.xvg   table_MB_MB.xvg   RA 1000
+ MB   PB   10  table_PB_PB.xvg   table_MB_MB.xvg   RA 1000
+ MB   RA   10  table_RA_RA.xvg   table_MB_MB.xvg   RA 1000
+ MB   RB   10  table_RB_RB.xvg   table_MB_MB.xvg   RA 1000
+ ML   PL   10  table_PL_PL.xvg   table_ML_ML.xvg   RA 1000
+ ML   PB   10  table_PB_PB.xvg   table_ML_ML.xvg   RA 1000
+ ML   RB   10  table_RB_RB.xvg   table_ML_ML.xvg   RA 1000
+ ML   PA     10 table_PA_PA.xvg table_ML_ML.xvg RA 1000
+ ML   RA     10 table_RA_RA.xvg table_MA_MA.xvg RA 1000

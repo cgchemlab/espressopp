@@ -40,6 +40,7 @@ real ChemicalConversion::compute_real() const {
   boost::mpi::all_reduce(*getSystem()->comm, local_count, global_count, std::plus<longint>());
 
   real result = global_count / total_value;
+  // Send value via signal.
   onValue(result);
 
   return result;

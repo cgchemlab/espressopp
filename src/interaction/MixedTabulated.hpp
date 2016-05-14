@@ -35,6 +35,7 @@ namespace interaction {
 class MixedTabulated: public PotentialTemplate<MixedTabulated> {
  public:
   static LOG4ESPP_DECL_LOGGER(theLogger);
+  static LOG4ESPP_DECL_LOGGER(theLocalLogger);
 
   MixedTabulated() {
     setShift(0.0);
@@ -76,6 +77,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
     mix_value_ = _mix_value;
     // Connect onValue signal.
     chm->onValue.connect(boost::bind(&MixedTabulated::onValue, this, _1));
+    initialized = true;
   }
 
   /** Returns energy value for given distance square. */
@@ -86,7 +88,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
 
     real val = mix_value_*e1 + (1.0 - mix_value_)*e2;
 
-    LOG4ESPP_DEBUG(theLogger,
+    LOG4ESPP_DEBUG(theLocalLogger,
                    "Energy, e1=" << e1 << " e2=" << e2
                        << " x=" << mix_value_ << " val=" << val);
     return val;
@@ -100,7 +102,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
 
     ffactor = mix_value_*ffactor1 + (1.0 - mix_value_)*ffactor2;
 
-    LOG4ESPP_DEBUG(theLogger,
+    LOG4ESPP_DEBUG(theLocalLogger,
                    "Force, f1=" << ffactor1 << " f2=" << ffactor2
                        << " x=" << mix_value_ << " val=" << ffactor);
 

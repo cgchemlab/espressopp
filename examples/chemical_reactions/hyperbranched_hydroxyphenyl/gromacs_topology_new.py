@@ -247,28 +247,3 @@ class GromacsTopology:
             map(lambda x: shift+x+(mol*n_atoms), l)
             for mol in range(n_mols) for l in input_list
         ]
-
-
-if __name__ == '__main__':
-    gt = GromacsTopology('topol.top')
-    gt.read()
-    gt.topol.molecules[gt.topol.molecules.keys()[0]] = 1
-    gt.topol.bonds = {}
-    gt.topol.new_data['bonds'] = {(1,2): [1,2,3], (2,3): [2,3,4]}
-    gt.topol.write('abc.top')
-
-    # conf = files_io.GROFile('conf.gro')
-    # conf.read()
-    # import tools_sim
-    # import espressopp
-    # import mpi4py.MPI as MPI
-    # s = espressopp.System()
-    # s.rng = espressopp.esutil.RNG()
-    # s.bc = espressopp.bc.OrthorhombicBC(s.rng, (10, 10, 10))
-    # nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
-    # cellGrid = espressopp.tools.decomp.cellGrid((10, 10, 10), nodeGrid, 1.4, 0.2)
-    # s.storage = espressopp.storage.DomainDecomposition(s, nodeGrid, cellGrid)
-    # tools_sim.setNonbondedInteractions(s, gt, None, 1.4)
-    # tools_sim.setBondInteractions(s, gt)
-    # tools_sim.setAngleInteractions(s, gt)
-    # tools_sim.setDihedralInteractions(s, gt)

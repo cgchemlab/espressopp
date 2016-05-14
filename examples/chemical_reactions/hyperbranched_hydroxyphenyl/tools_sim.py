@@ -182,6 +182,7 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
 
     # Special case for MultiTabulated
     cr_multi = collections.defaultdict(list)
+    cr_mix_tab = collections.defaultdict(list)
     cr_observs = {}
 
     print('Number of pairs: {}'.format(len(type_pairs)))
@@ -223,6 +224,20 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
                     cr_min,
                     cr_max,
                     cr_default])
+            elif func == 10:
+                tab1 = param['params'][0]
+                tab2 = param['params'][1]
+                cr_type = atomsym_atomtype[param['params'][2]]
+                cr_total = int(param['params'][3])
+                if (cr_type, cr_total) not in cr_observs:
+                    cr_observs[(cr_type, cr_total)] = espressopp.analysis.ChemicalConversion(
+                        system, cr_type, cr_total
+                    )
+                cr_mix_tab[(t1, t2)].append([
+                    cr_observs[(cr_type, cr_total)],
+                    tab1,
+                    tab2])
+
         else:
             sig_1, eps_1 = atomparams[type_1]['sigma'], atomparams[type_1]['epsilon']
             sig_2, eps_2 = atomparams[type_2]['sigma'], atomparams[type_2]['epsilon']
@@ -247,7 +262,7 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
     system.addInteraction(lj_interaction, 'lj')
     system.addInteraction(tab_interaction, 'lj-tab')
 
-    # Mixed tabulated potentials.
+    # Conversion dependent tabulated potentials.
     if cr_multi:
         multi_tab_interaction = espressopp.interaction.VerletListMultiTabulated(vl)
         for (mt1, mt2), data in cr_multi.items():
@@ -261,7 +276,30 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
             print('Set multi tabulated potential {}-{}'.format(mt1, mt2))
             multi_tab_interaction.setPotential(
                 type1=mt1, type2=mt2, potential=mp_tab)
-    system.addInteraction(multi_tab_interaction, 'lj-mtab')
+        system.addInteraction(multi_tab_interaction, 'lj-mtab')
+
+    # Mixed Tabulated potentials.
+    if cr_mix_tab:
+        mixed_tab_interaction = espressopp.interaction.VerletListMixedTabulated(vl)
+        for (mt1, mt2), data in cr_mix_tab.items():
+            for cr_obs, tab1, tab2 in data:
+                espp_tab1_name = '{}.pot'.format(tab1.replace('.xvg', ''))
+                if not os.path.exists(espp_tab1_name):
+                    print('Convert {} to {}'.format(tab1, espp_tab1_name))
+                    topology_helper.convertTable((tab1, espp_tab1_name))
+                espp_tab2_name = '{}.pot'.format(tab2.replace('.xvg', ''))
+                if not os.path.exists(espp_tab2_name):
+                    print('Convert {} to {}'.format(tab2, espp_tab2_name))
+                    topology_helper.convertTable((tab2, espp_tab2_name))
+                print('Set mixed tabulated potential {}-{}'.format(mt1, mt2))
+                mixed_tab_interaction.setPotential(
+                    type1=mt1,
+                    type2=mt2,
+                    potential=espressopp.interaction.MixedTabulated(
+                        2, espp_tab1_name, espp_tab2_name, cr_obs, cutoff=tab_cutoff
+                    ))
+        system.addInteraction(mixed_tab_interaction, 'lj-mix_tab')
+
     return cr_observs
 
 

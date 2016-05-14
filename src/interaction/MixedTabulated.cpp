@@ -26,10 +26,11 @@ namespace espressopp {
 namespace interaction {
 
 LOG4ESPP_LOGGER(MixedTabulated::theLogger, "MixedTabulated");
+LOG4ESPP_LOGGER(MixedTabulated::theLocalLogger, "MixedTabulatedLocal");
 
 
 void MixedTabulated::onValue(real value) {
-  LOG4ESPP_DEBUG(theLogger, "previous mixed value=" << mix_value_ << " new=" << value);
+  LOG4ESPP_DEBUG(theLocalLogger, "previous mixed value=" << mix_value_ << " new=" << value);
   mix_value_ = value;
 }
 
