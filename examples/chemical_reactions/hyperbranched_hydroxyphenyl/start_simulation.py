@@ -349,6 +349,7 @@ def main():  #NOQA
         if k % k_trj_collect == 0:
             traj_file.dump(k*integrator_step, k*integrator_step*args.dt)
         if k % k_trj_flush == 0:
+            dump_topol.update()
             traj_file.flush()   # Write HDF5 to disk.
         if k_enable_reactions == k:
             print('Enabling chemical reactions')
