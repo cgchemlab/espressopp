@@ -35,6 +35,7 @@ namespace espressopp {
 
     using namespace espressopp::iterator;
 
+    LOG4ESPP_LOGGER(LangevinThermostat::theLogger, "LangevinThermostat");
 
     LangevinThermostat::LangevinThermostat(shared_ptr<System> system)
     :Extension(system) {
@@ -93,6 +94,7 @@ namespace espressopp {
     void LangevinThermostat::disconnect() {
 
         _initialize.disconnect();
+        _initialize_onSetTimeStep.disconnect();
         _heatUp.disconnect();
         _coolDown.disconnect();
         _thermalize.disconnect();
@@ -104,6 +106,9 @@ namespace espressopp {
 
         // connect to initialization inside run()
         _initialize = integrator->runInit.connect(
+                boost::bind(&LangevinThermostat::initialize, this));
+
+        _initialize_onSetTimeStep = integrator->onSetTimeStep.connect(
                 boost::bind(&LangevinThermostat::initialize, this));
 
         _heatUp = integrator->recalc1.connect(
@@ -190,12 +195,13 @@ namespace espressopp {
 
         real timestep = integrator->getTimeStep();
 
-      LOG4ESPP_INFO(theLogger, "init, timestep = " << timestep <<
-		    ", gamma = " << gamma << 
-		    ", temperature = " << temperature);
-
       pref1 = -gamma;
       pref2 = sqrt(24.0 * temperature * gamma / timestep);
+
+
+      LOG4ESPP_INFO(theLogger, "init, timestep = " << timestep <<
+          ", gamma = " << gamma <<
+          ", temperature = " << temperature << " pref2=" << pref2);
 
     }
 

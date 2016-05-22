@@ -81,7 +81,8 @@ namespace espressopp {
       private:
 
         boost::signals2::connection _initialize, _heatUp, _coolDown,
-                                       _thermalize, _thermalizeAdr;
+                                    _thermalize, _thermalizeAdr;
+        boost::signals2::connection _initialize_onSetTimeStep;
 
         void frictionThermo(class Particle&);
 
@@ -101,6 +102,9 @@ namespace espressopp {
         real pref2buffer; //!< temporary to save value between heatUp/coolDown
 
         shared_ptr< esutil::RNG > rng;  //!< random number generator used for friction term
+
+        /** Logger */
+        static LOG4ESPP_DECL_LOGGER(theLogger);
 
     };
   }
