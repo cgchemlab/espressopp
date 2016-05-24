@@ -328,8 +328,9 @@ def main():  #NOQA
     dump_topol.add_static_tuple(static_fpl, 'bonds')
     dump_topol.dump()
     dump_topol.update()
-    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
-    integrator.addExtension(ext_dump)
+    if args.topol_collect > 0:
+        ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
+        integrator.addExtension(ext_dump)
 
     k_trj_collect = int(math.ceil(args.trj_collect/float(integrator_step)))
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
