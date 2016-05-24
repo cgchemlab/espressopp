@@ -581,19 +581,30 @@ class GROMACSTopologyFile(TopologyFile):
         self.bonds_def[atom_tuple[1]].add(atom_tuple[0])
 
     def _parse_atomtypes(self, raw_data):
-        if len(raw_data) != 7:
+        if len(raw_data) == 7:
+            atom_name = raw_data[0]
+            atom_mass = float(raw_data[2])
+            atom_q = float(raw_data[3])
+            atom_type = raw_data[4]
+            sigma = float(raw_data[5])
+            epsilon = float(raw_data[6])
+        elif len(raw_data) == 6:
+            atom_name = raw_data[0]
+            atom_mass = float(raw_data[1])
+            atom_q = float(raw_data[2])
+            atom_type = raw_data[3]
+            sigma = float(raw_data[4])
+            epsilon = float(raw_data[5])
+        else:
             raise RuntimeError("Wrong atomtypes format")
-        atom_type = raw_data[0]
-        atom_mass = float(raw_data[2])
-        atom_q = float(raw_data[3])
 
         self.atomtypes[atom_type] = {
-            'name': atom_type,
+            'name': atom_name,
             'mass': atom_mass,
             'charge': atom_q,
-            'type': raw_data[4],
-            'sigma': float(raw_data[5]),
-            'epsilon': float(raw_data[6])
+            'type': atom_type,
+            'sigma': sigma,
+            'epsilon': epsilon
         }
 
     def _parse_nonbond_params(self, raw_data):
