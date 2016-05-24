@@ -418,18 +418,18 @@ def setBondInteractions(system, gt, only_interaction=False, name='bonds'):
     fpl = espressopp.FixedPairList(system.storage)
     if not only_interaction:
         fpl.addBonds(gt.bonds)
+    import pdb; pdb.set_trace()
     tab_interaction = espressopp.interaction.FixedPairListTypesTabulated(system, fpl)
     for (t1, t2), param in gt.bondparams.items():
-        if param['func'] != 8:
-            raise RuntimeError('Wrong func type, only tabulated supported')
-        espp_tab_name = 'table_b{}.pot'.format(param['params'][0])
-        tab_name = 'table_b{}.xvg'.format(param['params'][0])
-        if not os.path.exists(espp_tab_name):
-            print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
-        tab_interaction.setPotential(
-            type1=t1, type2=t2,
-            potential=espressopp.interaction.Tabulated(2, espp_tab_name))
+        if param['func'] == 8:
+            espp_tab_name = 'table_b{}.pot'.format(param['params'][0])
+            tab_name = 'table_b{}.xvg'.format(param['params'][0])
+            if not os.path.exists(espp_tab_name):
+                print('Convert {} to {}'.format(tab_name, espp_tab_name))
+                espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            tab_interaction.setPotential(
+                type1=t1, type2=t2,
+                potential=espressopp.interaction.Tabulated(2, espp_tab_name))
     system.addInteraction(tab_interaction, name)
     return fpl, tab_interaction
 
