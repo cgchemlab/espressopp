@@ -292,7 +292,16 @@ class SetupReactions:
             fpl = espressopp.FixedPairList(self.system.storage)
             fpls.append(fpl)
             pot_class = eval('espressopp.interaction.{}'.format(reaction_group['potential']))
-            potential = pot_class(**reaction_group['potential_options'])
+            # Convert if it's possible, values for float
+            pot_options = {}
+            for k, v in reaction_group['potential_options'].items():
+                try:
+                    pot_options[k] = float(v)
+                except ValueError:
+                    pot_options[k] = v
+            print('Setting potential for bond with class {}, options {}'.format(
+                reaction_group['potential'], reaction_group['potential_options']))
+            potential = pot_class(**pot_options)
             interaction = eval('espressopp.interaction.FixedPairList{}'.format(
                 reaction_group['potential']))(self.system, fpl, potential)
             self.system.addInteraction(interaction, 'fpl_{}'.format(group_name))

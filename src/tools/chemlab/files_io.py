@@ -598,7 +598,7 @@ class GROMACSTopologyFile(TopologyFile):
         else:
             raise RuntimeError("Wrong atomtypes format")
 
-        self.atomtypes[atom_type] = {
+        self.atomtypes[atom_name] = {
             'name': atom_name,
             'mass': atom_mass,
             'charge': atom_q,
