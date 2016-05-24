@@ -312,14 +312,13 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
             print('Using defined non-bonded cross params')
             func = param['func']
             if func == 1:
-                sig = float(param['params'][0])
-                eps = float(param['params'][1])
-            elif func == 8:
-                table_name = 'table_{}_{}.xvg'.format(type_1, type_2)
-            elif func == 1:
                 sig_1, eps_1 = atomparams[type_1]['sigma'], atomparams[type_1]['epsilon']
                 sig_2, eps_2 = atomparams[type_2]['sigma'], atomparams[type_2]['epsilon']
                 sig, eps = combination(sig_1, eps_1, sig_2, eps_2, combinationrule)
+                print('\t{}-{} sig={}, eps={}'.format(t1, t2, sig, eps))
+            elif func == 8:
+                table_name = 'table_{}_{}.xvg'.format(type_1, type_2)
+                print('\t{t1}-{t2} table_{t1}_{t2}.xvg'.format(t1=type_1, t2=type_2))
             elif func == 9:
                 tab_name = 'table_{}_{}.xvg'.format(param['params'][1], param['params'][0])
                 cr_type = atomsym_atomtype[param['params'][2]]
@@ -336,6 +335,9 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
                     cr_min,
                     cr_max,
                     cr_default])
+                print(
+                    '\t{t1}-{t2} {tab_name} conversion: type={type} min_val={cr_mn} max_val={mx} total={total}'.format(
+                        t1=t1, t2=t2, tab_name=tab_name, type=cr_type, mn=cr_min, mx=cr_max, total=cr_total))
             elif func == 10:
                 tab1 = param['params'][0]
                 tab2 = param['params'][1]
@@ -349,11 +351,14 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
                     cr_observs[(cr_type, cr_total)],
                     tab1,
                     tab2])
-
+                print('\t{t1}-{t2} mixing of {tab1}-{tab2} conversion: type={type} total={total}'.format(
+                    t1=t1, t2=t2, tab1=tab1, tab2=tab2, type=cr_type, total=cr_total
+                ))
         else:
             sig_1, eps_1 = atomparams[type_1]['sigma'], atomparams[type_1]['epsilon']
             sig_2, eps_2 = atomparams[type_2]['sigma'], atomparams[type_2]['epsilon']
             sig, eps = combination(sig_1, eps_1, sig_2, eps_2, combinationrule)
+            print('Using atomparams mixed values {t1}-{t2}: sig={sig} eps={eps}'.format(t1=t1, t2=t2, sig=sig, eps=eps))
         # Standard interaction.
         if sig > 0 and eps > 0:
             print('Set lj potential {}-{}, eps={}, sig={}'.format(type_1, type_2, eps, sig))
