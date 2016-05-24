@@ -223,31 +223,43 @@ def main():  #NOQA
     # Set potentials.
     cr_observs = espressopp.tools.chemlab.gromacs_topology.setNonbondedInteractions(
         system, gt, verletlist, lj_cutoff, cg_cutoff)
-    static_fpl, b_interaction = espressopp.tools.chemlab.gromacs_topology.setBondInteractions(system, gt)
-    static_ftl, _ = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt)
-    static_fql, _ = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt)
+    static_fpls = espressopp.tools.chemlab.gromacs_topology.setBondInteractions(system, gt)
+    static_ftls = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt)
+    static_fqls = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt)
 
-    dynamic_ftl, _ = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt, True, 'dynamic_angles')
-    dynamic_fql, _ = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt, True, 'dynamic_dih')
+    dynamic_ftls = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt, True, 'dynamic_angles')
+    dynamic_fqls = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt, True, 'dynamic_dih')
 
     print('Set Dynamic Exclusion lists.')
-    dynamic_exclusion_list.observe_tuple(static_fpl)
-    dynamic_exclusion_list.observe_triple(static_ftl)
-    dynamic_exclusion_list.observe_quadruple(static_fql)
-    dynamic_exclusion_list.observe_triple(dynamic_ftl)
-    dynamic_exclusion_list.observe_quadruple(dynamic_fql)
+    for static_fpl in static_fpls:
+        dynamic_exclusion_list.observe_tuple(static_fpl)
+    for static_ftl in static_ftls:
+        dynamic_exclusion_list.observe_triple(static_ftl)
+    for static_fql in static_fqls:
+        dynamic_exclusion_list.observe_quadruple(static_fql)
+    for _, ftls in dynamic_ftls.items():
+        for dynamic_ftl in ftls:
+            dynamic_exclusion_list.observe_triple(dynamic_ftl)
+    for _, fqls in dynamic_fqls.items():
+        for dynamic_fql in fqls:
+            dynamic_exclusion_list.observe_quadruple(dynamic_fql)
 
     print('Set topology manager')
     topology_manager = espressopp.integrator.TopologyManager(system)
-    topology_manager.observe_tuple(static_fpl)
+    for static_fpl in static_fpls:
+        topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
     topology_manager.register_tuple(static_fpl, 0, 0)
-    for t in gt.angleparams:
+    for t, p in gt.angleparams.items():
+        ftls = dynamic_ftls[p['func']]
         print('Register angles for type: {}'.format(t))
-        topology_manager.register_triplet(dynamic_ftl, *t)
-    for t in gt.dihedralparams:
+        for dynamic_ftl in ftls:
+            topology_manager.register_triplet(dynamic_ftl, *t)
+    for t, p in gt.dihedralparams.items():
+        fqls = dynamic_fqls[p['func']]
         print('Register dihedral for type: {}'.format(t))
-        topology_manager.register_quadruplet(dynamic_fql, *t)
+        for dynamic_fql in fqls:
+            topology_manager.register_quadruplet(dynamic_fql, *t)
     integrator.addExtension(topology_manager)
 
     # Set chemical reactions, parser in reaction_parser.py
@@ -325,12 +337,12 @@ def main():  #NOQA
     for i, f in enumerate(fpls):
         dump_topol.observe_tuple(f, 'chem_bonds_{}'.format(i))
 
-    dump_topol.add_static_tuple(static_fpl, 'bonds')
+    for i, static_fpl in enumerate(static_fpls):
+        dump_topol.add_static_tuple(static_fpl, 'bonds_{}'.format(i))
     dump_topol.dump()
     dump_topol.update()
-    if args.topol_collect > 0:
-        ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
-        integrator.addExtension(ext_dump)
+    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
+    integrator.addExtension(ext_dump)
 
     k_trj_collect = int(math.ceil(args.trj_collect/float(integrator_step)))
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
