@@ -19,6 +19,7 @@
 import collections
 import os
 import espressopp
+import math
 
 class FileBuffer():
     def __init__(self):
@@ -415,63 +416,233 @@ def setNonbondedInteractions(system, gt, vl, lj_cutoff, tab_cutoff=None):  #NOQA
 
 
 def setBondInteractions(system, gt, only_interaction=False, name='bonds'):
-    fpl = espressopp.FixedPairList(system.storage)
+    """Set bonded interactions."""
+
+    def convert_params(func, raw_data):
+        if func == 1:
+            return {'K': float(raw_data[1])/2.0, 'r0': float(raw_data[0])}
+        elif func == 8:
+            espp_tab_name = 'table_b{}.pot'.format(int(raw_data[0]))
+            tab_name = 'table_b{}.xvg'.format(int(raw_data[0]))
+            if not os.path.exists(espp_tab_name):
+                print('Convert {} to {}'.format(tab_name, espp_tab_name))
+                espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            return {'itype': 2, 'filename': espp_tab_name}
+        else:
+            raise RuntimeError('Unknown func type')
+
     if not only_interaction:
-        fpl.addBonds(gt.bonds)
-    tab_interaction = espressopp.interaction.FixedPairListTypesTabulated(system, fpl)
-    for (t1, t2), param in gt.bondparams.items():
-        if param['func'] != 8:
-            raise RuntimeError('Wrong func type, only tabulated supported')
-        espp_tab_name = 'table_b{}.pot'.format(param['params'][0])
-        tab_name = 'table_b{}.xvg'.format(param['params'][0])
-        if not os.path.exists(espp_tab_name):
-            print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
-        tab_interaction.setPotential(
-            type1=t1, type2=t2,
-            potential=espressopp.interaction.Tabulated(2, espp_tab_name))
-    system.addInteraction(tab_interaction, name)
-    return fpl, tab_interaction
+        fpls = []
+        func2interaction = {
+            1: (espressopp.interaction.FixedPairListHarmonic, espressopp.interaction.Harmonic),
+            8: (espressopp.interaction.FixedPairListTabulated, espressopp.interaction.Tabulated)
+        }
+        bonds_by_params = collections.defaultdict(list)
+        for b, parameters in gt.gt.bonds.items():
+            a1, a2 = map(gt.atom_id_params.get, b)
+            if parameters:
+                key_tuple = tuple(map(float, parameters))
+            else:
+                params = gt.bondparams[(a1['type_id'], a2['type_id'])]
+                key_tuple = tuple([params['func']] + map(float, params['params']))
+            bonds_by_params[key_tuple].append(b)
+
+        bond_count = 0
+        for params, bond_list in bonds_by_params.items():
+            func_type = int(params[0])
+            if func_type in func2interaction:
+                interaction_class, potential_class = func2interaction.get(func_type)
+                fpl = espressopp.FixedPairList(system.storage)
+                fpls.append(fpl)
+                fpl.addBonds(bond_list)
+                interaction = interaction_class(system, fpl, potential_class(**convert_params(func_type, params[1:])))
+                system.addInteraction(interaction, '{}_{}'.format(name, bond_count))
+                bond_count += 1
+            else:
+                raise RuntimerError('Bonded interaction of func {} not defined yet!'.format(func_type))
+    else:
+        fpls = collections.defaultdict(list)
+        func2interaction = {
+            1: (espressopp.interaction.FixedPairListTypesHarmonic, espressopp.interaction.Harmonic),
+            8: (espressopp.interaction.FixedPairListTypesTabulated, espressopp.interaction.Tabulated)
+        }
+        bondtypes_by_func = collections.defaultdict(list)
+        for types, param in gt.angleparams.items():
+            bondtypes_by_func[param['func']].append(types)
+
+        bond_count = 0
+        for func_type, bondtypes in bondtypes_by_func.items():
+            if func_type in func2interaction:
+                interaction_class, potential_class = func2interaction.get(func_type)
+                fpl = espressopp.FixedPairList(system.storage)
+                fpls[func_type].append(fpl)
+                interaction = interaction_class(system, fpl)
+                for t in bondtypes:
+                    param = gt.bondparams[t]['params']
+                    interaction.setPotential(
+                        type1=t[0], type2=t[1],
+                        potential=potential_class(**convert_params(func_type, param))
+                    )
+                system.addInteraction(interaction, 'bond_{}'.format(bond_count))
+                bond_count += 1
+            else:
+                raise RuntimerError('Bonded interaction of func {} not defined yet!'.format(func_type))
+
+    return fpls
 
 
 def setAngleInteractions(system, gt, only_interaction=False, name='angles'):
-    fpl = espressopp.FixedTripleList(system.storage)
+    """Set angle interactions."""
+    def convert_params(func, raw_data):
+        if func == 1:
+            return {'K': float(raw_data[1]), 'theta0': float(raw_data[0])*2*math.pi/360}
+        elif func == 8:
+            espp_tab_name = 'table_a{}.pot'.format(int(raw_data[0]))
+            tab_name = 'table_a{}.xvg'.format(int(raw_data[0]))
+            if not os.path.exists(espp_tab_name):
+                print('Convert {} to {}'.format(tab_name, espp_tab_name))
+                espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            return {'itype': 2, 'filename': espp_tab_name}
+        else:
+            raise RuntimeError('Unknown func type')
+
     if not only_interaction:
-        fpl.addTriples(gt.angles)
-    tab_interaction = espressopp.interaction.FixedTripleListTypesTabulatedAngular(system, fpl)
-    for (t1, t2, t3), param in gt.angleparams.items():
-        if param['func'] != 8:
-            raise RuntimeError('Wrong func type, only tabulated supported')
-        espp_tab_name = 'table_a{}.pot'.format(param['params'][0])
-        tab_name = 'table_a{}.xvg'.format(param['params'][0])
-        if not os.path.exists(espp_tab_name):
-            print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
-        tab_interaction.setPotential(
-            type1=t1, type2=t2, type3=t3,
-            potential=espressopp.interaction.TabulatedAngular(2, espp_tab_name))
-    system.addInteraction(tab_interaction, name)
-    return fpl, tab_interaction
+        ftls = []
+        func2interaction = {
+            1: (espressopp.interaction.FixedTripleListAngularHarmonic, espressopp.interaction.AngularHarmonic),
+            8: (espressopp.interaction.FixedTripleListTabulatedAngular, espressopp.interaction.TabulatedAngular)
+        }
+        angles_by_params = collections.defaultdict(list)
+        for b, parameters in gt.gt.angles.items():
+            a1, a2, a3 = map(gt.atom_id_params.get, b)
+            if parameters:
+                key_tuple = tuple(map(float, parameters))
+            else:
+                params = gt.angleparams[(a1['type_id'], a2['type_id'], a3['type_id'])]
+                key_tuple = tuple([params['func']] + map(float, params['params']))
+            angles_by_params[key_tuple].append(b)
+
+        angle_count = 0
+        for params, angle_list in angles_by_params.items():
+            func_type = int(params[0])
+            if func_type in func2interaction:
+                interaction_class, potential_class = func2interaction.get(func_type)
+                ftl = espressopp.FixedTripleList(system.storage)
+                ftls.append(ftl)
+                ftl.addTriples(angle_list)
+                interaction = interaction_class(system, ftl, potential_class(**convert_params(func_type, params[1:])))
+                system.addInteraction(interaction, '{}_{}'.format(name, angle_count))
+                angle_count += 1
+            else:
+                raise RuntimerError('Angular interaction of func {} not defined yet!'.format(func_type))
+    else:
+        ftls = collections.defaultdict(list)
+        func2interaction = {
+            1: (espressopp.interaction.FixedTripleListTypesAngularHarmonic, espressopp.interaction.AngularHarmonic),
+            8: (espressopp.interaction.FixedTripleListTypesTabulatedAngular, espressopp.interaction.TabulatedAngular)
+        }
+        angletypes_by_func = collections.defaultdict(list)
+        for types, param in gt.angleparams.items():
+            angletypes_by_func[param['func']].append(types)
+
+        angle_count = 0
+        for func_type, angletypes in angletypes_by_func.items():
+            if func_type in func2interaction:
+                interaction_class, potential_class = func2interaction.get(func_type)
+                ftl = espressopp.FixedTripleList(system.storage)
+                ftls[func_type].append(ftl)
+                interaction = interaction_class(system, ftl)
+                for t in angletypes:
+                    param = gt.angleparams[t]['params']
+                    interaction.setPotential(
+                        type1=t[0], type2=t[1], type3=t[2],
+                        potential=potential_class(**convert_params(func_type, param))
+                    )
+                    print('Set dynamic angular potential {}-{}-{} with params: {}'.format(t[0], t[1], t[2], param))
+                system.addInteraction(interaction, 'angle_{}'.format(angle_count))
+                angle_count += 1
+            else:
+                raise RuntimerError('Angle interaction of func {} not defined yet!'.format(func_type))
+    return ftls
 
 
 def setDihedralInteractions(system, gt, only_interaction=False, name='dihedrals'):
-    fpl = espressopp.FixedQuadrupleList(system.storage)
+    """Set dihedral interactions."""
+    def convert_params(func, raw_data):
+        if func == 1:
+            return {'K': float(raw_data[1]), 'phi0': float(raw_data[0])*2*math.pi/360, 'multiplicity': int(raw_data[2])}
+        elif func == 8:
+            espp_tab_name = 'table_a{}.pot'.format(int(raw_data[0]))
+            tab_name = 'table_a{}.xvg'.format(int(raw_data[0]))
+            if not os.path.exists(espp_tab_name):
+                print('Convert {} to {}'.format(tab_name, espp_tab_name))
+                espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
+            return {'itype': 2, 'filename': espp_tab_name}
+        else:
+            raise RuntimeError('Unknown func type')
+
     if not only_interaction:
-        fpl.addQuadruples(gt.dihedrals)
-    tab_interaction = espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedral(system, fpl)
-    for (t1, t2, t3, t4), param in gt.dihedralparams.items():
-        if param['func'] != 8:
-            raise RuntimeError('Wrong func type, only tabulated supported')
-        espp_tab_name = 'table_d{}.pot'.format(param['params'][0])
-        tab_name = 'table_d{}.xvg'.format(param['params'][0])
-        if not os.path.exists(espp_tab_name):
-            print('Convert {} to {}'.format(tab_name, espp_tab_name))
-            espressopp.tools.convert.gromacs.convertTable(tab_name, espp_tab_name)
-        tab_interaction.setPotential(
-            type1=t1, type2=t2, type3=t3, type4=t4,
-            potential=espressopp.interaction.TabulatedDihedral(2, espp_tab_name))
-    system.addInteraction(tab_interaction, name)
-    return fpl, tab_interaction
+        fqls = []
+        func2interaction = {
+            1: (espressopp.interaction.FixedQuadrupleListDihedralHarmonicNCos,
+                espressopp.interaction.DihedralHarmonicNCos),
+            8: (espressopp.interaction.FixedQuadrupleListTabulatedDihedral, espressopp.interaction.TabulatedDihedral)
+        }
+        dihedrals_by_params = collections.defaultdict(list)
+        for b, parameters in gt.gt.dihedrals.items():
+            a1, a2, a3, a4 = map(gt.atom_id_params.get, b)
+            if parameters:
+                key_tuple = tuple(map(float, parameters))
+            else:
+                params = gt.dihedralparams[(a1['type_id'], a2['type_id'], a3['type_id'], a4['type_id'])]
+                key_tuple = tuple([params['func']] + map(float, params['params']))
+            dihedrals_by_params[key_tuple].append(b)
+
+        dihedral_count = 0
+        for params, dihedral_list in dihedrals_by_params.items():
+            func_type = int(params[0])
+            if func_type in func2interaction:
+                interaction_class, potential_class = func2interaction.get(func_type)
+                fql = espressopp.FixedQuadrupleList(system.storage)
+                fqls.append(fql)
+                fql.addQuadruples(dihedral_list)
+                interaction = interaction_class(system, fql, potential_class(**convert_params(func_type, params[1:])))
+                system.addInteraction(interaction, '{}_{}'.format(name, dihedral_count))
+                dihedral_count += 1
+            else:
+                raise RuntimerError('Angular interaction of func {} not defined yet!'.format(func_type))
+    else:
+        fqls = collections.defaultdict(list)
+        func2interaction = {
+            1: (espressopp.interaction.FixedQuadrupleListTypesDihedralHarmonicNCos,
+                espressopp.interaction.DihedralHarmonicNCos),
+            8: (espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedral,
+                espressopp.interaction.TabulatedDihedral)
+        }
+        dihedraltypes_by_func = collections.defaultdict(list)
+        for types, param in gt.dihedralparams.items():
+            dihedraltypes_by_func[param['func']].append(types)
+
+        dihedral_count = 0
+        for func_type, dihedraltypes in dihedraltypes_by_func.items():
+            if func_type in func2interaction:
+                interaction_class, potential_class = func2interaction.get(func_type)
+                fql = espressopp.FixedQuadrupleList(system.storage)
+                fqls[func_type].append(fql)
+                interaction = interaction_class(system, fql)
+                for t in dihedraltypes:
+                    param = gt.dihedralparams[t]['params']
+                    interaction.setPotential(
+                        type1=t[0], type2=t[1], type3=t[2], type4=[3],
+                        potential=potential_class(**convert_params(func_type, param))
+                    )
+                    print('Set dynamic angular potential {}-{}-{}-{} with params: {}'.format(
+                        t[0], t[1], t[2], t[3], param))
+                system.addInteraction(interaction, 'dihedral_{}'.format(dihedral_count))
+                dihedral_count += 1
+            else:
+                raise RuntimerError('Dihedral interaction of func {} not defined yet!'.format(func_type))
+    return fqls
 
 
 def genParticleList(coordinate, topol):
