@@ -36,6 +36,7 @@ import sys
 
 # GROMACS units, kJ/mol K
 kb = 0.0083144621
+mass_factor = 1.6605402
 
 h5md_group = 'atoms'
 
@@ -102,7 +103,6 @@ def main():  #NOQA
     gt = espressopp.tools.chemlab.gromacs_topology.GromacsTopology(args.top)
     gt.read()
 
-
     input_conf = espressopp.tools.chemlab.files_io.GROFile(args.conf)
     input_conf.read()
 
@@ -123,6 +123,7 @@ def main():  #NOQA
 
     print('Skin: {}'.format(skin))
     print('RNG Seed: {}'.format(rng_seed))
+    print('Boltzmann constant: {}'.format(kb))
 
     part_prop, particle_list = espressopp.tools.chemlab.gromacs_topology.genParticleList(input_conf, gt)
     NPart = len(particle_list)
@@ -130,15 +131,15 @@ def main():  #NOQA
 
     particle_ids = [x[0] for x in particle_list]
 
-    density = sum(x[3] for x in particle_list)*1.6605402 / (box[0] * box[1] * box[2])
+    density = sum(x[3] for x in particle_list)*mass_factor/ (box[0] * box[1] * box[2])
     print('Density: {} kg/m^3'.format(density))
     print('Box: {} nm'.format(box))
 
     # Generate velocity.
-    print('Generating velocities from Maxwell-Boltzmann distribution T={}'.format(
-        args.temperature))
+    print('Generating velocities from Maxwell-Boltzmann distribution T={} ({})'.format(
+        args.temperature, args.temperature*kb))
     vx, vy, vz = espressopp.tools.velocities.gaussian(
-        args.temperature, len(particle_list), [x[3]*1.6605402 for x in particle_list],
+        args.temperature, len(particle_list), [x[3]*mass_factor for x in particle_list],
         kb=kb)
     part_prop.append('v')
     for i, p in enumerate(particle_list):
@@ -184,7 +185,7 @@ def main():  #NOQA
 
 # Define the thermostat
     temperature = args.temperature*kb
-    print('Temperature: {}, gamma: {}'.format(temperature, args.thermostat_gamma))
+    print('Temperature: {} ({}), gamma: {}'.format(args.temperature, temperature, args.thermostat_gamma))
     print('Thermostat: {}'.format(args.thermostat))
     if args.thermostat == 'lv':
         thermostat = espressopp.integrator.LangevinThermostat(system)
@@ -249,7 +250,6 @@ def main():  #NOQA
     for static_fpl in static_fpls:
         topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
-    topology_manager.register_tuple(static_fpl, 0, 0)
     for t, p in gt.angleparams.items():
         ftls = dynamic_ftls[p['func']]
         print('Register angles for type: {}'.format(t))
@@ -265,8 +265,6 @@ def main():  #NOQA
     # Set chemical reactions, parser in reaction_parser.py
     fpls = []
     cr_interval = 0
-    has_reaction = False
-    chemical_reaction_ext = None
     if args.reactions:
         if os.path.exists(args.reactions):
             print('Set chemical reactions from: {}'.format(args.reactions))
@@ -278,14 +276,14 @@ def main():  #NOQA
             output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
             print('Save copy of reaction config to: {}'.format(output_reaction_config))
             shutil.copyfile(args.reactions, output_reaction_config)
-            chemical_reaction_ext = ar
             cr_interval = sc.ar_interval
             integrator_step = cr_interval
             sim_step = args.run / integrator_step
             args.topol_collect = cr_interval
-            has_reaction = True
     else:
         cr_interval = integrator_step
+
+    cr_interval = min(integrator_step, cr_interval)
 
     for f in fpls:
         topology_manager.observe_tuple(f)
@@ -341,23 +339,32 @@ def main():  #NOQA
         dump_topol.add_static_tuple(static_fpl, 'bonds_{}'.format(i))
     dump_topol.dump()
     dump_topol.update()
-    ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
+    if args.topol_collect > 0:
+        ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
     integrator.addExtension(ext_dump)
 
     k_trj_collect = int(math.ceil(args.trj_collect/float(integrator_step)))
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
     print('Store trajectory every {} steps'.format(args.trj_collect))
 
-    k_enable_reactions = int(math.ceil(args.start_ar/float(integrator_step)))
+    if args.start_ar > 0:
+        k_enable_reactions = int(math.ceil(args.start_ar/float(integrator_step)))
+    else:
+        k_enable_reactions = -1
     print('Enable chemical reactions at {} step'.format(args.start_ar))
 
     print('Reset total velocity')
     total_velocity = espressopp.analysis.TotalVelocity(system)
     total_velocity.reset()
-    system_analysis.dump()
-    traj_file.dump(0, 0)
+
     print('Running {} steps'.format(sim_step*integrator_step))
+
+    system_analysis.dump()
+    system_analysis.info()
+
+    traj_file.dump(0, 0)
     for k in range(sim_step):
+        integrator.run(integrator_step)
         system_analysis.info()
         if k % k_trj_collect == 0:
             traj_file.dump(k*integrator_step, k*integrator_step*args.dt)
@@ -367,8 +374,6 @@ def main():  #NOQA
         if k_enable_reactions == k:
             print('Enabling chemical reactions')
             integrator.addExtension(ar)
-
-        integrator.run(integrator_step)
 
     system_analysis.info()
     traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*args.dt)
@@ -386,6 +391,7 @@ def main():  #NOQA
         'thermostat': args.thermostat,
         'thermostat_gamma': args.thermostat_gamma,
         'temperature': args.temperature,
+        'kb': kb,
         'barostat': args.barostat if args.pressure else 'no',
         'pressure': pressure,
         'total_steps': sim_step*integrator_step,
@@ -394,9 +400,6 @@ def main():  #NOQA
     for k, v in sim_params.items():
         g_params.attrs[k] = v
     tools.save_forcefield(h5, gt)
-
-    # Sort H5MD file afterwards.
-    sort_file(h5)
     h5.close()
 
     # Saves output file.
