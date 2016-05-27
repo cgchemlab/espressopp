@@ -195,8 +195,7 @@ std::set<Particle *> Reaction::postProcess_T1(Particle &p, Particle &partner) {
   std::vector<Particle *> ret;
 
   for (std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> >::iterator it =
-      post_process_T1.begin();
-      it != post_process_T1.end(); ++it) {
+      post_process_T1.begin(); it != post_process_T1.end(); ++it) {
     ret = (*it)->process(p, partner);
     output.insert(ret.begin(), ret.end());
   }
@@ -209,8 +208,7 @@ std::set<Particle *> Reaction::postProcess_T2(Particle &p, Particle &partner) {
   std::vector<Particle *> ret;
 
   for (std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> >::iterator it =
-      post_process_T2.begin();
-      it != post_process_T2.end(); ++it) {
+       post_process_T2.begin(); it != post_process_T2.end(); ++it) {
     ret = (*it)->process(p, partner);
     output.insert(ret.begin(), ret.end());
   }
@@ -241,6 +239,59 @@ void Reaction::registerPython() {
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .def("add_postprocess", &Reaction::addPostProcess)
       .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff);
+}
+
+/** Restricted reaction. */
+
+LOG4ESPP_LOGGER(RestrictReaction::theLogger, "RestrictReaction");
+
+/** Checks if the particles pair is valid. */
+bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
+  LOG4ESPP_DEBUG(theLogger, "entering RestrictReaction::isValidPair");
+
+  if (isValidState(p1, p2, particle_order)) {
+    real W = (*rng_)();
+    // Gets state dependent reaction rate.
+    //real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.second->state()];
+    real p = rate_;
+    // Multiply by time step and interval.
+    p *= (*dt_) * (*interval_);
+
+    particle_order.reaction_rate = p;
+    particle_order.r_sqr = 0.0;
+
+    if ((W < p) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+      LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void RestrictReaction::registerPython() {
+  using namespace espressopp::python;// NOLINT
+  class_<RestrictReaction, bases<Reaction>, shared_ptr<RestrictReaction> >
+      ("integrator_RestrictReaction",
+          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
+          // min_state_2, max_state_2, fpl, intramolecular
+          init<int, int, int, int, int, int, int, int, shared_ptr<FixedPairList>, real, bool>())
+          .add_property("type_1", &RestrictReaction::type_1, &Reaction::set_type_1)
+          .add_property("type_2", &RestrictReaction::type_2, &Reaction::set_type_2)
+          .add_property("delta_1", &RestrictReaction::delta_1, &RestrictReaction::set_delta_1)
+          .add_property("min_state_1", &RestrictReaction::min_state_1, &RestrictReaction::set_min_state_1)
+          .add_property("max_state_1", &RestrictReaction::max_state_1, &RestrictReaction::set_max_state_1)
+          .add_property("delta_2", &RestrictReaction::delta_2, &RestrictReaction::set_delta_2)
+          .add_property("min_state_2", &RestrictReaction::min_state_2, &RestrictReaction::set_min_state_2)
+          .add_property("max_state_2", &RestrictReaction::max_state_2, &RestrictReaction::set_max_state_2)
+          .add_property("intramolecular", &RestrictReaction::intramolecular, &RestrictReaction::set_intramolecular)
+          .add_property("intraresidual", &RestrictReaction::intraresidual, &RestrictReaction::set_interaresidual)
+          .add_property("active", &RestrictReaction::active, &RestrictReaction::set_active)
+          .add_property("cutoff", &RestrictReaction::cutoff)
+          .add_property("rate", &RestrictReaction::rate, &RestrictReaction::set_rate)
+          .def("add_postprocess", &RestrictReaction::addPostProcess)
+          .def("set_reaction_cutoff", &RestrictReaction::set_reaction_cutoff)
+          .def("define_connection", &RestrictReaction::defineConnection);
 }
 
 /** DissociationReaction */

@@ -103,6 +103,7 @@ def main():  #NOQA
     gt = espressopp.tools.chemlab.gromacs_topology.GromacsTopology(args.top)
     gt.read()
 
+
     input_conf = espressopp.tools.chemlab.files_io.GROFile(args.conf)
     input_conf.read()
 
@@ -185,7 +186,7 @@ def main():  #NOQA
 
 # Define the thermostat
     temperature = args.temperature*kb
-    print('Temperature: {} ({}), gamma: {}'.format(args.temperature, temperature, args.thermostat_gamma))
+    print('Temperature: {}, gamma: {}'.format(temperature, args.thermostat_gamma))
     print('Thermostat: {}'.format(args.thermostat))
     if args.thermostat == 'lv':
         thermostat = espressopp.integrator.LangevinThermostat(system)
@@ -250,6 +251,7 @@ def main():  #NOQA
     for static_fpl in static_fpls:
         topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
+    topology_manager.register_tuple(static_fpl, 0, 0)
     for t, p in gt.angleparams.items():
         ftls = dynamic_ftls[p['func']]
         print('Register angles for type: {}'.format(t))
@@ -265,6 +267,8 @@ def main():  #NOQA
     # Set chemical reactions, parser in reaction_parser.py
     fpls = []
     cr_interval = 0
+    has_reaction = False
+    chemical_reaction_ext = None
     if args.reactions:
         if os.path.exists(args.reactions):
             print('Set chemical reactions from: {}'.format(args.reactions))
@@ -276,14 +280,14 @@ def main():  #NOQA
             output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
             print('Save copy of reaction config to: {}'.format(output_reaction_config))
             shutil.copyfile(args.reactions, output_reaction_config)
+            chemical_reaction_ext = ar
             cr_interval = sc.ar_interval
-            integrator_step = cr_interval
+            integrator_step = min(integrator_step, cr_interval)
             sim_step = args.run / integrator_step
             args.topol_collect = cr_interval
+            has_reaction = True
     else:
         cr_interval = integrator_step
-
-    cr_interval = min(integrator_step, cr_interval)
 
     for f in fpls:
         topology_manager.observe_tuple(f)
@@ -310,7 +314,7 @@ def main():  #NOQA
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
+    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, min([cr_interval, integrator_step, args.energy_collect]))
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
 
@@ -341,7 +345,7 @@ def main():  #NOQA
     dump_topol.update()
     if args.topol_collect > 0:
         ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
-    integrator.addExtension(ext_dump)
+        integrator.addExtension(ext_dump)
 
     k_trj_collect = int(math.ceil(args.trj_collect/float(integrator_step)))
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
@@ -360,9 +364,11 @@ def main():  #NOQA
     print('Running {} steps'.format(sim_step*integrator_step))
 
     system_analysis.dump()
+    
+    traj_file.dump(0, 0)
+    print('Running {} steps'.format(sim_step*integrator_step))
     system_analysis.info()
 
-    traj_file.dump(0, 0)
     for k in range(sim_step):
         integrator.run(integrator_step)
         system_analysis.info()

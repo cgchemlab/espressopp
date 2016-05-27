@@ -248,19 +248,14 @@ class TestCaseChangePropertyOnState(ESPPTestCase):
         assert p_types == [5, 5]
 
 
-class TestCaseMultipleNodes(ESPPTestCase):
-    def test_node(self):
+class TestCyclization(ESPPTestCase):
+    def test_cyclization(self):
+        """Check if it is possible to make an cycle"""
         particle_list = [
-            (3, 1, espressopp.Real3D(2.5, 2.5, 4.9), 3, 1),
-            (4, 1, espressopp.Real3D(2.5, 2.5, 5.1), 4, 1)
+            (3, 2, espressopp.Real3D(2.0, 3.0, 2.0), 3, 1),
+            (4, 1, espressopp.Real3D(2.5, 3.0, 2.0), 4, 1),
         ]
         self.system.storage.addParticles(particle_list, *self.part_prop)
-        self.system.storage.decompose()
-
-        print 'node p1', self.system.storage.mapPositionToNodeClipped(
-            espressopp.Real3D(2.5, 2.5, 4.9))
-        print 'node p2', self.system.storage.mapPositionToNodeClipped(
-            espressopp.Real3D(2.5, 2.5, 5.1))
         r_type_1 = espressopp.integrator.Reaction(
             type_1=1,
             type_2=2,
@@ -272,8 +267,32 @@ class TestCaseMultipleNodes(ESPPTestCase):
             max_state_2=3,
             rate=400.0,
             fpl=self.fpl1,
-            cutoff=1.0)
-        r_type_2 = espressopp.integrator.Reaction(
+            cutoff=1.1)
+        self.ar.add_reaction(r_type_1)
+        fpl1_before = self.fpl1.getBonds()
+        self.assertEquals(fpl1_before, [[]])
+        self.integrator.run(2)
+        fpl1_after = self.fpl1.getBonds()
+        # Full cycle.
+        self.assertEquals(fpl1_after, [[(2, 4), (1, 2), (1, 3), (3, 4)]])
+
+    def test_non_cyclization(self):
+        """Check if it is possible to make an cycle"""
+        particle_list = [
+            (3, 2, espressopp.Real3D(2.0, 3.0, 2.0), 1, 1),
+            (4, 1, espressopp.Real3D(2.5, 3.0, 2.0), 1, 1),
+        ]
+        self.system.storage.addParticles(particle_list, *self.part_prop)
+        self.system.storage.modifyParticle(1, 'res_id', 2)
+        self.system.storage.modifyParticle(2, 'res_id', 2)
+
+        self.fpl1.addBonds([(1, 2), (3, 4), (1, 3)])
+        self.topology_manager.initialize_topology()
+
+        self.system.storage.decompose()
+        self.integrator.run(0)
+
+        r_type_1 = espressopp.integrator.Reaction(
             type_1=1,
             type_2=2,
             delta_1=1,
@@ -284,14 +303,15 @@ class TestCaseMultipleNodes(ESPPTestCase):
             max_state_2=3,
             rate=400.0,
             fpl=self.fpl1,
-            cutoff=1.0)
+            cutoff=1.1)
+        r_type_1.intraresidual = False
         self.ar.add_reaction(r_type_1)
-        self.ar.add_reaction(r_type_2)
         fpl1_before = self.fpl1.getBonds()
-        print fpl1_before
         self.integrator.run(2)
         fpl1_after = self.fpl1.getBonds()
-        print fpl1_after
+        # Full cycle.
+        self.assertEquals(set(fpl1_after[0]), {(1, 2), (1, 3), (3, 4)})
+
 
 
 if __name__ == '__main__':
