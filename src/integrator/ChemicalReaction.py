@@ -163,6 +163,7 @@ from espressopp import pmi
 from espressopp.integrator.Extension import *  # NOQA
 from _espressopp import integrator_ChemicalReaction
 from _espressopp import integrator_Reaction
+from _espressopp import integrator_RestrictReaction
 from _espressopp import integrator_DissociationReaction
 
 from _espressopp import integrator_ChemicalReactionPostProcess
@@ -298,6 +299,54 @@ class ReactionLocal(integrator_Reaction):
             self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
 
 
+class RestrictReactionLocal(integrator_Reaction):
+    """Synthesis reaction."""
+    def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
+                 min_state_2, max_state_2, cutoff, rate, fpl):
+        if pmi.workerIsActive():
+            cxxinit(
+                self,
+                integrator_RestrictReaction,
+                type_1,
+                type_2,
+                delta_1,
+                delta_2,
+                min_state_1,
+                max_state_1,
+                min_state_2,
+                max_state_2,
+                fpl,
+                rate,
+                False
+            )
+            self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
+
+    def add_postprocess(self, post_process, reactant_switch=0):
+        """Add new post process to the reaction.
+            Args:
+                post_process: The post process object.
+                reactant_switch: Which reactant (A, B or both) should be affected.
+                    0 - both, 1 - reactant A, 2 - reactant B.
+        """
+        if pmi.workerIsActive():
+            name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
+            self.cxxclass.add_postprocess(self, post_process, name_switch.get(reactant_switch, reactant_switch))
+
+    def set_reaction_cutoff(self, reaction_cutoff):
+        """Set cutoff object."""
+        if pmi.workerIsActive():
+            self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
+
+    def define_connection(self, pid1, pid2):
+        if pmi.workerIsActive():
+            self.cxxclass.define_connection(self, pid1, pid2)
+
+    def define_connections(self, connection_list):
+        if pmi.workerIsActive():
+            for p1, p2 in connection_list:
+                self.cxxclass.define_connection(self, p1, p2)
+
+
 class DissociationReactionLocal(integrator_DissociationReaction):
     """DissociationReaction reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
@@ -405,6 +454,32 @@ if pmi.isController:
                 'rate',
                 )
             )
+
+    class RestrictReaction:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.integrator.RestrictReactionLocal',
+            pmicall=(
+                'add_postprocess',
+                'set_reaction_cutoff',
+                'define_connection'
+            ),
+            pmiproperty=(
+                'type_1',
+                'type_2',
+                'delta_1',
+                'delta_2',
+                'min_state_1',
+                'max_state_1',
+                'min_state_2',
+                'max_state_2',
+                'intramolecular',
+                'intraresidual',
+                'active',
+                'cutoff',
+                'rate',
+            )
+        )
 
     class DissociationReaction:
             __metaclass__ = pmi.Proxy

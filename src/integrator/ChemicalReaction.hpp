@@ -412,6 +412,30 @@ protected:
   bool intraresidual_;  //!<Allows to intraresidual bonds if set to true;
 };
 
+
+class RestrictReaction : public Reaction {
+ public:
+  RestrictReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1,
+                   int min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate, bool intramolecular):
+      Reaction(type_1, type_2, delta_1, delta_2,
+               min_state_1, max_state_1, min_state_2, max_state_2, fpl,
+               rate, true) { }
+
+  bool isValidPair(Particle &p1, Particle &p2, ReactedPair &correct_order);
+
+  void defineConnection(longint pid1, longint pid2) {
+    connectivity_[std::make_pair(pid1, pid2)] = true;
+    connectivity_[std::make_pair(pid2, pid1)] = true;
+  }
+
+  static void registerPython();
+ protected:
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+
+ private:
+  std::map<std::pair<longint, longint>, bool> connectivity_;
+};
+
 /*** Defines dissociation reactions.
  *
  * This special type of reaction, modeling follwoing reaction:

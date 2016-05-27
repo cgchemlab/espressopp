@@ -110,6 +110,7 @@ namespace espressopp {
       ReactionCutoffStatic::registerPython();
       ReactionCutoffRandom::registerPython();
       Reaction::registerPython();
+      RestrictReaction::registerPython();
       DissociationReaction::registerPython();
       ChemicalReaction::registerPython();
       ChemicalReactionPostProcess::registerPython();
