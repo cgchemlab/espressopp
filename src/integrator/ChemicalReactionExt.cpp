@@ -161,7 +161,7 @@ void ChemicalReaction::React() {
   // Also, keep only non-ghost B
   UniqueB(potential_pairs_, effective_pairs_);
   // Distribute effective pairs
-  sendMultiMap(effective_pairs_);
+  // sendMultiMap(effective_pairs_);
 
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
