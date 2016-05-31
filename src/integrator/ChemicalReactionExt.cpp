@@ -800,7 +800,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
               << p2->type() << " B.type=" << p2->type());
     }
 #endif
-
+    bool valid_state = true;
     if (p1 != NULL) {
       if (reaction->isValidState_T1(*p1)) {
         p1->setState(p1->getState() + reaction->delta_1());
@@ -808,6 +808,8 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
         for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
           modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
       }
     }
 
@@ -818,11 +820,13 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
         for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
           modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
       }
     }
 
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
-    if ((p1 != NULL) && (p2 != NULL)) {
+    if ((p1 != NULL) && (p2 != NULL) && valid_state) {
       if (!(p1->ghost() && p2->ghost())) {
         LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
         reaction->fixed_pair_list_->iadd(it->first, it->second.first);
