@@ -75,7 +75,7 @@ public:
   virtual bool check(Particle &p1, Particle &p2, real &r_sqr) = 0;
   virtual real cutoff() = 0;
 
-  void set_bc(bc::BC *bc) {
+  void set_bc(shared_ptr<bc::BC> bc) {
     bc_ = bc;
   }
 
@@ -83,7 +83,7 @@ public:
   static void registerPython();
 
 protected:
-  bc::BC *bc_;
+  shared_ptr<bc::BC> bc_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
@@ -329,7 +329,10 @@ public:
 
   void set_dt(shared_ptr<real> dt) {dt_ = dt; }
 
-  void set_bc(bc::BC *bc) {bc_ = bc; }
+  void set_system(shared_ptr<System> s_) {
+    system_ = s_;
+    bc_ = s_->bc;
+  }
 
   bool reverse() {return reverse_; };
 
@@ -364,7 +367,7 @@ public:
   /** Sets reaction cutoff object.*/
   void set_reaction_cutoff(shared_ptr<ReactionCutoff> rc) {
     reaction_cutoff_ = rc;
-    rc->set_bc(bc_);
+    rc->set_bc(system_->bc);
   }
 
   shared_ptr<ReactionCutoff> reaction_cutoff(){
@@ -409,7 +412,9 @@ protected:
   shared_ptr<int> interval_;//!< number of steps between reaction loops
   shared_ptr<real> dt_;//!< timestep from the integrator
 
-  bc::BC *bc_;//!< boundary condition
+  shared_ptr<bc::BC> bc_;
+  shared_ptr<System> system_;
+  //bc::BC *bc_;//!< boundary condition
 
   real rate_; //<! Global rate.
 

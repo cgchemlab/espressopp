@@ -88,7 +88,7 @@ void ChemicalReaction::addReaction(boost::shared_ptr<integrator::Reaction> react
 
   bc::BC &bc = *getSystemRef().bc;
 
-  reaction->set_bc(&bc);
+  reaction->set_system(getSystem());
 
   if (!reaction->reverse()) {
     // If VL cutoff is smaller than reaction, increase it.
