@@ -108,6 +108,7 @@ public:
   bool check(Particle &p1, Particle &p2, real &r_sqr);
 
   void set_cutoff(real s) {
+    LOG4ESPP_DEBUG(theLogger, "set max_cutoff=" << s << "; min_cutoff=" << min_cutoff_);
     max_cutoff_ = s;
     max_cutoff_sqr_ = s*s;
   }
@@ -116,6 +117,7 @@ public:
   }
 
   void set_min_cutoff(real s) {
+    LOG4ESPP_DEBUG(theLogger, "set min_cutoff=" << s << "; max_cutoff=" << max_cutoff_);
     min_cutoff_ = s;
     min_cutoff_sqr_ = s*s;
   }

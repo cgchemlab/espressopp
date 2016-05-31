@@ -34,7 +34,7 @@ namespace espressopp {
 namespace integrator {
 LOG4ESPP_LOGGER(ReactionCutoff::theLogger, "ReactionCutoff");
 LOG4ESPP_LOGGER(ReactionCutoffStatic::theLogger, "ReactionCutoffStatic");
-LOG4ESPP_LOGGER(ReactionCutoffRandom::theLogger, "ReactionCutoffStatic");
+LOG4ESPP_LOGGER(ReactionCutoffRandom::theLogger, "ReactionCutoffRandom");
 
 void ReactionCutoff::registerPython() {
   using namespace espressopp::python;// NOLINT
@@ -238,7 +238,8 @@ void Reaction::registerPython() {
       .add_property("cutoff", &Reaction::cutoff)
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .def("add_postprocess", &Reaction::addPostProcess)
-      .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff);
+      .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
+      .def("get_reaction_cutoff", &Reaction::reaction_cutoff);
 }
 
 /** Restricted reaction. */
@@ -291,6 +292,7 @@ void RestrictReaction::registerPython() {
           .add_property("rate", &RestrictReaction::rate, &RestrictReaction::set_rate)
           .def("add_postprocess", &RestrictReaction::addPostProcess)
           .def("set_reaction_cutoff", &RestrictReaction::set_reaction_cutoff)
+          .def("get_reaction_cutoff", &Reaction::reaction_cutoff)
           .def("define_connection", &RestrictReaction::defineConnection);
 }
 

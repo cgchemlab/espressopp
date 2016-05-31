@@ -437,6 +437,7 @@ if pmi.isController:
             pmicall=(
                 'add_postprocess',
                 'set_reaction_cutoff',
+                'get_reaction_cutoff'
             ),
             pmiproperty=(
                 'type_1',
@@ -462,6 +463,7 @@ if pmi.isController:
             pmicall=(
                 'add_postprocess',
                 'set_reaction_cutoff',
+                'get_reaction_cutoff',
                 'define_connection'
             ),
             pmiproperty=(
