@@ -367,7 +367,7 @@ public:
   /** Sets reaction cutoff object.*/
   void set_reaction_cutoff(shared_ptr<ReactionCutoff> rc) {
     reaction_cutoff_ = rc;
-    rc->set_bc(system_->bc);
+
   }
 
   shared_ptr<ReactionCutoff> reaction_cutoff(){
