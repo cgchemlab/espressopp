@@ -241,7 +241,6 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
     out_buffer.write(reaction_id);
     out_buffer.write(reaction_rate);
     out_buffer.write(r_sqr);
-
   }
 
   LOG4ESPP_DEBUG(theLogger, "OutBuffer.size=" << out_buffer.getSize());
@@ -802,8 +801,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     }
 #endif
 
-    bool valid_state = true;
-
     if (p1 != NULL) {
       if (reaction->isValidState_T1(*p1)) {
         p1->setState(p1->getState() + reaction->delta_1());
@@ -811,25 +808,21 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
         for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
           modified_particles.insert(*pit);
-      } else {
-        valid_state = false;
       }
     }
 
-    if (p2 != NULL && valid_state) {
+    if (p2 != NULL) {
       if (reaction->isValidState_T2(*p2)) {
         p2->setState(p2->getState() + reaction->delta_2());
         tmp = reaction->postProcess_T2(*p2, *p1);
 
         for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
           modified_particles.insert(*pit);
-      } else {
-        valid_state = false;
       }
     }
 
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
-    if ((p1 != NULL) && (p2 != NULL) && valid_state) {
+    if ((p1 != NULL) && (p2 != NULL)) {
       if (!(p1->ghost() && p2->ghost())) {
         LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
         reaction->fixed_pair_list_->iadd(it->first, it->second.first);
