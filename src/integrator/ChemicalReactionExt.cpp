@@ -864,16 +864,23 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
         if (valid_state) {
           local_bond_count--;
+          longint p1_state = p1->getState();
+          p1_state += reaction->delta_1();
 
-          p1->setState(p1->getState() + reaction->delta_1());
+          p1->setState(p1_state);
           tmp = reaction->postProcess_T1(*p1, *p2);
-          modified_particles.insert(p1);
+          if (!p1->ghost())
+            modified_particles.insert(p1);
           for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
             modified_particles.insert(*pit);
 
-          p2->setState(p2->getState() + reaction->delta_2());
+          longint p2_state = p2->getState();
+          p2_state += reaction->delta_2();
+
+          p2->setState(p2_state);
           tmp = reaction->postProcess_T2(*p2, *p1);
-          modified_particles.insert(p2);
+          if (!p2->ghost())
+            modified_particles.insert(p2);
           for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
             modified_particles.insert(*pit);
         }
