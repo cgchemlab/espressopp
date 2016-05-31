@@ -43,7 +43,8 @@ void ReactionCutoff::registerPython() {
 }
 
 bool ReactionCutoffStatic::check(Particle &p1, Particle &p2, real &r_sqr) {
-  Real3D distance = p1.position() - p2.position();
+  Real3D distance;
+  bc_->getMinimumImageVectorBox(distance, p1.position(), p2.position());
   r_sqr = distance.sqr();
 
   return r_sqr >= min_cutoff_sqr_ && r_sqr < max_cutoff_sqr_;
@@ -66,7 +67,8 @@ void ReactionCutoffStatic::registerPython() {
 bool ReactionCutoffRandom::check(Particle &p1, Particle &p2, real &r_sqr) {
   real random_cutoff_ = fabs(generator_()) + eq_distance_;
   real random_cutoff_sqr_ = random_cutoff_ * random_cutoff_;
-  Real3D distance = p1.position() - p2.position();
+  Real3D distance;
+  bc_->getMinimumImageVectorBox(distance, p1.position(), p2.position());
   r_sqr = distance.sqr();
 
   return r_sqr < random_cutoff_sqr_;

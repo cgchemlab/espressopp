@@ -39,6 +39,7 @@
 #include "Particle.hpp"
 #include "SystemAccess.hpp"
 #include "esutil/ESPPIterator.hpp"
+#include "bc/BC.hpp"
 
 #include "integrator/Extension.hpp"
 #include "integrator/VelocityVerlet.hpp"
@@ -74,10 +75,15 @@ public:
   virtual bool check(Particle &p1, Particle &p2, real &r_sqr) = 0;
   virtual real cutoff() = 0;
 
+  void set_bc(bc::BC *bc) {
+    bc_ = bc;
+  }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
 protected:
+  bc::BC *bc_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
@@ -358,6 +364,7 @@ public:
   /** Sets reaction cutoff object.*/
   void set_reaction_cutoff(shared_ptr<ReactionCutoff> rc) {
     reaction_cutoff_ = rc;
+    rc->set_bc(bc_);
   }
 
   shared_ptr<ReactionCutoff> reaction_cutoff(){

@@ -222,23 +222,23 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
 
   // Fill out_buffer from mm.
   int array_size = mm.size();
-  int a, b, c;
+  int particle_id_1, particle_id_2, reaction_id;
 
-  real d, r_sqr;
+  real reaction_rate, r_sqr;
 
   out_buffer.write(array_size);
 
   for (integrator::ReactionMap::iterator it = mm.begin(); it != mm.end();
       it++) {
-    a = it->first;  // particle id
-    b = it->second.first;  // particle id
-    c = it->second.second.reaction_id;  // reaction id
-    d = it->second.second.reaction_rate; // reaction rate for this pair.
+    particle_id_1 = it->first;  // particle id
+    particle_id_2 = it->second.first;  // particle id
+    reaction_id = it->second.second.reaction_id;  // reaction id
+    reaction_rate = it->second.second.reaction_rate; // reaction rate for this pair.
     r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
-    out_buffer.write(a);
-    out_buffer.write(b);
-    out_buffer.write(c);
-    out_buffer.write(d);
+    out_buffer.write(particle_id_1);
+    out_buffer.write(particle_id_2);
+    out_buffer.write(reaction_id);
+    out_buffer.write(reaction_rate);
     out_buffer.write(r_sqr);
 
   }
@@ -251,7 +251,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
      value. */
 
   int data_length, idx_a, idx_b, reaction_idx, direction_size;
-  real reaction_rate, reaction_r_sqr;
+  real reaction_r_sqr;
 
   for (int direction = 0; direction < 3; ++direction) {
     /* inverted processing order for ghost force communication,
@@ -853,27 +853,29 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     bool valid_state = false;
 
     if (p1 && p2) {
-      valid_state = (reaction->isValidState_T1(*p1) && reaction->isValidState_T2(*p2));
+      if (!(p1->ghost() && p2->ghost())) {
+        if (reaction->isValidState_T1(*p1) && reaction->isValidState_T2(*p2))
+          valid_state = true;
 
-      if (valid_state) {
-        p1->setState(p1->getState() + reaction->delta_1());
-        tmp = reaction->postProcess_T1(*p1, *p2);
-        modified_particles.insert(p1);
-        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-          modified_particles.insert(*pit);
+        if (valid_state) {
+          valid_state = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+        }
 
-        p2->setState(p2->getState() + reaction->delta_2());
-        tmp = reaction->postProcess_T2(*p2, *p1);
-        modified_particles.insert(p2);
-        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-          modified_particles.insert(*pit);
+        if (valid_state) {
+          local_bond_count--;
 
-        // Try to add bond.
-        valid_state = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-      }
+          p1->setState(p1->getState() + reaction->delta_1());
+          tmp = reaction->postProcess_T1(*p1, *p2);
+          modified_particles.insert(p1);
+          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+            modified_particles.insert(*pit);
 
-      if (valid_state) {
-        local_bond_count--;
+          p2->setState(p2->getState() + reaction->delta_2());
+          tmp = reaction->postProcess_T2(*p2, *p1);
+          modified_particles.insert(p2);
+          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+            modified_particles.insert(*pit);
+        }
       }
     }
   }
