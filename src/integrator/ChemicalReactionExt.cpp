@@ -853,29 +853,27 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     bool valid_state = false;
 
     if (p1 && p2) {
-      if (!(p1->ghost() && p2->ghost())) {
-        if (reaction->isValidState_T1(*p1) && reaction->isValidState_T2(*p2))
-          valid_state = true;
+      valid_state = (reaction->isValidState_T1(*p1) && reaction->isValidState_T2(*p2));
 
-        if (valid_state) {
-          valid_state = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-        }
+      if (valid_state) {
+        p1->setState(p1->getState() + reaction->delta_1());
+        tmp = reaction->postProcess_T1(*p1, *p2);
+        modified_particles.insert(p1);
+        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
 
-        if (valid_state) {
-          local_bond_count--;
+        p2->setState(p2->getState() + reaction->delta_2());
+        tmp = reaction->postProcess_T2(*p2, *p1);
+        modified_particles.insert(p2);
+        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
 
-          p1->setState(p1->getState() + reaction->delta_1());
-          tmp = reaction->postProcess_T1(*p1, *p2);
-          modified_particles.insert(p1);
-          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-            modified_particles.insert(*pit);
+        // Try to add bond.
+        valid_state = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+      }
 
-          p2->setState(p2->getState() + reaction->delta_2());
-          tmp = reaction->postProcess_T2(*p2, *p1);
-          modified_particles.insert(p2);
-          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-            modified_particles.insert(*pit);
-        }
+      if (valid_state) {
+        local_bond_count--;
       }
     }
   }
