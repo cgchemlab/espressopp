@@ -161,7 +161,7 @@ void ChemicalReaction::React() {
   // Also, keep only non-ghost B
   UniqueB(potential_pairs_, effective_pairs_);
   // Distribute effective pairs
-  // sendMultiMap(effective_pairs_);
+  sendMultiMap(effective_pairs_);
 
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
@@ -616,6 +616,7 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
   }
 
   //@todo(jakub): I'm not sure if this is an efficient approach.
+  potential_candidates.clear();
   potential_candidates = unique_list_of_candidates;
 }
 
@@ -869,8 +870,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
           p1->setState(p1_state);
           tmp = reaction->postProcess_T1(*p1, *p2);
-          if (!p1->ghost())
-            modified_particles.insert(p1);
+          modified_particles.insert(p1);
           for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
             modified_particles.insert(*pit);
 
@@ -879,8 +879,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
           p2->setState(p2_state);
           tmp = reaction->postProcess_T2(*p2, *p1);
-          if (!p2->ghost())
-            modified_particles.insert(p2);
+          modified_particles.insert(p2);
           for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
             modified_particles.insert(*pit);
         }
