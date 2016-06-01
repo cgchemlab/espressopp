@@ -55,12 +55,13 @@ struct ReactionDef {
   real reaction_r_sqr;
   // 1 -> first => T1, second.first => T2
   // 2 -> first => T2, second.first => T1
-  uint8_t order;
+  int order;
 
-  ReactionDef(longint r_id, real rr, real r_sqr) {
+  ReactionDef(longint r_id, real rr, real r_sqr, int order_) {
     reaction_id = r_id;
     reaction_rate = rr;
     reaction_r_sqr = r_sqr;
+    order = order_;
   }
 };
 

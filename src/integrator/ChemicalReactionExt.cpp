@@ -137,11 +137,18 @@ void ChemicalReaction::React() {
       ReactedPair p;
 
       if ((*it)->isValidPair(p1, p2, p)) {
+        longint pid1 = p.first->id();
+        longint pid2 = p.second->id();
+        uint8_t order = 1;
+        if (pid1 > pid2) {
+          order = 2;
+          std::swap(pid1, pid2);
+        }
         potential_pairs_.insert(
-            std::make_pair(p.first->id(),
+            std::make_pair(pid1,
                            std::make_pair(
-                               p.second->id(),
-                               ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr)
+                               pid2,
+                               ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr, order)
                            )
             )
         );
@@ -226,6 +233,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
   int particle_id_1, particle_id_2, reaction_id;
 
   real reaction_rate, r_sqr;
+  int order;
 
   out_buffer.write(array_size);
 
@@ -236,11 +244,13 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
     reaction_id = it->second.second.reaction_id;  // reaction id
     reaction_rate = it->second.second.reaction_rate; // reaction rate for this pair.
     r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
+    order = it->second.second.order;
     out_buffer.write(particle_id_1);
     out_buffer.write(particle_id_2);
     out_buffer.write(reaction_id);
     out_buffer.write(reaction_rate);
     out_buffer.write(r_sqr);
+    out_buffer.write(order);
   }
 
   LOG4ESPP_DEBUG(theLogger, "OutBuffer.size=" << out_buffer.getSize());
@@ -252,6 +262,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
 
   int data_length, idx_a, idx_b, reaction_idx, direction_size;
   real reaction_r_sqr;
+  int p_order_;
 
   for (int direction = 0; direction < 3; ++direction) {
     /* inverted processing order for ghost force communication,
@@ -325,12 +336,23 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
           in_buffer_0.read(reaction_idx);
           in_buffer_0.read(reaction_rate);
           in_buffer_0.read(reaction_r_sqr);
+          in_buffer_0.read(p_order_);
         } else {
           in_buffer_1.read(idx_a);
           in_buffer_1.read(idx_b);
           in_buffer_1.read(reaction_idx);
           in_buffer_1.read(reaction_rate);
           in_buffer_1.read(reaction_r_sqr);
+          in_buffer_1.read(p_order_);
+        }
+
+        // Keep the order
+        if (idx_a > idx_b) {
+          std::swap(idx_a, idx_b);
+          if (p_order_ == 1)
+            p_order_ = 2;
+          else
+            p_order_ = 1;
         }
 
         mm.insert(
@@ -338,7 +360,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
                 idx_a,
                 std::make_pair(
                     idx_b,
-                    ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr)
+                    ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_)
                 )
             )
         );
