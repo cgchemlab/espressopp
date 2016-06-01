@@ -809,9 +809,18 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
        it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
 
+    Particle *p1;
+    Particle *p2;
     // Change the state of A and B.
-    Particle *p1 = system.storage->lookupLocalParticle(it->first);
-    Particle *p2 = system.storage->lookupLocalParticle(it->second.first);
+    if (it->second.second.order == 1) {
+      p1 = system.storage->lookupLocalParticle(it->first);
+      p2 = system.storage->lookupLocalParticle(it->second.first);
+    } else if (it->second.second.order == 2) {
+      p1 = system.storage->lookupLocalParticle(it->second.first);
+      p2 = system.storage->lookupLocalParticle(it->first);
+    } else {
+      LOG4ESPP_ERROR(theLogger, "wrong order parameter " << it->second.second.order);
+    }
 
 #ifdef LOG4ESPP_DEBUG_ENABLED
     if (p1 && p2) {
