@@ -27,11 +27,20 @@ if(NOT BUILD_SHARED_LIBS)
   message(WARNING "Building static libraries might lead to problems with python modules - you are on your own!")
 endif()
 
-IF(NOT CMAKE_BUILD_TYPE)
+option(USE_GCOV "Enable gcov support" OFF)
+if(USE_GCOV)
+  message(STATUS "Enabling gcov support")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -O0")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -O0")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
+endif()
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING
       "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
       FORCE)
-ENDIF(NOT CMAKE_BUILD_TYPE)
+endif()
 
 ########################################################################
 #VampirTrace settings
@@ -223,6 +232,16 @@ if ( SPHINX_EXECUTABLE )
    )
 
    message ( STATUS "Generate user documentation via ${SPHINX_EXECUTABLE}: make ug") 
+
+   add_custom_target(ug-pdf
+      COMMAND ${CMAKE_COMMAND} -E env "${TEST_ENV}" "${SPHINX_EXECUTABLE}" -b latex . _build/latex
+      COMMAND make -C "${SPHINX_BUILD_ROOT}/_build/latex" all-pdf
+      COMMENT "TeX ug documentation available at ${SPHINX_BUILD_ROOT}/_build/latex"
+      DEPENDS ${SPHINX_BUILD_ROOT}/conf.py _espressopp
+      WORKING_DIRECTORY ${SPHINX_BUILD_ROOT}
+   )
+
+   message ( STATUS "Generate LaTeX manual via ${SPHINX_EXECUTABLE}: make ug-pdf")
 else ( SPHINX_EXECUTABLE )
     message ( WARNING "Not building user documentation because Doxygen not found.")
 endif ( SPHINX_EXECUTABLE )
