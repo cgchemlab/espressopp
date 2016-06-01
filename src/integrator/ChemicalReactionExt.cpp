@@ -65,8 +65,6 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
   reaction_list_ = ReactionList();
   reverse_reaction_list_ = ReactionList();
 
-  bond_limit_ = -1;
-
   resetTimers();
 }
 
@@ -807,12 +805,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
   LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
 
-  // For debug purpose, write to file the list of reactions on every cpu.
-  std::stringstream ss;
-  ss << system.comm->rank() << "_reaction_list_" << integrator->getStep() << ".txt";
-  std::fstream out_file;
-  out_file.open(ss.str().c_str(), std::fstream::in | std::fstream::out);
-
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
        it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
@@ -829,8 +821,6 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     } else {
       LOG4ESPP_ERROR(theLogger, "wrong order parameter " << it->second.second.order);
     }
-
-    out_file << it->first << " " << it->second.first << "\n";
 
 #ifdef LOG4ESPP_DEBUG_ENABLED
     if (p1 && p2) {
@@ -919,12 +909,7 @@ void ChemicalReaction::registerPython() {
     .add_property(
       "nearest_mode",
       &ChemicalReaction::is_nearest,
-      &ChemicalReaction::set_is_nearest)
-    .add_property(
-      "bond_limit",
-      &ChemicalReaction::bond_limit,
-      &ChemicalReaction::set_bond_limit
-    );
+      &ChemicalReaction::set_is_nearest);
 }
 }// namespace integrator
 }// namespace espressopp
