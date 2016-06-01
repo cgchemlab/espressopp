@@ -53,6 +53,9 @@ struct ReactionDef {
   longint reaction_id;
   real reaction_rate;
   real reaction_r_sqr;
+  // 1 -> first => T1, second.first => T2
+  // 2 -> first => T2, second.first => T1
+  uint8_t order;
 
   ReactionDef(longint r_id, real rr, real r_sqr) {
     reaction_id = r_id;
@@ -61,7 +64,7 @@ struct ReactionDef {
   }
 };
 
-typedef boost::unordered_multimap<longint, std::pair<longint, ReactionDef> > ReactionMap;
+typedef std::multimap<longint, std::pair<longint, ReactionDef> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
 
 /** Reaction scheme for polymer growth and curing/crosslinking
