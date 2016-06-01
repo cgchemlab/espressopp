@@ -24,6 +24,8 @@
 #include <set>
 #include <numeric>
 #include <math.h>
+#include <bits/ios_base.h>
+#include <fstream>
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -805,6 +807,12 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
   LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
 
+  // For debug purpose, write to file the list of reactions on every cpu.
+  std::stringstream ss;
+  ss << << system.comm->rank() << "_reaction_list_" << integrator->getStep() << ".txt";
+  std::fstream out_file;
+  out_file.open(ss.str().c_str(), std::fstream::in | std::fstream::out);
+
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
        it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
@@ -821,6 +829,8 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     } else {
       LOG4ESPP_ERROR(theLogger, "wrong order parameter " << it->second.second.order);
     }
+
+    out_file << it->first << " " << it->second.first << "\n";
 
 #ifdef LOG4ESPP_DEBUG_ENABLED
     if (p1 && p2) {
