@@ -141,7 +141,7 @@ void ChemicalReaction::React() {
       if ((*it)->isValidPair(p1, p2, p)) {
         longint pid1 = p.first->id();
         longint pid2 = p.second->id();
-        uint8_t order = 1;
+        int order = 1;
         if (pid1 > pid2) {
           order = 2;
           std::swap(pid1, pid2);
@@ -809,7 +809,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
   // For debug purpose, write to file the list of reactions on every cpu.
   std::stringstream ss;
-  ss << << system.comm->rank() << "_reaction_list_" << integrator->getStep() << ".txt";
+  ss << system.comm->rank() << "_reaction_list_" << integrator->getStep() << ".txt";
   std::fstream out_file;
   out_file.open(ss.str().c_str(), std::fstream::in | std::fstream::out);
 
