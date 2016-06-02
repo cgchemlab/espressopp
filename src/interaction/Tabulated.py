@@ -164,6 +164,7 @@ from _espressopp import interaction_Tabulated, \
                       interaction_VerletListTabulated, \
                       interaction_VerletListAdressTabulated, \
                       interaction_VerletListHadressTabulated, \
+                      interaction_VerletListNonReciprocalTabulated, \
                       interaction_CellListTabulated, \
                       interaction_FixedPairListTabulated, \
                       interaction_FixedPairListTypesTabulated
