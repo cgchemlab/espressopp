@@ -170,6 +170,8 @@ void ChemicalReaction::React() {
   // Distribute effective pairs
   sendMultiMap(effective_pairs_);
 
+  sortParticleReactionList(effective_pairs_);
+
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
   timeComm += wallTimer.stopMeasure();
@@ -346,15 +348,6 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
           in_buffer_1.read(p_order_);
         }
 
-        // Keep the order
-        if (idx_a > idx_b) {
-          std::swap(idx_a, idx_b);
-          if (p_order_ == 1)
-            p_order_ = 2;
-          else
-            p_order_ = 1;
-        }
-
         mm.insert(
             std::make_pair(
                 idx_a,
@@ -366,11 +359,50 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
         );
       }
     }
-
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
   }
 
   LOG4ESPP_DEBUG(theLogger, "Leaving sendMultiMap");
+}
+
+void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
+  LOG4ESPP_DEBUG(theLogger, "Entering sortParticleReactionList");
+
+  ReactionMap out;
+  out.clear();
+  longint idx_a, idx_b, reaction_idx;
+  real reaction_rate, reaction_r_sqr;
+  int p_order;
+
+  for (ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
+    idx_a = it->first;  // particle id
+    idx_b = it->second.first;  // particle id
+    reaction_idx = it->second.second.reaction_id;  // reaction id
+    reaction_rate = it->second.second.reaction_rate; // reaction rate for this pair.
+    reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
+    p_order = it->second.second.order;
+
+    if (idx_a > idx_b) {
+      std::swap(idx_a, idx_b);
+      if (p_order == 1)
+        p_order = 2;
+      else
+        p_order = 1;
+    }
+
+    out.insert(
+        std::make_pair(
+            idx_a,
+            std::make_pair(
+                idx_b,
+                ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order)
+            )
+        )
+    );
+  }
+  mm = out;
+
+  LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
 }
 
 /** Performs two-way parallel communication to update the ghost particles.
@@ -805,8 +837,7 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
   LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
 
-  for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
-       it != effective_pairs_.end(); it++) {
+  for (integrator::ReactionMap::iterator it = effective_pairs_.begin(); it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
 
     Particle *p1;
@@ -833,26 +864,40 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 #endif
     bool valid_state = true;
     if (p1 != NULL) {
-      if (reaction->isValidState_T1(*p1)) {
-        p1->setState(p1->getState() + reaction->delta_1());
-        tmp = reaction->postProcess_T1(*p1, *p2);
+      try {
+        if (reaction->isValidState_T1(*p1)) {
+          p1->setState(p1->getState() + reaction->delta_1());
+          tmp = reaction->postProcess_T1(*p1, *p2);
 
-        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-          modified_particles.insert(*pit);
-      } else {
-        valid_state = false;
+          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+            modified_particles.insert(*pit);
+        } else {
+          valid_state = false;
+        }
+      } catch (std::runtime_error &e) {
+        std::cout << "p1.type=" << p1->type() << std::endl;
+        std::cout << "wrong order of particles: " << e.what() << std::endl;
+        std::cout << "order: " << it->second.second.order << std::endl;
+        throw e;
       }
     }
 
     if (p2 != NULL) {
-      if (reaction->isValidState_T2(*p2)) {
-        p2->setState(p2->getState() + reaction->delta_2());
-        tmp = reaction->postProcess_T2(*p2, *p1);
+      try {
+        if (reaction->isValidState_T2(*p2)) {
+          p2->setState(p2->getState() + reaction->delta_2());
+          tmp = reaction->postProcess_T2(*p2, *p1);
 
-        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-          modified_particles.insert(*pit);
-      } else {
-        valid_state = false;
+          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+            modified_particles.insert(*pit);
+        } else {
+          valid_state = false;
+        }
+      } catch (std::runtime_error &e) {
+        std::cout << "p2.type=" << p2->type() << std::endl;
+        std::cout << "wrong order of particles: " << e.what() << std::endl;
+        std::cout << "order: " << it->second.second.order << std::endl;
+        throw e;
       }
     }
 

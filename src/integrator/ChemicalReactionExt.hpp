@@ -182,6 +182,7 @@ private:
   python::list getTimers();
 
   void printMultiMap(ReactionMap &rmap, std::string comment);
+  void sortParticleReactionList(ReactionMap &mm);
 };
 }  // namespace integrator
 }  // namespace espressopp
