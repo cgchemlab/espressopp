@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012-2016
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -42,6 +42,7 @@ namespace espressopp {
       real K;
       real r0;
       real rMax;
+      real rMaxSqr;
     public:
       static void registerPython();
 
@@ -49,6 +50,7 @@ namespace espressopp {
         : K(0.0), r0(0.0), rMax(0.0) {
         setShift(0.0);
         setCutoff(infinity);
+        preset();
       }
 
       FENE(real _K, real _r0, real _rMax, 
@@ -56,6 +58,7 @@ namespace espressopp {
         : K(_K), r0(_r0), rMax(_rMax) {
         setShift(_shift);
         setCutoff(_cutoff);
+        preset();
         initialized = true;
       }
 
@@ -65,7 +68,12 @@ namespace espressopp {
         autoShift = false;
         setCutoff(_cutoff);
         setAutoShift();
+        preset();
         initialized = true;
+      }
+
+      void preset() {
+        rMaxSqr = rMax*rMax;
       }
 
       // Setter and getter
@@ -84,11 +92,12 @@ namespace espressopp {
       void setRMax(real _rMax) { 
         rMax = _rMax; 
         updateAutoShift();
+        preset();
       }
       real getRMax() const { return rMax; }
 
       real _computeEnergySqrRaw(real distSqr) const {
-        real energy = -0.5 * pow(rMax, 2) * K *
+        real energy = -0.5 * rMaxSqr * K *
                       log(1 - pow((sqrt(distSqr) - r0) / rMax, 2));
         return energy;
       }
@@ -99,13 +108,11 @@ namespace espressopp {
 
         real ffactor;
         
-        if(r0 == 0) {
+        if(r0 > ROUND_ERROR_PREC) {
           real r = sqrt(distSqr);
-          ffactor = -K * (r - r0) / (1 - pow((r - r0) / rMax, 2)) / r;
+          ffactor = -K * (r - r0) / (r * (1 - ((r - r0)*(r - r0) / rMaxSqr)));
         } else {
-            real r0sq = rMax * rMax;
-            real rlogarg = 1.0 - distSqr / r0sq;
-            ffactor = -K / rlogarg;
+            ffactor = -K / (1.0 - distSqr / rMaxSqr);
         }
         force = dist * ffactor;
         return true;

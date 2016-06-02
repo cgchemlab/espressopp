@@ -89,6 +89,7 @@ namespace espressopp {
                                        _thermalize, _thermalizeAdr;
         boost::unordered_set<longint> valid_type_ids;
         bool has_types;
+        boost::signals2::connection _initialize_onSetTimeStep;
 
         void frictionThermo(class Particle&);
 
@@ -108,6 +109,9 @@ namespace espressopp {
         real pref2buffer; //!< temporary to save value between heatUp/coolDown
 
         shared_ptr< esutil::RNG > rng;  //!< random number generator used for friction term
+
+        /** Logger */
+        static LOG4ESPP_DECL_LOGGER(theLogger);
 
     };
   }

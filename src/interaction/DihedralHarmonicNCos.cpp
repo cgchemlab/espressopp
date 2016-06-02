@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2014
+  Copyright (C) 2014,2016
       Jakub Krajniak
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
@@ -65,12 +65,11 @@ namespace espressopp {
 
       class_< FixedQuadrupleListTypesDihedralHarmonicNCos, bases< Interaction > >
           ("interaction_FixedQuadrupleListTypesDihedralHarmonicNCos",
-              init< shared_ptr<System>, shared_ptr<FixedQuadrupleList> >())
-              .def("setPotential", &FixedQuadrupleListTypesDihedralHarmonicNCos::setPotential)
-              .def("getPotential", &FixedQuadrupleListTypesDihedralHarmonicNCos::getPotentialPtr)
-              .def("setFixedQuadrupleList", &FixedQuadrupleListTypesDihedralHarmonicNCos::setFixedQuadrupleList)
-              .def("getFixedQuadrupleList", &FixedQuadrupleListTypesDihedralHarmonicNCos::getFixedQuadrupleList);
-
+           init< shared_ptr<System>, shared_ptr<FixedQuadrupleList> >())
+          .def("setPotential", &FixedQuadrupleListTypesDihedralHarmonicNCos::setPotential)
+          .def("getPotential", &FixedQuadrupleListTypesDihedralHarmonicNCos::getPotentialPtr)
+          .def("setFixedQuadrupleList", &FixedQuadrupleListTypesDihedralHarmonicNCos::setFixedQuadrupleList)
+          .def("getFixedQuadrupleList", &FixedQuadrupleListTypesDihedralHarmonicNCos::getFixedQuadrupleList);
     }
   }
 }

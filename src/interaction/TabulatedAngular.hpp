@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -70,23 +72,19 @@ namespace espressopp {
                 }
              
                 real _computeEnergyRaw(real theta) const {
-                  if (table) {
-                    try {
+                    if (table) {
                       return table->getEnergy(theta);
-                    } catch (std::exception &e) {
-                      std::cout << "Error in TabulatedAngular.hpp computeEnergy, filename=" << filename << std::endl;
-                      std::cout << e.what() << std::endl;
-                      throw e;
+                    } else {
+                      LOG4ESPP_DEBUG(
+                        theLogger,
+                        "Tabulate angular potential table not available. filename=" << filename);
+                      return 0.0;
                     }
-                  } else {
-                    throw std::runtime_error("Tabulated angular potential table not available.");
-                  }
                 }
              
                 bool _computeForceRaw(Real3D& force12, Real3D& force32,
                                       const Real3D& dist12, const Real3D& dist32) const {
                     if (table) {
-                      try {
                         real dist12_sqr = dist12 * dist12;
                         real dist32_sqr = dist32 * dist32;
                         real dist1232 = sqrt(dist12_sqr) * sqrt(dist32_sqr);
@@ -102,26 +100,16 @@ namespace espressopp {
 
                         force12 = a11 * dist12 + a12 * dist32;
                         force32 = a22 * dist32 + a12 * dist12;
-                      } catch (std::exception &e) {
-                        std::cout << "Error in TabulatedAngular.hpp computeForce, filename=" << filename << std::endl;
-                        std::cout << e.what() << std::endl;
-                        throw e;
-                      }
                     }
                     else {
-                        throw std::runtime_error("Tabulated angular potential table not available.");
+                        LOG4ESPP_DEBUG(theLogger, "Tabulate angular potential table not available.");
+                        return false;
                     }
                     return true;
                 }
              
                 real _computeForceRaw(real theta) const {
-                  try {
                     return table->getForce(theta);
-                  }  catch (std::exception &e) {
-                    std::cout << "Error in TabulatedAngular.hpp computeForceRaw, filename=" << filename << std::endl;
-                    std::cout << e.what() << std::endl;
-                    throw e;
-                  }
                 }
              
         }; // class

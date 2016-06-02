@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -63,7 +65,7 @@ namespace espressopp {
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
-    typedef class FixedPairListTypesInteractionTemplate<Tabulated> FixedPairListTypesTabulated;
+    typedef class FixedPairListTypesInteractionTemplate <Tabulated> FixedPairListTypesTabulated;
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
@@ -124,7 +126,7 @@ namespace espressopp {
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
 
-      class_<FixedPairListTypesTabulated, bases<Interaction> >
+      class_< FixedPairListTypesTabulated, bases< Interaction > >
           ("interaction_FixedPairListTypesTabulated",
            init< shared_ptr<System>, shared_ptr<FixedPairList> >())
           .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress> >())
