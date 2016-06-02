@@ -24,9 +24,11 @@
 
 #include "types.hpp"
 #include "Observable.hpp"
+#include "ParticleGroup.hpp"
 #include "storage/DomainDecomposition.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "boost/signals2.hpp"
+#include "boost/serialization/map.hpp"
 
 namespace espressopp {
 namespace analysis {
@@ -48,6 +50,31 @@ class ChemicalConversion : public Observable {
   real total_value;
   longint p_type;
 };
+
+
+class ChemicalConversionTypeSequence : public Observable {
+ public:
+  ChemicalConversionTypeSequence(shared_ptr<System> system, shared_ptr<ParticleGroup> pg_, longint total) :
+      Observable(system), total_value(total), particle_group_(pg_) {
+    result_type = real_scalar;
+  }
+
+  ~ChemicalConversionTypeSequence() {}
+  real compute_real() const;
+
+  void setSequence(std::vector<longint> in_seq) {
+    type_seq_ = in_seq;
+  }
+
+  boost::signals2::signal1<void, real> onValue;
+
+  static void registerPython();
+ private:
+  real total_value;
+  std::vector<longint> type_seq_;
+  shared_ptr<ParticleGroup> particle_group_;
+};
+
 }  // end namespace analysis
 }  // end namespace espressopp
 

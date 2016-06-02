@@ -125,6 +125,7 @@ namespace espressopp {
       NFixedTripleListEntries::registerPython();
       NFixedQuadrupleListEntries::registerPython();
       ChemicalConversion::registerPython();
+      ChemicalConversionTypeSequence::registerPython();
     }
   }
 }

@@ -53,5 +53,70 @@ void ChemicalConversion::registerPython() {
         init< shared_ptr<System>, longint, longint >())
     .add_property("value", &ChemicalConversion::compute_real);
 }
+
+real ChemicalConversionTypeSequence::compute_real() const {
+  System& system = getSystemRef();
+  CellList realCells = system.storage->getRealCells();
+
+  longint local_count = 0;
+  std::map<longint, longint> local_pid_type;
+  for (ParticleGroup::iterator it = particle_group_->begin(); it != particle_group_->end(); ++it) {
+    local_pid_type.insert(std::make_pair(it->id(), it->type()));
+  }
+
+  // Do the computation on root node as we have to match type sequence and
+  // some particles can be splited among nodes.
+  std::vector<std::map<longint, longint> > global_pid_type;
+
+  real result = 0.0;
+  if (system.comm->rank() == 0) {
+    mpi::gather(*(system.comm), local_pid_type, global_pid_type, 0);
+
+    std::map<longint, longint> global_seq;
+    for (std::vector<std::map<longint, longint> >::iterator it = global_pid_type.begin();
+         it != global_pid_type.end(); ++it ) {
+      global_seq.insert(it->begin(), it->end());
+    }
+
+    // Flying window, looking for the sequence.
+    size_t window_size = type_seq_.size();
+    size_t particle_number = global_seq.size();
+    if (particle_number % window_size != 0)
+      throw std::runtime_error("Number of particles does not corresponds to the sequence length");
+
+    longint counter = 0;
+
+    for (std::map<longint, longint>::iterator it = global_seq.begin(); it != global_seq.end();) {
+      bool valid = true;
+      for (size_t j = 0; j < window_size; j++, ++it) {
+        if (it->second != type_seq_[j] && valid)
+          valid = false;
+      }
+      if (valid)
+        counter++;
+    }
+
+  } else {
+    mpi::gather(*(system.comm), local_pid_type, global_pid_type, 0);
+  }
+
+  mpi::broadcast(*(system.comm), result, 0);
+
+  // Send value via signal.
+  onValue(result);
+
+  return result;
+}
+
+void ChemicalConversionTypeSequence::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+  class_<ChemicalConversionTypeSequence, bases<Observable>, boost::noncopyable>
+      ("analysis_ChemicalConversionTypeSequence",
+       init< shared_ptr<System>, shared_ptr<ParticleGroup>, longint >())
+      .add_property("value", &ChemicalConversionTypeSequence::compute_real)
+      .def("set_sequence", &ChemicalConversionTypeSequence::setSequence);
+}
+
+
 }  // end namespace analysis
 }  // end namespace espressopp
