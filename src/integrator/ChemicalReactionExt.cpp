@@ -26,6 +26,8 @@
 #include <math.h>
 #include <bits/ios_base.h>
 #include <fstream>
+#include <string>
+#include <algorithm>
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -145,16 +147,10 @@ void ChemicalReaction::React() {
           std::swap(pid1, pid2);
         }
         potential_pairs_.insert(
-            std::make_pair(pid1,
-                           std::make_pair(
-                               pid2,
-                               ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr, order)
-                           )
-            )
-        );
+            std::make_pair(pid1, std::make_pair(pid2, ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr, order))));
       }
     }
-  } // end loop over VL pairs
+  }  // end loop over VL pairs
   timeLoopPair += wallTimer.stopMeasure();
 
   wallTimer.startMeasure();
@@ -169,12 +165,12 @@ void ChemicalReaction::React() {
   UniqueB(potential_pairs_, effective_pairs_);
   // Distribute effective pairs
   sendMultiMap(effective_pairs_);
+  timeComm += wallTimer.stopMeasure();
 
   sortParticleReactionList(effective_pairs_);
 
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
-  timeComm += wallTimer.stopMeasure();
 
   wallTimer.startMeasure();
   // First, remove pairs.
@@ -244,7 +240,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
     particle_id_1 = it->first;  // particle id
     particle_id_2 = it->second.first;  // particle id
     reaction_id = it->second.second.reaction_id;  // reaction id
-    reaction_rate = it->second.second.reaction_rate; // reaction rate for this pair.
+    reaction_rate = it->second.second.reaction_rate;  // reaction rate for this pair.
     r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
     order = it->second.second.order;
     out_buffer.write(particle_id_1);
@@ -350,13 +346,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
 
         mm.insert(
             std::make_pair(
-                idx_a,
-                std::make_pair(
-                    idx_b,
-                    ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_)
-                )
-            )
-        );
+                idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_))));
       }
     }
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
@@ -378,7 +368,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     idx_a = it->first;  // particle id
     idx_b = it->second.first;  // particle id
     reaction_idx = it->second.second.reaction_id;  // reaction id
-    reaction_rate = it->second.second.reaction_rate; // reaction rate for this pair.
+    reaction_rate = it->second.second.reaction_rate;   // reaction rate for this pair.
     reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
     p_order = it->second.second.order;
 
@@ -392,13 +382,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
 
     out.insert(
         std::make_pair(
-            idx_a,
-            std::make_pair(
-                idx_b,
-                ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order)
-            )
-        )
-    );
+            idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order))));
   }
   mm = out;
 
@@ -662,13 +646,12 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
             std::make_pair(idx_a,
                            std::make_pair(
                                idx_b_reaction_id->second.first,
-                               idx_b_reaction_id->second.second
-                           )));
+                               idx_b_reaction_id->second.second)));
       }
     }
   }
 
-  //@todo(jakub): I'm not sure if this is an efficient approach.
+  //  @todo(jakub): I'm not sure if this is an efficient approach.
   potential_candidates.clear();
   potential_candidates = unique_list_of_candidates;
 }
@@ -864,40 +847,26 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 #endif
     bool valid_state = true;
     if (p1 != NULL) {
-      try {
-        if (reaction->isValidState_T1(*p1)) {
-          p1->setState(p1->getState() + reaction->delta_1());
-          tmp = reaction->postProcess_T1(*p1, *p2);
+      if (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1)) {
+        p1->setState(p1->getState() + reaction->delta_1());
+        tmp = reaction->postProcess_T1(*p1, *p2);
 
-          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-            modified_particles.insert(*pit);
-        } else {
-          valid_state = false;
-        }
-      } catch (std::runtime_error &e) {
-        std::cout << "p1.type=" << p1->type() << std::endl;
-        std::cout << "wrong order of particles: " << e.what() << std::endl;
-        std::cout << "order: " << it->second.second.order << std::endl;
-        throw e;
+        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
       }
     }
 
     if (p2 != NULL) {
-      try {
-        if (reaction->isValidState_T2(*p2)) {
-          p2->setState(p2->getState() + reaction->delta_2());
-          tmp = reaction->postProcess_T2(*p2, *p1);
+      if (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2)) {
+        p2->setState(p2->getState() + reaction->delta_2());
+        tmp = reaction->postProcess_T2(*p2, *p1);
 
-          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-            modified_particles.insert(*pit);
-        } else {
-          valid_state = false;
-        }
-      } catch (std::runtime_error &e) {
-        std::cout << "p2.type=" << p2->type() << std::endl;
-        std::cout << "wrong order of particles: " << e.what() << std::endl;
-        std::cout << "order: " << it->second.second.order << std::endl;
-        throw e;
+        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
       }
     }
 
@@ -956,5 +925,5 @@ void ChemicalReaction::registerPython() {
       &ChemicalReaction::is_nearest,
       &ChemicalReaction::set_is_nearest);
 }
-}// namespace integrator
-}// namespace espressopp
+}  // namespace integrator
+}  // namespace espressopp
