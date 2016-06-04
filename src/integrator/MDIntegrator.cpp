@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -62,6 +64,8 @@ namespace espressopp {
       }
 
       dt = _dt;
+
+      onSetTimeStep(_dt);
     }
 
 

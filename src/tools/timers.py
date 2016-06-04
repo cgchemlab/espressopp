@@ -23,7 +23,7 @@
 
 import sys
 
-def show(alltimers, system):
+def show(alltimers, system, precision=None):
     """Prints the timers data collected from all nodes.
 
     Args:

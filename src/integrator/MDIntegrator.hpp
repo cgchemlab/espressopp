@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -91,6 +93,8 @@ namespace espressopp {
         boost::signals2::signal0 <void> befIntV; // before integrate2()
         boost::signals2::signal0 <void> aftIntV; // after  integrate2()
         boost::signals2::signal0 <void> aftIntV2; // after  integrate2() - second case after the first
+
+        boost::signals2::signal1 <void, real&> onSetTimeStep;
 
 
         /** Register this class so it can be used from Python. */

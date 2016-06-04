@@ -1,26 +1,30 @@
 /*
   Copyright (C) 2016
       Jakub Krajniak (jkrajniak at gmail.com)
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// ESPP_CLASS 
+// ESPP_CLASS
 #ifndef _INTERACTION_FIXEDTRIPLELISTTYPESINTERACTIONTEMPLATE_HPP
 #define _INTERACTION_FIXEDTRIPLELISTTYPESINTERACTIONTEMPLATE_HPP
+
+#include <algorithm>
+#include <functional>
+#include <vector>
 
 #include "types.hpp"
 #include "Interaction.hpp"
@@ -39,7 +43,6 @@ namespace espressopp {
 namespace interaction {
 template<typename _Potential>
 class FixedTripleListTypesInteractionTemplate : public Interaction, SystemAccess {
-
  protected:
   typedef _Potential Potential;
 
@@ -52,7 +55,7 @@ class FixedTripleListTypesInteractionTemplate : public Interaction, SystemAccess
     ntypes = 0;
   }
 
-  virtual ~FixedTripleListTypesInteractionTemplate() { };
+  virtual ~FixedTripleListTypesInteractionTemplate() { }
 
   void setFixedTripleList(shared_ptr<FixedTripleList> _fixedtripleList) {
     fixedtripleList = _fixedtripleList;
@@ -66,7 +69,7 @@ class FixedTripleListTypesInteractionTemplate : public Interaction, SystemAccess
     // typeX+1 because i<ntypes
     ntypes = std::max(ntypes, std::max(std::max(type1 + 1, type2 + 1), type3 + 1));
     potentialArray.at(type1, type2, type3) = potential;
-    if (type1 != type3) { // add potential in the other direction
+    if (type1 != type3) {  // add potential in the other direction
       potentialArray.at(type3, type2, type1) = potential;
     }
   }
@@ -76,7 +79,6 @@ class FixedTripleListTypesInteractionTemplate : public Interaction, SystemAccess
     return potentialArray.at(type1, type2, type3);
   }
 
-  // this is mainly used to access the potential from Python (e.g. to change parameters of the potential)
   shared_ptr<Potential> getPotentialPtr(int type1, int type2, int type3) {
     return make_shared<Potential>(potentialArray.at(type1, type2, type3));
   }
@@ -163,22 +165,18 @@ template<typename _Potential>
 inline real
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeEnergyAA() {
-  return 0.0;
 }
 
 template<typename _Potential>
 inline real
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeEnergyCG() {
-  return 0.0;
 }
 
 template<typename _Potential>
 inline void
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeVirialX(std::vector<real> &p_xx_total, int bins) {
-  std::cout << "Warning! At the moment computeVirialX in FixedTripleListTypesInteractionTemplate does not work."
-      << std::endl << "Therefore, the corresponding interactions won't be included in calculation." << std::endl;
 }
 
 template<typename _Potential>
@@ -219,7 +217,7 @@ FixedTripleListTypesInteractionTemplate<_Potential>::computeVirialTensor(Tensor 
 
   Tensor wlocal(0.0);
   const bc::BC& bc = *getSystemRef().bc;
-  for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it){
+  for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
@@ -246,7 +244,6 @@ inline void
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeVirialTensor(Tensor &w, real z) {
   LOG4ESPP_INFO(theLogger, "compute the virial tensor of the triples");
-  std::cout << "Warning! At the moment computeVirialTensor for fixed triples does'n work"<<std::endl;
 }
 
 template<typename _Potential>
@@ -254,8 +251,6 @@ inline void
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeVirialTensor(Tensor *w, int n) {
   LOG4ESPP_INFO(theLogger, "compute the virial tensor for the FixedPair List");
-
-  std::cout << "Warning! At the moment IK computeVirialTensor for fixed triples does'n work"<<std::endl;
 }
 
 template<typename _Potential>
@@ -271,6 +266,6 @@ FixedTripleListTypesInteractionTemplate<_Potential>::getMaxCutoff() {
   }
   return cutoff;
 }
-}
-}
+}  // namespace interaction
+}  // namespace espressopp
 #endif

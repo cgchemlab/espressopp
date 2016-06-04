@@ -1,26 +1,30 @@
 /*
   Copyright (C) 2016
       Jakub Krajniak (jkrajniak at gmail.com)
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 // ESPP_CLASS
 #ifndef _INTERACTION_FIXEDQUADRUPLELISTTYPESINTERACTIONTEMPLATE_HPP
 #define _INTERACTION_FIXEDQUADRUPLELISTTYPESINTERACTIONTEMPLATE_HPP
+
+#include <algorithm>
+#include <functional>
+#include <vector>
 
 #include "mpi.hpp"
 #include "Interaction.hpp"
@@ -40,6 +44,7 @@ template<typename _DihedralPotential>
 class FixedQuadrupleListTypesInteractionTemplate: public Interaction, SystemAccess {
  protected:
   typedef _DihedralPotential Potential;
+
  public:
   FixedQuadrupleListTypesInteractionTemplate
       (shared_ptr<System> _system,
@@ -54,7 +59,7 @@ class FixedQuadrupleListTypesInteractionTemplate: public Interaction, SystemAcce
     fixedquadrupleList = _fixedquadrupleList;
   }
 
-  virtual ~FixedQuadrupleListTypesInteractionTemplate() { };
+  virtual ~FixedQuadrupleListTypesInteractionTemplate() { }
 
   shared_ptr<FixedQuadrupleList> getFixedQuadrupleList() {
     return fixedquadrupleList;
@@ -64,7 +69,7 @@ class FixedQuadrupleListTypesInteractionTemplate: public Interaction, SystemAcce
     // typeX+1 because i<ntypes
     ntypes = std::max(ntypes, std::max(std::max(std::max(type1 + 1, type2 + 1), type3+1), type4+1));
     potentialArray.at(type1, type2, type3, type4) = potential;
-    if (type1 != type4 || type2 != type3) { // add potential in the other direction
+    if (type1 != type4 || type2 != type3) {  // add potential in the other direction
       potentialArray.at(type4, type3, type2, type1) = potential;
     }
   }
@@ -74,7 +79,6 @@ class FixedQuadrupleListTypesInteractionTemplate: public Interaction, SystemAcce
     return potentialArray.at(type1, type2, type3, type4);
   }
 
-  // this is mainly used to access the potential from Python (e.g. to change parameters of the potential)
   shared_ptr<Potential> getPotentialPtr(int type1, int type2, int type3, int type4) {
     return make_shared<Potential>(potentialArray.at(type1, type2, type3, type4));
   }
@@ -121,7 +125,7 @@ addForces() {
 
     const Potential &potential = getPotential(type1, type2, type3, type4);
 
-    Real3D dist21, dist32, dist43; //
+    Real3D dist21, dist32, dist43;
 
     bc.getMinimumImageVectorBox(dist21, p2.position(), p1.position());
     bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
@@ -132,7 +136,7 @@ addForces() {
     potential.computeForce(force1, force2, force3, force4,
                            dist21, dist32, dist43);
     p1.force() += force1;
-    p2.force() += force2; //p2.force() -= force2;
+    p2.force() += force2;
     p3.force() += force3;
     p4.force() += force4;
   }
@@ -159,7 +163,7 @@ computeEnergy() {
 
     const Potential &potential = getPotential(type1, type2, type3, type4);
 
-    Real3D dist21, dist32, dist43; //
+    Real3D dist21, dist32, dist43;
 
     bc.getMinimumImageVectorBox(dist21, p2.position(), p1.position());
     bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
@@ -176,8 +180,6 @@ template<typename _DihedralPotential>
 inline real
 FixedQuadrupleListTypesInteractionTemplate<_DihedralPotential>::
 computeEnergyAA() {
-  std::cout << "Warning! At the moment computeEnergyAA() in FixedQuadrupleListTypesInteractionTemplate does not work."
-      << std::endl;
   return 0.0;
 }
 
@@ -185,8 +187,6 @@ template<typename _DihedralPotential>
 inline real
 FixedQuadrupleListTypesInteractionTemplate<_DihedralPotential>::
 computeEnergyCG() {
-  std::cout << "Warning! At the moment computeEnergyCG() in FixedQuadrupleListTypesInteractionTemplate does not work."
-      << std::endl;
   return 0.0;
 }
 
@@ -194,8 +194,6 @@ template<typename _DihedralPotential>
 inline void
 FixedQuadrupleListTypesInteractionTemplate<_DihedralPotential>::
 computeVirialX(std::vector<real> &p_xx_total, int bins) {
-  std::cout << "Warning! At the moment computeVirialX in FixedQuadrupleListTypesInteractionTemplate does not work."
-      << std::endl << "Therefore, the corresponding interactions won't be included in calculation." << std::endl;
 }
 
 template<typename _DihedralPotential>
@@ -354,6 +352,6 @@ getMaxCutoff() {
   }
   return cutoff;
 }
-}
-}
+}  // namespace interaction
+}  // namespace espressopp
 #endif
