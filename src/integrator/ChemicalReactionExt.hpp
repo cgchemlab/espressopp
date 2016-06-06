@@ -53,15 +53,19 @@ struct ReactionDef {
   longint reaction_id;
   real reaction_rate;
   real reaction_r_sqr;
+  // 1 -> first => T1, second.first => T2
+  // 2 -> first => T2, second.first => T1
+  int order;
 
-  ReactionDef(longint r_id, real rr, real r_sqr) {
+  ReactionDef(longint r_id, real rr, real r_sqr, int order_) {
     reaction_id = r_id;
     reaction_rate = rr;
     reaction_r_sqr = r_sqr;
+    order = order_;
   }
 };
 
-typedef boost::unordered_multimap<longint, std::pair<longint, ReactionDef> > ReactionMap;
+typedef std::multimap<longint, std::pair<longint, ReactionDef> > ReactionMap;
 typedef std::vector<boost::shared_ptr<integrator::Reaction> > ReactionList;
 
 /** Reaction scheme for polymer growth and curing/crosslinking
@@ -115,9 +119,6 @@ public:
   bool is_nearest() { return is_nearest_; }
   void set_is_nearest(bool s_) { is_nearest_ = s_; }
 
-  longint bond_limit() { return bond_limit_; }
-  void set_bond_limit(longint s_) { bond_limit_ = s_; }
-
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
@@ -158,8 +159,6 @@ private:
 
   bool is_nearest_;  //!< If set to True then nearest neighbour is taken instead of random particle.
 
-  longint bond_limit_;
-
   void connect();
   void disconnect();
 
@@ -183,6 +182,7 @@ private:
   python::list getTimers();
 
   void printMultiMap(ReactionMap &rmap, std::string comment);
+  void sortParticleReactionList(ReactionMap &mm);
 };
 }  // namespace integrator
 }  // namespace espressopp

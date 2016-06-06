@@ -39,6 +39,7 @@
 #include "Particle.hpp"
 #include "SystemAccess.hpp"
 #include "esutil/ESPPIterator.hpp"
+#include "bc/BC.hpp"
 
 #include "integrator/Extension.hpp"
 #include "integrator/VelocityVerlet.hpp"
@@ -74,10 +75,15 @@ public:
   virtual bool check(Particle &p1, Particle &p2, real &r_sqr) = 0;
   virtual real cutoff() = 0;
 
+  void set_bc(shared_ptr<bc::BC> bc) {
+    bc_ = bc;
+  }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
 protected:
+  shared_ptr<bc::BC> bc_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
@@ -108,6 +114,7 @@ public:
   bool check(Particle &p1, Particle &p2, real &r_sqr);
 
   void set_cutoff(real s) {
+    LOG4ESPP_DEBUG(theLogger, "set max_cutoff=" << s << "; min_cutoff=" << min_cutoff_);
     max_cutoff_ = s;
     max_cutoff_sqr_ = s*s;
   }
@@ -116,6 +123,7 @@ public:
   }
 
   void set_min_cutoff(real s) {
+    LOG4ESPP_DEBUG(theLogger, "set min_cutoff=" << s << "; max_cutoff=" << max_cutoff_);
     min_cutoff_ = s;
     min_cutoff_sqr_ = s*s;
   }
@@ -323,7 +331,10 @@ public:
 
   void set_dt(shared_ptr<real> dt) {dt_ = dt; }
 
-  void set_bc(bc::BC *bc) {bc_ = bc; }
+  void set_system(shared_ptr<System> s_) {
+    system_ = s_;
+    bc_ = s_->bc;
+  }
 
   bool reverse() {return reverse_; };
 
@@ -361,6 +372,7 @@ public:
   /** Sets reaction cutoff object.*/
   void set_reaction_cutoff(shared_ptr<ReactionCutoff> rc) {
     reaction_cutoff_ = rc;
+
   }
 
   shared_ptr<ReactionCutoff> reaction_cutoff(){
@@ -407,7 +419,9 @@ protected:
   shared_ptr<int> interval_;//!< number of steps between reaction loops
   shared_ptr<real> dt_;//!< timestep from the integrator
 
-  bc::BC *bc_;//!< boundary condition
+  shared_ptr<bc::BC> bc_;
+  shared_ptr<System> system_;
+  //bc::BC *bc_;//!< boundary condition
 
   real rate_; //<! Global rate.
 

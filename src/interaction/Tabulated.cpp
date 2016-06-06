@@ -124,6 +124,7 @@ namespace espressopp {
         .def("setPotential", &FixedPairListTabulated::setPotential)
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
+        ;
 
       class_<FixedPairListTypesTabulated, bases<Interaction> >
           ("interaction_FixedPairListTypesTabulated",

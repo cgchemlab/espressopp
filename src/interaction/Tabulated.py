@@ -164,6 +164,7 @@ from _espressopp import interaction_Tabulated, \
                       interaction_VerletListTabulated, \
                       interaction_VerletListAdressTabulated, \
                       interaction_VerletListHadressTabulated, \
+                      interaction_VerletListNonReciprocalTabulated, \
                       interaction_CellListTabulated, \
                       interaction_FixedPairListTabulated, \
                       interaction_FixedPairListTypesTabulated, \
@@ -326,6 +327,7 @@ if pmi.isController:
             cls =  'espressopp.interaction.FixedPairListTabulatedLocal',
             pmicall = ['setPotential', 'setFixedPairList', 'getFixedPairList']
             )
+        
 
     class FixedPairListTypesTabulated(Interaction):
         __metaclass__ = pmi.Proxy

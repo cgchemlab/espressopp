@@ -385,7 +385,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.ChemicalReactionLocal',
-            pmiproperty=('interval','nearest_mode', 'bond_limit'),
+            pmiproperty=('interval','nearest_mode'),
             pmicall=(
                 'add_reaction', 'get_timers'
                 )
@@ -437,6 +437,7 @@ if pmi.isController:
             pmicall=(
                 'add_postprocess',
                 'set_reaction_cutoff',
+                'get_reaction_cutoff'
             ),
             pmiproperty=(
                 'type_1',
@@ -462,6 +463,7 @@ if pmi.isController:
             pmicall=(
                 'add_postprocess',
                 'set_reaction_cutoff',
+                'get_reaction_cutoff',
                 'define_connection'
             ),
             pmiproperty=(

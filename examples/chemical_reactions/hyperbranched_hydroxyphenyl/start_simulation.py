@@ -36,6 +36,7 @@ import sys
 
 # GROMACS units, kJ/mol K
 kb = 0.0083144621
+mass_factor = 1.6605402
 
 h5md_group = 'atoms'
 
@@ -123,6 +124,7 @@ def main():  #NOQA
 
     print('Skin: {}'.format(skin))
     print('RNG Seed: {}'.format(rng_seed))
+    print('Boltzmann constant: {}'.format(kb))
 
     part_prop, particle_list = espressopp.tools.chemlab.gromacs_topology.genParticleList(input_conf, gt)
     NPart = len(particle_list)
@@ -130,15 +132,15 @@ def main():  #NOQA
 
     particle_ids = [x[0] for x in particle_list]
 
-    density = sum(x[3] for x in particle_list)*1.6605402 / (box[0] * box[1] * box[2])
+    density = sum(x[3] for x in particle_list)*mass_factor/ (box[0] * box[1] * box[2])
     print('Density: {} kg/m^3'.format(density))
     print('Box: {} nm'.format(box))
 
     # Generate velocity.
-    print('Generating velocities from Maxwell-Boltzmann distribution T={}'.format(
-        args.temperature))
+    print('Generating velocities from Maxwell-Boltzmann distribution T={} ({})'.format(
+        args.temperature, args.temperature*kb))
     vx, vy, vz = espressopp.tools.velocities.gaussian(
-        args.temperature, len(particle_list), [x[3]*1.6605402 for x in particle_list],
+        args.temperature, len(particle_list), [x[3]*mass_factor for x in particle_list],
         kb=kb)
     part_prop.append('v')
     for i, p in enumerate(particle_list):
@@ -223,31 +225,43 @@ def main():  #NOQA
     # Set potentials.
     cr_observs = espressopp.tools.chemlab.gromacs_topology.setNonbondedInteractions(
         system, gt, verletlist, lj_cutoff, cg_cutoff)
-    static_fpl, b_interaction = espressopp.tools.chemlab.gromacs_topology.setBondInteractions(system, gt)
-    static_ftl, _ = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt)
-    static_fql, _ = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt)
+    static_fpls = espressopp.tools.chemlab.gromacs_topology.setBondInteractions(system, gt)
+    static_ftls = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt)
+    static_fqls = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt)
 
-    dynamic_ftl, _ = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt, True, 'dynamic_angles')
-    dynamic_fql, _ = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt, True, 'dynamic_dih')
+    dynamic_ftls = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt, True, 'dynamic_angles')
+    dynamic_fqls = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt, True, 'dynamic_dih')
 
     print('Set Dynamic Exclusion lists.')
-    dynamic_exclusion_list.observe_tuple(static_fpl)
-    dynamic_exclusion_list.observe_triple(static_ftl)
-    dynamic_exclusion_list.observe_quadruple(static_fql)
-    dynamic_exclusion_list.observe_triple(dynamic_ftl)
-    dynamic_exclusion_list.observe_quadruple(dynamic_fql)
+    for static_fpl in static_fpls:
+        dynamic_exclusion_list.observe_tuple(static_fpl)
+    for static_ftl in static_ftls:
+        dynamic_exclusion_list.observe_triple(static_ftl)
+    for static_fql in static_fqls:
+        dynamic_exclusion_list.observe_quadruple(static_fql)
+    for _, ftls in dynamic_ftls.items():
+        for dynamic_ftl in ftls:
+            dynamic_exclusion_list.observe_triple(dynamic_ftl)
+    for _, fqls in dynamic_fqls.items():
+        for dynamic_fql in fqls:
+            dynamic_exclusion_list.observe_quadruple(dynamic_fql)
 
     print('Set topology manager')
     topology_manager = espressopp.integrator.TopologyManager(system)
-    topology_manager.observe_tuple(static_fpl)
+    for static_fpl in static_fpls:
+        topology_manager.observe_tuple(static_fpl)
     topology_manager.initialize_topology()
     topology_manager.register_tuple(static_fpl, 0, 0)
-    for t in gt.angleparams:
+    for t, p in gt.angleparams.items():
+        ftls = dynamic_ftls[p['func']]
         print('Register angles for type: {}'.format(t))
-        topology_manager.register_triplet(dynamic_ftl, *t)
-    for t in gt.dihedralparams:
+        for dynamic_ftl in ftls:
+            topology_manager.register_triplet(dynamic_ftl, *t)
+    for t, p in gt.dihedralparams.items():
+        fqls = dynamic_fqls[p['func']]
         print('Register dihedral for type: {}'.format(t))
-        topology_manager.register_quadruplet(dynamic_fql, *t)
+        for dynamic_fql in fqls:
+            topology_manager.register_quadruplet(dynamic_fql, *t)
     integrator.addExtension(topology_manager)
 
     # Set chemical reactions, parser in reaction_parser.py
@@ -325,7 +339,8 @@ def main():  #NOQA
     for i, f in enumerate(fpls):
         dump_topol.observe_tuple(f, 'chem_bonds_{}'.format(i))
 
-    dump_topol.add_static_tuple(static_fpl, 'bonds')
+    for i, static_fpl in enumerate(static_fpls):
+        dump_topol.add_static_tuple(static_fpl, 'bonds_{}'.format(i))
     dump_topol.dump()
     dump_topol.update()
     if args.topol_collect > 0:
@@ -336,16 +351,26 @@ def main():  #NOQA
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
     print('Store trajectory every {} steps'.format(args.trj_collect))
 
-    k_enable_reactions = int(math.ceil(args.start_ar/float(integrator_step)))
+    if args.start_ar > 0:
+        k_enable_reactions = int(math.ceil(args.start_ar/float(integrator_step)))
+    else:
+        k_enable_reactions = -1
     print('Enable chemical reactions at {} step'.format(args.start_ar))
 
     print('Reset total velocity')
     total_velocity = espressopp.analysis.TotalVelocity(system)
     total_velocity.reset()
+
+    print('Running {} steps'.format(sim_step*integrator_step))
+
     system_analysis.dump()
+    
     traj_file.dump(0, 0)
     print('Running {} steps'.format(sim_step*integrator_step))
+    system_analysis.info()
+
     for k in range(sim_step):
+        integrator.run(integrator_step)
         system_analysis.info()
         if k % k_trj_collect == 0:
             traj_file.dump(k*integrator_step, k*integrator_step*args.dt)
@@ -355,8 +380,6 @@ def main():  #NOQA
         if k_enable_reactions == k:
             print('Enabling chemical reactions')
             integrator.addExtension(ar)
-
-        integrator.run(integrator_step)
 
     system_analysis.info()
     traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*args.dt)
@@ -374,6 +397,7 @@ def main():  #NOQA
         'thermostat': args.thermostat,
         'thermostat_gamma': args.thermostat_gamma,
         'temperature': args.temperature,
+        'kb': kb,
         'barostat': args.barostat if args.pressure else 'no',
         'pressure': pressure,
         'total_steps': sim_step*integrator_step,
@@ -382,9 +406,6 @@ def main():  #NOQA
     for k, v in sim_params.items():
         g_params.attrs[k] = v
     tools.save_forcefield(h5, gt)
-
-    # Sort H5MD file afterwards.
-    sort_file(h5)
     h5.close()
 
     # Saves output file.

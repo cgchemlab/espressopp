@@ -75,7 +75,9 @@ namespace espressopp {
                     if (table) {
                       return table->getEnergy(theta);
                     } else {
-                      LOG4ESPP_DEBUG(theLogger, "Tabulate angular potential table not available.");
+                      LOG4ESPP_DEBUG(
+                        theLogger,
+                        "Tabulate angular potential table not available. filename=" << filename);
                       return 0.0;
                     }
                 }

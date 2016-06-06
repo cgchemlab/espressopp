@@ -166,7 +166,7 @@ def _args():
                         help='Kappa paramter for coulomb interactions')
     parser.add_argument('--coulomb_cutoff', default=0.9, type=float,
                         help='Coulomb cut-off')
-    parser.add_argument('--reactions', default='reaction.cfg',
+    parser.add_argument('--reactions', default=None,
                         help='Configuration file with chemical reactions')
     parser.add_argument('--debug', default=None, help='Turn on logging mechanism')
     parser.add_argument('--start_ar', default=0, type=int, help='When to start chemical reactions')

@@ -71,9 +71,11 @@ namespace espressopp {
         preset();
         initialized = true;
       }
+
       void preset() {
         rMaxSqr = rMax*rMax;
       }
+
       // Setter and getter
       void setK(real _K) {
         K = _K;

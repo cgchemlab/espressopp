@@ -24,6 +24,10 @@
 #include <set>
 #include <numeric>
 #include <math.h>
+#include <bits/ios_base.h>
+#include <fstream>
+#include <string>
+#include <algorithm>
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -63,8 +67,6 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
   reaction_list_ = ReactionList();
   reverse_reaction_list_ = ReactionList();
 
-  bond_limit_ = -1;
-
   resetTimers();
 }
 
@@ -88,7 +90,8 @@ void ChemicalReaction::addReaction(boost::shared_ptr<integrator::Reaction> react
 
   bc::BC &bc = *getSystemRef().bc;
 
-  reaction->set_bc(&bc);
+  reaction->reaction_cutoff()->set_bc(getSystem()->bc);
+  reaction->set_system(getSystem());
 
   if (!reaction->reverse()) {
     // If VL cutoff is smaller than reaction, increase it.
@@ -136,17 +139,18 @@ void ChemicalReaction::React() {
       ReactedPair p;
 
       if ((*it)->isValidPair(p1, p2, p)) {
+        longint pid1 = p.first->id();
+        longint pid2 = p.second->id();
+        int order = 1;
+        if (pid1 > pid2) {
+          order = 2;
+          std::swap(pid1, pid2);
+        }
         potential_pairs_.insert(
-            std::make_pair(p.first->id(),
-                           std::make_pair(
-                               p.second->id(),
-                               ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr)
-                           )
-            )
-        );
+            std::make_pair(pid1, std::make_pair(pid2, ReactionDef(reaction_idx_, p.reaction_rate, p.r_sqr, order))));
       }
     }
-  } // end loop over VL pairs
+  }  // end loop over VL pairs
   timeLoopPair += wallTimer.stopMeasure();
 
   wallTimer.startMeasure();
@@ -161,10 +165,12 @@ void ChemicalReaction::React() {
   UniqueB(potential_pairs_, effective_pairs_);
   // Distribute effective pairs
   sendMultiMap(effective_pairs_);
+  timeComm += wallTimer.stopMeasure();
+
+  sortParticleReactionList(effective_pairs_);
 
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
-  timeComm += wallTimer.stopMeasure();
 
   wallTimer.startMeasure();
   // First, remove pairs.
@@ -222,25 +228,27 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
 
   // Fill out_buffer from mm.
   int array_size = mm.size();
-  int a, b, c;
+  int particle_id_1, particle_id_2, reaction_id;
 
-  real d, r_sqr;
+  real reaction_rate, r_sqr;
+  int order;
 
   out_buffer.write(array_size);
 
   for (integrator::ReactionMap::iterator it = mm.begin(); it != mm.end();
       it++) {
-    a = it->first;  // particle id
-    b = it->second.first;  // particle id
-    c = it->second.second.reaction_id;  // reaction id
-    d = it->second.second.reaction_rate; // reaction rate for this pair.
+    particle_id_1 = it->first;  // particle id
+    particle_id_2 = it->second.first;  // particle id
+    reaction_id = it->second.second.reaction_id;  // reaction id
+    reaction_rate = it->second.second.reaction_rate;  // reaction rate for this pair.
     r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
-    out_buffer.write(a);
-    out_buffer.write(b);
-    out_buffer.write(c);
-    out_buffer.write(d);
+    order = it->second.second.order;
+    out_buffer.write(particle_id_1);
+    out_buffer.write(particle_id_2);
+    out_buffer.write(reaction_id);
+    out_buffer.write(reaction_rate);
     out_buffer.write(r_sqr);
-
+    out_buffer.write(order);
   }
 
   LOG4ESPP_DEBUG(theLogger, "OutBuffer.size=" << out_buffer.getSize());
@@ -251,7 +259,8 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
      value. */
 
   int data_length, idx_a, idx_b, reaction_idx, direction_size;
-  real reaction_rate, reaction_r_sqr;
+  real reaction_r_sqr;
+  int p_order_;
 
   for (int direction = 0; direction < 3; ++direction) {
     /* inverted processing order for ghost force communication,
@@ -325,30 +334,59 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
           in_buffer_0.read(reaction_idx);
           in_buffer_0.read(reaction_rate);
           in_buffer_0.read(reaction_r_sqr);
+          in_buffer_0.read(p_order_);
         } else {
           in_buffer_1.read(idx_a);
           in_buffer_1.read(idx_b);
           in_buffer_1.read(reaction_idx);
           in_buffer_1.read(reaction_rate);
           in_buffer_1.read(reaction_r_sqr);
+          in_buffer_1.read(p_order_);
         }
 
         mm.insert(
             std::make_pair(
-                idx_a,
-                std::make_pair(
-                    idx_b,
-                    ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr)
-                )
-            )
-        );
+                idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_))));
       }
     }
-
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
   }
 
   LOG4ESPP_DEBUG(theLogger, "Leaving sendMultiMap");
+}
+
+void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
+  LOG4ESPP_DEBUG(theLogger, "Entering sortParticleReactionList");
+
+  ReactionMap out;
+  out.clear();
+  longint idx_a, idx_b, reaction_idx;
+  real reaction_rate, reaction_r_sqr;
+  int p_order;
+
+  for (ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
+    idx_a = it->first;  // particle id
+    idx_b = it->second.first;  // particle id
+    reaction_idx = it->second.second.reaction_id;  // reaction id
+    reaction_rate = it->second.second.reaction_rate;   // reaction rate for this pair.
+    reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
+    p_order = it->second.second.order;
+
+    if (idx_a > idx_b) {
+      std::swap(idx_a, idx_b);
+      if (p_order == 1)
+        p_order = 2;
+      else
+        p_order = 1;
+    }
+
+    out.insert(
+        std::make_pair(
+            idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order))));
+  }
+  mm = out;
+
+  LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
 }
 
 /** Performs two-way parallel communication to update the ghost particles.
@@ -608,13 +646,13 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
             std::make_pair(idx_a,
                            std::make_pair(
                                idx_b_reaction_id->second.first,
-                               idx_b_reaction_id->second.second
-                           )));
+                               idx_b_reaction_id->second.second)));
       }
     }
   }
 
-  //@todo(jakub): I'm not sure if this is an efficient approach.
+  //  @todo(jakub): I'm not sure if this is an efficient approach.
+  potential_candidates.clear();
   potential_candidates = unique_list_of_candidates;
 }
 
@@ -782,64 +820,21 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
 
   LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
 
-  // Limit number of bonds created on each of interval steps.
-  longint local_bond_count = effective_pairs_.size();  // by default no limit;
-  if (bond_limit_ > 0) {
-    local_bond_count = 0;
-    // Calculate number of bonds that could be created at this CPU.
-    for (ReactionMap::const_iterator it = effective_pairs_.begin();
-         it != effective_pairs_.end(); it++) {
-      Particle *p1 = system.storage->lookupLocalParticle(it->first);
-      Particle *p2 = system.storage->lookupLocalParticle(it->second.first);
-
-      if (p1 && p2)
-        if (!(p1->ghost() && p2->ghost()))
-          local_bond_count++;
-    }
-
-    // We need to get the number of bonds on each of cpus and then redistribute
-    // the correct fraction.
-    std::vector<longint> global_bond_count;
-    if (system.comm->rank() == 0) {
-      // Collect bonds from CPUs.
-      mpi::gather(*(system.comm), local_bond_count, global_bond_count, 0);
-
-      longint total_count = std::accumulate(global_bond_count.begin(), global_bond_count.end(), 0);
-      longint bonds_left = total_count > bond_limit_ ? bond_limit_ : total_count;
-
-      std::vector<longint> global_bond_limit;
-      global_bond_limit.resize(global_bond_count.size(), 0);
-
-      // At least one bond on each of CPUs, then redistribute one by one.
-      while (bonds_left > 0) {
-        longint rank_index = 0;
-        for (std::vector<longint>::iterator it = global_bond_count.begin();
-             it != global_bond_count.end() && bonds_left > 0;
-             rank_index++, ++it) {
-          longint b = *it;
-          if (b > 0 && global_bond_limit[rank_index] < b) {
-            global_bond_limit[rank_index]++;
-            bonds_left--;
-          }
-        }
-      }
-
-      mpi::scatter(*(system.comm), global_bond_limit, local_bond_count, 0);
-    } else {
-      mpi::gather(*(system.comm), local_bond_count, global_bond_count, 0);
-
-      // Get the new value of local_bond_count.
-      mpi::scatter(*(system.comm), local_bond_count, 0);
-    }
-  }
-
-  for (integrator::ReactionMap::iterator it = effective_pairs_.begin();
-      it != effective_pairs_.end() && local_bond_count != 0; it++) {
+  for (integrator::ReactionMap::iterator it = effective_pairs_.begin(); it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
 
+    Particle *p1;
+    Particle *p2;
     // Change the state of A and B.
-    Particle *p1 = system.storage->lookupLocalParticle(it->first);
-    Particle *p2 = system.storage->lookupLocalParticle(it->second.first);
+    if (it->second.second.order == 1) {
+      p1 = system.storage->lookupLocalParticle(it->first);
+      p2 = system.storage->lookupLocalParticle(it->second.first);
+    } else if (it->second.second.order == 2) {
+      p1 = system.storage->lookupLocalParticle(it->second.first);
+      p2 = system.storage->lookupLocalParticle(it->first);
+    } else {
+      LOG4ESPP_ERROR(theLogger, "wrong order parameter " << it->second.second.order);
+    }
 
 #ifdef LOG4ESPP_DEBUG_ENABLED
     if (p1 && p2) {
@@ -850,32 +845,36 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
               << p2->type() << " B.type=" << p2->type());
     }
 #endif
-    bool valid_state = false;
+    bool valid_state = true;
+    if (p1 != NULL) {
+      if (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1)) {
+        p1->setState(p1->getState() + reaction->delta_1());
+        tmp = reaction->postProcess_T1(*p1, *p2);
 
-    if (p1 && p2) {
+        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
+      }
+    }
+
+    if (p2 != NULL) {
+      if (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2)) {
+        p2->setState(p2->getState() + reaction->delta_2());
+        tmp = reaction->postProcess_T2(*p2, *p1);
+
+        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+          modified_particles.insert(*pit);
+      } else {
+        valid_state = false;
+      }
+    }
+
+    /** Make sense only if both particles exists here, otherwise waste of CPU time. */
+    if ((p1 != NULL) && (p2 != NULL) && valid_state) {
       if (!(p1->ghost() && p2->ghost())) {
-        if (reaction->isValidState_T1(*p1) && reaction->isValidState_T2(*p2))
-          valid_state = true;
-
-        if (valid_state) {
-          valid_state = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-        }
-
-        if (valid_state) {
-          local_bond_count--;
-
-          p1->setState(p1->getState() + reaction->delta_1());
-          tmp = reaction->postProcess_T1(*p1, *p2);
-          modified_particles.insert(p1);
-          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-            modified_particles.insert(*pit);
-
-          p2->setState(p2->getState() + reaction->delta_2());
-          tmp = reaction->postProcess_T2(*p2, *p1);
-          modified_particles.insert(p2);
-          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-            modified_particles.insert(*pit);
-        }
+        LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
+        reaction->fixed_pair_list_->iadd(it->first, it->second.first);
       }
     }
   }
@@ -924,12 +923,7 @@ void ChemicalReaction::registerPython() {
     .add_property(
       "nearest_mode",
       &ChemicalReaction::is_nearest,
-      &ChemicalReaction::set_is_nearest)
-    .add_property(
-      "bond_limit",
-      &ChemicalReaction::bond_limit,
-      &ChemicalReaction::set_bond_limit
-    );
+      &ChemicalReaction::set_is_nearest);
 }
-}// namespace integrator
-}// namespace espressopp
+}  // namespace integrator
+}  // namespace espressopp
