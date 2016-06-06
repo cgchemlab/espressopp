@@ -39,7 +39,11 @@ void ChemicalReactionPostProcess::registerPython() {
     ("integrator_ChemicalReactionPostProcess", no_init);
 }
 
-/** PostProcess - change particle property */
+/** PostProcessChangeProperty
+ *
+ * Change property of particles that are involved in the reaction.
+ *
+ * */
 LOG4ESPP_LOGGER(PostProcessChangeProperty::theLogger, "PostProcessChangeProperty");
 void PostProcessChangeProperty::addChangeProperty(int type_id,
     boost::shared_ptr<ParticleProperties>             new_property) {
@@ -122,6 +126,11 @@ void PostProcessChangeProperty::registerPython() {
     .def("remove_change_property", &PostProcessChangeProperty::removeChangeProperty);
 }
 
+/**
+ * This PostProcess will remove bonds from defined bond list (FixedPairList)
+ * that are defined between atom involved in pair creation and other atoms.
+ * User can defined the number of bonds to remove from this list.
+ */
 LOG4ESPP_LOGGER(PostProcessRemoveBond::theLogger, "PostProcessRemoveBond");
 
 std::vector<Particle *> PostProcessRemoveBond::process(Particle &p, Particle &partner) {
@@ -158,11 +167,13 @@ void PostProcessRemoveBond::registerPython() {
     ("integrator_PostProcessRemoveBond", init<shared_ptr<FixedPairList>, int>());
 }
 
-
+/** ChangeNeighboursProperty
+ *
+ * Modyfie property of particles that are neighbour of the new bond pair.
+ */
 LOG4ESPP_LOGGER(PostProcessChangeNeighboursProperty::theLogger, "PostProcessChangeNeighboursProperty");
 
 std::vector<Particle *> PostProcessChangeNeighboursProperty::process(Particle &p, Particle &partner) {
-
   topology_manager_->invokeNeighbourPropertyChange(p);
 
   return std::vector<Particle *>();
@@ -175,9 +186,15 @@ void PostProcessChangeNeighboursProperty::registerPython() {
          boost::shared_ptr<integrator::PostProcessChangeNeighboursProperty> >
       ("integrator_PostProcessChangeNeighboursProperty", init<shared_ptr<integrator::TopologyManager> >())
       .def("add_change_property", &PostProcessChangeNeighboursProperty::registerNeighbourPropertyChange);
-
 }
 
+
+/** ChangePropertyOnState
+ *
+ *  Set the new property of particle whenever the state of particle reaches desired one.
+ *  The property are defined in the same way as in PostProcessChangeProperty.
+ *
+ * */
 LOG4ESPP_LOGGER(PostProcessChangePropertyOnState::theLogger, "PostProcessChangePropertyOnState");
 
 std::vector<Particle *> PostProcessChangePropertyOnState::process(Particle &p1, Particle &partner) {
@@ -224,7 +241,18 @@ void PostProcessChangePropertyOnState::registerPython() {
   class_<PostProcessChangePropertyOnState, bases<integrator::ChemicalReactionPostProcess>,
          boost::shared_ptr<integrator::PostProcessChangePropertyOnState> >
       ("integrator_PostProcessChangePropertyOnState", init<>())
-      .def("add_change_property", &PostProcessChangePropertyOnState::addPropertyChange);
+      .def("add_change_property", &PostProcessChangePropertyOnState::addChangeProperty);
+}
+
+
+/** PostProcessRemoveNeighbourBond */
+void espressopp::integrator::PostProcessRemoveNeighbourBond::registerPython() {
+  using namespace espressopp::python;  // NOLINT
+
+  class_<PostProcessRemoveNeighbourBond, bases<ChemicalReactionPostProcess>,
+         boost::shared_ptr<PostProcessRemoveNeighbourBond> >
+      ("integrator_PostProcessRemoveNeighbourBond", init<shared_ptr<integrator::TopologyManager> >())
+          .def("add_bond_to_remove", &PostProcessRemoveNeighbourBond::registerBondToRemove);
 }
 
 }// namespace integrator

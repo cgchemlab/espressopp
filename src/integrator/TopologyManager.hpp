@@ -37,6 +37,10 @@
 namespace espressopp {
 namespace integrator {
 
+struct TopologyNode {
+  longint type_id;
+};
+
 class TopologyManager: public Extension {
  public:
   TopologyManager(shared_ptr<System> system);
@@ -79,7 +83,6 @@ class TopologyManager: public Extension {
   void registerQuadruple(shared_ptr<FixedQuadrupleList> fql,
                          longint type1, longint type2, longint type3, longint type4);
 
-
   /**
    * Register the action to change neighbour property separated by nb_level from the root.
    *
@@ -89,11 +92,19 @@ class TopologyManager: public Extension {
   void registerNeighbourPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level);
 
   /**
+   * Register the action to remove bond that is `nb_level` bonds from the root particle
+   * and involves particles of pid1, pid2.
+   */
+  void registerNeighbourBondToRemove(longint type_id, longint nb_level, longint type_pid1, longint type_pid2);
+
+  /**
    * Interface for invoking property change of neighbour particles.
    *
    * @param root The root particle.
    */
   void invokeNeighbourPropertyChange(Particle &root);
+
+  void invokeNeighbourBondRemove(Particle &root);
 
   bool isResiduesConnected(longint rid1, longint rid2);
 
@@ -224,6 +235,7 @@ class TopologyManager: public Extension {
                   longint,
                   shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
   typedef std::map<longint, std::set<int>* > GraphMap;
+
   bool update_angles_dihedrals;
 
   std::vector<shared_ptr<FixedPairList> > tuples_;

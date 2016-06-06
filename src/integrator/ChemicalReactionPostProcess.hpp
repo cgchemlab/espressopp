@@ -169,6 +169,22 @@ private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
+class PostProcessRemoveNeighbourBond : public ChemicalReactionPostProcess {
+ public:
+  PostProcessRemoveNeighbourBond(shared_ptr<TopologyManager> tm) : topology_manager_(tm) { }
+
+  void registerBondToRemove(longint type_id, longint nb_level, longint type_pid1, longint type_pid2) {
+    topology_manager_->registerNeighbourBondToRemove(type_id, nb_level, type_pid1, type_pid2);
+  }
+
+  std::vector<Particle *> process(Particle &p, Particle &partner) { }
+
+  static void registerPython();
+ private:
+  shared_ptr<TopologyManager> topology_manager_;
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
 /** Change property of particles whenever they end up in desired chemical state.*/
 class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
  public:
@@ -186,7 +202,7 @@ class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
    * @param pp new ParticleProperties
    * @param state The number of edges that separates.
    */
-  void addPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint state) {
+  void addChangeProperty(longint type_id, shared_ptr<ParticleProperties> pp, longint state) {
     type_state_pp_.insert(std::make_pair(std::make_pair(type_id, state), pp));
   }
 

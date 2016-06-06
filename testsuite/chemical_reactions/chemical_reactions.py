@@ -313,6 +313,84 @@ class TestCyclization(ESPPTestCase):
         self.assertEquals(set(fpl1_after[0]), {(1, 2), (1, 3), (3, 4)})
 
 
+class TestCaseRemoveNeighbourBond(ESPPTestCase):
+    def setUp(self):
+        super(TestCaseRemoveNeighbourBond, self).setUp()
+        particle_list = [
+            (3, 3, espressopp.Real3D(3.0, 2.0, 2.0), 2, 1),
+            (4, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+            (5, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+            (6, 3, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+            (7, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+        ]
+        self.system.storage.addParticles(particle_list, *self.part_prop)
+
+        self.fpl1.addBonds([
+            (2, 3),
+            (2, 7),
+            (3, 4),
+            (3, 5),
+            (4, 6)
+        ])
+        self.topology_manager.exchange_data()
+
+    def test_reaction_1(self):
+        r_type_1 = espressopp.integrator.Reaction(
+            type_1=1,
+            type_2=2,
+            delta_1=1,
+            delta_2=1,
+            min_state_1=1,
+            max_state_1=4,
+            min_state_2=1,
+            max_state_2=4,
+            rate=400.0,
+            fpl=self.fpl1,
+            cutoff=0.6)
+
+        # Define post-process that will change a type of particle 4 from 4 to 5.
+        pp_type_1 = espressopp.integrator.PostProcessChangeNeighboursProperty(
+            self.topology_manager)
+        pp_type_1.add_change_property(
+            3, espressopp.ParticleProperties(5, 1.0, 0.0), 2)
+        r_type_1.add_postprocess(pp_type_1, 'type_2')
+
+        self.ar.add_reaction(r_type_1)
+        self.integrator.run(10)
+
+        # Check the types of particles.
+        assert [self.system.storage.getParticle(x).type for x in range(1, 5)] == [1, 2, 3, 5]
+
+    def test_reaction_2(self):
+        r_type_1 = espressopp.integrator.Reaction(
+            type_1=1,
+            type_2=2,
+            delta_1=1,
+            delta_2=1,
+            min_state_1=1,
+            max_state_1=4,
+            min_state_2=1,
+            max_state_2=4,
+            rate=400.0,
+            fpl=self.fpl1,
+            cutoff=0.6)
+
+        # Define post-process that will change a type of particle 4 from 3 to 5.
+        # and change particle 3 from 3 to 7 (different separation = 1!)
+        pp_type_1 = espressopp.integrator.PostProcessChangeNeighboursProperty(
+            self.topology_manager)
+        pp_type_1.add_change_property(
+            3, espressopp.ParticleProperties(5, 1.0, 0.0), 2)
+        pp_type_1.add_change_property(
+            3, espressopp.ParticleProperties(7, 1.0, 0.0), 1)
+        r_type_1.add_postprocess(pp_type_1, 'type_2')
+
+        self.ar.add_reaction(r_type_1)
+        self.integrator.run(10)
+
+        # Check the types of particles.
+        assert [self.system.storage.getParticle(x).type for x in range(1, 6)] == [1, 2, 7, 5, 3]
+
 
 if __name__ == '__main__':
     unittest.main()

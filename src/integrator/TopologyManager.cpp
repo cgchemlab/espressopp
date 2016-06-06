@@ -720,6 +720,16 @@ void TopologyManager::registerNeighbourPropertyChange(
   distance_type_pp_[nb_level][type_id] = pp;
 }
 
+void TopologyManager::registerNeighbourBondToRemove(longint type_id,
+                                                    longint nb_level,
+                                                    longint type_pid1,
+                                                    longint type_pid2) {
+  max_nb_distance_ = std::max(max_nb_distance_, nb_level+1);
+  nb_distances_.insert(nb_level);
+  nb_distances_.insert(nb_level);
+  nb_distances_.insert(nb_level+1);
+}
+
 
 void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
   wallTimer.startMeasure();
@@ -804,6 +814,7 @@ python::list TopologyManager::getTimers() {
 
   return ret;
 }
+
 
 }  // end namespace integrator
 }  // end namespace espressoppp
