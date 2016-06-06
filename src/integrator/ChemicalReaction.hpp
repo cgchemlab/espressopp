@@ -226,6 +226,7 @@ public:
             reverse_(false),
             intramolecular_(false),
             active_(true),
+            virtual_(false),
             intraresidual_(true),
             rate_(0.0) { }
 
@@ -259,6 +260,7 @@ public:
             fixed_pair_list_(fpl),
             intramolecular_(intramolecular),
             active_(true),
+            virtual_(false),
             intraresidual_(true),
             rate_(rate) { }
 
@@ -332,6 +334,9 @@ public:
   /** Activate the reaction*/
   void set_active(bool s) {active_ = s; }
 
+  bool virtual_reaction() { return virtual_; }
+  void set_virtual_reaction(bool s) { virtual_ = s; }
+
   /**
    * Define post-process method after reaction occures.
    *
@@ -392,6 +397,8 @@ protected:
   int delta_2_;//!< state change for reactant B
   bool active_;//!< is reaction active, by default true
 
+  bool virtual_;  //!< Is this virtual reaction (without bond) or not
+
   bool intramolecular_;//!< Allow to intramolecular reactions.
 
   bool reverse_;//!< If true then reaction will break a bond.
@@ -433,7 +440,11 @@ class RestrictReaction : public Reaction {
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
  private:
-  std::map<std::pair<longint, longint>, bool> connectivity_;
+  bool isConnected(longint pid1, longint pid2) {
+    return connectivity_.count(std::make_pair(pid1, pid2)) == 1;
+  }
+
+  boost::unordered_map<std::pair<longint, longint>, bool> connectivity_;
 };
 
 /*** Defines dissociation reactions.

@@ -169,8 +169,7 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_ord
 }
 
 bool Reaction::isValidState_T1(Particle &p) {
-  if (p.type() != type_1_)
-    throw std::runtime_error("Particle has wrong type.");
+  assert(p.type() == type_1_);
 
   // States has to be always positive or zero.
   int p_state = p.state();
@@ -180,8 +179,7 @@ bool Reaction::isValidState_T1(Particle &p) {
 }
 
 bool Reaction::isValidState_T2(Particle &p) {
-  if (p.type() != type_2_)
-    throw std::runtime_error("Particle has wrong type.");
+  assert(p.type() == type_2_);
 
   // States has to be always positive or zero.
   int p_state = p.state();
@@ -249,18 +247,13 @@ LOG4ESPP_LOGGER(RestrictReaction::theLogger, "RestrictReaction");
 bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering RestrictReaction::isValidPair");
 
-  if (isValidState(p1, p2, particle_order)) {
-    real W = (*rng_)();
-    // Gets state dependent reaction rate.
-    //real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.second->state()];
-    real p = rate_;
-    // Multiply by time step and interval.
-    p *= (*dt_) * (*interval_);
+  if (isConnected(p1.id(), p2.id()) && isValidState(p1, p2, particle_order)) {
 
-    particle_order.reaction_rate = p;
+    // Always set reaction_rate to 1.0;
+    particle_order.reaction_rate = 1.0;
     particle_order.r_sqr = 0.0;
 
-    if ((W < p) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+    if (reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
       LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
       return true;
     }
