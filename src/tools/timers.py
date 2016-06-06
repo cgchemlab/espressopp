@@ -23,7 +23,7 @@
 
 import sys
 
-def show(alltimers, system, precision=None):
+def show(alltimers, system=None, precision=None):
     """Prints the timers data collected from all nodes.
 
     Args:
@@ -47,11 +47,12 @@ def show(alltimers, system, precision=None):
     # interactions in the system object.
     sys.stdout.write('{:25} time {:3.6f}\n'.format('Run', t))
 
-    for k, v in sorted(timers.items()):
-        if k.startswith('f'):
-            lbl = system.getNameOfInteraction(int(k.replace('f', '')))
-        else:
-            lbl = k
-        sys.stdout.write('{:25} time {:3.6f} ({:3.0f} %)\n'.format(lbl, v, 100*v/t))
+    if system is not None:
+        for k, v in sorted(timers.items()):
+            if k.startswith('f'):
+                lbl = system.getNameOfInteraction(int(k.replace('f', '')))
+            else:
+                lbl = k
+            sys.stdout.write('{:25} time {:3.6f} ({:3.0f} %)\n'.format(lbl, v, 100*v/t))
 
     sys.stdout.write('\n')

@@ -274,7 +274,7 @@ class TestCyclization(ESPPTestCase):
         self.integrator.run(2)
         fpl1_after = self.fpl1.getBonds()
         # Full cycle.
-        self.assertEquals(fpl1_after, [[(2, 4), (1, 2), (1, 3), (3, 4)]])
+        self.assertEquals(fpl1_after, [[(2, 4), (3, 4), (1, 2), (1, 3)]])
 
     def test_non_cyclization(self):
         """Check if it is possible to make an cycle"""
