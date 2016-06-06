@@ -237,6 +237,7 @@ void Reaction::registerPython() {
       .add_property("active", &Reaction::active, &Reaction::set_active)
       .add_property("cutoff", &Reaction::cutoff)
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
+      .add_property("is_virtual", &Reaction::virtual_reaction, &Reaction::set_virtual_reaction)
       .def("add_postprocess", &Reaction::addPostProcess)
       .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
       .def("get_reaction_cutoff", &Reaction::reaction_cutoff);

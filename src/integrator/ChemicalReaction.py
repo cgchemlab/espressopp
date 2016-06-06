@@ -453,6 +453,7 @@ if pmi.isController:
                 'active',
                 'cutoff',
                 'rate',
+                'is_virtual'
                 )
             )
 
