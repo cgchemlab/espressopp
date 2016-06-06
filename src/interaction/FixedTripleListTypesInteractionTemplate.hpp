@@ -35,6 +35,7 @@
 #include "esutil/Array3D.hpp"
 #include "bc/BC.hpp"
 #include "SystemAccess.hpp"
+#include "types.hpp"
 
 #include "storage/Storage.hpp"
 

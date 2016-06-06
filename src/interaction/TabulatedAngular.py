@@ -81,7 +81,9 @@ from _espressopp import interaction_TabulatedAngular, \
 
 
 class TabulatedAngularLocal(AngularPotentialLocal, interaction_TabulatedAngular):
+
     def __init__(self, itype, filename):
+
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, interaction_TabulatedAngular, itype, filename)
 

@@ -167,7 +167,8 @@ from _espressopp import interaction_Tabulated, \
                       interaction_VerletListNonReciprocalTabulated, \
                       interaction_CellListTabulated, \
                       interaction_FixedPairListTabulated, \
-                      interaction_FixedPairListTypesTabulated
+                      interaction_FixedPairListTypesTabulated, \
+                      interaction_VerletListNonReciprocalTabulated
 
 class TabulatedLocal(PotentialLocal, interaction_Tabulated):
 

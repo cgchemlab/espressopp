@@ -127,6 +127,14 @@ class FixedQuadrupleListTypesDihedralHarmonicNCosLocal(InteractionLocal,
     if pmi.workerIsActive():
       return self.cxxclass.getPotential(self, type1, type2, type3, type4)
 
+    def setFixedQuadrupleList(self, fixedlist):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setFixedQuadrupleList(self, fixedlist)
+
+    def getFixedQuadrupleList(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getFixedQuadrupleList(self)
+
 
 if pmi.isController:
   class DihedralHarmonicNCos(DihedralPotential):

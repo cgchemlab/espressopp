@@ -32,9 +32,8 @@
 #include "Extension.hpp"
 #include "VelocityVerlet.hpp"
 
-
-#include "boost/signals2.hpp"
 #include "boost/unordered_set.hpp"
+#include "boost/signals2.hpp"
 
 
 namespace espressopp {

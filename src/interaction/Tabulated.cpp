@@ -126,7 +126,7 @@ namespace espressopp {
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
 
-      class_< FixedPairListTypesTabulated, bases< Interaction > >
+      class_<FixedPairListTypesTabulated, bases<Interaction> >
           ("interaction_FixedPairListTypesTabulated",
            init< shared_ptr<System>, shared_ptr<FixedPairList> >())
           .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress> >())

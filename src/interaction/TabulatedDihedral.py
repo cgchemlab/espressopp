@@ -54,23 +54,28 @@ r"""
         :param ftl: The FixedQuadrupleList list.
         :type ftl: espressopp.FixedQuadrupleList
 
-.. function:: espressopp.interaction.FixedQuadrupleListTabulatedDihedral(system, vl, potential)
+.. function:: espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedral(system, ftl)
 
-		:param system: 
-		:param vl: 
-		:param potential: 
-		:type system: 
-		:type vl: 
-		:type potential: 
+        :param system: The Espresso++ system object.
+        :type system: espressopp.System
+        :param ftl: The FixedQuadruple list.
+        :type ftl: espressopp.FixedQuadrupleList
 
-.. function:: espressopp.interaction.FixedQuadrupleListTabulatedDihedral.setPotential(type1, type2, potential)
+.. function:: espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedral.setPotential(type1, type2, type3, type4, potential)
 
-		:param type1: 
-		:param type2: 
-		:param potential: 
-		:type type1: 
-		:type type2: 
-		:type potential: 
+        Defines dihedral potential for interaction between particles of types type1-type2-type3-type4.
+
+        :param type1: Type of particle 1.
+        :type type1: int
+        :param type2: Type of particle 2.
+        :type type2: int
+        :param type3: Type of particle 3.
+        :type type3: int
+        :param type4: Type of particle 4.
+        :type type4: int
+        :param potential: The potential to set up.
+        :type potential: espressopp.interaction.DihedralPotential
+
 """
 
 from espressopp import pmi
