@@ -325,14 +325,24 @@ class TestCaseRemoveNeighbourBond(ESPPTestCase):
         ]
         self.system.storage.addParticles(particle_list, *self.part_prop)
 
-        self.fpl1.addBonds([
-            (2, 3),
-            (2, 7),
-            (3, 4),
-            (3, 5),
-            (4, 6)
-        ])
-        self.topology_manager.exchange_data()
+        self.fpl23 = espressopp.FixedPairList(self.system.storage)
+        self.fpl24 = espressopp.FixedPairList(self.system.storage)
+        self.fpl34 = espressopp.FixedPairList(self.system.storage)
+
+        self.ftl234 = espressopp.FixedTripleList(self.system.storage)
+        self.ftl234.addTriples([(2, 3, 4)])
+
+        self.fpl23.addBonds([(2, 3)])
+        self.fpl24.addBonds([(2, 7)])
+        self.fpl34.addBonds([(3, 4), (3, 5), (4, 6)])
+
+        self.topology_manager.register_tuple(self.fpl24, 2, 4)
+        self.topology_manager.register_tuple(self.fpl34, 3, 4)
+        self.topology_manager.register_tuple(self.fpl23, 2, 3)
+        self.topology_manager.register_triplet(self.ftl234, 2, 3, 4)
+
+        self.topology_manager.initialize_topology()
+
 
     def test_reaction_1(self):
         r_type_1 = espressopp.integrator.Reaction(
@@ -349,47 +359,23 @@ class TestCaseRemoveNeighbourBond(ESPPTestCase):
             cutoff=0.6)
 
         # Define post-process that will change a type of particle 4 from 4 to 5.
-        pp_type_1 = espressopp.integrator.PostProcessChangeNeighboursProperty(
-            self.topology_manager)
-        pp_type_1.add_change_property(
-            3, espressopp.ParticleProperties(5, 1.0, 0.0), 2)
+        pp_type_1 = espressopp.integrator.PostProcessRemoveNeighbourBond(self.topology_manager)
+        pp_type_1.add_bond_to_remove(2, 1, 2, 3)
+        pp_type_1.add_bond_to_remove(2, 3, 3, 4)
         r_type_1.add_postprocess(pp_type_1, 'type_2')
 
         self.ar.add_reaction(r_type_1)
         self.integrator.run(10)
 
-        # Check the types of particles.
-        assert [self.system.storage.getParticle(x).type for x in range(1, 5)] == [1, 2, 3, 5]
+        fpl_after = self.fpl1.getAllBonds()
+        self.assertEqual(fpl_after, [(1, 2)])
 
-    def test_reaction_2(self):
-        r_type_1 = espressopp.integrator.Reaction(
-            type_1=1,
-            type_2=2,
-            delta_1=1,
-            delta_2=1,
-            min_state_1=1,
-            max_state_1=4,
-            min_state_2=1,
-            max_state_2=4,
-            rate=400.0,
-            fpl=self.fpl1,
-            cutoff=0.6)
-
-        # Define post-process that will change a type of particle 4 from 3 to 5.
-        # and change particle 3 from 3 to 7 (different separation = 1!)
-        pp_type_1 = espressopp.integrator.PostProcessChangeNeighboursProperty(
-            self.topology_manager)
-        pp_type_1.add_change_property(
-            3, espressopp.ParticleProperties(5, 1.0, 0.0), 2)
-        pp_type_1.add_change_property(
-            3, espressopp.ParticleProperties(7, 1.0, 0.0), 1)
-        r_type_1.add_postprocess(pp_type_1, 'type_2')
-
-        self.ar.add_reaction(r_type_1)
-        self.integrator.run(10)
-
-        # Check the types of particles.
-        assert [self.system.storage.getParticle(x).type for x in range(1, 6)] == [1, 2, 7, 5, 3]
+        # The bond 2-3 should be removed but rest should be okey
+        fpl_after = self.fpl23.getAllBonds()
+        self.assertEqual(fpl_after, [])
+        self.assertEqual(self.fpl24.getAllBonds(), [(2, 7)])
+        self.assertEqual(self.fpl34.getAllBonds(), [(3, 4), (3, 5)])
+        self.assertEqual(self.ftl234.getTriples(), [[]])  # Clean up also triplets because the bond 2-3 is removed.
 
 
 if __name__ == '__main__':

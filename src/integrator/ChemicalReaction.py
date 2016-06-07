@@ -243,9 +243,9 @@ class PostProcessChangePropertyOnStateLocal(integrator_PostProcessChangeProperty
 
 class PostProcessRemoveNeighbourBondLocal(integrator_PostProcessRemoveNeighbourBond,
                                           integrator_ChemicalReactionPostProcess):
-    def __init__(self):
+    def __init__(self, topology_manager):
         if pmi.workerIsActive():
-            cxxinit(self, integrator_PostProcessRemoveNeighbourBond)
+            cxxinit(self, integrator_PostProcessRemoveNeighbourBond, topology_manager)
 
     def add_bond_to_remove(self, type_id, nb_level, type_pid1, type_pid2):
         if pmi.workerIsActive():

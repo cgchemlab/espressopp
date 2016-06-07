@@ -177,7 +177,11 @@ class PostProcessRemoveNeighbourBond : public ChemicalReactionPostProcess {
     topology_manager_->registerNeighbourBondToRemove(type_id, nb_level, type_pid1, type_pid2);
   }
 
-  std::vector<Particle *> process(Particle &p, Particle &partner) { }
+  std::vector<Particle *> process(Particle &p, Particle &partner) {
+    topology_manager_->invokeNeighbourBondRemove(p);
+
+    return std::vector<Particle* >();
+  }
 
   static void registerPython();
  private:

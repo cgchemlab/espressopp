@@ -88,22 +88,7 @@ class FixedTripleListLocal(_espressopp.FixedTripleList):
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
-    '''
-    def addTriples(self, triplelist):
-        """
-        Each processor takes the broadcasted triplelist and
-        adds those triples whose first particle is owned by
-        this processor.
-        """
-        
-        if pmi.workerIsActive():
-            for triple in triplelist:
-                pid1, pid2, pid3 = triple
-                self.cxxclass.add(self, pid1, pid2, pid3)
-    '''
-
     def getTriples(self):
-
         if pmi.workerIsActive():
           triples = self.cxxclass.getTriples(self)
           return triples 

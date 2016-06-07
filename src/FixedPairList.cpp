@@ -190,7 +190,7 @@ namespace espressopp {
     return returnVal;
   }
 
-  bool FixedPairList::remove(longint pid1, longint pid2) {
+  bool FixedPairList::remove(longint pid1, longint pid2, bool no_signal) {
     LOG4ESPP_DEBUG(theLogger, "FPL remove " << pid1 << "-" << pid2);
     bool returnValue = false;
     std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange =
@@ -199,7 +199,8 @@ namespace espressopp {
       for (GlobalPairs::iterator it = equalRange.first; it != equalRange.second;) {
         if (it->second == pid2) {
           LOG4ESPP_DEBUG(theLogger, "FPL, found " << it->first << " - " << it->second);
-          onTupleRemoved(pid1, pid2);
+          if (!no_signal)
+            onTupleRemoved(pid1, pid2);
           it = globalPairs.erase(it);
           returnValue = true;
         } else {

@@ -33,6 +33,7 @@
 #include "FixedQuadrupleList.hpp"
 #include "System.hpp"
 #include "esutil/Timer.hpp"
+#include "boost/unordered_set.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -264,6 +265,14 @@ class TopologyManager: public Extension {
   std::map<longint, std::map<longint, shared_ptr<ParticleProperties> > > distance_type_pp_;
   std::vector<longint> nb_distance_particles_;  //<! Stores the pairs distance; particle_id
 
+  /** Data for bond remove. */
+  typedef boost::unordered_map<longint, boost::unordered_set<std::pair<longint, longint> > > DistanceEdges;
+  void removeNeighbourEdges(size_t pid);
+  std::set<longint> nb_bond_distances_;
+  longint max_bond_nb_distance_;
+  std::vector<longint> nb_edges_root_to_remove_;  //<! Stores the pairs: distance; particle_id1, particle_id2
+  boost::unordered_map<longint, DistanceEdges> edges_type_distance_pair_types_;
+
   void updateParticlePropertiesAtDistance(int id, int distance);
 
   /** Logger */
@@ -285,6 +294,7 @@ class TopologyManager: public Extension {
   }
 
   python::list getTimers();
+
 };
 
 }  // end namespace integrator
