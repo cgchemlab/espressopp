@@ -313,6 +313,70 @@ class TestCyclization(ESPPTestCase):
         self.assertEquals(set(fpl1_after[0]), {(1, 2), (1, 3), (3, 4)})
 
 
+class TestCaseRemoveNeighbourBond(ESPPTestCase):
+    def setUp(self):
+        super(TestCaseRemoveNeighbourBond, self).setUp()
+        particle_list = [
+            (3, 3, espressopp.Real3D(3.0, 2.0, 2.0), 2, 1),
+            (4, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+            (5, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+            (6, 3, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+            (7, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
+        ]
+        self.system.storage.addParticles(particle_list, *self.part_prop)
+
+        self.fpl23 = espressopp.FixedPairList(self.system.storage)
+        self.fpl24 = espressopp.FixedPairList(self.system.storage)
+        self.fpl34 = espressopp.FixedPairList(self.system.storage)
+
+        self.ftl234 = espressopp.FixedTripleList(self.system.storage)
+        self.ftl234.addTriples([(2, 3, 4)])
+
+        self.fpl23.addBonds([(2, 3)])
+        self.fpl24.addBonds([(2, 7)])
+        self.fpl34.addBonds([(3, 4), (3, 5), (4, 6)])
+
+        self.topology_manager.register_tuple(self.fpl24, 2, 4)
+        self.topology_manager.register_tuple(self.fpl34, 3, 4)
+        self.topology_manager.register_tuple(self.fpl23, 2, 3)
+        self.topology_manager.register_triplet(self.ftl234, 2, 3, 4)
+
+        self.topology_manager.initialize_topology()
+
+
+    def test_reaction_1(self):
+        r_type_1 = espressopp.integrator.Reaction(
+            type_1=1,
+            type_2=2,
+            delta_1=1,
+            delta_2=1,
+            min_state_1=1,
+            max_state_1=4,
+            min_state_2=1,
+            max_state_2=4,
+            rate=400.0,
+            fpl=self.fpl1,
+            cutoff=0.6)
+
+        # Define post-process that will change a type of particle 4 from 4 to 5.
+        pp_type_1 = espressopp.integrator.PostProcessRemoveNeighbourBond(self.topology_manager)
+        pp_type_1.add_bond_to_remove(2, 1, 2, 3)
+        pp_type_1.add_bond_to_remove(2, 3, 3, 4)
+        r_type_1.add_postprocess(pp_type_1, 'type_2')
+
+        self.ar.add_reaction(r_type_1)
+        self.integrator.run(10)
+
+        fpl_after = self.fpl1.getAllBonds()
+        self.assertEqual(fpl_after, [(1, 2)])
+
+        # The bond 2-3 should be removed but rest should be okey
+        fpl_after = self.fpl23.getAllBonds()
+        self.assertEqual(fpl_after, [])
+        self.assertEqual(self.fpl24.getAllBonds(), [(2, 7)])
+        self.assertEqual(self.fpl34.getAllBonds(), [(3, 4), (3, 5)])
+        self.assertEqual(self.ftl234.getTriples(), [[]])  # Clean up also triplets because the bond 2-3 is removed.
+
 
 if __name__ == '__main__':
     unittest.main()

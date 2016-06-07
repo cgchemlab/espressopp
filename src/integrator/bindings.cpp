@@ -122,6 +122,7 @@ namespace espressopp {
       PostProcessRemoveBond::registerPython();
       PostProcessChangeNeighboursProperty::registerPython();
       PostProcessChangePropertyOnState::registerPython();
+      PostProcessRemoveNeighbourBond::registerPython();
 
       EmptyExtension::registerPython();
     }

@@ -90,10 +90,10 @@ void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
   tuples_.push_back(fpl);
 }
 
+/** Registers methods, those FixedList are only to updated and no to take data. */
 void TopologyManager::registerTuple(
     shared_ptr<FixedPairList> fpl, longint type1, longint type2, longint level) {
   tuples_.push_back(fpl);
-  LOG4ESPP_ERROR(theLogger, "Currently, only calculated 1-4 interaction.");
   tupleMap_[type1][type2] = fpl;
   tupleMap_[type2][type1] = fpl;
 }
@@ -340,6 +340,17 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
     return;
   }
 
+  longint t1 = p1->type();
+  longint t2 = p2->type();
+  // Update fpl and remove bond.
+  shared_ptr<FixedPairList> fpl = tupleMap_[t1][t2];
+  if (!fpl)
+    fpl = tupleMap_[t2][t1];
+
+  if (fpl) {
+    fpl->remove(pid1, pid2, true);
+  }
+
   // Generate list of angles/dihedrals to remove, based on the graph.
   wallTimer.startMeasure();
   if (update_angles_dihedrals) {
@@ -363,6 +374,10 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
   timeGenerateAnglesDihedrals += wallTimer.stopMeasure();
 }
 
+/**
+ * Invoke by signal from integrator aftIntF (after all other part)
+ * Exchange data between nodes and perform operations.
+ */
 void TopologyManager::exchangeData() {
   LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
   wallTimer.startMeasure();
@@ -373,10 +388,12 @@ void TopologyManager::exchangeData() {
 
   // Pack data
   std::vector<longint> output;
+  output.push_back(nb_edges_root_to_remove_.size());
   output.push_back(nb_distance_particles_.size() / 2);  // vector of particles to updates.
   output.push_back(newEdges_.size());  // vector of new edges.
   output.push_back(removedEdges_.size());  // vector of edges to remove.
 
+  output.insert(output.end(), nb_edges_root_to_remove_.begin(), nb_edges_root_to_remove_.end());
   output.insert(output.end(), nb_distance_particles_.begin(), nb_distance_particles_.end());
 
   for (std::vector<std::pair<longint, longint> >::iterator it = newEdges_.begin();
@@ -395,13 +412,18 @@ void TopologyManager::exchangeData() {
   mpi::all_gather(*(system_->comm), output, global_merge_sets);
 
   // Merge data from other nodes.
-  longint f1, f2, f3, merge_set_size, new_edge_size, split_set_size, remove_edge_size, nb_distance_particles_size;
+  longint f1, f2, nb_edges_root_to_remove_size;
+  longint new_edge_size, remove_edge_size, nb_distance_particles_size;
   for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
     for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
-      //merge_set_size = *(itm++);
+      nb_edges_root_to_remove_size = *(itm++);
       nb_distance_particles_size = *(itm++);
       new_edge_size = *(itm++);
       remove_edge_size = *(itm++);
+      for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
+        int particle_id = *(itm++);
+        removeNeighbourEdges(particle_id);
+      }
 
       for (int i = 0; i < nb_distance_particles_size; i++) {
         int distance = *(itm++);
@@ -710,6 +732,77 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   return nb_at_distance;
 }
 
+void TopologyManager::removeNeighbourEdges(size_t pid) {
+  std::map<longint, longint> visitedDistance;
+  std::queue<longint> Q;
+
+  Particle *root = system_->storage->lookupLocalParticle(pid);
+  if (!root)
+    return;
+
+  Q.push(root->id());
+  visitedDistance.insert(std::make_pair(root->id(), 0));
+
+  boost::unordered_map<longint, DistanceEdges>::iterator distance_edges = edges_type_distance_pair_types_.find(root->type());
+  boost::unordered_set<std::pair<longint, longint> > pair_types_at_distance;
+  DistanceEdges::iterator pair_types_at_distance_iter_;
+  if (distance_edges == edges_type_distance_pair_types_.end())
+    return;
+
+  boost::unordered_set<std::pair<longint, longint> > edges_to_remove;
+
+  longint current, node, new_distance;
+  longint type_p1 = -1;
+  longint type_p2 = -1;
+  while (!Q.empty()) {
+    current = Q.front();
+    Particle *p1_current = system_->storage->lookupLocalParticle(current);
+    if (p1_current)
+      type_p1 = p1_current->type();
+    new_distance = visitedDistance[current] + 1;
+    pair_types_at_distance_iter_ = distance_edges->second.find(new_distance);
+    try {
+      std::set<longint> *adj = graph_->at(current);
+      bool has_pairs_at_distance = false;
+      if (pair_types_at_distance_iter_ != distance_edges->second.end()) {
+        pair_types_at_distance = pair_types_at_distance_iter_->second;
+        has_pairs_at_distance = true;
+      }
+      for (std::set<longint>::iterator ia = adj->begin(); ia != adj->end(); ++ia) {
+        node = *ia;
+        if (visitedDistance.count(node) == 0) {
+          if (has_pairs_at_distance) {
+            Particle *p1_node = system_->storage->lookupLocalParticle(node);
+            if (p1_node && p1_current) {
+              type_p2 = p1_node->type();
+              if (pair_types_at_distance.count(std::make_pair(type_p1, type_p2)) != 0) {
+                if (edges_to_remove.count(std::make_pair(node, current)) == 0)
+                  edges_to_remove.insert(std::make_pair(current, node));
+              }
+            }
+          }
+          if (new_distance < max_bond_nb_distance_) {
+            Q.push(node);
+          }
+          visitedDistance.insert(std::make_pair(node, new_distance));
+        }
+      }
+    } catch (...) {
+      std::cout << "Exception graph_->at(current) = " << current << std::endl;
+      throw new std::runtime_error("Exception graph_->at");
+    }
+    Q.pop();
+  }
+
+  if (edges_to_remove.size() > 0) {
+    LOG4ESPP_DEBUG(theLogger, "edges to remove: " << edges_to_remove.size());
+    for (boost::unordered_set<std::pair<longint, longint> >::iterator it = edges_to_remove.begin();
+         it != edges_to_remove.end(); ++it) {
+      deleteEdge(it->first, it->second);
+    }
+  }
+
+}
 
 void TopologyManager::registerNeighbourPropertyChange(
       longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level) {
@@ -720,6 +813,15 @@ void TopologyManager::registerNeighbourPropertyChange(
   distance_type_pp_[nb_level][type_id] = pp;
 }
 
+void TopologyManager::registerNeighbourBondToRemove(longint type_id,
+                                                    longint nb_level,
+                                                    longint type_pid1,
+                                                    longint type_pid2) {
+  max_bond_nb_distance_ = std::max(max_bond_nb_distance_, nb_level);
+  edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid1, type_pid2));
+  edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid2, type_pid1));
+}
+
 
 void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
   wallTimer.startMeasure();
@@ -728,6 +830,12 @@ void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
       << " generates=" << nb.size() << " of neighbour particles");
   nb_distance_particles_.insert(nb_distance_particles_.end(), nb.begin(), nb.end());
   timeUpdateNeighbourProperty += wallTimer.stopMeasure();
+}
+
+void TopologyManager::invokeNeighbourBondRemove(Particle &root) {
+  // Check if this root.type is on the list of possible edges to remove.
+  if (edges_type_distance_pair_types_.count(root.type()) == 1)
+    nb_edges_root_to_remove_.insert(nb_edges_root_to_remove_.end(), root.id());
 }
 
 void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) {
@@ -804,6 +912,7 @@ python::list TopologyManager::getTimers() {
 
   return ret;
 }
+
 
 }  // end namespace integrator
 }  // end namespace espressoppp
