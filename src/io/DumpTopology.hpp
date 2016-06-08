@@ -40,7 +40,7 @@ namespace io {
 class DumpTopology: public ParticleAccess {
  public:
   DumpTopology(shared_ptr<System> system, shared_ptr<integrator::MDIntegrator> integrator)
-      : ParticleAccess(system), integrator_(integrator), fpl_idx_(0) { }
+      : ParticleAccess(system), integrator_(integrator) { }
   ~DumpTopology() {  }
 
   void perform_action() {
