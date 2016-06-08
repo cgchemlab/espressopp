@@ -38,8 +38,105 @@
 namespace espressopp {
 namespace integrator {
 
-struct TopologyNode {
-  longint type_id;
+struct TopologyParticleProperties {
+  void init() {
+    type_id = 0;
+    mass = 0.0;
+    q = 0.0;
+    lambda = 0.0;
+    state = 0;
+    res_id = 0;
+    v = 0.0;
+    type_id_s = false;
+    mass_s = false;
+    q_s = false;
+    lambda_s = false;
+    state_s = false;
+    res_id_s = false;
+    v_s = false;
+  }
+
+  void setTypeId(size_t t) {
+    type_id = t;
+    type_id_s = true;
+  }
+  void setMass(real m) {
+    mass = m;
+    mass_s = true;
+  }
+  void setQ(real q_) {
+    q = q_;
+    q_s = true;
+  }
+  void setV(Real3D v_) {
+    v = v_;
+    v_s = true;
+  }
+  void setState(longint s) {
+    state = s;
+    state_s = true;
+  }
+  void setResId(longint ri) {
+    res_id = ri;
+    res_id_s = true;
+  }
+  void setLambda(real l) {
+    lambda = l;
+    lambda_s = true;
+  }
+
+  static void registerPython();
+
+  void apply(Particle *p) {
+    if (type_id_s)
+      p->setType(type_id);
+    if (mass_s)
+      p->setMass(mass);
+    if (q_s)
+      p->setQ(q);
+    if (v_s)
+      p->setV(v);
+    if (state_s)
+      p->setState(state);
+    if (res_id_s)
+      p->setResId(res_id);
+    if (lambda_s)
+      p->setLambda(lambda);
+  }
+
+ private:
+  friend class boost::serialization::access;
+  template< class Archive >
+  void serialize(Archive &ar, const unsigned int version)
+  {
+    ar & type_id;
+    ar & mass;
+    ar & q;
+    ar & lambda;
+    ar & state;
+    ar & res_id;
+    ar & type_id_s;
+    ar & mass_s;
+    ar & q_s;
+    ar & lambda_s;
+    ar & state_s;
+    ar & res_id_s;
+  }
+  size_t type_id;
+  real mass;
+  real q;
+  real lambda;
+  longint state;
+  longint res_id;
+  Real3D v;
+
+  bool type_id_s;
+  bool mass_s;
+  bool q_s;
+  bool lambda_s;
+  bool state_s;
+  bool res_id_s;
+  bool v_s;
 };
 
 class TopologyManager: public Extension {

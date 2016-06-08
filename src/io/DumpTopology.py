@@ -72,7 +72,7 @@ FixedPairList `fpl`.
 >>> ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, 10)
 >>> integrator.addExtension(ext_dump)
 
-Stores static data from FixedPairList `fpl_0`
+Stores static data from FixedPairList `fpl_0`, those are time-independent.
 
 >>> dump_topol.add_static_tuple(fpl_0, 'fpl_0', 'atoms')
 
