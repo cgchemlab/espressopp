@@ -150,6 +150,9 @@ void ChemicalReaction::React() {
       }
     }
   }  // end loop over VL pairs
+
+  LOG4ESPP_DEBUG(theLogger, "found " << potential_pairs_.size() << " potential pairs to react");
+
   timeLoopPair += wallTimer.stopMeasure();
 
   wallTimer.startMeasure();

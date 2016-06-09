@@ -135,39 +135,37 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_ord
   int p1_state = p1.state();
   int p2_state = p2.state();
 
-  // States has to be always positive or zero.
-  // assert(p1_state >= 0 && p2_state >= 0);
-
+  bool ret_val = false;
   // Case when both types are the same.
   if ((type_1_ == type_2_) && (p1.type() == type_1_) && (p1.type() == p2.type())) {
     if ((p1_state >= min_state_1_) && (p1_state < max_state_1_) &&
         (p2_state >= min_state_2_) && (p2_state < max_state_2_)) {
       correct_order.first = &p1;
       correct_order.second = &p2;
-      return true;
+      ret_val = true;
     } else if ((p2_state >= min_state_1_) && (p2_state < max_state_1_) &&
         (p1_state >= min_state_2_) && (p1_state < max_state_2_)) {
       correct_order.first = &p2;
       correct_order.second = &p1;
-      return true;
+      ret_val = true;
     }
-  } else if (type_1_ != type_2_) {  // inhomogeneous case.
+  } else {  // inhomogeneous case.
     if (  (p1.type() == type_1_) && (p2.type() == type_2_)
        && ((p1_state >= min_state_1_) && (p1_state < max_state_1_))
-       && ((p2_state >= min_state_2_) && (p2_state < max_state_2_))) {
+       && ((p2_state >= min_state_2_) && (p2_state < max_state_2_)) ) {
       correct_order.first = &p1;
       correct_order.second = &p2;
-      return true;
+      ret_val = true;
     } else if (  (p1.type() == type_2_) && (p2.type() == type_1_)
               && ((p1_state >= min_state_2_) && (p1_state < max_state_2_))
-              && ((p2_state >= min_state_1_) && (p2_state < max_state_1_))) {
+              && ((p2_state >= min_state_1_) && (p2_state < max_state_1_)) ) {
       correct_order.first = &p2;
       correct_order.second = &p1;
-      return true;
+      ret_val = true;
     }
   }
 
-  return false;
+  return ret_val;
 }
 
 bool Reaction::isValidState_T1(Particle &p) {

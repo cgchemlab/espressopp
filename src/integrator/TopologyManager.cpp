@@ -387,7 +387,6 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
     fpl = tupleMap_[t2][t1];
 
   if (fpl) {
-    std::cout << "remove bonds of type " << t1 << "-" << t2 << " p: " << pid1 << "-" << pid2 << std::endl;
     fpl->remove(pid1, pid2);
   }
 
@@ -599,11 +598,9 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
       if (ftl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
         bool ret = ftl->remove(p1->id(), p2->id(), p3->id());
-        std::cout << "remove angle " << p1->id() << "-" << p2->id() << "-" << p3->id() << std::endl;
         if (!ret)
           ret = ftl->remove(p3->id(), p2->id(), p1->id());
         if (ret) {
-          std::cout << "remove angle " << p1->id() << "-" << p2->id() << "-" << p3->id() << "-" << std::endl;
           LOG4ESPP_DEBUG(theLogger,
                          "Remove angle: " << it->first << "-" << it->second.first << "-"
                              << it->second.second);
@@ -638,7 +635,6 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
         if (!ret)
           ret = fql->remove(p4->id(), p3->id(), p2->id(), p1->id());
         if (ret) {
-          std::cout << "remove angle " << p1->id() << "-" << p2->id() << "-" << p3->id() << "-" << p4->id() << std::endl;
           LOG4ESPP_DEBUG(theLogger,
                          "Remove dihedral: " << it->first << "-" << it->second.first
                              << "-" << it->second.second.first << "-"
@@ -895,16 +891,11 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
     longint p_type = p->type();
     if (distance_type_pp_.count(distance) > 0) {
       if (distance_type_pp_[distance].count(p_type) > 0) {
-        std::cout << "change property " << p->id() <<  " t=" << p_type << std::endl;
         shared_ptr<ParticleProperties> pp = distance_type_pp_[distance][p_type];
 
         // Change particle type.
         if (pp->type != NULL) {
-          std::cout << "t= " << p_type << "->" << pp->type << std::endl;
           p->setType(pp->type);
-          p->setV(0.0);
-          p->setF(0.0);
-          p->setMass(0.0000001);
         }
 
         // Change mass.
