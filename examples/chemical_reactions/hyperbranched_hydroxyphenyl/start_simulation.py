@@ -1,21 +1,21 @@
 #!/usr/bin/env python
-"""
-Copyright (C) 2015-2016 Jakub Krajniak <jkrajniak@gmail.com>
-
-This file is distributed under free software licence:
-you can redistribute it and/or modify it under the terms of the
-GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
+#  Copyright (C) 2016
+#      Jakub Krajniak (jkrajniak at gmail.com)
+#
+#  This file is part of ChemLab.
+#
+#  ChemLab is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  ChemLab is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import espressopp  # NOQA
 import h5py
@@ -29,64 +29,32 @@ import logging
 import random
 import shutil
 
+import chemlab
 import tools
 
 import os
-import sys
-
-# GROMACS units, kJ/mol K
-kb = 0.0083144621
-mass_factor = 1.6605402
 
 h5md_group = 'atoms'
 
-__doc__ = 'Run GROMACS-like simulation'
-
-
-def sort_trajectory(trj, ids):
-    """Performs sorting on HDF5 file. It is required because by default, H5MD file
-    can be in unsorted state and only /particles/{}/id/value inform about particle. id.
-
-    Args:
-        trj: The input HDF5 Dataset to sort.
-        ids: The input ids Dataset with particle ids for every time step.
-
-    Returns:
-        Sorted numpy array.
-    """
-    print('Sorting trajectory')
-    idd = [
-        x[1] for x in sorted([(p_id, col_id) for col_id, p_id in enumerate(ids)],
-                             key=lambda y: (True, y[0]) if y[0] == -1 else (False, y[0]))
-    ]
-    return trj[idd]
-
-
-def sort_file(h5):
-    """Sort data file."""
-    atom_groups = [ag for ag in h5['/particles'] if 'id' in h5['/particles/{}/'.format(ag)]]
-    T = len(h5['/particles/{}/id/value'.format(atom_groups[0])])
-    # Iterate over time frames.
-    for t in xrange(T):
-        sys.stdout.write('Progress: {:.2f} %\r'.format(100.0*float(t)/T))
-        sys.stdout.flush()
-        for ag in atom_groups:
-            ids = h5['/particles/{}/id/value'.format(ag)]
-            idd = [
-                x[1] for x in sorted(
-                    [(p_id, col_id) for col_id, p_id in enumerate(ids[t])],
-                    key=lambda y: (True, y[0]) if y[0] == -1 else (False, y[0]))
-                ]
-            for k in h5['/particles/{}/'.format(ag)].keys():
-                if 'value' in h5['/particles/{}/{}'.format(ag, k)].keys():
-                    path = '/particles/{}/{}/value'.format(ag, k)
-                    h5[path][t] = h5[path][t][idd]
+__doc__ = 'Run GROMACS-like simulation with chemical reactions'
 
 
 def main():  #NOQA
     args = tools._args().parse_args()
 
     tools._args().save_to_file('{}params.out'.format(args.output_prefix), args)
+
+    # GROMACS units, kJ/mol K
+    kb = 0.0083144621
+    mass_factor = 1.6605402
+
+    if args.kb:
+        kb = args.kb
+
+    if args.mass_factor:
+        mass_factor = args.mass_factor
+
+    print('Using kB={} and mass-factor={}'.format(kb, mass_factor))
 
     if args.debug:
         for s in args.debug.split(','):
@@ -100,18 +68,17 @@ def main():  #NOQA
 
     time0 = time.time()
 
-    gt = espressopp.tools.chemlab.gromacs_topology.GromacsTopology(args.top)
+    gt = chemlab.gromacs_topology.GromacsTopology(args.top)
     gt.read()
 
-
-    input_conf = espressopp.tools.chemlab.files_io.GROFile(args.conf)
+    input_conf = chemlab.files_io.GROFile(args.conf)
     input_conf.read()
 
     box = input_conf.box
     print('Setup simulation...')
 
     # Tune simulation parameter according to arguments
-    integrator_step = args.int_step
+    integrator_step = min([args.int_step, args.trj_collect])
     sim_step = args.run / integrator_step
 
     if args.skin:
@@ -119,14 +86,14 @@ def main():  #NOQA
 
     # Seed for RNG
     rng_seed = args.rng_seed
-    if not args.rng_seed:
+    if not args.rng_seed or args.rng_seed == -1:
         rng_seed = random.randint(10, 1000000)
 
     print('Skin: {}'.format(skin))
     print('RNG Seed: {}'.format(rng_seed))
     print('Boltzmann constant: {}'.format(kb))
 
-    part_prop, particle_list = espressopp.tools.chemlab.gromacs_topology.genParticleList(input_conf, gt)
+    part_prop, particle_list = chemlab.gromacs_topology.gen_particle_list(input_conf, gt)
     NPart = len(particle_list)
     print('Reads {} particles with properties {}'.format(NPart, part_prop))
 
@@ -186,7 +153,7 @@ def main():  #NOQA
 
 # Define the thermostat
     temperature = args.temperature*kb
-    print('Temperature: {}, gamma: {}'.format(temperature, args.thermostat_gamma))
+    print('Temperature: {} ({}), gamma: {}'.format(args.temperature, temperature, args.thermostat_gamma))
     print('Thermostat: {}'.format(args.thermostat))
     if args.thermostat == 'lv':
         thermostat = espressopp.integrator.LangevinThermostat(system)
@@ -217,20 +184,31 @@ def main():  #NOQA
             barostat = espressopp.integrator.BerendsenBarostat(system, pressure_comp)
             barostat.tau = args.barostat_tau
             barostat.pressure = pressure
+        else:
+            raise Exception('Wrong barostat keyword: `{}`'.format(args.barostat))
         integrator.addExtension(barostat)
 
     print("Decomposing now ...")
     system.storage.decompose()
 
-    # Set potentials.
-    cr_observs = espressopp.tools.chemlab.gromacs_topology.setNonbondedInteractions(
-        system, gt, verletlist, lj_cutoff, cg_cutoff)
-    static_fpls = espressopp.tools.chemlab.gromacs_topology.setBondInteractions(system, gt)
-    static_ftls = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt)
-    static_fqls = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt)
+    # Conditional break of the reactions.
+    cr_observs = None
+    if args.maximum_conversion:
+        pass
+        #TODO(jakub): finish this part. Stop simulation whenever it's reach given conversion rate.
 
-    dynamic_ftls = espressopp.tools.chemlab.gromacs_topology.setAngleInteractions(system, gt, True, 'dynamic_angles')
-    dynamic_fqls = espressopp.tools.chemlab.gromacs_topology.setDihedralInteractions(system, gt, True, 'dynamic_dih')
+    print('Set topology manager')
+    topology_manager = espressopp.integrator.TopologyManager(system)
+
+    # Set potentials.
+    cr_observs = chemlab.gromacs_topology.setNonbondedInteractions(
+        system, gt, verletlist, lj_cutoff, cg_cutoff, tables=args.table_groups, cr_observs=cr_observs)
+    dynamic_fpls, static_fpls = chemlab.gromacs_topology.set_bonded_interactions(system, gt)
+    dynamic_ftls, static_ftls = chemlab.gromacs_topology.set_angle_interactions(system, gt)
+    dynamic_fqls, static_fqls = chemlab.gromacs_topology.set_dihedral_interactions(system, gt)
+
+    dynamic_fpairs, static_fpairs = chemlab.gromacs_topology.set_pair_interactions(system, gt, args)
+    chemlab.gromacs_topology.set_coulomb_interactions(system, gt, args)
 
     print('Set Dynamic Exclusion lists.')
     for static_fpl in static_fpls:
@@ -239,60 +217,69 @@ def main():  #NOQA
         dynamic_exclusion_list.observe_triple(static_ftl)
     for static_fql in static_fqls:
         dynamic_exclusion_list.observe_quadruple(static_fql)
-    for _, ftls in dynamic_ftls.items():
-        for dynamic_ftl in ftls:
-            dynamic_exclusion_list.observe_triple(dynamic_ftl)
-    for _, fqls in dynamic_fqls.items():
-        for dynamic_fql in fqls:
-            dynamic_exclusion_list.observe_quadruple(dynamic_fql)
 
-    print('Set topology manager')
-    topology_manager = espressopp.integrator.TopologyManager(system)
+    for _, fpl in dynamic_fpls.items():
+        dynamic_exclusion_list.observe_tuple(fpl)
+    for _, ftl in dynamic_ftls.items():
+        dynamic_exclusion_list.observe_triple(ftl)
+    for _, fql in dynamic_fqls.items():
+        dynamic_exclusion_list.observe_quadruple(fql)
+
+    print('Set dynamic topology')
     for static_fpl in static_fpls:
         topology_manager.observe_tuple(static_fpl)
+    for _, fpl in dynamic_fpls.items():
+        topology_manager.observe_tuple(fpl)
+
     topology_manager.initialize_topology()
-    topology_manager.register_tuple(static_fpl, 0, 0)
+
+    for t, p in gt.bondparams.items():
+        if p['func'] in dynamic_fpls:
+            fpl = dynamic_fpls[p['func']]
+            print('Register bonds for type: {}'.format(t))
+            topology_manager.register_tuple(fpl, *t)
+
     for t, p in gt.angleparams.items():
-        ftls = dynamic_ftls[p['func']]
-        print('Register angles for type: {}'.format(t))
-        for dynamic_ftl in ftls:
-            topology_manager.register_triplet(dynamic_ftl, *t)
+        if p['func'] in dynamic_ftls:
+            ftl = dynamic_ftls[p['func']]
+            print('Register angles for type: {}'.format(t))
+            topology_manager.register_triplet(ftl, *t)
+
     for t, p in gt.dihedralparams.items():
-        fqls = dynamic_fqls[p['func']]
-        print('Register dihedral for type: {}'.format(t))
-        for dynamic_fql in fqls:
-            topology_manager.register_quadruplet(dynamic_fql, *t)
+        if p['func'] in dynamic_fqls:
+            fql = dynamic_fqls[p['func']]
+            print('Register dihedral for type: {}'.format(t))
+            topology_manager.register_quadruplet(fql, *t)
+
     integrator.addExtension(topology_manager)
 
     # Set chemical reactions, parser in reaction_parser.py
     fpls = []
     cr_interval = 0
-    has_reaction = False
-    chemical_reaction_ext = None
     if args.reactions:
         if os.path.exists(args.reactions):
             print('Set chemical reactions from: {}'.format(args.reactions))
-            reaction_config = espressopp.tools.chemlab.reaction_parser.parse_config(args.reactions)
-            sc = espressopp.tools.chemlab.reaction_parser.SetupReactions(
+            reaction_config = chemlab.reaction_parser.parse_config(args.reactions)
+            sc = chemlab.reaction_parser.SetupReactions(
                 system, verletlist, gt, topology_manager, reaction_config)
 
             ar, fpls = sc.setup_reactions()
             output_reaction_config = '{}_{}_{}'.format(args.output_prefix, rng_seed, args.reactions)
             print('Save copy of reaction config to: {}'.format(output_reaction_config))
             shutil.copyfile(args.reactions, output_reaction_config)
-            chemical_reaction_ext = ar
             cr_interval = sc.ar_interval
-            integrator_step = min(integrator_step, cr_interval)
+            integrator_step = min(cr_interval, integrator_step)
             sim_step = args.run / integrator_step
             args.topol_collect = cr_interval
-            has_reaction = True
     else:
         cr_interval = integrator_step
+
+    cr_interval = min([integrator_step, cr_interval])
 
     for f in fpls:
         topology_manager.observe_tuple(f)
         dynamic_exclusion_list.observe_tuple(f)
-# Define SystemMonitor that will store data from observables into a .csv file.
+    # Define SystemMonitor that will store data from observables into a .csv file.
     energy_file = '{}_energy_{}.csv'.format(args.output_prefix, rng_seed)
     print('Energy saved to: {}'.format(energy_file))
     system_analysis = espressopp.analysis.SystemMonitor(
@@ -314,7 +301,7 @@ def main():  #NOQA
     for fidx, f in enumerate(fpls):
         system_analysis.add_observable(
             'count_{}'.format(fidx), espressopp.analysis.NFixedPairListEntries(system, f))
-    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, min([cr_interval, integrator_step, args.energy_collect]))
+    ext_analysis = espressopp.integrator.ExtAnalyze(system_analysis, cr_interval)
     integrator.addExtension(ext_analysis)
     print('Configured system analysis')
 
@@ -332,6 +319,7 @@ def main():  #NOQA
         store_charge=False,
         store_state=args.store_state,
         store_lambda=args.store_lambda,
+        store_force=args.store_force,
         chunk_size=int(NPart/MPI.COMM_WORLD.size))
 
     print('Set topology writer')
@@ -339,11 +327,19 @@ def main():  #NOQA
     for i, f in enumerate(fpls):
         dump_topol.observe_tuple(f, 'chem_bonds_{}'.format(i))
 
-    for i, static_fpl in enumerate(static_fpls):
-        dump_topol.add_static_tuple(static_fpl, 'bonds_{}'.format(i))
-    dump_topol.dump()
-    dump_topol.update()
+    for i, f in dynamic_fpls.items():
+        dump_topol.observe_tuple(f, 'dynamic_bonds_{}'.format(i))
+
+    bcount = 0
+    for static_fpl in static_fpls:
+        dump_topol.add_static_tuple(static_fpl, 'bonds_{}'.format(bcount))
+        bcount += 1
+    for dynamic_fpl in dynamic_fpls.values():
+        dump_topol.add_static_tuple(dynamic_fpl, 'bonds_{}'.format(bcount))
+        bcount += 1
+
     if args.topol_collect > 0:
+        print('Collect topology: {}'.format(args.topol_collect))
         ext_dump = espressopp.integrator.ExtAnalyze(dump_topol, args.topol_collect)
         integrator.addExtension(ext_dump)
 
@@ -351,26 +347,30 @@ def main():  #NOQA
     k_trj_flush = 10 if 10 < k_trj_collect else k_trj_collect
     print('Store trajectory every {} steps'.format(args.trj_collect))
 
-    if args.start_ar > 0:
+    if args.start_ar >= 0:
         k_enable_reactions = int(math.ceil(args.start_ar/float(integrator_step)))
+        print('Enable chemical reactions at {} step'.format(args.start_ar))
     else:
         k_enable_reactions = -1
-    print('Enable chemical reactions at {} step'.format(args.start_ar))
 
     print('Reset total velocity')
     total_velocity = espressopp.analysis.TotalVelocity(system)
     total_velocity.reset()
 
-    print('Running {} steps'.format(sim_step*integrator_step))
+    if args.max_force > -1:
+        cap_force = espressopp.integrator.CapForce(system, args.max_force)
+        integrator.addExtension(cap_force)
+        print('Cap force to {}'.format(args.max_force))
 
-    system_analysis.dump()
-    
-    traj_file.dump(0, 0)
+    print('Mapping Type name  type id')
+    for at_sym in gt.used_atomtypes:
+        print('        {:9}  {:8}'.format(at_sym, gt.atomsym_atomtype[at_sym]))
+
     print('Running {} steps'.format(sim_step*integrator_step))
-    system_analysis.info()
+    print('Temperature: {} ({} K)'.format(args.temperature*kb, args.temperature))
+    system_analysis.dump()
 
     for k in range(sim_step):
-        integrator.run(integrator_step)
         system_analysis.info()
         if k % k_trj_collect == 0:
             traj_file.dump(k*integrator_step, k*integrator_step*args.dt)
@@ -380,6 +380,7 @@ def main():  #NOQA
         if k_enable_reactions == k:
             print('Enabling chemical reactions')
             integrator.addExtension(ar)
+        integrator.run(integrator_step)
 
     system_analysis.info()
     traj_file.dump(sim_step*integrator_step, sim_step*integrator_step*args.dt)
