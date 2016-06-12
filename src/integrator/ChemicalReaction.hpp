@@ -59,7 +59,7 @@ struct ReactedPair {
   real r_sqr;
 };
 
-const int kCrCommTag = 0xad;// @warning: this made problems when multiple extension will be enabled.
+const int kCrCommTag = 0xad;  // @warning: this made problems when multiple extension will be enabled.
 
 /**  Defines reaction cut-off.
 
@@ -251,6 +251,7 @@ public:
    * @param min_state_2 The minimum state of particle B.
    * @param max_state_2 The maximum state of particle B.
    * @param fpl The espressopp.FixedPairList with the new bonds that are added by reaction.
+   * @param rate The reaction rate.
    * @param intramolecular If set to true then intramolecular bonds are allowed.
    *
    */

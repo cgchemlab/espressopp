@@ -94,8 +94,6 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_ord
 
   if (isValidState(p1, p2, particle_order)) {
     real W = (*rng_)();
-    // Gets state dependent reaction rate.
-    //real p = state_rate_T1[particle_order.first->state()] * state_rate_T2[particle_order.second->state()];
     real p = rate_;
     // Multiply by time step and interval.
     p *= (*dt_) * (*interval_);

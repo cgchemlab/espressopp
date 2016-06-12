@@ -300,25 +300,15 @@ namespace espressopp {
     inline bool
     PotentialTemplate< Derived >::
     _computeForce(Real3D& force, const Particle &p1, const Particle &p2) const {
-      try {
-        Real3D dist = p1.position() - p2.position();
-        return _computeForce(force, dist);
-      } catch (std::exception &e) {
-        LOG4ESPP_ERROR(Derived::theLogger, "p1:" << p1 << " p2: " << p2 << " \n" << e.what());
-        throw e;
-      }
+      Real3D dist = p1.position() - p2.position();
+      return _computeForce(force, dist);
     }
 
     template < class Derived >
     inline bool
     PotentialTemplate< Derived >::
     _computeForce(Real3D& force, const Particle& p1, const Particle& p2, const Real3D& dist) const {
-      try {
-        return _computeForce(force, dist);
-      } catch (std::exception &e) {
-        LOG4ESPP_ERROR(Derived::theLogger, "p1: " << p1 << " p2:" << p2 << "\n" << e.what());
-        throw e;
-      }
+      return _computeForce(force, dist);
     }
 
     template < class Derived > 
@@ -329,12 +319,7 @@ namespace espressopp {
       if (distSqr > cutoffSqr || !initialized)
         return false;
       else {
-        bool return_val = derived_this()->_computeForceRaw(force, dist, distSqr);
-        if (force.isNaNInf()) {
-          LOG4ESPP_ERROR(Derived::theLogger, "computer force is NaN, dist=" << dist << " nothing to do, exit(1)");
-          throw std::runtime_error("Computer force is NaN");
-        }
-        return return_val;
+        return derived_this()->_computeForceRaw(force, dist, distSqr);
       }
     }
     
