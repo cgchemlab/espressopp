@@ -52,6 +52,8 @@ namespace espressopp {
         if (comm.rank() == root) N = readFile(file, true);  // dummy read
         mpi::broadcast(comm, N, root);
         if (N < 2) throw std::runtime_error("illegal file for tabulated potential");
+
+        file_name_ = file;
         
         radius = new real[N];
         energy = new real[N];

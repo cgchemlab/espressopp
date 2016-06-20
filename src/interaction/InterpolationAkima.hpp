@@ -60,6 +60,8 @@ namespace espressopp {
                 real getSlope(real m1, real m2, real m3, real m4);
              
                 int N;  // number of read values
+
+                std::string file_name_;   // file name of tabulated potential, mostly for debug
              
                 real inner;
                 real outer;
@@ -92,7 +94,8 @@ namespace espressopp {
                   theLogger,
                   "Distance " << r << " out of range " 
                               << inner << " - " << inner + (N-1)*delta 
-                              << " using first value!");
+                              << " using first value! file_name=" << file_name_
+                  );
               
             }
             if (index >= N) {
@@ -100,8 +103,8 @@ namespace espressopp {
               LOG4ESPP_ERROR(
                   theLogger,
                   "Distance " << r << " out of range " 
-                              << inner << " - " << inner + (N-1)*delta 
-                              << " using last value!");
+                              << inner << " - " << inner + (N-1)*delta
+                              << " using first value! file_name=" << file_name_);
             }
             
             real z = r - radius[index];
