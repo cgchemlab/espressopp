@@ -1,7 +1,7 @@
 #  Copyright (C) 2016
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
-#  This file is part of ChemLab.
+#  This file is part of Espresso++.
 #
 #  ChemLab is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
