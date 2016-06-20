@@ -94,13 +94,11 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.ChemicalConversionLocal',
-            pmiproperty=['value']
         )
 
     class ChemicalConversionTypeSequence(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.ChemicalConversionTypeSequenceLocal',
-            pmiproperty=['value'],
             pmicall=['set_sequence']
         )

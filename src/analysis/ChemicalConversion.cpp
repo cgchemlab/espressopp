@@ -39,19 +39,18 @@ real ChemicalConversion::compute_real() const {
   longint global_count = 0;
   boost::mpi::all_reduce(*getSystem()->comm, local_count, global_count, std::plus<longint>());
 
-  real result = global_count / total_value;
+  real value = global_count / total_value;
   // Send value via signal.
-  onValue(result);
+  onValue(value);
 
-  return result;
+  return value;
 }
 
 void ChemicalConversion::registerPython() {
   using namespace espressopp::python;  //NOLINT
   class_<ChemicalConversion, bases<Observable>, boost::noncopyable>
     ("analysis_ChemicalConversion",
-        init< shared_ptr<System>, longint, longint >())
-    .add_property("value", &ChemicalConversion::compute_real);
+        init< shared_ptr<System>, longint, longint >());
 }
 
 real ChemicalConversionTypeSequence::compute_real() const {
@@ -113,7 +112,6 @@ void ChemicalConversionTypeSequence::registerPython() {
   class_<ChemicalConversionTypeSequence, bases<Observable>, boost::noncopyable>
       ("analysis_ChemicalConversionTypeSequence",
        init< shared_ptr<System>, shared_ptr<ParticleGroup>, longint >())
-      .add_property("value", &ChemicalConversionTypeSequence::compute_real)
       .def("set_sequence", &ChemicalConversionTypeSequence::setSequence);
 }
 
