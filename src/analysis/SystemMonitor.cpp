@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015
+  Copyright (c) 2015-2016
     Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -41,9 +41,19 @@ void SystemMonitor::perform_action() {
 }
 
 void SystemMonitor::computeObservables() {
+  total_energy_ = 0.0;
+  potential_energy_ = 0.0;
   for (ObservableList::iterator it = observables_.begin(); it != observables_.end(); ++it) {
-    values_->push_back(it->second->compute_real());
+    real val = it->second->compute_real();
+    Observable::ObservableTypes obs_type = it->second->getObservableType();
+    if (obs_type == Observable::POTENTIAL_ENERGY) {
+      potential_energy_ += val;
+    } else if (obs_type == Observable::KINETIC_ENERGY) {
+      total_energy_ += val;
+    }
+    values_->push_back(val);
   }
+  total_energy_ += potential_energy_;
 }
 
 void SystemMonitor::info() {
@@ -75,8 +85,7 @@ void SystemMonitor::info() {
   }
 }
 
-void SystemMonitor::addObservable(std::string name, shared_ptr<Observable> obs,
-    bool is_visible) {
+void SystemMonitor::addObservable(std::string name, shared_ptr<Observable> obs, bool is_visible) {
   observables_.push_back(std::make_pair(name, obs));
   header_->push_back(name);
   if (is_visible)
@@ -93,13 +102,14 @@ void SystemMonitor::registerPython() {
           shared_ptr<integrator::MDIntegrator>,
           shared_ptr<SystemMonitorOutputCSV>
           >())
+      .add_property("total_energy", make_getter(&SystemMonitor::total_energy_))
+      .add_property("potential_energy", make_getter(&SystemMonitor::potential_energy_))
       .def("add_observable", &SystemMonitor::addObservable)
       .def("info", &SystemMonitor::info)
       .def("dump", &SystemMonitor::perform_action);
 }
 
 /** Implementation of SystemMonitorOutputs. **/
-
 void SystemMonitorOutputCSV::registerPython() {
   using namespace espressopp::python;  // NOLINT
   class_<SystemMonitorOutputCSV>
