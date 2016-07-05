@@ -1,4 +1,4 @@
-#  Copyright (c) 2015
+#  Copyright (c) 2015-2016
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
@@ -120,5 +120,6 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.SystemMonitorLocal',
-            pmicall=['add_observable', 'info', 'dump']
+            pmicall=['add_observable', 'info', 'dump'],
+            pmiproperty=('total_energy', 'potential_energy')
             )

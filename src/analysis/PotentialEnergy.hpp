@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015
+  Copyright (C) 2015-2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -35,11 +35,13 @@ class PotentialEnergy : public Observable {
                   bool compute_at):
       Observable(system), interaction_(interaction), compute_at_(compute_at) {
     result_type = real_scalar;
+    observable_type = POTENTIAL_ENERGY;
     compute_global_ = false;
   }
   PotentialEnergy(shared_ptr<System> system, shared_ptr<interaction::Interaction> interaction)
       : Observable(system), interaction_(interaction) {
     result_type = real_scalar;
+    observable_type = POTENTIAL_ENERGY;
     compute_global_ = true;
   }
   ~PotentialEnergy() {}
