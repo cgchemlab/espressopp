@@ -145,6 +145,8 @@ namespace espressopp {
       virtual Real3D
       getRandomPos() const;
 
+      inline bool isPeriodic(int dir) { return periodicity_[dir]; }
+
       // This signal is called whenever the box dimensions did change
       // (e.g. when scaling the Volume or when setting boxL)
       boost::signals2::signal0 <void> onBoxDimensionsChanged;
@@ -153,6 +155,9 @@ namespace espressopp {
 
      protected:
       shared_ptr< esutil::RNG > rng;
+
+      /** Defines the periodicity of the simulation box. This is valid only for orthorombic systems. **/
+      bool periodicity_[3];
 
       static LOG4ESPP_DECL_LOGGER(logger);
 

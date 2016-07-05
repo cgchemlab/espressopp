@@ -129,6 +129,7 @@ namespace espressopp {
 	.def("getFoldedPosition", pygetFoldedPosition2)
 	.def("getUnfoldedPosition", pygetUnfoldedPosition)
 	.def("getRandomPos", pygetRandomPos)
+    .def("setPeriodicity", &BC::setPeriodic)
 	;
     }
   }
