@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015
+  Copyright (C) 2015-2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -34,10 +34,12 @@ class KineticEnergy : public Observable {
   KineticEnergy(shared_ptr<System> system, shared_ptr<Temperature> temperature):
       Observable(system), temperature_(temperature) {
     result_type = real_scalar;
+    observable_type = KINETIC_ENERGY;
     precomputed_ = true;
   }
   KineticEnergy(shared_ptr<System> system): Observable(system) {
     result_type = real_scalar;
+    observable_type = KINETIC_ENERGY;
     precomputed_ = false;
     temperature_ = make_shared<Temperature>(system);
   }

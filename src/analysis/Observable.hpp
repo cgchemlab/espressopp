@@ -35,7 +35,16 @@ namespace espressopp {
     public:
       /** Observable can be int, real, scalar or vector */
       enum result_types {old_format=-1, none=0, real_scalar=1, int_scalar=2, real_vector=3, int_vector=4};
-      Observable(shared_ptr< System > system) : SystemAccess(system) {result_type=old_format; };
+      enum ObservableTypes {
+        POTENTIAL_ENERGY,
+        KINETIC_ENERGY,
+        OTHER
+        };
+
+      Observable(shared_ptr< System > system) : SystemAccess(system) {
+        result_type = old_format;
+        observable_type = OTHER;
+      };
       virtual ~Observable() {};
 
     public:
@@ -60,11 +69,13 @@ namespace espressopp {
       // trying to convert result_types to python
       //result_types getResultType() { return result_type; };
       int getResultType() { return result_type; };
+      ObservableTypes getObservableType() { return observable_type; }
 
       static void registerPython();
 
      protected:
       result_types result_type;
+      ObservableTypes observable_type;
       std::vector< real > result_real_vector;
       std::vector< int > result_int_vector;
 
