@@ -89,7 +89,6 @@ from espressopp import pmi
 from _espressopp import io_DumpH5MD
 from mpi4py import MPI
 import numpy as np
-import sys
 try:
     import pyh5md
     import h5py
@@ -114,7 +113,7 @@ class DumpH5MDLocal(io_DumpH5MD):
                  author='xxx',
                  email='xxx',
                  chunk_size=256,
-                 sorted=True):
+                 do_sort=True):
         """
         Args:
             system: The system object.
@@ -134,7 +133,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 256)
-            sorted: If set to True then HDF5 will be sorted on close.
+            do_sort: If set to True then HDF5 will be sorted on close.
         """
         if not pmi.workerIsActive():
             return
@@ -152,7 +151,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.store_res_id = store_res_id
         self.static_box = static_box
         self.chunk_size = chunk_size
-        self.sorted = sorted
+        self.do_sort = do_sort
 
         self.system = system
         self.file = pyh5md.H5MD_File(filename, 'w', driver='mpio', comm=MPI.COMM_WORLD,
@@ -213,9 +212,11 @@ class DumpH5MDLocal(io_DumpH5MD):
 	
         self._system_data()
 
-	self.commTimer = 0.0
-	self.updateTimer = 0.0
-	self.writeTimer = 0.0
+        self.commTimer = 0.0
+        self.updateTimer = 0.0
+        self.writeTimer = 0.0
+        self.flushTimer = 0.0
+        self.closeTimer = 0.0
 
     def _system_data(self):
         """Stores specific information about simulation."""
@@ -233,7 +234,9 @@ class DumpH5MDLocal(io_DumpH5MD):
         if pmi.workerIsActive():
             return {'commTimer': self.commTimer,
                     'updateTimer': self.updateTimer,
-                    'writeTimer': self.writeTimer
+                    'writeTimer': self.writeTimer,
+                    'flushTimer': self.flusTimer,
+                    'closeTimer': self.closeTimer
                    }
 
     def set_parameters(self, paramters):
@@ -320,6 +323,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         time0 = py_time.time()
         # Store ids. Always!
         id_ar = np.asarray(self.getId())
+
         if total_size > self.id_e.value.shape[1]:
             self.id_e.value.resize(total_size, axis=1)
         self.id_e.append(id_ar, step, time, region=(idx_0, idx_1))
@@ -396,11 +400,15 @@ class DumpH5MDLocal(io_DumpH5MD):
 
     def close(self):
         if pmi.workerIsActive():
+            time0 = py_time.time()
             self.file.f.close()
+            self.closeTimer += (py_time.time() - time0)
 
     def flush(self):
         if pmi.workerIsActive():
+            time0 = py_time.time()
             self.file.flush()
+            self.flushTimer += (py_time.time() - time0)
 
 
 if pmi.isController:
@@ -410,8 +418,6 @@ if pmi.isController:
         T = len(h5['/particles/{}/id/value'.format(atom_groups[0])])
         # Iterate over time frames.
         for t in xrange(T):
-            sys.stdout.write('Progress: {:.2f} %\r'.format(100.0*float(t)/T))
-            sys.stdout.flush()
             for ag in atom_groups:
                 ids = h5['/particles/{}/id/value'.format(ag)]
                 idd = [
@@ -431,7 +437,7 @@ if pmi.isController:
             pmicall=['update', 'getPosition', 'getId', 'getSpecies', 'getState', 'getImage',
                      'getVelocity', 'getMass', 'getCharge', 'getResId',
                      'dump', 'clear_buffers', 'flush', 'get_file', 'set_parameters'],
-            pmiinvoke = ['getTimers'],
+            pmiinvoke=['getTimers'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
                          'store_charge', 'store_res_id', 'store_lambda'])
 
@@ -439,8 +445,9 @@ if pmi.isController:
             print('Closing file')
             pmi.call(self.pmiobject, "close")
             # Sort file if flag is set to true.
-            if self.pmiobject.sorted:
+            if self.pmiobject.do_sort:
                 h5 = h5py.File(self.pmiobject.filename, 'r+')
+                print('Sorting file, please wait...')
                 sort_file(h5)
                 print('File sorted')
                 h5.close()
