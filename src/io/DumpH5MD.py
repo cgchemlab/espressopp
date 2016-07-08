@@ -235,7 +235,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             return {'commTimer': self.commTimer,
                     'updateTimer': self.updateTimer,
                     'writeTimer': self.writeTimer,
-                    'flushTimer': self.flusTimer,
+                    'flushTimer': self.flushTimer,
                     'closeTimer': self.closeTimer
                    }
 
