@@ -78,6 +78,16 @@ class FixedPairListLocal(_espressopp.FixedPairList):
         if pmi.workerIsActive():
             cxxinit(self, _espressopp.FixedPairList, storage)
 
+        self._interaction = None
+
+    @property
+    def interaction(self):
+        return self._interaction
+
+    @interaction.setter
+    def interaction(self, _interaction):
+        self._interaction = _interaction
+
     def add(self, pid1, pid2):
 
         if pmi.workerIsActive():
@@ -131,6 +141,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedPairListLocal',
             #localcall = [ 'add' ],
+            pmiproperty = ('interaction', ),
             pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', "totalSize", "remove", 'getAllBonds' ],
             pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal']
         )

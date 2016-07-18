@@ -31,6 +31,7 @@
 #include "VerletListNonReciprocalInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
+#include "VerletListDynamicResolutionInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
@@ -63,6 +64,7 @@ namespace espressopp {
     typedef class VerletListNonReciprocalInteractionTemplate <Tabulated> VerletListNonReciprocalTabulated;
     typedef class VerletListAdressInteractionTemplate <Tabulated, Tabulated> VerletListAdressTabulated;
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
+    typedef class VerletListDynamicResolutionInteractionTemplate<Tabulated> VerletListDynamicResolutionTabulated;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
     typedef class FixedPairListTypesInteractionTemplate <Tabulated> FixedPairListTypesTabulated;
@@ -108,6 +110,13 @@ namespace espressopp {
             .def("setPotentialAT", &VerletListHadressTabulated::setPotentialAT)
             .def("setPotentialCG", &VerletListHadressTabulated::setPotentialCG);
         ;
+
+      class_< VerletListDynamicResolutionTabulated, bases< Interaction > >
+          ("interaction_VerletListDynamicResolutionTabulated", init< shared_ptr<VerletList>, bool >())
+          .def("getVerletList", &VerletListDynamicResolutionTabulated::getVerletList)
+          .def("setPotential", &VerletListDynamicResolutionTabulated::setPotential)
+          .def("getPotential", &VerletListDynamicResolutionTabulated::getPotentialPtr)
+          ;
      
       class_ <CellListTabulated, bases <Interaction> > 
         ("interaction_CellListTabulated", init <shared_ptr <storage::Storage> >())
@@ -122,6 +131,7 @@ namespace espressopp {
         )
         .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress>, shared_ptr<Tabulated> >())
         .def("setPotential", &FixedPairListTabulated::setPotential)
+        .def("getPotential", &FixedPairListTabulated::getPotential)
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
