@@ -120,11 +120,11 @@ namespace espressopp {
 
         if (adress) {
             _thermalizeAdr = integrator->aftCalcF.connect(
-                boost::bind(&LangevinThermostat::thermalizeAdr, this));
+                boost::bind(&LangevinThermostat::thermalizeAdr, this), boost::signals2::at_back);
         }
         else {
             _thermalize = integrator->aftCalcF.connect(
-                boost::bind(&LangevinThermostat::thermalize, this));
+                boost::bind(&LangevinThermostat::thermalize, this), boost::signals2::at_back);
         }
     }
 
