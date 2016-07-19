@@ -46,6 +46,7 @@ namespace espressopp {
      */
     class ParticleGroup {
         public:
+            ParticleGroup() { };
             ParticleGroup(shared_ptr <storage::Storage> _storage);
             ~ParticleGroup();
 
@@ -89,7 +90,7 @@ namespace espressopp {
              *
              * @return begin iterator
              */
-            iterator begin() {
+            virtual iterator begin() {
                 return active.begin();
             }
 
@@ -98,7 +99,7 @@ namespace espressopp {
              *
              * @return end iterator
              */
-            iterator end() {
+            virtual iterator end() {
                 return active.end();
             }
 

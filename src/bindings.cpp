@@ -27,6 +27,7 @@
 
 #include <Particle.hpp>
 #include <ParticleGroup.hpp>
+#include <ParticleRegion.hpp>
 #include <System.hpp>
 #include <VerletList.hpp>
 #include <VerletListAdress.hpp>
@@ -63,6 +64,7 @@
 void espressopp::registerPython() {
   espressopp::Particle::registerPython();
   espressopp::ParticleGroup::registerPython();
+  espressopp::ParticleRegion::registerPython();
   espressopp::System::registerPython();
   espressopp::VerletList::registerPython();
   espressopp::VerletListAdress::registerPython();
