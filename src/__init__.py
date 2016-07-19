@@ -35,6 +35,7 @@ from espressopp.Tensor import *
 from espressopp.Int3D import *
 from espressopp.Particle import *
 from espressopp.ParticleGroup import *
+from espressopp.ParticleRegion import *
 from espressopp.System import *
 from espressopp.VerletList import *
 from espressopp.VerletListTriple import *
