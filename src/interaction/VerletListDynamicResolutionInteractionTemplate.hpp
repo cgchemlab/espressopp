@@ -138,14 +138,15 @@ addForces() {
       // shared_ptr<Potential> potential = getPotential(type1, type2);
 
       Real3D force(0.0);
-      if(potential._computeForce(force, p1, p2)) {
+      Real3D dist = p1.position() - p2.position();
+      if(potential._computeForce(force, p1, p2, dist)) {
         if (has_max_force_) {
           if (force.isNaNInf()) {
-            force = (dist / dist.abs()) * max_force;
+            force = (dist / dist.abs()) * max_force_;
           } else {
             real abs_force = force.abs();
-            if (abs_force > max_force) {
-              force = (force / abs_force) * max_force;
+            if (abs_force > max_force_) {
+              force = (force / abs_force) * max_force_;
             }
           }
         }
