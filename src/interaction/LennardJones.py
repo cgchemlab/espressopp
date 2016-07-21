@@ -94,6 +94,10 @@ class VerletListDynamicResolutionLennardJonesLocal(InteractionLocal, interaction
         if pmi.workerIsActive():
             return self.cxxclass.getVerletList(self)
 
+    def setMaxForce(self, max_force):
+        if pmi.workerIsActive():
+            self.cxxclass.setMaxForce(self, max_force)
+
 class VerletListNonReciprocalLennardJonesLocal(InteractionLocal, interaction_VerletListNonReciprocalLennardJones):
     'The (local) Lennard Jones interaction using Verlet lists.'
     def __init__(self, vl, active_type):
@@ -234,7 +238,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListDynamicResolutionLennardJonesLocal',
-            pmicall = ['setPotential', 'getPotential', 'getVerletList']
+            pmicall = ['setPotential', 'getPotential', 'getVerletList', 'setMaxForce']
             )
 
     class VerletListLennardJones(Interaction):

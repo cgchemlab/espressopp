@@ -85,6 +85,7 @@ namespace espressopp {
         .def("getVerletList", &VerletListDynamicResolutionLennardJones::getVerletList)
         .def("setPotential", &VerletListDynamicResolutionLennardJones::setPotential)
         .def("getPotential", &VerletListDynamicResolutionLennardJones::getPotentialPtr)
+        .def("setMaxForce", &VerletListDynamicResolutionLennardJones::setMaxForce)
       ;
 
       class_< VerletListNonReciprocalLennardJones, bases< Interaction > >

@@ -116,6 +116,7 @@ namespace espressopp {
           .def("getVerletList", &VerletListDynamicResolutionTabulated::getVerletList)
           .def("setPotential", &VerletListDynamicResolutionTabulated::setPotential)
           .def("getPotential", &VerletListDynamicResolutionTabulated::getPotentialPtr)
+          .def("setMaxForce", &VerletListDynamicResolutionTabulated::setMaxForce)
           ;
      
       class_ <CellListTabulated, bases <Interaction> > 

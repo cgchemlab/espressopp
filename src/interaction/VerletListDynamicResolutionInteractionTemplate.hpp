@@ -52,6 +52,7 @@ public:
           verletList(_verletList), cgPotential(_cg_potential) {
     potentialArray = esutil::Array2D<Potential, esutil::enlarge>(0, 0, Potential());
     ntypes = 0;
+    has_max_force_ = false;
   }
 
   virtual ~VerletListDynamicResolutionInteractionTemplate() {};
@@ -89,6 +90,11 @@ public:
     return  make_shared<Potential>(potentialArray.at(type1, type2));
   }
 
+  void setMaxForce(real max_force) {
+    max_force_ = max_force;
+    has_max_force_ = true;
+  }
+
   virtual void addForces();
   virtual real computeEnergy();
   virtual real computeEnergyAA();
@@ -106,6 +112,8 @@ protected:
   shared_ptr<VerletList> verletList;
   esutil::Array2D<Potential, esutil::enlarge> potentialArray;
   bool cgPotential;
+  real max_force_;
+  bool has_max_force_;
 };
 
 //////////////////////////////////////////////////
@@ -131,13 +139,18 @@ addForces() {
 
       Real3D force(0.0);
       if(potential._computeForce(force, p1, p2)) {
+        if (has_max_force_) {
+          if (force.isNaNInf()) {
+            force = (dist / dist.abs()) * max_force;
+          } else {
+            real abs_force = force.abs();
+            if (abs_force > max_force) {
+              force = (force / abs_force) * max_force;
+            }
+          }
+        }
         p1.force() += w12*force;
         p2.force() -= w12*force;
-        LOG4ESPP_TRACE(
-            _Potential::theLogger,
-            "id1=" << p1.id() << " id2=" << p2.id() << " force=" << force
-            << " scale=" << w12;
-        );
       }
     }
   }
@@ -161,17 +174,12 @@ computeEnergy() {
       w12 = (1.0 - w12);
     }
     const Potential &potential = getPotential(type1, type2);
-    es += w12*potential._computeEnergy(p1, p2);
-    LOG4ESPP_DEBUG(
-        _Potential::theLogger,
-        "id1=" << p1.id() << " type1=" << type1 <<
-        " lambda1=" << p1.lambda() <<
-        " id2=" << p2.id() << " type2=" << type2 <<
-        " lambda2=" << p2.lambda() <<
-        " forcescale12=" << w12 << 
-        " potential energy=" << es <<
-        " cgPotential=" << cgPotential
-    );
+
+    real e = potential._computeEnergy(p1, p2);
+    if (isnan(e) || isinf(e)) {
+      e = 0.0;
+    }
+    es += w12*e;
   }
 
   // reduce over all CPUs

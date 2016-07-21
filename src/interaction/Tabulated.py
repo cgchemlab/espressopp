@@ -249,6 +249,10 @@ class VerletListDynamicResolutionTabulatedLocal(InteractionLocal, interaction_Ve
         if pmi.workerIsActive():
             return self.cxxclass.getVerletList(self)
 
+    def setMaxForce(self, max_force):
+        if pmi.workerIsActive():
+            self.cxxclass.setMaxForce(self, max_force)
+
 class CellListTabulatedLocal(InteractionLocal, interaction_CellListTabulated):
 
     def __init__(self, stor):
@@ -333,7 +337,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListDynamicResolutionTabulatedLocal',
-            pmicall = ['setPotential', 'getPotential', 'getVerletList']
+            pmicall = ['setPotential', 'getPotential', 'getVerletList', 'setMaxForce']
         )
 
         
