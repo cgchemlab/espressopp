@@ -34,7 +34,7 @@ class MaxForce : public Observable {
   MaxForce(shared_ptr<System> system) : Observable(system) {}
   virtual ~MaxForce() {}
   virtual real compute() const;
- private:
+
   static void registerPython();
 };
 
