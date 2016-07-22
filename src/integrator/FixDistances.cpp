@@ -67,7 +67,7 @@ void FixDistances::connect() {
   // If use particle types then update constraints at every time step at last.
   System &system = getSystemRef();
   if (has_types_) {
-    aftIntV2_ = integrator->aftIntV2.connect(boost::bind(&FixDistances::onParticlesChanged, this));
+    aftIntV2_ = integrator->aftIntV2.connect(boost::bind(&FixDistances::onAftIntV2, this));
   }
 
   sigBeforeSend = system.storage->beforeSendParticles.connect(
@@ -76,7 +76,7 @@ void FixDistances::connect() {
       boost::bind(&FixDistances::afterRecvParticles, this, _1, _2));
 }
 
-void FixDistances::onParticlesChanged() {
+void FixDistances::onAftIntV2() {
   if (!has_types_)
     return;
   std::vector<std::pair<Particle*, Particle*> > affected_particles;

@@ -204,9 +204,11 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
 class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
                                      integrator_ChemicalReactionPostProcess):
     """Post process of reaction that changes particle property."""
-    def __init__(self):
+    def __init__(self, type_id=None, prop=None):
         if pmi.workerIsActive():
             cxxinit(self, integrator_PostProcessChangeProperty)
+            if type_id is not None and prop is not None:
+                self.add_change_property(type_id, prop)
 
     def add_change_property(self, type_id, prop):
         if pmi.workerIsActive():

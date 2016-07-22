@@ -84,7 +84,7 @@ class FixDistances : public Extension {
   void connect();
   void disconnect();
 
-  void onParticlesChanged();
+  void onAftIntV2();
   void beforeSendParticles(ParticleList& pl, OutBuffer& buf);
   void afterRecvParticles(ParticleList &pl, InBuffer& buf);
   shared_ptr<integrator::PostProcessChangeProperty> post_process_;
