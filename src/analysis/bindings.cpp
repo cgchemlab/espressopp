@@ -71,6 +71,8 @@
 #include "NFixedListEntries.hpp"
 #include "ChemicalConversion.hpp"
 
+#include "MaxAvgMinForce.hpp"
+
 namespace espressopp {
   namespace analysis {
     void registerPython() {
@@ -126,6 +128,8 @@ namespace espressopp {
       NFixedQuadrupleListEntries::registerPython();
       ChemicalConversion::registerPython();
       ChemicalConversionTypeSequence::registerPython();
+
+      MaxForce::registerPython();
     }
   }
 }
