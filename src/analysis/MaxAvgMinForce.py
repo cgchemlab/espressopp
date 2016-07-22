@@ -36,7 +36,7 @@ from _espressopp import analysis_MaxForce
 
 class MaxForceLocal(ObservableLocal, analysis_MaxForce):
     def __init__(self, system):
-	    if pmi.workerIsActive():
+        if pmi.workerIsActive():
             cxxinit(self, analysis_MaxForce, system)
 
 if pmi.isController :

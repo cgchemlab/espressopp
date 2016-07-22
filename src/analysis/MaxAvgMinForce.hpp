@@ -31,13 +31,14 @@ namespace analysis {
 /** Class to get the number of particles in the system. */
 class MaxForce : public Observable {
  public:
-  MaxForce(shared_ptr<System> system) : Observable(system) {}
+  explicit MaxForce(shared_ptr<System> system) : Observable(system) {}
   virtual ~MaxForce() {}
-  virtual real compute() const;
+  real compute() const;
+  real compute_real() const { return compute(); }
 
   static void registerPython();
 };
 
-}
-}
+}  // namespace analysis
+}  // namespace espressopp
 #endif
