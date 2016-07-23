@@ -100,7 +100,7 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             pmiproperty = [ "boxL", "rng" ],
-            pmicall = ('setPeriodicity', ),
+            pmicall = ('isPeriodic', ),
             localcall = [ "getMinimumImageVector", 
                           "getFoldedPosition", "getUnfoldedPosition", 
                           "getRandomPos" ]
