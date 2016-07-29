@@ -28,7 +28,7 @@
 namespace espressopp {
 namespace analysis {
 
-/** Class to get the number of particles in the system. */
+/** Class to get the maximum force acting on particles in the system. */
 class MaxForce : public Observable {
  public:
   explicit MaxForce(shared_ptr<System> system) : Observable(system) {}

@@ -103,6 +103,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             self.dt = integrator.dt
 
     def dump(self):
+        """Dump data to the internal buffer."""
         if pmi.workerIsActive():
             self.cxxclass.dump(self)
 
@@ -142,6 +143,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             g[idx_0:idx_1] = bonds
 
     def update(self):
+        """Load data from the buffer and store in the HDF5 file."""
         if pmi.workerIsActive():
             raw_data = self.cxxclass.get_data(self)
             step_data = collections.defaultdict(dict)

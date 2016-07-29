@@ -90,8 +90,8 @@ from _espressopp import io_DumpH5MD
 from mpi4py import MPI
 import numpy as np
 try:
-    import pyh5md
     import h5py
+    import pyh5md
 except ImportError:
     print 'missing pyh5md'
 
@@ -209,7 +209,6 @@ class DumpH5MDLocal(io_DumpH5MD):
             self.res_id = part.trajectory(
                 'res_id', (self.chunk_size, ), np.int,
                 chunks=(1, self.chunk_size), fillvalue=-1)
-	
         self._system_data()
 
         self.commTimer = 0.0
@@ -306,6 +305,12 @@ class DumpH5MDLocal(io_DumpH5MD):
     def dump(self, step, time):
         if not pmi.workerIsActive():
             return
+
+        # Take it directly from integrator;
+        integrator = self.system.integrator
+        step = integrator.step
+        time = step*integrator.dt
+
         time0 = py_time.time()
         self.update()
         self.updateTimer += (py_time.time() - time0)
@@ -323,7 +328,6 @@ class DumpH5MDLocal(io_DumpH5MD):
         time0 = py_time.time()
         # Store ids. Always!
         id_ar = np.asarray(self.getId())
-
         if total_size > self.id_e.value.shape[1]:
             self.id_e.value.resize(total_size, axis=1)
         self.id_e.append(id_ar, step, time, region=(idx_0, idx_1))
@@ -442,7 +446,6 @@ if pmi.isController:
                          'store_charge', 'store_res_id', 'store_lambda'])
 
         def close(self):
-            print('Closing file')
             pmi.call(self.pmiobject, "close")
             # Sort file if flag is set to true.
             if self.pmiobject.do_sort:
