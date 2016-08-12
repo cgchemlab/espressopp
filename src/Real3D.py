@@ -64,6 +64,8 @@ r"""
 		:param \*args: 
 		:type \*args: 
 """
+
+import collections
 from _espressopp import Real3D
 from espressopp import esutil
 
@@ -123,6 +125,13 @@ class __Real3D(Real3D) :
 
     def __repr__(self) :
         return 'Real3D' + str(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, collections.Iterable):
+            return False
+        if len(other) > 3:
+            raise TypeError("Cannot compare with object of type".format(type(other)))
+        return self[0] == other[0] and self[1] == other[1] and self[2] == other[2]
 
 def toReal3DFromVector(*args):
     """Try to convert the arguments to a Real3D.

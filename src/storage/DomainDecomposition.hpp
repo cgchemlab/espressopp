@@ -129,6 +129,9 @@ namespace espressopp {
       */
       CommCells commCells[6];
 
+      bool local_periodic_[6];
+      bool periodic_[3];
+
       static LOG4ESPP_DECL_LOGGER(logger);
     };
   }
