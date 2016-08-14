@@ -24,6 +24,7 @@
 #include "BC.hpp"
 #include "OrthorhombicBC.hpp"
 #include "SlabBC.hpp"
+#include "FreeOrthorhombicBC.hpp"
 
 namespace espressopp {
   namespace bc {
@@ -31,6 +32,7 @@ namespace espressopp {
       BC::registerPython();
       OrthorhombicBC::registerPython();
       SlabBC::registerPython();
+      FreeOrthorhombicBC::registerPython();
     }
   }
 }
