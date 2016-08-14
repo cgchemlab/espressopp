@@ -27,6 +27,8 @@
 
 namespace espressopp {
 
+    LOG4ESPP_LOGGER(ParticleGroup::theLogger, "ParticleGroup");
+
     ParticleGroup::ParticleGroup(shared_ptr <storage::Storage> _storage)
     : storage(_storage) {
         con_send = storage->beforeSendParticles.connect
@@ -76,6 +78,7 @@ namespace espressopp {
 
 
     void ParticleGroup::beforeSendParticles(ParticleList& pl, class OutBuffer& buf) {
+        LOG4ESPP_DEBUG(theLogger, "beforeSendParticles");
         // remove all particles that move to a different node
         for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
             longint pid = pit->id();
@@ -89,6 +92,7 @@ namespace espressopp {
 
 
     void ParticleGroup::afterRecvParticles(ParticleList& pl, class InBuffer& buf) {
+        LOG4ESPP_DEBUG(theLogger, "afterRecvParticles");
         // add all particles that moved to this node
         for (ParticleList::Iterator pit(pl);
                 pit.isValid(); ++pit) {
@@ -104,6 +108,7 @@ namespace espressopp {
 
 
     void ParticleGroup::onParticlesChanged() {
+        LOG4ESPP_DEBUG(theLogger, "onParticlesChanged");
         std::map<longint, Particle*>::iterator p;
         std::list<longint> remove;
 
