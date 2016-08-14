@@ -26,3 +26,4 @@ from espressopp.storage.Storage import *
 from espressopp.storage.DomainDecomposition import *
 from espressopp.storage.DomainDecompositionNonBlocking import *
 from espressopp.storage.DomainDecompositionAdress import *
+from espressopp.storage.DomainDecompositionFree import *

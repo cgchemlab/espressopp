@@ -1,7 +1,5 @@
-#  Copyright (C) 2012,2013
-#      Max Planck Institute for Polymer Research
-#  Copyright (C) 2008,2009,2010,2011
-#      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
+#  Copyright (C) 2016
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #  
 #  This file is part of ESPResSo++.
 #  
@@ -21,11 +19,11 @@
 
 r"""
 ******************************************
-**espressopp.storage.DomainDecomposition**
+**espressopp.storage.DomainDecompositionFree**
 ******************************************
 
 
-.. function:: espressopp.storage.DomainDecomposition(system, nodeGrid, cellGrid)
+.. function:: espressopp.storage.DomainDecompositionFree(system, nodeGrid, cellGrid)
 
 		:param system: 
 		:param nodeGrid: 
@@ -34,17 +32,18 @@ r"""
 		:type nodeGrid: 
 		:type cellGrid: 
 
-.. function:: espressopp.storage.DomainDecomposition.getCellGrid()
+.. function:: espressopp.storage.DomainDecompositionFree.getCellGrid()
 
 		:rtype: 
 
-.. function:: espressopp.storage.DomainDecomposition.getNodeGrid()
+.. function:: espressopp.storage.DomainDecompositionFree.getNodeGrid()
 
 		:rtype: 
 """
 from espressopp import pmi
 from espressopp.esutil import cxxinit
-from _espressopp import storage_DomainDecomposition
+from _espressopp import storage_DomainDecompositionFree
+from _espressopp import storage_DomainDecompositionFree
 from espressopp import Int3D, toInt3DFromVector
 from espressopp.tools import decomp
 from espressopp import check
@@ -52,11 +51,11 @@ import mpi4py.MPI as MPI
 
 from espressopp.storage.Storage import *
 
-class DomainDecompositionLocal(StorageLocal, storage_DomainDecomposition):
+class DomainDecompositionFreeLocal(StorageLocal, storage_DomainDecompositionFree):
 
     def __init__(self, system, nodeGrid, cellGrid):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, storage_DomainDecomposition, system, nodeGrid, cellGrid)
+            cxxinit(self, storage_DomainDecompositionFree, system, nodeGrid, cellGrid)
 
     def getCellGrid(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -68,9 +67,9 @@ class DomainDecompositionLocal(StorageLocal, storage_DomainDecomposition):
 
 
 if pmi.isController:
-    class DomainDecomposition(Storage):
+    class DomainDecompositionFree(Storage):
         pmiproxydefs = dict(
-          cls = 'espressopp.storage.DomainDecompositionLocal',
+          cls = 'espressopp.storage.DomainDecompositionFreeLocal',
           pmicall = ['getCellGrid', 'getNodeGrid', 'cellAdjust']
         )
         def __init__(self, system, 

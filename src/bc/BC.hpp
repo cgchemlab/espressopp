@@ -146,7 +146,8 @@ namespace espressopp {
       getRandomPos() const;
 
       /** Checks if the system is periodic in given direction. */
-      inline bool isPeriodic(int dir) { return periodicity_[dir]; }
+      bool isPeriodic() { return periodicity_[0] && periodicity_[1] && periodicity_[2]; }
+      inline bool getPeriodic(int dir) { return periodicity_[dir]; }
 
       // This signal is called whenever the box dimensions did change
       // (e.g. when scaling the Volume or when setting boxL)
