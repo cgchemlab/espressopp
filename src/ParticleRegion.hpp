@@ -29,6 +29,7 @@
 #include <set>
 #include <boost/signals2.hpp>
 #include "iterator/CellListIterator.hpp"
+#include "integrator/MDIntegrator.hpp"
 
 namespace espressopp {
 
@@ -46,7 +47,7 @@ namespace espressopp {
  */
 class ParticleRegion : public ParticleGroup {
  public:
-  ParticleRegion(shared_ptr <storage::Storage> _storage);
+  ParticleRegion(shared_ptr<storage::Storage> _storage, shared_ptr<integrator::MDIntegrator>);
   ~ParticleRegion();
 
   /**
@@ -67,6 +68,20 @@ class ParticleRegion : public ParticleGroup {
   void removeTypeId(longint type_id) {
     types_.erase(type_id);
     has_types_ = types_.size() > 0;
+  }
+
+  void set_v(real vx, real vy, real vz, bool left_right) {
+    if (left_right)
+      velocity_left_ = Real3D(vx, vy, vz);
+    else
+      velocity_right_ = Real3D(vx, vy, vz);
+  }
+
+  python::tuple get_v(bool left_right) {
+    if (left_right)
+      return python::make_tuple(velocity_left_[0], velocity_left_[1], velocity_left_[2]);
+    else
+      return python::make_tuple(velocity_right_[0], velocity_right_[1], velocity_right_[2]);
   }
 
   // for debugging purpose
@@ -107,14 +122,19 @@ class ParticleRegion : public ParticleGroup {
   std::set<longint> types_;
   bool has_types_;
 
+  // Velocity of modyfication
+  Real3D velocity_left_;
+  Real3D velocity_right_;
+
   // pointer to storage object
-  shared_ptr <storage::Storage> storage;
+  shared_ptr<storage::Storage> storage;
+
+  // pointer to integrator
+  shared_ptr<integrator::MDIntegrator> integrator_;
 
   // some signalling stuff to keep track of the particles in cell
-  boost::signals2::connection con_send, con_recv, con_changed;
+  boost::signals2::connection con_changed, sig_aftIntV1, sig_aftIntV2;
 
-  void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
-  void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
   void onParticlesChanged();
 
   static LOG4ESPP_DECL_LOGGER(theLogger);
@@ -122,6 +142,9 @@ class ParticleRegion : public ParticleGroup {
  private:
   Real3D left_bottom_;
   Real3D right_top_;
+
+  void updateRegion();
+  python::tuple getRegion();
 };
 
 }

@@ -24,14 +24,13 @@ import unittest as ut
 class TestFixedPairListTypesTabulated(ut.TestCase):
     def setUp(self):
         self.system, self.integrator = espressopp.standard_system.Minimal(
-            0, (10., 10., 10.))
+            0, (10., 10., 10.), dt=0.01)
         self.system.storage.addParticle(1, espressopp.Real3D(1, 1, 1))
         self.system.storage.addParticle(2, espressopp.Real3D(1, 1, 6))
         self.system.storage.addParticle(3, espressopp.Real3D(1, 1, 4.7))
-        self.system.storage.modifyParticle(3, 'v', espressopp.Real3D(0, 0, 0.5))
         self.system.storage.addParticle(4, espressopp.Real3D(1, 1, 10))
         self.particle_region = espressopp.ParticleRegion(
-            self.system.storage,
+            self.system.storage, self.integrator,
             espressopp.Real3D(-1, -1, 5),
             espressopp.Real3D(11, 11, 11))
         self.system.storage.decompose()
@@ -42,11 +41,24 @@ class TestFixedPairListTypesTabulated(ut.TestCase):
 
     def test_particle_gets_into_region(self):
         # Now run integrator, particle 3 will move into region after while
+        self.system.storage.modifyParticle(3, 'v', espressopp.Real3D(0, 0, 0.5))
         for i in range(10):
             self.integrator.run(100)
 
         self.assertEqual(self.particle_region.size(), 3)  # Particle 3 in the region
         self.assertEqual(self.particle_region.get_particle_ids(), [[2, 3, 4]])
+
+    def test_moving_region(self):
+        """Sets the velocity of the region, particle 3 will be there after a while."""
+        self.system.storage.modifyParticle(3, 'pos', espressopp.Real3D(1, 1, 4))
+        self.particle_region.set_v(0, 0, -2.0, 'left')
+        self.assertEqual(self.particle_region.size(), 2)
+        self.assertEqual(self.particle_region.get_particle_ids(), [[2, 4]])
+        self.integrator.run(200)
+        self.assertAlmostEqual(self.particle_region.get_region()[0][2], 5.0-0.01*200*2.0)
+        self.assertEqual(self.particle_region.size(), 3)
+        self.assertEqual(self.particle_region.get_particle_ids(), [[2, 3, 4]])
+        print self.particle_region.get_region()
 
 
 if __name__ == '__main__':

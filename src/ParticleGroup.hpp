@@ -48,7 +48,7 @@ namespace espressopp {
         public:
             ParticleGroup() { };
             ParticleGroup(shared_ptr <storage::Storage> _storage);
-            ~ParticleGroup();
+            virtual ~ParticleGroup();
 
             /**
              * \brief add particle to group
@@ -58,11 +58,11 @@ namespace espressopp {
             void add(longint pid);
 
             // for debugging purpose
-            void print();
+            virtual void print();
 
-            bool has(longint pid);
+            virtual bool has(longint pid);
 
-            longint size() {return particles.size();}
+            virtual longint size() {return particles.size();}
 
             static void registerPython();
 
@@ -124,7 +124,7 @@ namespace espressopp {
                     class OutBuffer& buf);
             void afterRecvParticles(ParticleList& pl,
                     class InBuffer& buf);
-            void onParticlesChanged();
+            virtual void onParticlesChanged();
 
             static LOG4ESPP_DECL_LOGGER(theLogger);
     };

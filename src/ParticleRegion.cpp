@@ -27,15 +27,20 @@ namespace espressopp {
 
 LOG4ESPP_LOGGER(ParticleRegion::theLogger, "ParticleRegion");
 
-ParticleRegion::ParticleRegion(shared_ptr<storage::Storage> _storage) : storage(_storage), ParticleGroup() {
-
+ParticleRegion::ParticleRegion(shared_ptr<storage::Storage> _storage, shared_ptr<integrator::MDIntegrator> integrator)
+    : storage(_storage), integrator_(integrator), ParticleGroup(), velocity_left_(0.0), velocity_right_(0.0) {
   con_changed = storage->onParticlesChanged.connect
       (boost::bind(&ParticleRegion::onParticlesChanged, this));
+
+  sig_aftIntV1  = integrator_->aftIntV.connect(boost::bind(&ParticleRegion::onParticlesChanged, this));
+  sig_aftIntV2  = integrator_->aftIntV.connect(boost::bind(&ParticleRegion::updateRegion, this));
   has_types_ = false;
 }
 
 ParticleRegion::~ParticleRegion() {
   con_changed.disconnect();
+  sig_aftIntV1.disconnect();
+  sig_aftIntV2.disconnect();
 }
 
 bool ParticleRegion::has(longint pid) {
@@ -84,18 +89,38 @@ void ParticleRegion::onParticlesChanged() {
   }
 }
 
+void ParticleRegion::updateRegion() {
+  real dt = integrator_->getTimeStep();
+  Real3D delta_p = dt * velocity_left_;
+  left_bottom_ += delta_p;
+
+  delta_p = dt * velocity_right_;
+  right_top_ += delta_p;
+}
+
+python::tuple ParticleRegion::getRegion() {
+  return python::make_tuple(
+      python::make_tuple(left_bottom_[0], left_bottom_[1], left_bottom_[2]),
+      python::make_tuple(right_top_[0], right_top_[1], right_top_[2])
+  );
+}
+
 void ParticleRegion::registerPython() {
   using namespace espressopp::python;
 
   class_<ParticleRegion, shared_ptr<ParticleRegion>, bases<ParticleGroup> >
-      ("ParticleRegion", init<shared_ptr<storage::Storage> >())
+      ("ParticleRegion", init<shared_ptr<storage::Storage>, shared_ptr<integrator::MDIntegrator> >())
         .def("show", &ParticleRegion::print)
         .def("has", &ParticleRegion::has)
         .def("define_region", &ParticleRegion::defineRegion)
+        .def("get_region", &ParticleRegion::getRegion)
         .def("add_type_id", &ParticleRegion::addTypeId)
         .def("remove_type_id", &ParticleRegion::removeTypeId)
         .def("get_particle_ids", &ParticleRegion::getParticleIDs)
+        .def("set_v", &ParticleRegion::set_v)
+        .def("get_v", &ParticleRegion::get_v)
         .def("size", &ParticleRegion::size);
 }
+
 
 }  // end namespace espressopp

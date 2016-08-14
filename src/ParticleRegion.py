@@ -35,10 +35,83 @@ of the block and :math:`r` is the position of right-top-rear vertex.
 **ParticleRegion** inherits interface from **ParticleGroup**, therefore whenever
 **ParticleGroup** is accepted then **ParticleRegion** can also be passed.
 
+The region can be extended or shrinked during the simulation by defining the speed of it. The update
+is always made on the right top bottom coordinate of the region and the velocity can be positive or negative. By
+default it is 0.0 in all directions.
+
 Example of usage
 ==================
 
 >>> pr = espressopp.ParticleRegion(storage, espressopp.Real3D(-1, -1, 5), espressopp.Real3D(-1, -1, 11))
+
+
+.. class:: espressopp.ParticleRegion
+
+      The particle region class.
+
+      .. method:: espressopp.ParticleRegion(storage, left, right)
+
+            Define the particle region.
+
+            :param storage: The storage object.
+		    :type storage: espressopp.storage.Storage
+		    :param left: The left-bottom-front vertex.
+		    :type left: espressopp.Real3D
+		    :param right: The right-top-rear vertex.
+		    :type right: espressopp.Real3D
+
+	  .. method:: espressopp.ParticleRegion.set_v(vx, vy, vz)
+
+            Set the velocity of which the region will change the dimension. The velocity
+            can be positive or negative.
+
+            :param vx: The velocity in x-direction.
+            :type vx: float
+            :param vy: The velocity in y-direction.
+            :type vy: float
+            :param vz: The velocity in z-direction.
+            :type vz: float
+
+	  .. method:: espressopp.ParticleRegion.get_v()
+
+            Returns the velocity of the changes in region.
+
+            :rtype: tuple
+
+      .. method:: espressopp.ParticleRegion.has(pid)
+
+            Check if given particle of *pid* is in the region.
+
+            :param pid:
+            :type pid:
+            :rtype: bool
+
+      .. method:: espressopp.ParticleRegion.show()
+
+            Debug purpose, print all particles in the region.
+
+
+      .. method:: espressopp.ParticleRegion.size()
+
+            Gets the number of particles in the region.
+
+            :rtype: int
+
+
+      .. method:: espressopp.ParticleRegion.add_type_id(type_id)
+
+            Stores only particles of given type.
+
+            :param type_id: Type id to add
+            :type type_id: int
+
+
+      .. method:: espressopp.ParticleRegion.remove_type_id(type_id)
+
+            Removes type from the list of observed types.
+
+            :param type_id: Type id to remove.
+            :type type_id: int
 
 
 .. function:: espressopp.ParticleRegion(storage, left, right)
@@ -81,15 +154,15 @@ Example of usage
 
 """
 import _espressopp
-import esutil
-import pmi
 from espressopp.esutil import cxxinit
+
+import pmi
 
 
 class ParticleRegionLocal(_espressopp.ParticleRegion):
-    def __init__(self, storage, left_bottom, right_top):
+    def __init__(self, storage, integrator, left_bottom, right_top):
         if pmi.workerIsActive():
-            cxxinit(self, _espressopp.ParticleRegion, storage)
+            cxxinit(self, _espressopp.ParticleRegion, storage, integrator)
             self.cxxclass.define_region(self, left_bottom, right_top)
 
     def add_type_id(self, type_id):
@@ -112,6 +185,18 @@ class ParticleRegionLocal(_espressopp.ParticleRegion):
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
+    def set_v(self, vx, vy, vz, left_right='left'):
+        if pmi.workerIsActive():
+            self.cxxclass.set_v(self, vx, vy, vz, left_right=='left')
+
+    def get_v(self, left_right='left'):
+        if pmi.workerIsActive():
+            return self.cxxclass.get_v(self, left_right=='left')
+
+    def get_region(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.get_region(self)
+
 
 if pmi.isController:
     class ParticleRegion(object):
@@ -119,6 +204,6 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls='espressopp.ParticleRegionLocal',
             pmiinvoke=['get_particle_ids'],
-            pmicall=['show', 'has', 'size', 'define_region', 'add_type_id', 'remove_type_id']
-            )
-
+            pmicall=['show', 'has', 'size', 'define_region', 'add_type_id', 'remove_type_id', 'set_v', 'get_v',
+                     'get_region']
+        )
