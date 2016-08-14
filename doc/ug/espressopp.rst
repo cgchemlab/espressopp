@@ -23,6 +23,7 @@ espressopp
    espressopp.Particle.rst
    espressopp.ParticleAccess.rst
    espressopp.ParticleGroup.rst
+   espressopp.ParticleRegion.rst
    espressopp.Real3D.rst
    espressopp.RealND.rst
    espressopp.Tensor.rst
