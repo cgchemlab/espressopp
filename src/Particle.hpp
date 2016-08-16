@@ -61,9 +61,54 @@ namespace espressopp {
       lambdaDeriv = 0.0;
       state = 0;
       res_id = 0;
+
+      change_flag = 0;
     }
 
+    enum ChangeFlags {
+      CHANGE_TYPE=1,
+      CHANGE_MASS=2,
+      CHANGE_Q=4,
+      CHANGE_STATE=8,
+      CHANGE_RESID=16,
+      CHANGE_LAMBDA=32
+    };
+
+    void setType(size_t t) {
+      type = t;
+      change_flag |= CHANGE_TYPE;
+    }
+
+    void setMass(real m) {
+      mass = m;
+      change_flag |= CHANGE_MASS;
+    }
+
+    void setQ(real q_) {
+      q = q_;
+      change_flag |= CHANGE_Q;
+    }
+
+    void setState(int s) {
+      state = s;
+      change_flag |= CHANGE_STATE;
+    }
+
+    void setResId(int rs) {
+      res_id = rs;
+      change_flag |= CHANGE_RESID;
+    }
+
+    void setLambda(real l) {
+      lambda = l;
+      change_flag |= CHANGE_LAMBDA;
+    }
+
+    bool updateParticleProperties(Particle *p);
+
   private:
+    int change_flag;
+
     friend class boost::serialization::access;
     template< class Archive >
     void serialize(Archive &ar, const unsigned int version)

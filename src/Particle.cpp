@@ -24,6 +24,23 @@
 #include "Particle.hpp"
 
 namespace espressopp {
+
+  bool ParticleProperties::updateParticleProperties(Particle *p) {
+    if (change_flag & CHANGE_TYPE)
+      p->setType(type);
+    if (change_flag & CHANGE_MASS)
+      p->setMass(mass);
+    if (change_flag & CHANGE_Q)
+      p->setQ(q);
+    if (change_flag & CHANGE_STATE)
+      p->setState(state);
+    if (change_flag & CHANGE_RESID)
+      p->setResId(res_id);
+    if (change_flag & CHANGE_LAMBDA)
+      p->setLambda(lambda);
+    return change_flag != 0;
+  }
+
   void 
   Particle::
   registerPython() {
@@ -57,27 +74,27 @@ namespace espressopp {
       .add_property(
           "type",
           make_getter(&ParticleProperties::type),
-          make_setter(&ParticleProperties::type))
+          &ParticleProperties::setType)
       .add_property(
           "mass",
           make_getter(&ParticleProperties::mass),
-          make_setter(&ParticleProperties::mass))
+          &ParticleProperties::setMass)
       .add_property(
           "q",
           make_getter(&ParticleProperties::q),
-          make_setter(&ParticleProperties::q))
+          &ParticleProperties::setQ)
       .add_property(
           "state",
           make_getter(&ParticleProperties::state),
-          make_setter(&ParticleProperties::state))
+          &ParticleProperties::setState)
       .add_property(
           "res_id",
           make_getter(&ParticleProperties::res_id),
-          make_setter(&ParticleProperties::res_id))
+          &ParticleProperties::setResId)
        .add_property(
            "lambda_adr",
            make_getter(&ParticleProperties::lambda),
-           make_setter(&ParticleProperties::lambda))
+           &ParticleProperties::setLambda)
       .def(
           "init",
           &ParticleProperties::init

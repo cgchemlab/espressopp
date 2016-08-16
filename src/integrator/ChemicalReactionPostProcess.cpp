@@ -206,26 +206,7 @@ std::vector<Particle *> PostProcessChangePropertyOnState::process(Particle &p1, 
   bool mod = false;
   if (pp_it != type_state_pp_.end()) {
     shared_ptr<ParticleProperties> pp = pp_it->second;
-    if (pp->type != NULL) {
-      p1.setType(pp->type);
-      mod = true;
-    }
-
-    if (pp->mass != NULL) {
-      p1.setMass(pp->mass);
-      mod = true;
-    }
-
-    if (pp->q != NULL) {
-      p1.setQ(pp->q);
-      mod = true;
-    }
-
-    if (pp->lambda != NULL) {
-      p1.setLambda(pp->lambda);
-      mod = true;
-    }
-
+    mod = pp->updateParticleProperties(&p1);
     LOG4ESPP_DEBUG(theLogger, "Modified particle id=" << p1.id());
   }
 

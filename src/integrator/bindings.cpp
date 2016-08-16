@@ -63,6 +63,7 @@
 #include "ChemicalReactionExt.hpp"
 #include "DynamicResolution.hpp"
 #include "TopologyManager.hpp"
+#include "ChangeInRegion.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -126,6 +127,7 @@ namespace espressopp {
       PostProcessRemoveNeighbourBond::registerPython();
       
       MinimizeEnergy::registerPython();
+      ChangeInRegion::registerPython();
       EmptyExtension::registerPython();
     }
   }

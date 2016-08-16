@@ -892,21 +892,7 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
     if (distance_type_pp_.count(distance) > 0) {
       if (distance_type_pp_[distance].count(p_type) > 0) {
         shared_ptr<ParticleProperties> pp = distance_type_pp_[distance][p_type];
-
-        // Change particle type.
-        if (pp->type != NULL) {
-          p->setType(pp->type);
-        }
-
-        // Change mass.
-        if (pp->mass != NULL) {
-          p->setMass(pp->mass);
-        }
-
-        // Change partial charge.
-        if (pp->q != NULL) {
-          p->setQ(pp->q);
-        }
+        pp->updateParticleProperties(p);
       }
     }
   }

@@ -51,15 +51,41 @@ class TestFixedPairListTypesTabulated(ut.TestCase):
     def test_moving_region(self):
         """Sets the velocity of the region, particle 3 will be there after a while."""
         self.system.storage.modifyParticle(3, 'pos', espressopp.Real3D(1, 1, 4))
+        self.system.storage.modifyParticle(3, 'type', 7)
         self.particle_region.set_v(0, 0, -2.0, 'left')
         self.assertEqual(self.particle_region.size(), 2)
         self.assertEqual(self.particle_region.get_particle_ids(), [[2, 4]])
+
+        change_in_region = espressopp.integrator.ChangeInRegion(self.system, self.particle_region)
+        change_in_region.set_particle_properties(7, espressopp.ParticleProperties(9, 1.0, 0.0))
+        self.integrator.addExtension(change_in_region)
+
         self.integrator.run(200)
         self.assertAlmostEqual(self.particle_region.get_region()[0][2], 5.0-0.01*200*2.0)
         self.assertEqual(self.particle_region.size(), 3)
         self.assertEqual(self.particle_region.get_particle_ids(), [[2, 3, 4]])
-        print self.particle_region.get_region()
 
+    def test_change_particles_in_region(self):
+        """Particle 3 will enter the region and change the type from 7 to 9"""
+        self.system.storage.modifyParticle(3, 'pos', espressopp.Real3D(1, 1, 4))
+        self.system.storage.modifyParticle(3, 'type', 7)
+        self.system.storage.modifyParticle(3, 'q',  999.0)
+        self.particle_region.set_v(0, 0, -2.0, 'left')
+        self.assertEqual(self.particle_region.size(), 2)
+        self.assertEqual(self.particle_region.get_particle_ids(), [[2, 4]])
+
+        change_in_region = espressopp.integrator.ChangeInRegion(self.system, self.particle_region)
+        change_in_region.set_particle_properties(7, espressopp.ParticleProperties(9))
+        self.integrator.addExtension(change_in_region)
+
+        self.integrator.run(200)
+        self.assertAlmostEqual(self.particle_region.get_region()[0][2], 5.0-0.01*200*2.0)
+        self.assertEqual(self.particle_region.size(), 3)
+        self.assertEqual(self.particle_region.get_particle_ids(), [[2, 3, 4]])
+
+        p3 = self.system.storage.getParticle(3)
+        self.assertEqual(p3.type, 9)
+        self.assertEqual(p3.q, 999.0)
 
 if __name__ == '__main__':
     ut.main()

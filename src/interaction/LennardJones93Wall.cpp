@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2014
       Pierre de Buyl
   Copyright (C) 2012,2013
@@ -40,7 +42,7 @@ namespace espressopp {
       using namespace espressopp::python;
 
       class_< LennardJones93Wall, bases< SingleParticlePotential > >
-        ("interaction_LennardJones93Wall", init<>())
+        ("interaction_LennardJones93Wall", init<int>())
         .def("setParams", &LennardJones93Wall::setParams)
         .def("getParams", &LennardJones93Wall::getParams)
         ;
