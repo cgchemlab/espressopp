@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2014
       Pierre de Buyl
   Copyright (C) 2012,2013
@@ -53,12 +55,12 @@ namespace espressopp {
     class LennardJones93Wall : public SingleParticlePotentialTemplate<LennardJones93Wall> {
     private:
       std::vector<LJ93WParams> params_list;
-      int dir;
+      int dir_;
 
     public:
       static void registerPython();
 
-      LennardJones93Wall() : dir(0) {
+      LennardJones93Wall() : dir_(0) {
 	params_list.resize(1);
 	LJ93WParams *pl = &params_list.at(0);
 	pl->epsilon = 1.0;
@@ -67,13 +69,22 @@ namespace espressopp {
 	pl->r0 = 0.;
       }
 
+	  LennardJones93Wall(int dir) : dir_(dir) {
+		  params_list.resize(1);
+		  LJ93WParams *pl = &params_list.at(0);
+		  pl->epsilon = 1.0;
+		  pl->sigma = 1.0;
+		  pl->sigma3 = 1.0;
+		  pl->r0 = 0.;
+	  }
+
       ~LennardJones93Wall() {};
 
       int bondType() { return Single; }
       real getMaxCutoff() { return 0.; }
 
       void setParams(int type, real _epsilon, real _sigma, real _sigmaCutoff, real _r0) {
-	if (params_list.size()<(type+1)) {
+	if (params_list.size() < (type+1)) {
 	  params_list.resize(type+1);
 	}
 	params_list.at(type).epsilon = _epsilon;
@@ -101,17 +112,17 @@ namespace espressopp {
       real _computeEnergyRaw(const Particle& p, const bc::BC& bc) const {
         real dist, dist3, se3;
 
-        real boxL = bc.getBoxL()[dir];
+        real boxL = bc.getBoxL()[dir_];
         Real3D position;
         position = p.position();
 
 	const LJ93WParams &params = params_list.at(p.type());
 
-	if (position[dir]<params.sigmaCutoff+params.r0) {
-	  dist = position[dir]-params.r0;
+	if (position[dir_]<params.sigmaCutoff+params.r0) {
+	  dist = position[dir_]-params.r0;
 	}
-	else if (position[dir]>(boxL-params.sigmaCutoff-params.r0)) {
-	  dist = boxL - position[dir] - params.r0;
+	else if (position[dir_]>(boxL-params.sigmaCutoff-params.r0)) {
+	  dist = boxL - position[dir_] - params.r0;
 	}
 	else {return 0.;}
 
@@ -125,18 +136,18 @@ namespace espressopp {
                             const Particle& p,
                             const bc::BC& bc) const {
 	real dist, dist3, se3;
-        real boxL = bc.getBoxL()[dir];
+        real boxL = bc.getBoxL()[dir_];
 	bool opposite;
 	opposite = false;
         Real3D position;
         position = p.position();
 	const LJ93WParams &params = params_list.at(p.type());
 
-	if (position[dir]<params.sigmaCutoff+params.r0) {
-	  dist = position[dir]-params.r0;
+	if (position[dir_]<params.sigmaCutoff+params.r0) {
+	  dist = position[dir_]-params.r0;
 	}
-	else if (position[dir]>(boxL-params.sigmaCutoff-params.r0)) {
-	  dist = boxL - position[dir] - params.r0;
+	else if (position[dir_]>(boxL-params.sigmaCutoff-params.r0)) {
+	  dist = boxL - position[dir_] - params.r0;
 	  opposite=true;
 	}
 	else {return false;};
@@ -146,9 +157,9 @@ namespace espressopp {
 	dist3 = dist*dist*dist;
 	se3 = params.sigma3 / dist3;
 
-	force[dir] = params.epsilon * ( 9*se3*se3*se3 - 3*se3 ) / dist;
+	force[dir_] = params.epsilon * ( 9*se3*se3*se3 - 3*se3 ) / dist;
 	if (opposite) {
-	  force[dir] *= -1;
+	  force[dir_] *= -1;
 	}
 
         return true;

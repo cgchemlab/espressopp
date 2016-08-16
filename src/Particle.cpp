@@ -24,6 +24,16 @@
 #include "Particle.hpp"
 
 namespace espressopp {
+
+  void ParticleProperties::updateParticleProperties(Particle *p) {
+    if (change_flag & 1)
+      p->setType(type);
+    if (change_flag & 2)
+      p->setMass(mass);
+    if (change_flag & 4)
+      p->setQ(q);
+  }
+
   void 
   Particle::
   registerPython() {
@@ -57,15 +67,15 @@ namespace espressopp {
       .add_property(
           "type",
           make_getter(&ParticleProperties::type),
-          make_setter(&ParticleProperties::type))
+          &ParticleProperties::setType)
       .add_property(
           "mass",
           make_getter(&ParticleProperties::mass),
-          make_setter(&ParticleProperties::mass))
+          &ParticleProperties::setMass)
       .add_property(
           "q",
           make_getter(&ParticleProperties::q),
-          make_setter(&ParticleProperties::q))
+          &ParticleProperties::setQ)
       .add_property(
           "state",
           make_getter(&ParticleProperties::state),

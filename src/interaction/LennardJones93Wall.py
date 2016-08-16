@@ -1,3 +1,5 @@
+#  Copyright (C) 2016,
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #  Copyright (C) 2014
 #      Pierre de Buyl
 #  Copyright (C) 2012,2013
@@ -35,20 +37,20 @@ direction. :math:`V(r)=0` after a distance `sigmaCutoff`.
 The parameters have to be defined for every species present in the system with
 `setParams` and can be retrieved with `getParams`.
 
+The direction of the wall is defined in the constructor.
+
 Example:
 
-    >>> LJ93 = espressopp.interaction.LennardJones93Wall()
+    >>> LJ93 = espressopp.interaction.LennardJones93Wall(direction=0)
     >>> LJ93.setParams(0, 6., 1., wall_cutoff)
     >>> SPLJ93 = espressopp.interaction.SingleParticleLennardJones93Wall(system, LJ93)
     >>> system.addInteraction(SPLJ93)
 
 
+.. function:: espressopp.interaction.LennardJones93Wall(direction)
 
-
-
-
-
-.. function:: espressopp.interaction.LennardJones93Wall()
+      :param direction: The direction of the wall.
+      :type direction: int
 
 
 .. function:: espressopp.interaction.LennardJones93Wall.getParams(type_var)
@@ -92,29 +94,26 @@ from _espressopp import interaction_LennardJones93Wall, interaction_SinglePartic
 
 class LennardJones93WallLocal(SingleParticlePotentialLocal, interaction_LennardJones93Wall):
 
-    def __init__(self):
+    def __init__(self, direction=0):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_LennardJones93Wall, direction)
 
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_LennardJones93Wall)
     def getParams(self, type_var):
-
-
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             return self.cxxclass.getParams(self, type_var)
 
     def setParams(self, type_var, epsilon, sigma, sigmaCutoff, r0):
-
-
-        self.cxxclass.setParams(self, type_var, epsilon, sigma, sigmaCutoff, r0)
+        if pmi.workerIsActive():
+            self.cxxclass.setParams(self, type_var, epsilon, sigma, sigmaCutoff, r0)
 
 class SingleParticleLennardJones93WallLocal(InteractionLocal, interaction_SingleParticleLennardJones93Wall):
 
     def __init__(self, system, potential):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             cxxinit(self, interaction_SingleParticleLennardJones93Wall, system, potential)
 
     def setPotential(self, potential):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             self.cxxclass.setPotential(self, potential)
 
 if pmi.isController:

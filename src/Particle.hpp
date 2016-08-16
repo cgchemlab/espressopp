@@ -61,9 +61,29 @@ namespace espressopp {
       lambdaDeriv = 0.0;
       state = 0;
       res_id = 0;
+
+      change_flag = 0;
     }
 
+    void setType(size_t t) {
+      type = t;
+      change_flag |= 1;
+    }
+
+    void setMass(real m) {
+      mass = m;
+      change_flag |= 2;
+    }
+
+    void setQ(real q_) {
+      q = q_;
+      change_flag |= 4;
+    }
+
+    void updateParticleProperties(Particle *p);
+
   private:
+    int change_flag;
     friend class boost::serialization::access;
     template< class Archive >
     void serialize(Archive &ar, const unsigned int version)
