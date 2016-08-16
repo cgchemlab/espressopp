@@ -49,8 +49,22 @@ void ChangeInRegion::connect() {
 void ChangeInRegion::updateParticles() {
   for (ParticleRegion::iterator it=particleRegion->begin(); it != particleRegion->end(); it++ ) {
     Particle *p = *it;
-    if (type_particleProperties.count(p->type()) == 1) {
-      type_particleProperties[p->type()]->updateParticleProperties(p);
+    longint p_type = p->type();
+    if (type_particleProperties.count(p_type) == 1) {
+      type_particleProperties[p_type]->updateParticleProperties(p);
+      LOG4ESPP_DEBUG(theLogger, "change property of particle " << p->id());
+    }
+    if (type_flags.count(p_type) == 1) {
+      int flag = type_flags[p_type];
+      LOG4ESPP_DEBUG(theLogger, "type_flags " << flag);
+      if (flag & 1) { // reset velocity TODO: maybe enum ??
+        p->setV(0.0);
+        LOG4ESPP_DEBUG(theLogger, "reset velocity of particle " << p->id());
+      }
+      if (flag & 2) {  // reset force
+        p->setF(0.0);
+        LOG4ESPP_DEBUG(theLogger, "reset force of particle " << p->id());
+      }
     }
   }
 }
@@ -65,9 +79,11 @@ void ChangeInRegion::registerPython() {
   class_<ChangeInRegion, shared_ptr<ChangeInRegion>, bases<Extension> >
   ("integrator_ChangeInRegion", init<shared_ptr<System>, shared_ptr<ParticleRegion> >())
       .def("set_particle_properties", &ChangeInRegion::setParticleProperties)
+      .def("set_flags", &ChangeInRegion::setFlags)
       .def("update_particles", &ChangeInRegion::updateParticles)
       .def("connect", &ChangeInRegion::connect)
       .def("disconnect", &ChangeInRegion::disconnect);
+
 }
 
 }

@@ -43,6 +43,17 @@ class ChangeInRegion: public Extension {
     type_particleProperties.insert(std::make_pair(type_id, pp));
   }
 
+  void setFlags(longint type_id, bool reset_velocity, bool reset_force) {
+
+    int flag = 0;
+    if (reset_velocity)
+      flag |= 1;
+    if (reset_force)
+      flag |= 2;
+    LOG4ESPP_DEBUG(theLogger, "set flags type_id: " << type_id << " v:" << reset_velocity << " f:" << reset_force << " flag:" << flag);
+    type_flags.insert(std::make_pair(type_id, flag));
+  }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
@@ -51,6 +62,7 @@ class ChangeInRegion: public Extension {
   shared_ptr<ParticleRegion> particleRegion;
 
   std::map<longint, shared_ptr<ParticleProperties> > type_particleProperties;
+  std::map<longint, int> type_flags;
 
   void updateParticles();
   void connect();

@@ -35,8 +35,19 @@ This extension allows chainging properties of particles whenever they enters the
 
       Defines the change of the particle properties, the particles of `type_id` in region will be updated only.
 
-      :param type_id:
+      :param type_id: The particle type id.
       :type type_id:
+
+.. function:: espressopp.integrator.ChangeInRegion.set_flags(type_id, reset_velocity, reset_force)
+
+      Sets if velocity of force of particle of given type should have reset the force and velocity.
+
+      :param type_id: The particle type id.
+      :type type_id: int
+      :param reset_velocity: If set to true then the velocity will be reset to 0.0.
+      :type reset_velocity: bool
+      :param reset_force: If set to true the the force will be reset to 0.0.
+      :type reset_force: bool
 
 """
 from espressopp.esutil import cxxinit
@@ -54,5 +65,5 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.ChangeInRegionLocal',
-            pmicall = ['set_particle_properties', 'update_particles'],
+            pmicall = ['set_particle_properties', 'update_particles', 'set_flags'],
             )
