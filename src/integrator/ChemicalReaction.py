@@ -503,6 +503,7 @@ if pmi.isController:
                 'active',
                 'cutoff',
                 'rate',
+                'revert',
             )
         )
 

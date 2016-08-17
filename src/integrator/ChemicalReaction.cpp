@@ -240,14 +240,17 @@ void Reaction::registerPython() {
 }
 
 /** Restricted reaction. */
-
 LOG4ESPP_LOGGER(RestrictReaction::theLogger, "RestrictReaction");
 
 /** Checks if the particles pair is valid. */
 bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering RestrictReaction::isValidPair");
 
-  if (isConnected(p1.id(), p2.id()) && isValidState(p1, p2, particle_order)) {
+  if (revert_) {
+    if (isConnected(p1.id(), p2.id()))
+      return false;
+    return Reaction::isValidPair(p1, p2, particle_order);
+  } else if (isConnected(p1.id(), p2.id()) && isValidState(p1, p2, particle_order)) {
 
     // Always set reaction_rate to 1.0;
     particle_order.reaction_rate = 1.0;
@@ -258,7 +261,6 @@ bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &part
       return true;
     }
   }
-
   return false;
 }
 
@@ -282,6 +284,7 @@ void RestrictReaction::registerPython() {
           .add_property("active", &RestrictReaction::active, &RestrictReaction::set_active)
           .add_property("cutoff", &RestrictReaction::cutoff)
           .add_property("rate", &RestrictReaction::rate, &RestrictReaction::set_rate)
+          .add_property("revert", make_getter(&RestrictReaction::revert_), make_setter(&RestrictReaction::revert_))
           .def("add_postprocess", &RestrictReaction::addPostProcess)
           .def("set_reaction_cutoff", &RestrictReaction::set_reaction_cutoff)
           .def("get_reaction_cutoff", &Reaction::reaction_cutoff)

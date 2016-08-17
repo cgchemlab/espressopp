@@ -460,6 +460,7 @@ class RestrictReaction : public Reaction {
   }
 
   boost::unordered_map<std::pair<longint, longint>, bool> connectivity_;
+  bool revert_;
 };
 
 /*** Defines dissociation reactions.

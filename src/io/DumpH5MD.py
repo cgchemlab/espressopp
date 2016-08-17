@@ -60,6 +60,7 @@ Flags
 - store_charge: saves charge
 - store_lambda: saves the value of lambda parameter (useful in AdResS simulations)
 - store_res_id: saves residue id
+- do_sort: sort the file (see :ref:`sorting-file-label`)
 
 Example
 +++++++
@@ -78,6 +79,20 @@ Example
 >>> for s in range(steps):
         integrator.run(int_steps)
         traj_file.dump(s*int_steps, s*int_steps*integrator.dt)
+
+
+.. _sorting-file-label:
+
+Sorting file
+++++++++++++++
+
+The content of the `/particles/{}/` is not sorted with respect to the
+particle id. This is because of the way how the data are stored
+by multiple cores simultaneously.
+
+If the flag `do_sort` is True then during the close method, the data
+will be sorted.
+
 
 .. _H5MD: http://nongnu.org/h5md/
 
@@ -99,7 +114,7 @@ import time as py_time
 
 
 class DumpH5MDLocal(io_DumpH5MD):
-    def __init__(self, system, filename, group_name='all',
+    def __init__(self, system, filename, group_name='atoms',
                  store_position=True,
                  store_species=True,
                  store_state=False,
@@ -112,13 +127,13 @@ class DumpH5MDLocal(io_DumpH5MD):
                  is_adress=False,
                  author='xxx',
                  email='xxx',
-                 chunk_size=256,
+                 chunk_size=128,
                  do_sort=True):
         """
         Args:
             system: The system object.
             filename: The name of hdf file name.
-            group_name: The name of atom groups. (default: 'all').
+            group_name: The name of atom groups. (default: 'atoms').
             store_position: If set to True then position will be stored. (default: True)
             store_species: If set to True then species will be stored. (default: True)
             store_state: If set to True then state will be stored. (default: False)
@@ -132,7 +147,7 @@ class DumpH5MDLocal(io_DumpH5MD):
                 coarse-grained.
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
-            chunk_size: The size of data chunk. (default: 256)
+            chunk_size: The size of data chunk. (default: 128)
             do_sort: If set to True then HDF5 will be sorted on close.
         """
         if not pmi.workerIsActive():

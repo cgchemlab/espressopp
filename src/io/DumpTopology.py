@@ -46,7 +46,18 @@ r"""
 
 .. function:: espressopp.io.DumpTopology.update()
 
-   Update H5MD file.
+   Update the H5MD file.
+
+.. function:: espressopp.io.DumpTopology.add_static_tuple(fpl, name, particle_group)
+
+   Write data from fixed pair list once, not updated whenever the tuple is changed.
+
+   :param fpl: The FixedPairList object.
+   :type fpl: espressopp.FixedPairList
+   :param name: The name of the tuple to store in H5MD file.
+   :type name: str
+   :param particle_group: The particle group to referee to.
+   :type particle_group: str
 
 Example
 +++++++
