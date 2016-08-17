@@ -441,7 +441,7 @@ class RestrictReaction : public Reaction {
                    int min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate, bool intramolecular):
       Reaction(type_1, type_2, delta_1, delta_2,
                min_state_1, max_state_1, min_state_2, max_state_2, fpl,
-               rate, true) { }
+               rate, true), revert_(false) { }
 
   bool isValidPair(Particle &p1, Particle &p2, ReactedPair &correct_order);
 
