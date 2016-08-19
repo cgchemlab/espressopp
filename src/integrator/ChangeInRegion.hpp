@@ -43,14 +43,20 @@ class ChangeInRegion: public Extension {
     type_particleProperties.insert(std::make_pair(type_id, pp));
   }
 
-  void setFlags(longint type_id, bool reset_velocity, bool reset_force) {
+  void setFlags(longint type_id, bool reset_velocity, bool reset_force, bool remove_particle) {
 
     int flag = 0;
     if (reset_velocity)
-      flag |= 1;
+      flag |= R_VELOCITY;
     if (reset_force)
-      flag |= 2;
-    LOG4ESPP_DEBUG(theLogger, "set flags type_id: " << type_id << " v:" << reset_velocity << " f:" << reset_force << " flag:" << flag);
+      flag |= R_FORCE;
+    if (remove_particle)
+      flag |= R_PARTICLE;
+
+    LOG4ESPP_DEBUG(theLogger,
+      "set flags type_id: " << type_id << " v:" << reset_velocity << " f:" << reset_force
+      << " remove: " << remove_particle
+      << " flag:" << flag);
     type_flags.insert(std::make_pair(type_id, flag));
   }
 
@@ -58,6 +64,7 @@ class ChangeInRegion: public Extension {
   static void registerPython();
 
  private:
+  enum FLAGS {R_VELOCITY = 1, R_FORCE = 2, R_PARTICLE = 4};
   boost::signals2::connection sig_aftIntV;
   shared_ptr<ParticleRegion> particleRegion;
 

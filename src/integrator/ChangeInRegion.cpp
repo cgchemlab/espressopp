@@ -47,6 +47,7 @@ void ChangeInRegion::connect() {
 }
 
 void ChangeInRegion::updateParticles() {
+  System& system = getSystemRef();
   for (ParticleRegion::iterator it=particleRegion->begin(); it != particleRegion->end(); it++ ) {
     Particle *p = *it;
     longint p_type = p->type();
@@ -57,13 +58,17 @@ void ChangeInRegion::updateParticles() {
     if (type_flags.count(p_type) == 1) {
       int flag = type_flags[p_type];
       LOG4ESPP_DEBUG(theLogger, "type_flags " << flag);
-      if (flag & 1) { // reset velocity TODO: maybe enum ??
-        p->setV(0.0);
-        LOG4ESPP_DEBUG(theLogger, "reset velocity of particle " << p->id());
-      }
-      if (flag & 2) {  // reset force
-        p->setF(0.0);
-        LOG4ESPP_DEBUG(theLogger, "reset force of particle " << p->id());
+      if (flag & R_PARTICLE) {  // remove particle ;-)
+        system.storage->removeParticle(p->id());
+      } else {
+        if (flag & R_VELOCITY) { // reset velocity
+          p->setV(0.0);
+          LOG4ESPP_DEBUG(theLogger, "reset velocity of particle " << p->id());
+        }
+        if (flag & R_FORCE) {  // reset force
+          p->setF(0.0);
+          LOG4ESPP_DEBUG(theLogger, "reset force of particle " << p->id());
+        }
       }
     }
   }
@@ -83,7 +88,6 @@ void ChangeInRegion::registerPython() {
       .def("update_particles", &ChangeInRegion::updateParticles)
       .def("connect", &ChangeInRegion::connect)
       .def("disconnect", &ChangeInRegion::disconnect);
-
 }
 
 }

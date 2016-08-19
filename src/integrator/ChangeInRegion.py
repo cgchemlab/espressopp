@@ -38,7 +38,7 @@ This extension allows chainging properties of particles whenever they enters the
       :param type_id: The particle type id.
       :type type_id:
 
-.. function:: espressopp.integrator.ChangeInRegion.set_flags(type_id, reset_velocity, reset_force)
+.. function:: espressopp.integrator.ChangeInRegion.set_flags(type_id, reset_velocity, reset_force, remove_particle)
 
       Sets if velocity of force of particle of given type should have reset the force and velocity.
 
@@ -48,6 +48,8 @@ This extension allows chainging properties of particles whenever they enters the
       :type reset_velocity: bool
       :param reset_force: If set to true the the force will be reset to 0.0.
       :type reset_force: bool
+      :param remove_particle: If set to true then the particle will be removed from the simulation
+      :type remove_particle: bool
 
 """
 from espressopp.esutil import cxxinit
@@ -59,6 +61,10 @@ class ChangeInRegionLocal(ExtensionLocal, integrator_ChangeInRegion):
     def __init__(self, system, particleGroup):
         if pmi.workerIsActive():
             cxxinit(self, integrator_ChangeInRegion, system, particleGroup)
+
+    def set_flags(self, type_id, reset_velocity, reset_force, remove_particle=False):
+        if pmi.workerIsActive():
+            self.cxxclass.set_flags(self, type_id, reset_velocity, reset_force, remove_particle)
 
 if pmi.isController :
     class ChangeInRegion(Extension):
