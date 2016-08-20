@@ -206,7 +206,6 @@ namespace espressopp {
     FixedPairListTypesInteractionTemplate < _Potential >::
     computeVirial() {
       LOG4ESPP_INFO(theLogger, "compute the virial for the Fixed Pair List with types");
-      std::cout << "Warning! computeVirial in FixedPairListTypesInteractionTemplate has not been tested." << std::endl;
       
       real w = 0.0;
       const bc::BC& bc = *getSystemRef().bc;  // boundary conditions

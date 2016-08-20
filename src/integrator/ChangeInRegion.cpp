@@ -27,7 +27,7 @@
 #include "iterator/CellListIterator.hpp"
 
 namespace espressopp {
-using namespace iterator;
+using namespace iterator;  // NOLINT
 
 namespace integrator {
 
@@ -48,7 +48,7 @@ void ChangeInRegion::connect() {
 
 void ChangeInRegion::updateParticles() {
   System& system = getSystemRef();
-  for (ParticleRegion::iterator it=particleRegion->begin(); it != particleRegion->end(); it++ ) {
+  for (ParticleRegion::iterator it=particleRegion->begin(); it != particleRegion->end(); it++) {
     Particle *p = *it;
     longint p_type = p->type();
     if (type_particleProperties.count(p_type) == 1) {
@@ -59,9 +59,10 @@ void ChangeInRegion::updateParticles() {
       int flag = type_flags[p_type];
       LOG4ESPP_DEBUG(theLogger, "type_flags " << flag);
       if (flag & R_PARTICLE) {  // remove particle ;-)
-        system.storage->removeParticle(p->id());
+        if (!p->ghost())
+          system.storage->removeParticle(p->id());
       } else {
-        if (flag & R_VELOCITY) { // reset velocity
+        if (flag & R_VELOCITY) {  // reset velocity
           p->setV(0.0);
           LOG4ESPP_DEBUG(theLogger, "reset velocity of particle " << p->id());
         }
@@ -78,8 +79,7 @@ void ChangeInRegion::updateParticles() {
 ** REGISTRATION WITH PYTHON
 ****************************************************/
 void ChangeInRegion::registerPython() {
-
-  using namespace espressopp::python;
+  using namespace espressopp::python;  // NOLINT
 
   class_<ChangeInRegion, shared_ptr<ChangeInRegion>, bases<Extension> >
   ("integrator_ChangeInRegion", init<shared_ptr<System>, shared_ptr<ParticleRegion> >())
@@ -90,5 +90,5 @@ void ChangeInRegion::registerPython() {
       .def("disconnect", &ChangeInRegion::disconnect);
 }
 
-}
-}
+}  // end namespace integrator
+}  // end namespace espressopp
