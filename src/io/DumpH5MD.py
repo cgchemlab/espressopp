@@ -128,7 +128,6 @@ class DumpH5MDLocal(io_DumpH5MD):
                  author='xxx',
                  email='xxx',
                  chunk_size=128,
-                 with_compression=True,
                  do_sort=True):
         """
         Args:
@@ -149,7 +148,6 @@ class DumpH5MDLocal(io_DumpH5MD):
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 128)
-            with_compression: If set to True then gzip compression will be enabled. (default: True)
             do_sort: If set to True then HDF5 will be sorted on close.
         """
         if not pmi.workerIsActive():
@@ -194,42 +192,38 @@ class DumpH5MDLocal(io_DumpH5MD):
                 time=True,
                 edges=np.zeros(3, dtype=np.float64))
 
-        trajectory_kwargs = {}
-        if with_compression:
-            trajectory_kwargs['compression'] = 'gzip'
-
         self.id_e = part.trajectory(
-            'id', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+            'id', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
         self.mass = part.trajectory(
-            'mass', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+            'mass', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_position:
             self.position = part.trajectory(
-                'position', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3), **trajectory_kwargs)
+                'position', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
             self.image = part.trajectory(
-                'image', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3), **trajectory_kwargs)
+                'image', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
         if self.store_species:
             self.species = part.trajectory(
-                'species', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+                'species', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_state:
             self.state = part.trajectory(
-                'state', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+                'state', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_velocity:
             self.velocity = part.trajectory(
-                'velocity', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3), **trajectory_kwargs)
+                'velocity', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
         if self.store_force:
             self.force = part.trajectory(
-                'force', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3), **trajectory_kwargs)
+                'force', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
         if self.store_charge:
             self.charge = part.trajectory(
-                'charge', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+                'charge', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_lambda:
             self.lambda_adr = part.trajectory(
                 'lambda_adr', (self.chunk_size,), np.float64,
-                chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+                chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_res_id:
             self.res_id = part.trajectory(
                 'res_id', (self.chunk_size, ), np.int,
-                chunks=(1, self.chunk_size), fillvalue=-1, **trajectory_kwargs)
+                chunks=(1, self.chunk_size), fillvalue=-1)
         self._system_data()
 
         self.commTimer = 0.0
