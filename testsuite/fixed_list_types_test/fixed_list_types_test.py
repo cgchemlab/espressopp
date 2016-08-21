@@ -42,11 +42,11 @@ class TestFixedPairListTypesTabulated(ESPPTestCase):
     def setUpClass(cls):
         # Create two tables.
         tab1 = open('table_b1.pot', 'w')
-        tab1.write('0.0 0.0 0.0\n1.0 1.0 1.0\n2.0 2.0 2.0\n')
+        tab1.write('0.0 0.0 0.0\n1.0 1.0 1.0\n2.0 2.0 2.0\n3.0 3.0 3.0\n4.0 4.0 4.0')
         tab1.close()
 
         tab2 = open('table_b2.pot', 'w')
-        tab2.write('0.0 0.0 0.0\n1.0 2.0 2.0\n2.0 3.0 3.0\n')
+        tab2.write('0.0 0.0 0.0\n1.0 2.0 2.0\n2.0 3.0 3.0\n3.0 3.0 3.0\n4.0 4.0 4.0')
         tab2.close()
 
     @classmethod
@@ -96,21 +96,22 @@ class TestFixedPairListTypesTabulated(ESPPTestCase):
         ret_fpl = self.interaction.getFixedPairList()
         self.assertEqual(ret_fpl.getBonds(), [[(1, 1)]])
 
-
 class TestFixedTripleListTypesTabulated(ESPPTestCase):
     @classmethod
     def setUpClass(cls):
         # Create table.
         tab1 = open('table_a1.pot', 'w')
-        tab1.write('0.0 0.0 0.0\n{} 1.0 1.0\n{} 1.0 2.0\n'.format(
+        tab1.write('0.0 0.0 0.0\n{} 1.0 1.0\n{} 1.0 2.0\n{} 2.0 3.0\n'.format(
             45.0 / 180.0 * math.pi,
-            90.0 / 180.0 * math.pi))
+            90.0 / 180.0 * math.pi,
+            135.0 / 180.0 * math.pi))
         tab1.close()
 
         tab1 = open('table_a2.pot', 'w')
-        tab1.write('0.0 0.0 0.0\n{} 2.0 1.0\n{} 1.0 2.0\n'.format(
+        tab1.write('0.0 0.0 0.0\n{} 2.0 1.0\n{} 1.0 2.0\n{} 2.0 3.0'.format(
             45.0 / 180.0 * math.pi,
-            90.0 / 180.0 * math.pi))
+            90.0 / 180.0 * math.pi,
+            135.0 / 180.0 * math.pi))
         tab1.close()
 
     @classmethod
@@ -197,7 +198,6 @@ class TestFixedQuadrupleListTypesTabulated(ESPPTestCase):
         self.interaction.setFixedQuadrupleList(fql)
         ret_fql = self.interaction.getFixedQuadrupleList()
         self.assertEqual(ret_fql.getQuadruples(), [[(1, 1, 1, 1)]])
-
 
 if __name__ == '__main__':
     ut.main()
