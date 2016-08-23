@@ -124,6 +124,7 @@ class DumpH5MDLocal(io_DumpH5MD):
                  store_lambda=False,
                  store_res_id=False,
                  static_box=True,
+                 dump_freq=None,
                  is_adress=False,
                  author='xxx',
                  email='xxx',
@@ -145,6 +146,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             static_box: If set to True then box is static (like in NVT ensemble) (default: True)
             is_adress: If set to True then AdResS particles will be save instead of
                 coarse-grained.
+            dump_freq: The dictionary with the frequencies of dump. (default: every dump)
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 128)
@@ -196,34 +198,26 @@ class DumpH5MDLocal(io_DumpH5MD):
             'id', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
         self.mass = part.trajectory(
             'mass', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
-        if self.store_position:
-            self.position = part.trajectory(
-                'position', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
-            self.image = part.trajectory(
-                'image', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
-        if self.store_species:
-            self.species = part.trajectory(
-                'species', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
-        if self.store_state:
-            self.state = part.trajectory(
-                'state', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
-        if self.store_velocity:
-            self.velocity = part.trajectory(
-                'velocity', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
-        if self.store_force:
-            self.force = part.trajectory(
-                'force', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
-        if self.store_charge:
-            self.charge = part.trajectory(
-                'charge', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
-        if self.store_lambda:
-            self.lambda_adr = part.trajectory(
-                'lambda_adr', (self.chunk_size,), np.float64,
-                chunks=(1, self.chunk_size), fillvalue=-1)
-        if self.store_res_id:
-            self.res_id = part.trajectory(
-                'res_id', (self.chunk_size, ), np.int,
-                chunks=(1, self.chunk_size), fillvalue=-1)
+        self.position = part.trajectory(
+            'position', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+        self.image = part.trajectory(
+            'image', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+        self.species = part.trajectory(
+            'species', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
+        self.state = part.trajectory(
+            'state', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
+        self.velocity = part.trajectory(
+            'velocity', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+        self.force = part.trajectory(
+            'force', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+        self.charge = part.trajectory(
+            'charge', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
+        self.lambda_adr = part.trajectory(
+            'lambda_adr', (self.chunk_size,), np.float64,
+            chunks=(1, self.chunk_size), fillvalue=-1)
+        self.res_id = part.trajectory(
+            'res_id', (self.chunk_size, ), np.int,
+            chunks=(1, self.chunk_size), fillvalue=-1)
         self._system_data()
 
         self.commTimer = 0.0
