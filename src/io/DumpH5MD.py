@@ -347,16 +347,18 @@ class DumpH5MDLocal(io_DumpH5MD):
             self.id_e.value.resize(total_size, axis=1)
         self.id_e.append(id_ar, step, time, region=(idx_0, idx_1))
 
+        # Store box values at every time step
+        if not self.static_box:
+            self.box.edges.append(
+                np.array([edge_i for edge_i in self.system.bc.boxL], dtype=np.float64),
+                step,
+                time)
+
         if self.store_position:
             pos = np.asarray(self.getPosition())
             if total_size > self.position.value.shape[1]:
                 self.position.value.resize(total_size, axis=1)
             self.position.append(pos, step, time, region=(idx_0, idx_1))
-            if not self.static_box:
-                self.box.edges.append(
-                    np.array([edge_i for edge_i in self.system.bc.boxL], dtype=np.float64),
-                    step,
-                    time)
             # Store image.
             image = np.asarray(self.getImage())
             if total_size > self.image.value.shape[1]:
