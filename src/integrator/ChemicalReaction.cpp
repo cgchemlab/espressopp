@@ -243,20 +243,20 @@ LOG4ESPP_LOGGER(RestrictReaction::theLogger, "RestrictReaction");
 bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering RestrictReaction::isValidPair");
 
-  if (revert_) {
-    if (isConnected(p1.id(), p2.id()))
+  if (isConnected(p1.id(), p2.id())) {
+    if (isValidState(p1, p2, particle_order)) {
+      particle_order.reaction_rate = max_rate;   // set as maximum reaction rate
+      particle_order.r_sqr = 0.0;
+    } else {
       return false;
-    return Reaction::isValidPair(p1, p2, particle_order);
-  } else if (isConnected(p1.id(), p2.id()) && isValidState(p1, p2, particle_order)) {
-
-    // Always set reaction_rate to 1.0;
-    particle_order.reaction_rate = 1.0;
-    particle_order.r_sqr = 0.0;
-
-    if (reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
-      LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
-      return true;
     }
+  } else {
+
+  }
+
+  if (reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+    LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
+    return true;
   }
   return false;
 }

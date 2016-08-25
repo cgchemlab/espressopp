@@ -439,6 +439,7 @@ class RestrictReaction : public Reaction {
   void defineConnection(longint pid1, longint pid2) {
     connectivity_[std::make_pair(pid1, pid2)] = true;
     connectivity_[std::make_pair(pid2, pid1)] = true;
+    connected_ids_.insert(pid1);
   }
 
   static void registerPython();
@@ -451,7 +452,12 @@ class RestrictReaction : public Reaction {
   }
 
   boost::unordered_map<std::pair<longint, longint>, bool> connectivity_;
+
+  boost::unordered_set<longint> connected_ids_;
+
   bool revert_;
+
+  const static real max_rate = std::numeric_limits<real>::max();
 };
 
 /*** Defines dissociation reactions.
