@@ -38,6 +38,8 @@ namespace espressopp {
 
   static const real infinity = std::numeric_limits< real >::infinity();
   static const real ROUND_ERROR_PREC = std::numeric_limits< real >::epsilon();
+  static const real MAX_REAL = std::numeric_limits<real>::max();
+  static const real MIN_REAL = std::numeric_limits<real>::min();
 
   // define this to "long long" if you need longer integers
   typedef int longint;

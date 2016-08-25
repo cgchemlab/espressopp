@@ -456,8 +456,6 @@ class RestrictReaction : public Reaction {
   boost::unordered_set<longint> connected_ids_;
 
   bool revert_;
-
-  const static real max_rate = std::numeric_limits<real>::max();
 };
 
 /*** Defines dissociation reactions.

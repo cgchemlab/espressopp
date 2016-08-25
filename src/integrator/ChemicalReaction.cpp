@@ -245,7 +245,7 @@ bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &part
 
   if (isConnected(p1.id(), p2.id())) {
     if (isValidState(p1, p2, particle_order)) {
-      particle_order.reaction_rate = max_rate;   // set as maximum reaction rate
+      particle_order.reaction_rate = MAX_REAL;   // set as maximum reaction rate
       particle_order.r_sqr = 0.0;
     } else {
       return false;
