@@ -292,8 +292,7 @@ class ReactionLocal(integrator_Reaction):
                 min_state_2,
                 max_state_2,
                 fpl,
-                rate,
-                False
+                rate
             )
             self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
 
@@ -331,8 +330,7 @@ class RestrictReactionLocal(integrator_Reaction):
                 min_state_2,
                 max_state_2,
                 fpl,
-                rate,
-                False
+                rate
             )
             self.cxxclass.set_reaction_cutoff(self, ReactionCutoffStaticLocal(cutoff))
 
@@ -470,7 +468,6 @@ if pmi.isController:
                 'max_state_1',
                 'min_state_2',
                 'max_state_2',
-                'intramolecular',
                 'intraresidual',
                 'active',
                 'cutoff',
@@ -498,7 +495,6 @@ if pmi.isController:
                 'max_state_1',
                 'min_state_2',
                 'max_state_2',
-                'intramolecular',
                 'intraresidual',
                 'active',
                 'cutoff',

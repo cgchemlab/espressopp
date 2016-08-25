@@ -114,8 +114,8 @@ LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles has correct state. */
 bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_order) {
-  if ((p1.res_id() == p2.res_id()) && !intramolecular_)
-    return false;
+  if (p1.res_id() == p2.res_id())
+    return;
 
   if (!intraresidual_) {  // do not allow to intraresidual bonds (bonds between already bonded residuals)
     if (!topology_manager_)
@@ -216,8 +216,6 @@ void Reaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<Reaction, shared_ptr<integrator::Reaction> >
       ("integrator_Reaction",
-          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-          // min_state_2, max_state_2, fpl, intramolecular
        init<int, int, int, int, int, int, int, int,
             shared_ptr<FixedPairList>, real, bool>())
       .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
@@ -228,7 +226,6 @@ void Reaction::registerPython() {
       .add_property("delta_2", &Reaction::delta_2, &Reaction::set_delta_2)
       .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
       .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
-      .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
       .add_property("intraresidual", &Reaction::intraresidual, &Reaction::set_interaresidual)
       .add_property("active", &Reaction::active, &Reaction::set_active)
       .add_property("cutoff", &Reaction::cutoff)
@@ -268,8 +265,6 @@ void RestrictReaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<RestrictReaction, bases<Reaction>, shared_ptr<RestrictReaction> >
       ("integrator_RestrictReaction",
-          // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
-          // min_state_2, max_state_2, fpl, intramolecular
           init<int, int, int, int, int, int, int, int, shared_ptr<FixedPairList>, real, bool>())
           .add_property("type_1", &RestrictReaction::type_1, &Reaction::set_type_1)
           .add_property("type_2", &RestrictReaction::type_2, &Reaction::set_type_2)
@@ -279,7 +274,6 @@ void RestrictReaction::registerPython() {
           .add_property("delta_2", &RestrictReaction::delta_2, &RestrictReaction::set_delta_2)
           .add_property("min_state_2", &RestrictReaction::min_state_2, &RestrictReaction::set_min_state_2)
           .add_property("max_state_2", &RestrictReaction::max_state_2, &RestrictReaction::set_max_state_2)
-          .add_property("intramolecular", &RestrictReaction::intramolecular, &RestrictReaction::set_intramolecular)
           .add_property("intraresidual", &RestrictReaction::intraresidual, &RestrictReaction::set_interaresidual)
           .add_property("active", &RestrictReaction::active, &RestrictReaction::set_active)
           .add_property("cutoff", &RestrictReaction::cutoff)

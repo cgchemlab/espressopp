@@ -124,12 +124,11 @@ class DumpH5MDLocal(io_DumpH5MD):
                  store_lambda=False,
                  store_res_id=False,
                  static_box=True,
-                 dump_freq=None,
                  is_adress=False,
                  author='xxx',
                  email='xxx',
                  chunk_size=128,
-                 do_sort=True):
+                 do_sort=True, **kwargs):
         """
         Args:
             system: The system object.
@@ -146,11 +145,11 @@ class DumpH5MDLocal(io_DumpH5MD):
             static_box: If set to True then box is static (like in NVT ensemble) (default: True)
             is_adress: If set to True then AdResS particles will be save instead of
                 coarse-grained.
-            dump_freq: The dictionary with the frequencies of dump. (default: every dump)
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 128)
             do_sort: If set to True then HDF5 will be sorted on close.
+            freq_position,freq_species,freq_state,freq_velocity... defines the frequence of storing different elements
         """
         if not pmi.workerIsActive():
             return
@@ -169,6 +168,12 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.static_box = static_box
         self.chunk_size = chunk_size
         self.do_sort = do_sort
+
+        freq_keys = ['position', 'species', 'state', 'velocity', 'force', 'charge', 'lambda', 'res_id']
+        self.dump_freq = {k: 1 for k in freq_keys}
+        for k, v in kwargs.items():
+            if k.startswith('freq_'):
+                self.dump_freq[k.replace('freq_', '')] = v
 
         self.system = system
         self.file = pyh5md.H5MD_File(filename, 'w', driver='mpio', comm=MPI.COMM_WORLD,
@@ -348,7 +353,7 @@ class DumpH5MDLocal(io_DumpH5MD):
                 step,
                 time)
 
-        if self.store_position:
+        if self.store_position and (step % self.dump_freq['position'] == 0):
             pos = np.asarray(self.getPosition())
             if total_size > self.position.value.shape[1]:
                 self.position.value.resize(total_size, axis=1)
@@ -360,19 +365,19 @@ class DumpH5MDLocal(io_DumpH5MD):
             self.image.append(image, step, time, region=(idx_0, idx_1))
 
         # Store velocity.
-        if self.store_velocity:
+        if self.store_velocity and (step % self.dump_freq['position'] == 0):
             vel = np.asarray(self.getVelocity())
             if total_size > self.velocity.value.shape[1]:
                 self.velocity.value.resize(total_size, axis=1)
             self.velocity.append(vel, step, time, region=(idx_0, idx_1))
 
-        if self.store_force:
+        if self.store_force and (step % self.dump_freq['force'] == 0):
             force = np.asarray(self.getForce())
             if total_size > self.force.value.shape[1]:
                 self.force.value.resize(total_size, axis=1)
             self.force.append(force, step, time, region=(idx_0, idx_1))
 
-        if self.store_charge:
+        if self.store_charge and (step % self.dump_freq['charge'] == 0):
             charge = np.asarray(self.getCharge())
             if total_size > self.charge.value.shape[1]:
                 self.charge.value.resize(total_size, axis=1)
@@ -385,28 +390,28 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.mass.append(mass, step, time, region=(idx_0, idx_1))
 
         # Store species.
-        if self.store_species:
+        if self.store_species and (step % self.dump_freq['species'] == 0):
             species = np.asarray(self.getSpecies())
             if total_size > self.species.value.shape[1]:
                 self.species.value.resize(total_size, axis=1)
             self.species.append(species, step, time, region=(idx_0, idx_1))
 
         # Store state.
-        if self.store_state:
+        if self.store_state and (step % self.dump_freq['state'] == 0):
             state = np.asarray(self.getState())
             if total_size > self.state.value.shape[1]:
                 self.state.value.resize(total_size, axis=1)
             self.state.append(state, step, time, region=(idx_0, idx_1))
 
         # Store lambda_adr
-        if self.store_lambda:
+        if self.store_lambda and (step % self.dump_freq['lambda'] == 0):
             lambda_adr = np.asarray(self.getLambda())
             if total_size > self.lambda_adr.value.shape[1]:
                 self.lambda_adr.value.resize(total_size, axis=1)
             self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1))
 
         # Store res_id
-        if self.store_res_id:
+        if self.store_res_id and (step % self.dump_freq['res_id'] == 0):
             res_id = np.asarray(self.getResId())
             if total_size > self.res_id.value.shape[1]:
                 self.res_id.value.resize(total_size, axis=1)

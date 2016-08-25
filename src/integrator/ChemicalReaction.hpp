@@ -232,7 +232,6 @@ public:
             min_state_2_(-1),
             max_state_2_(-1),
             reverse_(false),
-            intramolecular_(false),
             active_(true),
             virtual_(false),
             intraresidual_(true),
@@ -252,11 +251,10 @@ public:
    * @param max_state_2 The maximum state of particle B.
    * @param fpl The espressopp.FixedPairList with the new bonds that are added by reaction.
    * @param rate The reaction rate.
-   * @param intramolecular If set to true then intramolecular bonds are allowed.
    *
    */
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int
-      min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate, bool intramolecular)
+      min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate)
         :type_1_(type_1),
             type_2_(type_2),
             delta_1_(delta_1),
@@ -267,7 +265,6 @@ public:
             max_state_2_(max_state_2),
             reverse_(false),
             fixed_pair_list_(fpl),
-            intramolecular_(intramolecular),
             active_(true),
             virtual_(false),
             intraresidual_(true),
@@ -313,10 +310,6 @@ public:
   void set_max_state_2(int max_state_2) {max_state_2_ = max_state_2; }
 
   int max_state_2() {return max_state_2_; }
-
-  void set_intramolecular(bool intramolecular) {intramolecular_ = intramolecular; }
-
-  bool intramolecular() {return intramolecular_; }
 
   void set_interaresidual(bool i) { intraresidual_ = i; }
 
@@ -412,8 +405,6 @@ protected:
 
   bool virtual_;  //!< Is this virtual reaction (without bond) or not
 
-  bool intramolecular_;//!< Allow to intramolecular reactions.
-
   bool reverse_;//!< If true then reaction will break a bond.
 
   shared_ptr<esutil::RNG> rng_;//!< random number generator
@@ -438,10 +429,10 @@ protected:
 class RestrictReaction : public Reaction {
  public:
   RestrictReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1,
-                   int min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate, bool intramolecular):
+                   int min_state_2, int max_state_2, shared_ptr<FixedPairList> fpl, real rate):
       Reaction(type_1, type_2, delta_1, delta_2,
                min_state_1, max_state_1, min_state_2, max_state_2, fpl,
-               rate, true), revert_(false) { }
+               rate), revert_(false) { }
 
   bool isValidPair(Particle &p1, Particle &p2, ReactedPair &correct_order);
 
