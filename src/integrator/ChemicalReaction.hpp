@@ -480,9 +480,8 @@ public:
   DissociationReaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int
       max_state_1, int min_state_2, int max_state_2, real break_cutoff,
       shared_ptr<FixedPairList> fpl, real rate):
-    Reaction(type_1, type_2, delta_1, delta_2,
-        min_state_1, max_state_1, min_state_2, max_state_2, fpl, 
-        rate, true), break_cutoff_(break_cutoff) {
+        Reaction(type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2, max_state_2, fpl, rate),
+          break_cutoff_(break_cutoff) {
     reverse_ = true;
     break_cutoff_sqr_ = break_cutoff_ * break_cutoff_;
   }
