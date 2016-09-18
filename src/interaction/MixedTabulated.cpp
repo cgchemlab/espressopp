@@ -43,6 +43,7 @@ void MixedTabulated::registerPython() {
   class_<MixedTabulated, bases<Potential> >
       ("interaction_MixedTabulated",
           init<int, const char*, const char*, shared_ptr<analysis::ChemicalConversion>, real, real>())
+          .def(init<int, const char*, const char*, real, real>())  // static mixing
           .add_property("mix_value",
                         &MixedTabulated::mix_value,
                         &MixedTabulated::set_mix_value);

@@ -166,7 +166,7 @@ class ReactionCutoffRandom : public ReactionCutoff {
 public:
   ReactionCutoffRandom(real eq_distance, real eq_width, longint seed)
         :eq_width_(eq_width), eq_distance_(eq_distance), seed_(seed),
-            generator_(boost::mt19937(seed), boost::normal_distribution<>(0.0, eq_width)) { }
+            generator_(boost::mt19937(seed), boost::normal_distribution<>(eq_distance, eq_width)) { }
 
   /** Checks the condition.
 

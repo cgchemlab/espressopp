@@ -61,9 +61,12 @@ from _espressopp import interaction_MixedTabulated, interaction_VerletListMixedT
 
 
 class MixedTabulatedLocal(PotentialLocal, interaction_MixedTabulated):
-    def __init__(self, itype, table1, table2, conversion, mix_value=1.0, cutoff=infinity):
+    def __init__(self, itype, table1, table2, conversion=None, mix_value=1.0, cutoff=infinity):
         if pmi.workerIsActive():
-            cxxinit(self, interaction_MixedTabulated, itype, table1, table2, conversion, mix_value, cutoff)
+            if conversion:
+                cxxinit(self, interaction_MixedTabulated, itype, table1, table2, conversion, mix_value, cutoff)
+            else:
+                cxxinit(self, interaction_MixedTabulated, itype, table1, table2, mix_value, cutoff)
 
 class VerletListMixedTabulatedLocal(InteractionLocal, interaction_VerletListMixedTabulated):
     def __init__(self, vl):

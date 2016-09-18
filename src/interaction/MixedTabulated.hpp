@@ -80,6 +80,41 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
     initialized = true;
   }
 
+  MixedTabulated(longint itype,
+                 const char *filename1,
+                 const char *filename2,
+                 real _mix_value,
+                 real cutoff) {
+    setShift(0.0);
+    setCutoff(cutoff);
+    // Set first table.
+    boost::mpi::communicator world;
+    switch (itype) {
+      case 1:
+        table1 = make_shared<InterpolationLinear>();
+        table1->read(world, filename1);
+        table2 = make_shared<InterpolationLinear>();
+        table2->read(world, filename2);
+        break;
+      case 2:
+        table1 = make_shared<InterpolationAkima>();
+        table1->read(world, filename1);
+        table2 = make_shared<InterpolationAkima>();
+        table2->read(world, filename2);
+        break;
+      case 3:
+        table1 = make_shared<InterpolationCubic>();
+        table1->read(world, filename1);
+        table2 = make_shared<InterpolationCubic>();
+        table2->read(world, filename2);
+        break;
+      default:
+        throw std::runtime_error("wrong itype");
+    }
+    mix_value_ = _mix_value;
+    initialized = true;
+  }
+
   /** Returns energy value for given distance square. */
   real _computeEnergySqrRaw(real distSqr) const {
     real dist = sqrt(distSqr);
