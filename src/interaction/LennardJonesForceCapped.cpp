@@ -24,7 +24,6 @@
 #include "LennardJonesForceCapped.hpp"
 #include "Tabulated.hpp"
 #include "VerletListInteractionTemplate.hpp"
-#include "VerletListNonReciprocalInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListDynamicResolutionInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
@@ -36,8 +35,6 @@ namespace espressopp {
 
     typedef class VerletListInteractionTemplate <LennardJonesForceCapped>
         VerletListLennardJonesForceCapped;
-    typedef class VerletListNonReciprocalInteractionTemplate <LennardJonesForceCapped>
-        VerletListNonReciprocalLennardJonesForceCapped;
     typedef class VerletListAdressInteractionTemplate <LennardJonesForceCapped, Tabulated>
         VerletListAdressLennardJonesForceCapped;
     typedef class VerletListHadressInteractionTemplate <LennardJonesForceCapped, Tabulated>
@@ -75,12 +72,6 @@ namespace espressopp {
         ("interaction_VerletListDynamicResolutionLennardJonesForceCapped", init< shared_ptr<VerletList>, bool >())
         .def("setPotential", &VerletListDynamicResolutionLennardJonesForceCapped::setPotential, return_value_policy< reference_existing_object >())
         .def("getPotential", &VerletListDynamicResolutionLennardJonesForceCapped::getPotential, return_value_policy< reference_existing_object >())
-      ;
-
-      class_< VerletListNonReciprocalLennardJonesForceCapped, bases< Interaction > >
-        ("interaction_VerletListNonReciprocalLennardJonesForceCapped", init< shared_ptr<VerletList>, int >())
-        .def("setPotential", &VerletListNonReciprocalLennardJonesForceCapped::setPotential, return_value_policy< reference_existing_object >())
-        .def("getPotential", &VerletListNonReciprocalLennardJonesForceCapped::getPotential, return_value_policy< reference_existing_object >())
       ;
 
       class_< VerletListAdressLennardJonesForceCapped, bases< Interaction > >

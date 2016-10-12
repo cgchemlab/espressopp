@@ -97,6 +97,7 @@ public:
 
   virtual void addForces();
   virtual real computeEnergy();
+  virtual real computeEnergyDeriv();
   virtual real computeEnergyAA();
   virtual real computeEnergyCG();
   virtual void computeVirialX(std::vector<real> &p_xx_total, int bins);
@@ -203,6 +204,12 @@ VerletListDynamicResolutionInteractionTemplate < _Potential >::
 computeEnergyCG() {
   if (cgPotential)
     return computeEnergy();
+  return 0.0;
+}
+template < typename _Potential > inline real
+VerletListDynamicResolutionInteractionTemplate < _Potential >::
+computeEnergyDeriv() {
+  LOG4ESPP_WARN(_Potential::theLogger, "Warning! computeEnergyDeriv() is not yet implemented.");
   return 0.0;
 }
 

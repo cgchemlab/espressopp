@@ -32,7 +32,6 @@ from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_LennardJonesForceCapped, \
                         interaction_VerletListLennardJonesForceCapped, \
-                        interaction_VerletListNonReciprocalLennardJonesForceCapped, \
                         interaction_VerletListAdressLennardJonesForceCapped, \
                         interaction_VerletListHadressLennardJonesForceCapped, \
                         interaction_CellListLennardJonesForceCapped, \
@@ -79,21 +78,6 @@ class VerletListDynamicResolutionLennardJonesForceCappedLocal(InteractionLocal, 
     def getPotential(self, type1, type2):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getPotential(self, type1, type2)
-
-class VerletListNonReciprocalLennardJonesForceCappedLocal(InteractionLocal, interaction_VerletListNonReciprocalLennardJonesForceCapped):
-    'The (local) Lennard Jones interaction using Verlet lists.'
-    def __init__(self, vl, active_type):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_VerletListNonReciprocalLennardJonesForceCapped, vl, active_type)
-
-    def setPotential(self, type1, type2, potential):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.setPotential(self, type1, type2, potential)
-
-    def getPotential(self, type1, type2):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            return self.cxxclass.getPotential(self, type1, type2)
-
 
 class VerletListAdressLennardJonesForceCappedLocal(InteractionLocal, interaction_VerletListAdressLennardJonesForceCapped):
     'The (local) Lennard Jones interaction using Verlet lists.'
@@ -186,13 +170,6 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListDynamicResolutionLennardJonesForceCappedLocal',
-            pmicall = ['setPotential', 'getPotential']
-            )
-
-    class VerletListNonReciprocalLennardJonesForceCapped(Interaction):
-        __metaclass__ = pmi.Proxy
-        pmiproxydefs = dict(
-            cls =  'espressopp.interaction.VerletListNonReciprocalLennardJonesForceCappedLocal',
             pmicall = ['setPotential', 'getPotential']
             )
 
