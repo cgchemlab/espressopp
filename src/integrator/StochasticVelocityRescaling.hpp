@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Max Planck Institute for Polymer Research & JGU Mainz
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -31,7 +33,6 @@
 #include "VelocityVerlet.hpp"
 
 #include "boost/signals2.hpp"
-#include "boost/unordered_set.hpp"
 
 namespace espressopp {
 namespace integrator {

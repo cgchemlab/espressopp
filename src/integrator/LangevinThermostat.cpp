@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012,2013,2014,2015,2016
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -44,8 +44,9 @@ namespace espressopp {
 
       gamma  = 0.0;
       temperature = 0.0;
-      
+
       adress = false;
+      exclusions.clear();
       has_types = false;
 
       if (!system->rng) {
@@ -95,7 +96,6 @@ namespace espressopp {
     void LangevinThermostat::disconnect() {
 
         _initialize.disconnect();
-        _initialize_onSetTimeStep.disconnect();
         _heatUp.disconnect();
         _coolDown.disconnect();
         _thermalize.disconnect();
@@ -107,9 +107,6 @@ namespace espressopp {
 
         // connect to initialization inside run()
         _initialize = integrator->runInit.connect(
-                boost::bind(&LangevinThermostat::initialize, this));
-
-        _initialize_onSetTimeStep = integrator->onSetTimeStep.connect(
                 boost::bind(&LangevinThermostat::initialize, this));
 
         _heatUp = integrator->recalc1.connect(
@@ -134,13 +131,16 @@ namespace espressopp {
       LOG4ESPP_DEBUG(theLogger, "thermalize");
 
       System& system = getSystemRef();
-      
+
       CellList cells = system.storage->getRealCells();
 
       for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
-        if (!has_types || valid_type_ids.count(cit->type())) { 
+
+        if(exclusions.count((*cit).id()) == 0 || (!has_types || valid_type_ids.count(cit->type())))
+        {
           frictionThermo(*cit);
         }
+
       }
     }
 
@@ -151,31 +151,15 @@ namespace espressopp {
 
       System& system = getSystemRef();
 
-      // thermalize CG particles
-      /*CellList cells = system.storage->getRealCells();
-      for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
-        frictionThermo(*cit);
-      }*/
-
-      // TODO: It doesn't make that much sense to thermalize both CG and AT particles, since CG particles get velocities of AT particles anyway.
-      
       // thermalize AT particles
       ParticleList& adrATparticles = system.storage->getAdrATParticles();
       for (std::vector<Particle>::iterator it = adrATparticles.begin();
               it != adrATparticles.end(); it++) {
-            if (!has_types || valid_type_ids.count(it->type()))
-              frictionThermo(*it);
-            
-        // Only in hybrid region!          
-        /*Particle &at = *it;
-        real w = at.lambda();  
-        if(w!=1.0 && w!=0.0) {
-            //std::cout << "w: " << w << std::endl;
-            //std::cout << "pos_x: " << at.position()[0] << std::endl;
-            
-            frictionThermo(*it);
-        }*/           
-            
+        if(exclusions.count((*it).id()) == 0 || (!has_types || valid_type_ids.count(it->type())))
+        {
+          frictionThermo(*it);
+        }
+
       }
       
     }
@@ -198,7 +182,6 @@ namespace espressopp {
     { // calculate the prefactors
 
         real timestep = integrator->getTimeStep();
-
       pref1 = -gamma;
       pref2 = sqrt(24.0 * temperature * gamma / timestep);
 
@@ -262,6 +245,7 @@ namespace espressopp {
         .def("disconnect", &LangevinThermostat::disconnect)
         .def("add_valid_type_id", &LangevinThermostat::setTypeId)
         .def("remove_valid_type_id", &LangevinThermostat::unsetTypeId)
+        .def("addExclpid", &LangevinThermostat::addExclpid)
         .add_property("adress", &LangevinThermostat::getAdress, &LangevinThermostat::setAdress)
         .add_property("gamma", &LangevinThermostat::getGamma, &LangevinThermostat::setGamma)
         .add_property("temperature", &LangevinThermostat::getTemperature, &LangevinThermostat::setTemperature)

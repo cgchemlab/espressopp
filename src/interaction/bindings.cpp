@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012,2013,2016
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -31,6 +31,7 @@
 #include "LennardJonesEnergyCapped.hpp"
 #include "LennardJonesExpand.hpp"
 #include "LennardJonesGromacs.hpp"
+#include "LennardJonesSoftcoreTI.hpp"
 #include "LennardJonesGeneric.hpp"
 #include "LennardJonesForceCapped.hpp"
 #include "LennardJonesLambda.hpp"
@@ -40,6 +41,7 @@
 #include "CoulombTruncated.hpp"
 #include "GravityTruncated.hpp"
 #include "ReactionFieldGeneralized.hpp"
+#include "ReactionFieldGeneralizedTI.hpp"
 #include "SoftCosine.hpp"
 #include "FENE.hpp"
 #include "FENECapped.hpp"
@@ -105,6 +107,7 @@ namespace espressopp {
       LennardJonesForceCapped::registerPython();
       LennardJonesExpand::registerPython();
       LennardJonesGromacs::registerPython();
+      LennardJonesSoftcoreTI::registerPython();
       LennardJonesGeneric::registerPython();
       LennardJonesLambda::registerPython();
       LennardJonesUnique::registerPython();
@@ -113,6 +116,7 @@ namespace espressopp {
       CoulombTruncated::registerPython();
       GravityTruncated::registerPython();
       ReactionFieldGeneralized::registerPython();
+      ReactionFieldGeneralizedTI::registerPython();
       SoftCosine::registerPython();
       Tabulated::registerPython();
       FENE::registerPython();

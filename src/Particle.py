@@ -1,3 +1,5 @@
+#  Copyright (C) 2016
+#      Max Planck Institute for Polymer Research & JGU Mainz
 #  Copyright (C) 2012,2013
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
@@ -227,6 +229,6 @@ if pmi.isController:
             return node
 
         def __getattr__(self, key):
-            value, node = pmi.reduce(pmi.MAXLOC, self, 'getLocalData', key)
+            value = pmi.reduce(pmi.MAX, self, 'getLocalData', key)
             return value
 
