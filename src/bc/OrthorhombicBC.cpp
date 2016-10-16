@@ -33,13 +33,8 @@ namespace espressopp {
     OrthorhombicBC::
     OrthorhombicBC(shared_ptr< esutil::RNG > _rng,
 		   const Real3D& _boxL) 
-      : BC(_rng) {
-        setBoxL(_boxL);
-        // Set the box to be periodic in all directions;
-        periodicity_[0] = true;
-        periodicity_[1] = true;
-        periodicity_[2] = true;
-    }
+      : BC(_rng)
+    { setBoxL(_boxL); }
   
     /* Setter method for the box length */
     void OrthorhombicBC::setBoxL(const Real3D& _boxL) {
