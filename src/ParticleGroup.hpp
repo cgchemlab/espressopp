@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -30,6 +32,8 @@
 //#include <list>
 #include <set>
 #include <boost/signals2.hpp>
+#include "iterator/CellListIterator.hpp"
+#include "integrator/MDIntegrator.hpp"
 
 namespace espressopp {
 
@@ -127,6 +131,42 @@ namespace espressopp {
             virtual void onParticlesChanged();
 
             static LOG4ESPP_DECL_LOGGER(theLogger);
+    };
+
+    class ParticleGroupByType : public ParticleGroup {
+     public:
+      ParticleGroupByType(shared_ptr<storage::Storage> _storage, shared_ptr<integrator::MDIntegrator>);
+      ~ParticleGroupByType();
+
+      void addTypeId(longint type_id) {
+        types_.insert(type_id);
+      }
+      void removeTypeId(longint type_id) {
+        types_.erase(type_id);
+      }
+
+      bool has(longint pid);
+      longint size() { return active.size(); }
+
+      python::list getParticleIDs();
+      static void registerPython();
+
+     private:
+      std::map<longint, Particle *> active;
+      std::set<longint> types_;
+
+      // pointer to storage object
+      shared_ptr<storage::Storage> storage_;
+
+      // pointer to integrator
+      shared_ptr<integrator::MDIntegrator> integrator_;
+
+      // some signalling stuff to keep track of the particles in cell
+      boost::signals2::connection sig_aftIntV1;
+
+      void updateParticles();
+
+      static LOG4ESPP_DECL_LOGGER(theLogger);
     };
 
 }

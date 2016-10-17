@@ -218,6 +218,8 @@ class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
+
+
 }  // namespace integrator
 }  // namespace espressopp
 

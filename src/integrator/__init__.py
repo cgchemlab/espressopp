@@ -64,3 +64,5 @@ from espressopp.integrator.MinimizeEnergy import *
 from espressopp.integrator.ChangeInRegion import *
 from espressopp.integrator.TopologyManager import *
 from espressopp.integrator.DynamicResolution import *
+
+from espressopp.integrator.ChangeParticleType import *

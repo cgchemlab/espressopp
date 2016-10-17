@@ -64,6 +64,7 @@
 #include "DynamicResolution.hpp"
 #include "TopologyManager.hpp"
 #include "ChangeInRegion.hpp"
+#include "ChangeParticleType.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -128,6 +129,7 @@ namespace espressopp {
       
       MinimizeEnergy::registerPython();
       ChangeInRegion::registerPython();
+      ChangeParticleType::registerPython();
       EmptyExtension::registerPython();
     }
   }

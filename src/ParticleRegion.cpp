@@ -21,7 +21,6 @@
 #include "python.hpp"
 #include "ParticleRegion.hpp"
 #include "storage/Storage.hpp"
-#include "iterator/CellListIterator.hpp"
 
 namespace espressopp {
 
@@ -32,8 +31,8 @@ ParticleRegion::ParticleRegion(shared_ptr<storage::Storage> _storage, shared_ptr
   con_changed = storage->onParticlesChanged.connect
       (boost::bind(&ParticleRegion::onParticlesChanged, this));
 
-  sig_aftIntV1  = integrator_->aftIntV.connect(boost::bind(&ParticleRegion::onParticlesChanged, this));
-  sig_aftIntV2  = integrator_->aftIntV.connect(boost::bind(&ParticleRegion::updateRegion, this));
+  sig_aftIntV1 = integrator_->aftIntV.connect(boost::bind(&ParticleRegion::onParticlesChanged, this));
+  sig_aftIntV2 = integrator_->aftIntV.connect(boost::bind(&ParticleRegion::updateRegion, this));
   has_types_ = false;
 }
 
@@ -51,14 +50,14 @@ bool ParticleRegion::has(longint pid) {
 void ParticleRegion::print() {
   std::cout << "####### I have " << active.size() << " active particles";
   std::cout << " region: " << left_bottom_ << " to " << right_top_ << std::endl;
-  for(iterator i=begin(); i!=end(); ++i ) {
+  for (iterator i = begin(); i != end(); ++i) {
     std::cout << "pid: " << i->id() << " " << i->type() << std::endl;
   }
 }
 
 python::list ParticleRegion::getParticleIDs() {
   python::list particle_ids;
-  for(iterator i=begin(); i!=end(); ++i ) {
+  for (iterator i = begin(); i != end(); ++i) {
     particle_ids.append(i->id());
   }
 
@@ -72,9 +71,10 @@ void ParticleRegion::onParticlesChanged() {
 
   // Update active list.
   CellList cl = storage->getLocalCells();
-  for(espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
+  for (espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
     Particle &p = *cit;
-    LOG4ESPP_DEBUG(theLogger, "particle id=" << p.id() << " t= " << p.type() << " p= " << p.position() << " g=" << p.ghost());
+    LOG4ESPP_DEBUG(theLogger, "particle id=" << p.id() << " t= "
+                                             << p.type() << " p= " << p.position() << " g=" << p.ghost());
     if (!has_types_ || (has_types_ && types_.count(p.type()) == 1)) {
       Real3D pos = p.position();
       bool in_region = true;
@@ -110,17 +110,16 @@ void ParticleRegion::registerPython() {
 
   class_<ParticleRegion, shared_ptr<ParticleRegion>, bases<ParticleGroup> >
       ("ParticleRegion", init<shared_ptr<storage::Storage>, shared_ptr<integrator::MDIntegrator> >())
-        .def("show", &ParticleRegion::print)
-        .def("has", &ParticleRegion::has)
-        .def("define_region", &ParticleRegion::defineRegion)
-        .def("get_region", &ParticleRegion::getRegion)
-        .def("add_type_id", &ParticleRegion::addTypeId)
-        .def("remove_type_id", &ParticleRegion::removeTypeId)
-        .def("get_particle_ids", &ParticleRegion::getParticleIDs)
-        .def("set_v", &ParticleRegion::set_v)
-        .def("get_v", &ParticleRegion::get_v)
-        .def("size", &ParticleRegion::size);
+      .def("show", &ParticleRegion::print)
+      .def("has", &ParticleRegion::has)
+      .def("define_region", &ParticleRegion::defineRegion)
+      .def("get_region", &ParticleRegion::getRegion)
+      .def("add_type_id", &ParticleRegion::addTypeId)
+      .def("remove_type_id", &ParticleRegion::removeTypeId)
+      .def("get_particle_ids", &ParticleRegion::getParticleIDs)
+      .def("set_v", &ParticleRegion::set_v)
+      .def("get_v", &ParticleRegion::get_v)
+      .def("size", &ParticleRegion::size);
 }
-
 
 }  // end namespace espressopp
