@@ -27,6 +27,8 @@ if(NOT BUILD_SHARED_LIBS)
   message(WARNING "Building static libraries might lead to problems with python modules - you are on your own!")
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
+
 option(USE_GCOV "Enable gcov support" OFF)
 if(USE_GCOV)
   message(STATUS "Enabling gcov support")
