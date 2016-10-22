@@ -128,6 +128,7 @@ class DumpH5MDLocal(io_DumpH5MD):
                  author='xxx',
                  email='xxx',
                  chunk_size=128,
+                 is_single_prec=False,
                  do_sort=True, **kwargs):
         """
         Args:
@@ -148,6 +149,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 128)
+            is_single_prec: Use single precision instead of double.
             do_sort: If set to True then HDF5 will be sorted on close.
         """
         if not pmi.workerIsActive():
@@ -167,6 +169,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.static_box = static_box
         self.chunk_size = chunk_size
         self.do_sort = do_sort
+        self.single_prec = is_single_prec
 
         self.system = system
         self.file = pyh5md.H5MD_File(filename, 'w', driver='mpio', comm=MPI.COMM_WORLD,
@@ -176,6 +179,8 @@ class DumpH5MDLocal(io_DumpH5MD):
 
         self._system_data()
 
+        float_type = np.float32 if is_single_prec else np.float64
+
         part = self.file.particles_group(self.group_name)
         if self.static_box:
             self.box = part.box(dimension=3,
@@ -183,46 +188,46 @@ class DumpH5MDLocal(io_DumpH5MD):
                                 time=False,
                                 edges=np.array(
                                     [ed_i for ed_i in self.system.bc.boxL],
-                                    dtype=np.float64
+                                    dtype=float_type
                                 ))
         else:
             self.box = part.box(
                 dimension=3,
                 boundary=['periodic', 'periodic', 'periodic'],
                 time=True,
-                edges=np.zeros(3, dtype=np.float64))
+                edges=np.zeros(3, dtype=float_type))
 
         self.id_e = part.trajectory(
-            'id', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
+            'id', (self.chunk_size,), np.int64, chunks=(1, self.chunk_size), fillvalue=-1)
         self.mass = part.trajectory(
-            'mass', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
+            'mass', (self.chunk_size,), float_type, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_position:
             self.position = part.trajectory(
-                'position', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+                'position', (self.chunk_size, 3), float_type, chunks=(1, self.chunk_size, 3))
             self.image = part.trajectory(
-                'image', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+                'image', (self.chunk_size, 3), float_type, chunks=(1, self.chunk_size, 3))
         if self.store_species:
             self.species = part.trajectory(
-                'species', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
+                'species', (self.chunk_size,), np.int64, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_state:
             self.state = part.trajectory(
-                'state', (self.chunk_size,), np.int, chunks=(1, self.chunk_size), fillvalue=-1)
+                'state', (self.chunk_size,), np.int64, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_velocity:
             self.velocity = part.trajectory(
-                'velocity', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+                'velocity', (self.chunk_size, 3), float_type, chunks=(1, self.chunk_size, 3))
         if self.store_force:
             self.force = part.trajectory(
-                'force', (self.chunk_size, 3), np.float64, chunks=(1, self.chunk_size, 3))
+                'force', (self.chunk_size, 3), float_type, chunks=(1, self.chunk_size, 3))
         if self.store_charge:
             self.charge = part.trajectory(
-                'charge', (self.chunk_size,), np.float64, chunks=(1, self.chunk_size), fillvalue=-1)
+                'charge', (self.chunk_size,), float_type, chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_lambda:
             self.lambda_adr = part.trajectory(
-                'lambda_adr', (self.chunk_size,), np.float64,
+                'lambda_adr', (self.chunk_size,), float_type,
                 chunks=(1, self.chunk_size), fillvalue=-1)
         if self.store_res_id:
             self.res_id = part.trajectory(
-                'res_id', (self.chunk_size, ), np.int,
+                'res_id', (self.chunk_size, ), np.int64,
                 chunks=(1, self.chunk_size), fillvalue=-1)
         self._system_data()
 
@@ -350,7 +355,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         # Store box values at every time step
         if not self.static_box:
             self.box.edges.append(
-                np.array([edge_i for edge_i in self.system.bc.boxL], dtype=np.float64),
+                np.array([edge_i for edge_i in self.system.bc.boxL], dtype=float_type),
                 step,
                 time)
 
