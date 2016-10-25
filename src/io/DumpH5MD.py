@@ -149,6 +149,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             author: The name of author of the file. (default: xxx)
             email: The e-mail to author of that file. (default: xxx)
             chunk_size: The size of data chunk. (default: 128)
+            is_single_prec: Use single precision instead of double.
             do_sort: If set to True then HDF5 will be sorted on close.
         """
         if not pmi.workerIsActive():
@@ -168,7 +169,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.static_box = static_box
         self.chunk_size = chunk_size
         self.do_sort = do_sort
-        self.single_precision = is_single_prec
+        self.single_prec = is_single_prec
 
         self.system = system
         self.file = pyh5md.H5MD_File(filename, 'w', driver='mpio', comm=MPI.COMM_WORLD,

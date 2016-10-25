@@ -21,8 +21,9 @@ import espressopp
 import unittest as ut
 
 
-class TestFixedPairListTypesTabulated(ut.TestCase):
+class TestParticleRegion(ut.TestCase):
     def setUp(self):
+        super(TestParticleRegion, self).setUp()
         self.system, self.integrator = espressopp.standard_system.Minimal(
             0, (10., 10., 10.), dt=0.01)
         self.system.storage.addParticle(1, espressopp.Real3D(1, 1, 1))

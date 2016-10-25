@@ -49,6 +49,11 @@ class ESPPTestCase(unittest.TestCase):
         self.integrator.addExtension(self.ar)
 
 
+class TestCmpAssociatieReaction(ESPPTestCase):
+    """Compare the result of previous implementation with current"""
+    def test_synthesis_reaction(self):
+        pass
+
 class TestBasicReaction(ESPPTestCase):
 
     def test_synthesis_reaction(self):

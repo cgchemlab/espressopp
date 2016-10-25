@@ -82,6 +82,7 @@ void ChemicalReaction::addReaction(boost::shared_ptr<integrator::Reaction> react
   if (!reaction->reaction_cutoff())
     throw std::runtime_error("Reaction object does not have ReactionCutoff object.");
 
+  // Inject required objects to every reaction object.
   reaction->set_dt(dt_);
   reaction->set_interval(interval_);
   reaction->set_rng(rng_);

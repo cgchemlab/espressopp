@@ -140,4 +140,62 @@ namespace espressopp {
                 .def("size", &ParticleGroup::size)
                 ;
     }
+
+    /** ParticleGroupByType */
+    LOG4ESPP_LOGGER(ParticleGroupByType::theLogger, "ParticleGroupByType");
+    ParticleGroupByType::ParticleGroupByType(shared_ptr<storage::Storage> storage,
+                                             shared_ptr<integrator::MDIntegrator> integrator)
+        : storage_(storage), integrator_(integrator) {
+
+        sig_aftIntV1 = integrator_->aftIntV.connect(
+            boost::bind(&ParticleGroupByType::updateParticles, this));
+
+    }
+
+    ParticleGroupByType::~ParticleGroupByType() {
+        sig_aftIntV1.disconnect();
+    }
+
+    bool ParticleGroupByType::has(longint pid) {
+        return particles.find(pid) != particles.end();
+    }
+
+    python::list ParticleGroupByType::getParticleIDs() {
+        python::list particle_ids;
+        for (iterator i = begin(); i != end(); ++i) {
+            particle_ids.append(i->id());
+        }
+        return particle_ids;
+    }
+
+    void ParticleGroupByType::updateParticles() {
+        LOG4ESPP_DEBUG(theLogger, "ParticleGroupByType::onParticlesChanges");
+        active.clear();
+        particles.clear();
+
+        // Update active list.
+        CellList cl = storage_->getRealCells();
+        for (espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
+            Particle &p = *cit;
+            if (types_.count(p.type()) == 1) {  // add only if type is correct
+                LOG4ESPP_DEBUG(theLogger, "insert  p " << p.id());
+                active.insert(std::make_pair(p.id(), &p));
+                particles.insert(p.id());
+            }
+        }
+    }
+
+    void ParticleGroupByType::registerPython() {
+        using namespace espressopp::python;
+
+        class_<ParticleGroupByType, shared_ptr<ParticleGroupByType>, bases<ParticleGroup> >
+            ("ParticleGroupByType", init<shared_ptr<storage::Storage>,
+                                         shared_ptr<integrator::MDIntegrator> >())
+            .def("show", &ParticleGroupByType::print)
+            .def("has", &ParticleGroupByType::has)
+            .def("add_type_id", &ParticleGroupByType::addTypeId)
+            .def("remove_type_id", &ParticleGroupByType::removeTypeId)
+            .def("get_particle_ids", &ParticleGroupByType::getParticleIDs)
+            .def("size", &ParticleGroupByType::size);
+    }
 }

@@ -23,7 +23,6 @@
 #include "DomainDecompositionNonBlocking.hpp"
 #include "DomainDecompositionAdress.hpp"
 #include "DomainDecomposition.hpp"
-#include "DomainDecompositionFree.hpp"
 #include "Storage.hpp"
 #include "bindings.hpp"
 
@@ -32,7 +31,6 @@ namespace espressopp {
     void registerPython() {
       Storage::registerPython();
       DomainDecomposition::registerPython();
-      DomainDecompositionFree::registerPython();
       DomainDecompositionNonBlocking::registerPython();
       DomainDecompositionAdress::registerPython();
     }

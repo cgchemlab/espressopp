@@ -25,4 +25,3 @@ pmiimport('espressopp.bc')
 from espressopp.bc.BC import *
 from espressopp.bc.OrthorhombicBC import *
 from espressopp.bc.SlabBC import *
-from espressopp.bc.FreeOrthorhombicBC import *

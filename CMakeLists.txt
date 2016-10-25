@@ -27,6 +27,8 @@ if(NOT BUILD_SHARED_LIBS)
   message(WARNING "Building static libraries might lead to problems with python modules - you are on your own!")
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
+
 option(USE_GCOV "Enable gcov support" OFF)
 if(USE_GCOV)
   message(STATUS "Enabling gcov support")
@@ -41,6 +43,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
       "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
       FORCE)
 endif()
+
+check_cxx_compiler_flag("-std=c++98" COMPILER_SUPPORTS_CXX98)
+if(COMPILER_SUPPORTS_CXX98)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
+else(COMPILER_SUPPORTS_CXX98)
+    message(FATAL_ERROR "Compiler flag -std=c++98 not supported")
+endif(COMPILER_SUPPORTS_CXX98)
 
 ########################################################################
 #VampirTrace settings
@@ -144,7 +153,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 option(EXTERNAL_MPI4PY "Use external mpi4py" ON)
 
 if(EXTERNAL_MPI4PY)
-  find_package(MPI4PY 2.0 REQUIRED)
+  find_package(MPI4PY 1.3.1 REQUIRED)
   include_directories(${MPI4PY_INCLUDES})
 else(EXTERNAL_MPI4PY)
   include_directories(${CMAKE_SOURCE_DIR}/contrib/mpi4py/mpi4py-2.0.0/src/include)

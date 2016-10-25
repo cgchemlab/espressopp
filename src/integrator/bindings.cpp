@@ -57,6 +57,7 @@
 #include "CapForce.hpp"
 #include "ExtAnalyze.hpp"
 #include "Settle.hpp"
+#include "Rattle.hpp"
 #include "VelocityVerletOnRadius.hpp"
 #include "AssociationReaction.hpp"
 #include "MinimizeEnergy.hpp"
@@ -64,6 +65,8 @@
 #include "DynamicResolution.hpp"
 #include "TopologyManager.hpp"
 #include "ChangeInRegion.hpp"
+#include "ChangeParticleType.hpp"
+#include "ATRPActivator.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -105,6 +108,7 @@ namespace espressopp {
       CapForce::registerPython();
       ExtAnalyze::registerPython();
       Settle::registerPython();
+      Rattle::registerPython();
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
 
@@ -128,6 +132,9 @@ namespace espressopp {
       
       MinimizeEnergy::registerPython();
       ChangeInRegion::registerPython();
+      ChangeParticleType::registerPython();
+      ATRPActivator::registerPython();
+
       EmptyExtension::registerPython();
     }
   }

@@ -56,6 +56,7 @@ from espressopp.integrator.ExtForce import *
 from espressopp.integrator.CapForce import *
 from espressopp.integrator.ExtAnalyze import *
 from espressopp.integrator.Settle import *
+from espressopp.integrator.Rattle import *
 from espressopp.integrator.VelocityVerletOnRadius import *
 from espressopp.integrator.AssociationReaction import *
 from espressopp.integrator.ChemicalReaction import *
@@ -64,3 +65,6 @@ from espressopp.integrator.MinimizeEnergy import *
 from espressopp.integrator.ChangeInRegion import *
 from espressopp.integrator.TopologyManager import *
 from espressopp.integrator.DynamicResolution import *
+
+from espressopp.integrator.ChangeParticleType import *
+from espressopp.integrator.ATRPActivator import *

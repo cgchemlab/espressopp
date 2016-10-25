@@ -78,6 +78,33 @@ class ParticleGroupLocal(_espressopp.ParticleGroup):
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
+
+class ParticleGroupByTypeLocal(_espressopp.ParticleGroupByType):
+
+    def __init__(self, storage, integrator):
+        if pmi.workerIsActive():
+            cxxinit(self, _espressopp.ParticleGroupByType, storage, integrator)
+
+    def add_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.add_type_id(self, type_id)
+
+    def remove_type_id(self, type_id):
+        if pmi.workerIsActive():
+            self.cxxclass.remove_type_id(self, type_id)
+
+    def show(self):
+        if pmi.workerIsActive():
+            self.cxxclass.show(self)
+
+    def has(self, pid):
+        if pmi.workerIsActive():
+            return self.cxxclass.has(self, pid)
+
+    def size(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.size(self)
+
 if pmi.isController:
     class ParticleGroup(object):
         __metaclass__ = pmi.Proxy
@@ -86,3 +113,10 @@ if pmi.isController:
             pmicall = [ "add", "show", "has", "size" ]
             )
 
+    class ParticleGroupByType(object):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls = 'espressopp.ParticleGroupByTypeLocal',
+            pmiinvoke=['get_particle_ids'],
+            pmicall = [ 'add_type_id', 'remove_type_id', 'show', 'has', 'size']
+        )
