@@ -24,6 +24,7 @@
 #include "Harmonic.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
+#include "FixedPairLambdaListInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -45,6 +46,8 @@ namespace espressopp {
         FixedPairListHarmonic;
       typedef class FixedPairListTypesInteractionTemplate< Harmonic >
         FixedPairListTypesHarmonic;
+      typedef class FixedPairLambdaListInteractionTemplate<Harmonic>
+        FixedPairLambdaListHarmonic;
 
       class_< FixedPairListHarmonic, bases< Interaction > >
         ("interaction_FixedPairListHarmonic",
@@ -63,7 +66,16 @@ namespace espressopp {
         .def("getPotential", &FixedPairListTypesHarmonic::getPotentialPtr)
         .def("setFixedPairList", &FixedPairListTypesHarmonic::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTypesHarmonic::getFixedPairList);
-     ; 
+      ;
+      class_< FixedPairLambdaListHarmonic, bases< Interaction > >
+          ("interaction_FixedPairLambdaListHarmonic",
+           init< shared_ptr<System>, shared_ptr<FixedPairLambdaList>, shared_ptr<Harmonic> >())
+          .def("setPotential", &FixedPairLambdaListHarmonic::setPotential)
+          .def("getPotential", &FixedPairLambdaListHarmonic::getPotential)
+          .def("setFixedPairList", &FixedPairLambdaListHarmonic::setFixedPairList)
+          .def("setFixedPairList", &FixedPairLambdaListHarmonic::setFixedPairList);
+      ;
+
     }
 
   }

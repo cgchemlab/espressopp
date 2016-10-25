@@ -1,7 +1,7 @@
 /*
   Copyright (C) 2016
       Jakub Krajniak (jkrajniak at gmail.com)
-  
+
   This file is part of ESPResSo++.
   
   ESPResSo++ is free software: you can redistribute it and/or modify
@@ -20,9 +20,7 @@
 
 #include "python.hpp"
 #include "FixedPairLambdaList.hpp"
-#include <boost/bind.hpp>
 #include "storage/Storage.hpp"
-#include "Buffer.hpp"
 #include "bc/BC.hpp"
 #include "esutil/Error.hpp"
 
@@ -31,7 +29,7 @@ namespace espressopp {
 LOG4ESPP_LOGGER(FixedPairLambdaList::theLogger, "FixedPairLambdaList");
 
 
-FixedPairLambdaList::FixedPairLambdaList(shared_ptr <storage::Storage> _storage, real initLambda)
+FixedPairLambdaList::FixedPairLambdaList(shared_ptr<storage::Storage> _storage, real initLambda)
     : storage(_storage), pairsLambda(), initLambda_(initLambda) {
   LOG4ESPP_INFO(theLogger, "construct FixedPairLambdaList");
 
@@ -84,7 +82,7 @@ bool FixedPairLambdaList::add(longint pid1, longint pid2) {
     }
     returnVal = !found;
     if (!found) {
-      this->add(p1, p2);
+      this->push_back(ParticlePairLambda(p1, p2, initLambda_));
       onTupleAdded(pid1, pid2);
       pairsLambda.insert(std::make_pair(pid1, std::make_pair(pid2, initLambda_)));
       LOG4ESPP_INFO(theLogger, "added fixed pair to global pair lambda list");
@@ -140,8 +138,8 @@ real FixedPairLambdaList::getLambda(longint pid1, longint pid2) {
 }
 
 void FixedPairLambdaList::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
-  std::vector <longint> toSendInt;
-  std::vector <real> toSendReal;
+  std::vector<longint> toSendInt;
+  std::vector<real> toSendReal;
   // loop over the particle list
   for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
     longint pid = pit->id();
@@ -176,8 +174,8 @@ void FixedPairLambdaList::beforeSendParticles(ParticleList &pl, OutBuffer &buf) 
 }
 
 void FixedPairLambdaList::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
-  std::vector <longint> receivedInt;
-  std::vector <real> receivedReal;
+  std::vector<longint> receivedInt;
+  std::vector<real> receivedReal;
   int n;
   longint pid1, pid2;
   real lambdaVal;
@@ -230,27 +228,24 @@ void FixedPairLambdaList::onParticlesChanged() {
       msg << "bond particle p2 " << it->second.first << " does not exists here";
       err.setException(msg.str());
     }
-    this->add(p1, p2);
+    this->push_back(ParticlePairLambda(p1, p2, it->second.second));
   }
   err.checkException();
   LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
 }
 
-/****************************************************
-** REGISTRATION WITH PYTHON
-****************************************************/
 void FixedPairLambdaList::registerPython() {
   using namespace espressopp::python;
 
   bool (FixedPairLambdaList::*pyAdd)(longint pid1, longint pid2)
-      = &FixedPairLambdaList::add;
+  = &FixedPairLambdaList::add;
 
   class_<FixedPairLambdaList, shared_ptr<FixedPairLambdaList>, boost::noncopyable>
       ("FixedPairLambdaList", init<shared_ptr<storage::Storage>, real>())
-          .def("add", pyAdd)
-          .def("size", &FixedPairLambdaList::size)
-          .def("getPairs", &FixedPairLambdaList::getPairs)
-          .def("getPairsLambda", &FixedPairLambdaList::getPairsLambda)
-          .def("getLambda", &FixedPairLambdaList::getLambda);
+      .def("add", pyAdd)
+      .def("size", &FixedPairLambdaList::size)
+      .def("getPairs", &FixedPairLambdaList::getPairs)
+      .def("getPairsLambda", &FixedPairLambdaList::getPairsLambda)
+      .def("getLambda", &FixedPairLambdaList::getLambda);
 }
-}
+}  // end namespace espressopp

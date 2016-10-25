@@ -83,11 +83,6 @@ class FixedPairLambdaListLocal(_espressopp.FixedPairLambdaList):
             return self.cxxclass.size(self)
 
     def addPairs(self, bondlist):
-        """
-        Each processor takes the broadcasted bondlist and
-        adds those pairs whose first particle is owned by
-        this processor.
-        """
         if pmi.workerIsActive():
             for pid1, pid2 in bondlist:
                 self.cxxclass.add(self, pid1, pid2)
