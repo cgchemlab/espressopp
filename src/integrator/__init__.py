@@ -67,3 +67,4 @@ from espressopp.integrator.TopologyManager import *
 from espressopp.integrator.DynamicResolution import *
 
 from espressopp.integrator.ChangeParticleType import *
+from espressopp.integrator.ATRPActivator import *

@@ -66,6 +66,7 @@
 #include "TopologyManager.hpp"
 #include "ChangeInRegion.hpp"
 #include "ChangeParticleType.hpp"
+#include "ATRPActivator.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -132,6 +133,8 @@ namespace espressopp {
       MinimizeEnergy::registerPython();
       ChangeInRegion::registerPython();
       ChangeParticleType::registerPython();
+      ATRPActivator::registerPython();
+
       EmptyExtension::registerPython();
     }
   }
