@@ -22,6 +22,8 @@
 #include "DihedralRB.hpp"
 #include "FixedQuadrupleListInteractionTemplate.hpp"
 #include "FixedQuadrupleListTypesInteractionTemplate.hpp"
+#include "FixedQuadrupleListLambdaInteractionTemplate.hpp"
+#include "FixedQuadrupleListTypesLambdaInteractionTemplate.hpp"
 
 namespace espressopp {
 namespace interaction {
@@ -49,6 +51,23 @@ void DihedralRB::registerPython() {
       .def("getPotential", &FixedQuadrupleListTypesDihedralRB::getPotentialPtr)
       .def("setFixedQuadrupleList", &FixedQuadrupleListTypesDihedralRB::setFixedQuadrupleList)
       .def("getFixedQuadrupleList", &FixedQuadrupleListTypesDihedralRB::getFixedQuadrupleList);
+
+  typedef class FixedQuadrupleListLambdaInteractionTemplate<DihedralRB> FixedQuadrupleListLambdaDihedralRB;
+  class_ <FixedQuadrupleListLambdaDihedralRB, bases <Interaction> >
+      ("interaction_FixedQuadrupleListLambdaDihedralRB",
+       init<shared_ptr<System>, shared_ptr<FixedQuadrupleListLambda>, shared_ptr<DihedralRB> >())
+      .def("setPotential", &FixedQuadrupleListLambdaDihedralRB::setPotential)
+      .def("getFixedQuadrupleList", &FixedQuadrupleListLambdaDihedralRB::getFixedQuadrupleList);
+
+  typedef class FixedQuadrupleListTypesLambdaInteractionTemplate<DihedralRB>
+      FixedQuadrupleListTypesLambdaDihedralRB;
+  class_< FixedQuadrupleListTypesLambdaDihedralRB, bases< Interaction > >
+      ("interaction_FixedQuadrupleListTypesLambdaDihedralRB",
+       init< shared_ptr<System>, shared_ptr<FixedQuadrupleListLambda> >())
+      .def("setPotential", &FixedQuadrupleListTypesLambdaDihedralRB::setPotential)
+      .def("getPotential", &FixedQuadrupleListTypesLambdaDihedralRB::getPotentialPtr)
+      .def("setFixedQuadrupleList", &FixedQuadrupleListTypesLambdaDihedralRB::setFixedQuadrupleList)
+      .def("getFixedQuadrupleList", &FixedQuadrupleListTypesLambdaDihedralRB::getFixedQuadrupleList);
 
 }
 

@@ -23,6 +23,7 @@ from espressopp import pmi
 from espressopp.integrator.Extension import *
 from _espressopp import integrator_DynamicResolution
 from _espressopp import integrator_BasicDynamicResolutionType
+from _espressopp import integrator_FixedListDynamicResolution
 
 
 class BasicDynamicResolutionLocal(ExtensionLocal, integrator_BasicDynamicResolutionType):
@@ -59,6 +60,24 @@ class DynamicResolutionLocal(ExtensionLocal, integrator_DynamicResolution):
             cxxinit(self, integrator_DynamicResolution, _system,  _fixedtuplelist, _rate)
 
 
+class FixedListDynamicResolutionLocal(ExtensionLocal, integrator_FixedListDynamicResolution):
+    """The (local) FixedListDynamicResolution"""
+    def __init__(self, system):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_FixedListDynamicResolution, system)
+
+    def register_pair_list(self, fpl, rate):
+        if pmi.workerIsActive():
+            self.cxxclass.register_pair_list(self, fpl, rate)
+
+    def register_triple_list(self, ftl, rate):
+        if pmi.workerIsActive():
+            self.cxxclass.register_triple_list(self, ftl, rate)
+
+    def register_quadruple_list(self, fql, rate):
+        if pmi.workerIsActive():
+            self.cxxclass.register_triple_list(self, fql, rate)
+
 if pmi.isController:
     class BasicDynamicResolution(Extension):
         __metaclass__ = pmi.Proxy
@@ -74,3 +93,10 @@ if pmi.isController:
             pmiproperty = [ 'resolution', 'rate', 'active' ],
             pmicall = ['SetPosVel']
             )
+
+    class FixedListDynamicResolution(Extension):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls = 'espressopp.integrator.FixedListDynamicResolutionLocal',
+            pmicall = ['register_pair_list', 'register_triple_list', 'register_quadruple_list']
+        )

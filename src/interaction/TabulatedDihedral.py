@@ -86,6 +86,8 @@ from espressopp.interaction.Interaction import *
 from _espressopp import interaction_TabulatedDihedral, \
                         interaction_FixedQuadrupleListTabulatedDihedral, \
                         interaction_FixedQuadrupleListTypesTabulatedDihedral
+from _espressopp import interaction_FixedQuadrupleListLambdaTabulatedDihedral
+from _espressopp import interaction_FixedQuadrupleListTypesLambdaTabulatedDihedral
 
 
 class TabulatedDihedralLocal(DihedralPotentialLocal, interaction_TabulatedDihedral):
@@ -125,6 +127,37 @@ class FixedQuadrupleListTypesTabulatedDihedralLocal(InteractionLocal, interactio
         if pmi.workerIsActive():
             return self.cxxclass.getFixedQuadrupleList(self)
 
+class FixedQuadrupleListLambdaTabulatedDihedralLocal(InteractionLocal, interaction_FixedQuadrupleListLambdaTabulatedDihedral):
+
+    def __init__(self, system, fql, potential):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedQuadrupleListLambdaTabulatedDihedral, system, fql, potential)
+
+    def setPotential(self, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, potential)
+
+class FixedQuadrupleListTypesLambdaTabulatedDihedralLocal(InteractionLocal, interaction_FixedQuadrupleListTypesLambdaTabulatedDihedral):
+    def __init__(self, system, fql):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedQuadrupleListTypesLambdaTabulatedDihedral, system, fql)
+
+    def setPotential(self, type1, type2, type3, type4, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, type1, type2, type3, type4, potential)
+
+    def getPotential(self, type1, type2, type3, type4):
+        if pmi.workerIsActive():
+            return self.cxxclass.getPotential(self, type1, type2, type3, type4)
+
+    def setFixedQuadrupleList(self, fixedlist):
+        if pmi.workerIsActive():
+            self.cxxclass.setFixedQuadrupleList(self, fixedlist)
+
+    def getFixedQuadrupleList(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getFixedQuadrupleList(self)
+
 if pmi.isController:
     class TabulatedDihedral(DihedralPotential):
         'The TabulatedDihedral potential.'
@@ -144,5 +177,19 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedQuadrupleListTypesTabulatedDihedralLocal',
+            pmicall = ['setPotential','getPotential','setFixedQuadrupleList','getFixedQuadrupleList']
+        )
+
+    class FixedQuadrupleListLambdaTabulatedDihedral(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedQuadrupleListLambdaTabulatedDihedralLocal',
+            pmicall = ['setPotential', 'getFixedQuadrupleList']
+        )
+
+    class FixedQuadrupleListTypesLambdaTabulatedDihedral(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedQuadrupleListTypesLambdaTabulatedDihedralLocal',
             pmicall = ['setPotential','getPotential','setFixedQuadrupleList','getFixedQuadrupleList']
         )

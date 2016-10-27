@@ -107,6 +107,8 @@ from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_Harmonic, interaction_FixedPairListHarmonic, \
                       interaction_FixedPairListTypesHarmonic
+from _espressopp import interaction_FixedPairListLambdaHarmonic
+from _espressopp import interaction_FixedPairListTypesLambdaHarmonic
 
 class HarmonicLocal(PotentialLocal, interaction_Harmonic):
 
@@ -159,6 +161,46 @@ class FixedPairListTypesHarmonicLocal(InteractionLocal, interaction_FixedPairLis
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getFixedPairList(self)
 
+class FixedPairListLambdaHarmonicLocal(InteractionLocal, interaction_FixedPairListLambdaHarmonic):
+
+    def __init__(self, system, fpl, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_FixedPairListLambdaHarmonic, system, fpl, potential)
+
+    def setPotential(self, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, potential)
+
+    def setFixedPairList(self, fixedpairlist):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setFixedPairList(self, fixedpairlist)
+
+
+    def getFixedPairList(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getFixedPairList(self)
+
+class FixedPairListTypesLambdaHarmonicLocal(InteractionLocal, interaction_FixedPairListTypesLambdaHarmonic):
+    def __init__(self, system, fpl):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_FixedPairListTypesLambdaHarmonic, system, fpl)
+
+    def setPotential(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPotential(self, type1, type2)
+
+    def setFixedPairList(self, fixedpairlist):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setFixedPairList(self, fixedpairlist)
+
+    def getFixedPairList(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getFixedPairList(self)
+
 if pmi.isController:
     class Harmonic(Potential):
         'The Harmonic potential.'
@@ -174,9 +216,23 @@ if pmi.isController:
             pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
             )
 
+    class FixedPairListLambdaHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.interaction.FixedPairListLambdaHarmonicLocal',
+            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+        )
+
     class FixedPairListTypesHarmonic(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedPairListTypesHarmonicLocal',
             pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
             )
+
+    class FixedPairListTypesLambdaHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedPairListTypesLambdaHarmonicLocal',
+            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+        )

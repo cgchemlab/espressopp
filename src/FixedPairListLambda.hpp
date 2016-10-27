@@ -1,8 +1,6 @@
 /*
-  Copyright (C) 2012,2013
-      Max Planck Institute for Polymer Research
-  Copyright (C) 2008,2009,2010,2011
-      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   
   This file is part of ESPResSo++.
   
@@ -33,40 +31,52 @@
 #include "types.hpp"
 
 namespace espressopp {
-class FixedPairLambdaList: public PairList {
+
+class ParticlePairLambda : public Triple< class Particle*, class Particle*, real > {
+ private:
+  typedef Triple< class Particle*, class Particle*, real> Super;
+ public:
+  ParticlePairLambda() : Super() {}
+  ParticlePairLambda(Particle* p1, Particle* p2, real l)
+      : Super(p1, p2, l) {}
+  ParticlePairLambda(Particle &p1, Particle &p2, real &l)
+      : Super(&p1, &p2, l) {}
+};
+
+class FixedPairListLambda: public esutil::ESPPContainer< std::vector< ParticlePairLambda > > {
  protected:
   typedef std::multimap <longint, std::pair<longint, real> > PairsLambda;
   boost::signals2::connection con1, con2, con3;
   shared_ptr <storage::Storage> storage;
   PairsLambda pairsLambda;
-  using PairList::add;
+  real longtimeMaxBondSqr;
 
  public:
-  FixedPairLambdaList(shared_ptr <storage::Storage> _storage, real initLambda);
-  virtual ~FixedPairLambdaList();
+  FixedPairListLambda(shared_ptr <storage::Storage> _storage, real initLambda);
+  virtual ~FixedPairListLambda();
 
-  /** Add the given particle pair to the list on this processor if the
-  particle with the lower id belongs to this processor.  Note that
-  this routine does not check whether the pair is inserted on
-  another processor as well.
-  \return whether the particle was inserted on this processor.
-  */
   virtual bool add(longint pid1, longint pid2);
   virtual void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
   void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
   virtual void onParticlesChanged();
 
-  python::list getPairs();
+  python::list getBonds();
   python::list getPairsLambda();
 
   real getLambda(longint pid1, longint pid2);
+  void setLambda(longint pid1, longint pid2, real lambda);
+  void setAllLambda(real lambda);
+  void incrementAllLambda(real d_lambda);
   /** Get the number of bonds in the GlobalPairs list */
   int size() { return pairsLambda.size(); }
+
+  real getLongtimeMaxBondSqr() { return longtimeMaxBondSqr; }
+  void setLongtimeMaxBondSqr(real d) { longtimeMaxBondSqr = d; };
+  void resetLongtimeMaxBondSqr() { longtimeMaxBondSqr = 0.0; }
 
   boost::signals2::signal2 <void, longint, longint> onTupleAdded;
 
   static void registerPython();
-
  private:
   real initLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);

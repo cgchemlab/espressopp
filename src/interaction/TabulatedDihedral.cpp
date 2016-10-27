@@ -30,6 +30,9 @@
 #include "FixedTripleListInteractionTemplate.hpp"
 #include "FixedQuadrupleListInteractionTemplate.hpp"
 #include "FixedQuadrupleListTypesInteractionTemplate.hpp"
+#include "FixedQuadrupleListLambdaInteractionTemplate.hpp"
+#include "FixedQuadrupleListTypesLambdaInteractionTemplate.hpp"
+
 
 namespace espressopp {
     namespace interaction {
@@ -61,6 +64,12 @@ namespace espressopp {
         typedef class FixedQuadrupleListTypesInteractionTemplate<TabulatedDihedral>
             FixedQuadrupleListTypesTabulatedDihedral;
 
+        typedef class FixedQuadrupleListLambdaInteractionTemplate <TabulatedDihedral>
+            FixedQuadrupleListLambdaTabulatedDihedral;
+
+        typedef class FixedQuadrupleListTypesLambdaInteractionTemplate<TabulatedDihedral>
+            FixedQuadrupleListTypesLambdaTabulatedDihedral;
+
         //////////////////////////////////////////////////
         // REGISTRATION WITH PYTHON
         //////////////////////////////////////////////////
@@ -88,6 +97,22 @@ namespace espressopp {
                 .def("getPotential", &FixedQuadrupleListTypesTabulatedDihedral::getPotentialPtr)
                 .def("setFixedQuadrupleList", &FixedQuadrupleListTypesTabulatedDihedral::setFixedQuadrupleList)
                 .def("getFixedQuadrupleList", &FixedQuadrupleListTypesTabulatedDihedral::getFixedQuadrupleList);
+
+            class_ <FixedQuadrupleListLambdaTabulatedDihedral, bases <Interaction> >
+                ("interaction_FixedQuadrupleListLambdaTabulatedDihedral",
+                 init <shared_ptr<System>,
+                       shared_ptr<FixedQuadrupleListLambda>,
+                       shared_ptr<TabulatedDihedral> >())
+                .def("setPotential", &FixedQuadrupleListLambdaTabulatedDihedral::setPotential)
+                .def("getFixedQuadrupleList", &FixedQuadrupleListLambdaTabulatedDihedral::getFixedQuadrupleList);
+
+            class_< FixedQuadrupleListTypesLambdaTabulatedDihedral, bases< Interaction > >
+                ("interaction_FixedQuadrupleListTypesLambdaTabulatedDihedral",
+                 init< shared_ptr<System>, shared_ptr<FixedQuadrupleListLambda> >())
+                .def("setPotential", &FixedQuadrupleListTypesLambdaTabulatedDihedral::setPotential)
+                .def("getPotential", &FixedQuadrupleListTypesLambdaTabulatedDihedral::getPotentialPtr)
+                .def("setFixedQuadrupleList", &FixedQuadrupleListTypesLambdaTabulatedDihedral::setFixedQuadrupleList)
+                .def("getFixedQuadrupleList", &FixedQuadrupleListTypesLambdaTabulatedDihedral::getFixedQuadrupleList);
 
         }
         

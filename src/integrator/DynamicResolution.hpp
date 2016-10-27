@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015
+  Copyright (c) 2015,2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -18,7 +18,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// ESPP_CLASS
 #ifndef _DYNAMICRESOLUTION_HPP
 #define _DYNAMICRESOLUTION_HPP
 
@@ -32,9 +31,11 @@
 #include "VelocityVerlet.hpp"
 #include "Adress.hpp"
 #include "ChemicalReactionPostProcess.hpp"
+#include "FixedPairListLambda.hpp"
+#include "FixedTripleListLambda.hpp"
+#include "FixedQuadrupleListLambda.hpp"
 
 #include "boost/signals2.hpp"
-
 
 namespace espressopp {
 namespace integrator {
@@ -48,7 +49,7 @@ class BasicDynamicResolutionType : public Extension {
   BasicDynamicResolutionType(shared_ptr<System> _system);
   ~BasicDynamicResolutionType();
 
-  void SetTypeRate(longint type, real rate) { rate_type_[type] = rate; }
+  void setTypeRate(longint type, real rate) { rate_type_[type] = rate; }
   /**
    * Define action after lambda reaches 1.0 or 0.0.
    */
@@ -72,6 +73,45 @@ class BasicDynamicResolutionType : public Extension {
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_0;
   std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_1;
 };
+
+
+class FixedListDynamicResolution : public Extension {
+ public:
+  FixedListDynamicResolution(shared_ptr<System> system_)
+      : Extension(system_) {}
+  ~FixedListDynamicResolution() {
+    disconnect();
+  }
+
+  void registerPairList(shared_ptr<FixedPairListLambda> fpl, real rate) {
+    fixed_pair_list_rate_.push_back(std::make_pair(fpl, rate));
+  }
+  void registerTripleList(shared_ptr<FixedTripleListLambda> ftl, real rate) {
+    fixed_triple_list_rate_.push_back(std::make_pair(ftl, rate));
+  }
+  void registerQuadrupleList(shared_ptr<FixedQuadrupleListLambda> fql, real rate) {
+    fixed_quadruple_list_rate_.push_back(std::make_pair(fql, rate));
+  }
+
+  void updateLists();
+
+  static void registerPython();
+ private:
+  void connect();
+  void disconnect();
+
+  typedef std::vector<std::pair<shared_ptr<FixedPairListLambda>, real> > FixedPairListRate;
+  typedef std::vector<std::pair<shared_ptr<FixedTripleListLambda>, real> > FixedTripleListRate;
+  typedef std::vector<std::pair<shared_ptr<FixedQuadrupleListLambda>, real> > FixedQuadrupleListRate;
+
+  FixedPairListRate fixed_pair_list_rate_;
+  FixedTripleListRate fixed_triple_list_rate_;
+  FixedQuadrupleListRate fixed_quadruple_list_rate_;
+
+  boost::signals2::connection _aftIntV;
+};
+
+
 
 /**
  * This module implement dynamic resolution extension.
@@ -119,6 +159,7 @@ class DynamicResolution : public Extension {
   boost::signals2::connection _aftIntV, _SetPosVel, _befIntP, _integrate1;
   boost::signals2::connection _recalc2, _befIntV, _aftIntV2;
 };
+
 }  // namespace integrator
 }  // namespace espressopp
 #endif

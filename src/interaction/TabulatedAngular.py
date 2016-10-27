@@ -78,6 +78,8 @@ from espressopp.interaction.Interaction import *
 from _espressopp import interaction_TabulatedAngular, \
                         interaction_FixedTripleListTabulatedAngular, \
                         interaction_FixedTripleListTypesTabulatedAngular
+from _espressopp import interaction_FixedTripleListLambdaTabulatedAngular
+from _espressopp import interaction_FixedTripleListTypesLambdaTabulatedAngular
 
 
 class TabulatedAngularLocal(AngularPotentialLocal, interaction_TabulatedAngular):
@@ -120,6 +122,39 @@ class FixedTripleListTypesTabulatedAngularLocal(InteractionLocal, interaction_Fi
             return self.cxxclass.getFixedTripleList(self)
 
 
+class FixedTripleListLambdaTabulatedAngularLocal(InteractionLocal, interaction_FixedTripleListLambdaTabulatedAngular):
+
+    def __init__(self, system, ftl, potential):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedTripleListLambdaTabulatedAngular, system, ftl, potential)
+
+    def setPotential(self, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, potential)
+
+
+class FixedTripleListTypesLambdaTabulatedAngularLocal(InteractionLocal, interaction_FixedTripleListTypesLambdaTabulatedAngular):
+    def __init__(self, system, ftl):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedTripleListTypesLambdaTabulatedAngular, system, ftl)
+
+    def setPotential(self, type1, type2, type3, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, type1, type2, type3, potential)
+
+    def getPotential(self, type1, type2, type3):
+        if pmi.workerIsActive():
+            return self.cxxclass.getPotential(self, type1, type2, type3)
+
+    def setFixedTripleList(self, ftl):
+        if pmi.workerIsActive():
+            self.cxxclass.setFixedTripleList(self, ftl)
+
+    def getFixedTripleList(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getFixedTripleList(self)
+
+
 if pmi.isController:
     class TabulatedAngular(AngularPotential):
         'The TabulatedAngular potential.'
@@ -139,5 +174,19 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedTripleListTypesTabulatedAngularLocal',
+            pmicall = ['setPotential','getPotential', 'setFixedTripleList', 'getFixedTripleList']
+        )
+
+    class FixedTripleListLambdaTabulatedAngular(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedTripleListLambdaTabulatedAngularLocal',
+            pmicall = ['setPotential', 'getFixedTripleList']
+        )
+
+    class FixedTripleListTypesLambdaTabulatedAngular(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedTripleListTypesLambdaTabulatedAngularLocal',
             pmicall = ['setPotential','getPotential', 'setFixedTripleList', 'getFixedTripleList']
         )

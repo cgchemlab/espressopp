@@ -237,10 +237,6 @@ void DynamicResolution::aftCalcF() {
   }
 }
 
-
-/****************************************************
-** REGISTRATION WITH PYTHON
-****************************************************/
 void DynamicResolution::registerPython() {
   using namespace espressopp::python;  // NOLINT
   class_<DynamicResolution, shared_ptr<DynamicResolution>, bases<Extension> >
@@ -281,7 +277,7 @@ void BasicDynamicResolutionType::registerPython() {
   using namespace espressopp::python;  // NOLINT
   class_<BasicDynamicResolutionType, shared_ptr<BasicDynamicResolutionType>, bases<Extension> >
       ("integrator_BasicDynamicResolutionType", init<shared_ptr<System> >())
-       .def("set_type_rate", &BasicDynamicResolutionType::SetTypeRate)
+      .def("set_type_rate", &BasicDynamicResolutionType::setTypeRate)
        .def("connect", &BasicDynamicResolutionType::connect)
        .def("disconnect", &BasicDynamicResolutionType::disconnect)
        .def("add_postprocess", &BasicDynamicResolutionType::addPostProcess);
@@ -318,5 +314,46 @@ void BasicDynamicResolutionType::UpdateWeights() {
     }
   }
 }
+
+void FixedListDynamicResolution::connect() {
+  _aftIntV = integrator->aftIntV.connect(
+      boost::bind(&FixedListDynamicResolution::updateLists, this), boost::signals2::at_back);
+}
+
+void FixedListDynamicResolution::disconnect() {
+  _aftIntV.disconnect();
+}
+
+/**
+ * Update lambda parameters on fixed lists.
+ */
+void FixedListDynamicResolution::updateLists() {
+  // Update FixedPairLists
+  for (FixedPairListRate::iterator it = fixed_pair_list_rate_.begin(); it != fixed_pair_list_rate_.end(); ++it) {
+    it->first->incrementAllLambda(it->second);
+  }
+
+  // Update TripleLists
+  for (FixedTripleListRate::iterator it = fixed_triple_list_rate_.begin(); it != fixed_triple_list_rate_.end(); ++it) {
+    it->first->incrementAllLambda(it->second);
+  }
+
+  // Update QuadrupleLists
+  for (FixedQuadrupleListRate::iterator it = fixed_quadruple_list_rate_.begin(); it != fixed_quadruple_list_rate_.end(); ++it) {
+    it->first->incrementAllLambda(it->second);
+  }
+}
+
+void FixedListDynamicResolution::registerPython() {
+  using namespace espressopp::python;  // NOLINT
+  class_<FixedListDynamicResolution, shared_ptr<FixedListDynamicResolution>, bases<Extension> >
+      ("integrator_FixedListDynamicResolution", init<shared_ptr<System> >())
+      .def("connect", &FixedListDynamicResolution::connect)
+      .def("disconnect", &FixedListDynamicResolution::disconnect)
+      .def("register_pair_list", &FixedListDynamicResolution::registerPairList)
+      .def("register_triple_list", &FixedListDynamicResolution::registerTripleList)
+      .def("register_quadruple_list", &FixedListDynamicResolution::registerQuadrupleList);
+}
+
 }  // end namespace integrator
 }  // end namespace espressopp
