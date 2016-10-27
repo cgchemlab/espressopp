@@ -49,7 +49,7 @@ class TestFixedPairListLambda(ESPPTestCase):
         harmonic = espressopp.interaction.Harmonic(K=30, r0=0.97)
         interaction = espressopp.interaction.FixedPairListLambdaHarmonic(self.system, fpl, harmonic)
         self.assertAlmostEqual(interaction.computeEnergy(), 60.0)
-        fpl.setLambdaAll(0.5)
+        fpl.setAllLambda(0.5)
         self.assertAlmostEqual(interaction.computeEnergy(), 30.0)
         fpl.setLambda(2, 3, 0.0)  # Set lambda 0.0 to only bond 2-3
         self.assertAlmostEqual(interaction.computeEnergy(), 15.0)
@@ -79,7 +79,7 @@ class TestFixedTripleListTypesLambda(ESPPTestCase):
         interaction.setPotential(0, 0, harmonic)
         interaction.setPotential(0, 1, harmonic)
         self.assertAlmostEqual(interaction.computeEnergy(), 60.0)
-        fpl.setLambdaAll(0.5)
+        fpl.setAllLambda(0.5)
         self.assertAlmostEqual(interaction.computeEnergy(), 30.0)
         fpl.setLambda(2, 3, 0.0)  # Set lambda 0.0 to only bond 2-3
         self.assertAlmostEqual(interaction.computeEnergy(), 15.0)
@@ -105,7 +105,7 @@ class TestFixedTripleListLambda(ESPPTestCase):
         interactionLambda = espressopp.interaction.FixedTripleListLambdaAngularHarmonic(self.system, ftl_lambda, harmonic)
         interaction = espressopp.interaction.FixedTripleListAngularHarmonic(self.system, ftl, harmonic)
 
-        ftl_lambda.setLambdaAll(0.5)
+        ftl_lambda.setAllLambda(0.5)
         self.assertAlmostEqual(0.5*interaction.computeEnergy(), interactionLambda.computeEnergy())
 
     def test_angular_harmonic_types_lambda(self):
@@ -119,7 +119,7 @@ class TestFixedTripleListLambda(ESPPTestCase):
         interaction = espressopp.interaction.FixedTripleListTypesAngularHarmonic(self.system, ftl)
         interaction.setPotential(0, 0, 1, harmonic)
 
-        ftl_lambda.setLambdaAll(0.5)
+        ftl_lambda.setAllLambda(0.5)
         self.assertAlmostEqual(0.5*interaction.computeEnergy(), interactionLambda.computeEnergy())
 
     def test_set_lambda_single(self):
@@ -155,7 +155,7 @@ class TestFixedQuadrupleListLambda(ESPPTestCase):
         interactionLambda = espressopp.interaction.FixedQuadrupleListLambdaDihedralRB(self.system, ftl_lambda, self.potential)
         interaction = espressopp.interaction.FixedQuadrupleListDihedralRB(self.system, ftl, self.potential)
 
-        ftl_lambda.setLambdaAll(0.5)
+        ftl_lambda.setAllLambda(0.5)
 
         self.assertAlmostEqual(0.5*interaction.computeEnergy(), interactionLambda.computeEnergy())
 
@@ -184,7 +184,7 @@ class TestFixedQuadrupleListLambda(ESPPTestCase):
         interaction = espressopp.interaction.FixedQuadrupleListTypesDihedralRB(self.system, ftl)
         interaction.setPotential(0, 0, 1, 1, self.potential)
 
-        ftl_lambda.setLambdaAll(0.5)
+        ftl_lambda.setAllLambda(0.5)
         self.assertEqual(ftl_lambda.getLambda(1, 2, 3, 4), [0.5])
 
         self.assertAlmostEqual(0.5*interaction.computeEnergy(), interactionLambda.computeEnergy())

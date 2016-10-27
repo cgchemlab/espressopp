@@ -74,7 +74,9 @@ class FixedQuadrupleListLambda: public esutil::ESPPContainer< std::vector<Partic
   python::list getQuadruples();
   real getLambda(longint pid1, longint pid2, longint pid3, longint pid4);
   void setLambda(longint pid1, longint pid2, longint pid3, longint pid4, real lambda);
-  void setLambdaAll(real lambda);
+  void setAllLambda(real lambda);
+  void incrementAllLambda(real d_lambda);
+
   boost::python::list getQuadruplesLambda();
 
   /** Get the number of quadruples in the GlobalQuadruples list */
@@ -92,7 +94,6 @@ class FixedQuadrupleListLambda: public esutil::ESPPContainer< std::vector<Partic
  private:
   real initLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
-
 };
 }
 

@@ -168,6 +168,9 @@ from _espressopp import interaction_Tabulated, \
                       interaction_CellListTabulated, \
                       interaction_FixedPairListTabulated, \
                       interaction_FixedPairListTypesTabulated
+from _espressopp import interaction_FixedPairListLambdaTabulated
+from _espressopp import interaction_FixedPairListTypesLambdaTabulated
+
 class TabulatedLocal(PotentialLocal, interaction_Tabulated):
 
     def __init__(self, itype, filename, cutoff=infinity):
@@ -282,6 +285,39 @@ class FixedPairListTypesTabulatedLocal(InteractionLocal, interaction_FixedPairLi
             return self.cxxclass.getFixedPairList(self)
 
 
+class FixedPairListLambdaTabulatedLocal(InteractionLocal, interaction_FixedPairListLambdaTabulated):
+
+    def __init__(self, system, vl, potential):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedPairListLambdaTabulated, system, vl, potential)
+
+    def setPotential(self, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, potential)
+
+
+class FixedPairListTypesLambdaTabulatedLocal(InteractionLocal, interaction_FixedPairListTypesLambdaTabulated):
+    def __init__(self, system, fpl):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedPairListTypesLambdaTabulated, system, fpl)
+
+    def setPotential(self, type1, type2, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if pmi.workerIsActive():
+            return self.cxxclass.getPotential(self, type1, type2)
+
+    def setFixedPairList(self, fixedpairlist):
+        if pmi.workerIsActive():
+            self.cxxclass.setFixedPairList(self, fixedpairlist)
+
+    def getFixedPairList(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getFixedPairList(self)
+
+
 if pmi.isController:
     class Tabulated(Potential):
         'The Tabulated potential.'
@@ -318,7 +354,6 @@ if pmi.isController:
             pmicall = ['setPotential', 'getPotential', 'getVerletList', 'setMaxForce']
         )
 
-        
     class CellListTabulated(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
@@ -332,11 +367,24 @@ if pmi.isController:
             cls =  'espressopp.interaction.FixedPairListTabulatedLocal',
             pmicall = ['setPotential', 'setFixedPairList', 'getFixedPairList']
             )
-        
 
     class FixedPairListTypesTabulated(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedPairListTypesTabulatedLocal',
+            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+        )
+
+    class FixedPairListLambdaTabulated(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedPairListLambdaTabulatedLocal',
+            pmicall = ['setPotential', 'setFixedPairList', 'getFixedPairList']
+        )
+
+    class FixedPairListTypesLambdaTabulated(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedPairListTypesLambdaTabulatedLocal',
             pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
         )

@@ -93,6 +93,6 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedTripleListLambdaLocal',
             localcall = [ 'add' ],
-            pmicall = [ 'addTriples', 'totalSize', 'setLambda', 'setLambdaAll'],
+            pmicall = [ 'addTriples', 'totalSize', 'setLambda', 'setAllLambda'],
             pmiinvoke = ['getTriples', 'size', 'getLambda', 'getPairsLambda']
         )

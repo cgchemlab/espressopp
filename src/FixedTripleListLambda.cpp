@@ -272,13 +272,27 @@ void FixedTripleListLambda::setLambda(longint pid1, longint pid2, longint pid3, 
   }
 }
 
-void FixedTripleListLambda::setLambdaAll(real lambda) {
+void FixedTripleListLambda::setAllLambda(real lambda) {
   for (GlobalTriples::iterator it = globalTriples.begin(); it != globalTriples.end(); ++it) {
     it->second.second.second = lambda;
   }
 
   for (FixedTripleListLambda::Iterator it(*this); it.isValid(); ++it) {
     it->fourth = lambda;
+  }
+}
+
+void FixedTripleListLambda::incrementAllLambda(real d_lambda) {
+  for (GlobalTriples::iterator it = globalTriples.begin(); it != globalTriples.end(); ++it) {
+    it->second.second.second += d_lambda;
+    if (it->second.second.second > 1.0)
+      it->second.second.second = 1.0;
+  }
+
+  for (FixedTripleListLambda::Iterator it(*this); it.isValid(); ++it) {
+    it->fourth += d_lambda;
+    if (it->fourth > 1.0)
+      it->fourth = 1.0;
   }
 }
 
@@ -434,7 +448,7 @@ void FixedTripleListLambda::registerPython() {
       .def("getTriplesLambda", &FixedTripleListLambda::getTriplesLambda)
       .def("getLambda", &FixedTripleListLambda::getLambda)
       .def("setLambda", &FixedTripleListLambda::setLambda)
-      .def("setLambdaAll", &FixedTripleListLambda::setLambdaAll);
+      .def("setAllLambda", &FixedTripleListLambda::setAllLambda);
 }
 
 }  // end namespace espressopp

@@ -429,13 +429,27 @@ void FixedQuadrupleListLambda::setLambda(longint pid1, longint pid2, longint pid
   }
 }
 
-void FixedQuadrupleListLambda::setLambdaAll(real lambda) {
+void FixedQuadrupleListLambda::setAllLambda(real lambda) {
   for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
     it->second.second = lambda;
   }
 
   for (FixedQuadrupleListLambda::Iterator it(*this); it.isValid(); ++it) {
     it->fifth = lambda;
+  }
+}
+
+void FixedQuadrupleListLambda::incrementAllLambda(real d_lambda) {
+  for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
+    it->second.second += d_lambda;
+    if (it->second.second > 1.0)
+      it->second.second = 1.0;
+  }
+
+  for (FixedQuadrupleListLambda::Iterator it(*this); it.isValid(); ++it) {
+    it->fifth += d_lambda;
+    if (it->fifth > 1.0)
+      it->fifth = 1.0;
   }
 }
 
@@ -446,7 +460,7 @@ void FixedQuadrupleListLambda::registerPython() {
                                           longint pid3, longint pid4) = &FixedQuadrupleListLambda::add;
 
   class_<FixedQuadrupleListLambda, shared_ptr<FixedQuadrupleListLambda>, boost::noncopyable>
-      ("FixedQuadrupleListLambda", init<shared_ptr<storage::Storage>, real >())
+      ("FixedQuadrupleListLambda", init<shared_ptr<storage::Storage>, real>())
       .def("add", pyAdd)
       .def("size", &FixedQuadrupleListLambda::size)
       .def("totalSize", &FixedQuadrupleListLambda::totalSize)
@@ -454,6 +468,6 @@ void FixedQuadrupleListLambda::registerPython() {
       .def("getQuadruplesLambda", &FixedQuadrupleListLambda::getQuadruplesLambda)
       .def("getLambda", &FixedQuadrupleListLambda::getLambda)
       .def("setLambda", &FixedQuadrupleListLambda::setLambda)
-      .def("setLambdaAll", &FixedQuadrupleListLambda::setLambdaAll);
+      .def("setAllLambda", &FixedQuadrupleListLambda::setAllLambda);
 }
 }  // end namespace espressopp

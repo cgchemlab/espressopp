@@ -104,6 +104,6 @@ if pmi.isController:
       pmiproxydefs = dict(
           cls = 'espressopp.FixedPairListLambdaLocal',
           localcall = [ "add" ],
-          pmicall = [ "addBonds", "setLambda", "setLambdaAll"],
+          pmicall = [ "addBonds", "setLambda", "setAllLambda"],
           pmiinvoke = ['getBonds', 'getPairsLambda', 'size', 'getLambda']
       )

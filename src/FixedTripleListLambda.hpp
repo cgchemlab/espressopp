@@ -67,7 +67,8 @@ class FixedTripleListLambda: public esutil::ESPPContainer< std::vector< Particle
 
   real getLambda(longint pid1, longint pid2, longint pid3);
   void setLambda(longint pid1, longint pid2, longint pid3, real lambda);
-  void setLambdaAll(real lambda);
+  void setAllLambda(real lambda);
+  void incrementAllLambda(real d_lambda);
 
     /** Get the number of triplets in the GlobalTriples list */
   int size() { return globalTriples.size(); }
@@ -80,7 +81,6 @@ class FixedTripleListLambda: public esutil::ESPPContainer< std::vector< Particle
  private:
   real initLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
-
 };
 }
 

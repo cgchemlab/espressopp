@@ -163,13 +163,27 @@ void FixedPairListLambda::setLambda(longint pid1, longint pid2, real lambda) {
   }
 }
 
-void FixedPairListLambda::setLambdaAll(real lambda) {
+void FixedPairListLambda::setAllLambda(real lambda) {
   for (PairsLambda::iterator it = pairsLambda.begin(); it != pairsLambda.end(); ++it) {
     it->second.second = lambda;
   }
 
   for (FixedPairListLambda::Iterator it(*this); it.isValid(); ++it) {
     it->third = lambda;
+  }
+}
+
+void FixedPairListLambda::incrementAllLambda(real d_lambda) {
+  for (PairsLambda::iterator it = pairsLambda.begin(); it != pairsLambda.end(); ++it) {
+    it->second.second += d_lambda;
+    if (it->second.second > 1.0)
+      it->second.second = 1.0;
+  }
+
+  for (FixedPairListLambda::Iterator it(*this); it.isValid(); ++it) {
+    it->third += d_lambda;
+    if (it->third > 1.0)
+      it->third = 1.0;
   }
 }
 
@@ -286,7 +300,8 @@ void FixedPairListLambda::registerPython() {
       .def("getPairsLambda", &FixedPairListLambda::getPairsLambda)
       .def("getLambda", &FixedPairListLambda::getLambda)
       .def("setLambda", &FixedPairListLambda::setLambda)
-      .def("setLambdaAll", &FixedPairListLambda::setLambdaAll);
+      .def("setAllLambda", &FixedPairListLambda::setAllLambda);
 }
+
 
 }  // end namespace espressopp

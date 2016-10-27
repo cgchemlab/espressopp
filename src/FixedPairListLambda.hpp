@@ -65,7 +65,8 @@ class FixedPairListLambda: public esutil::ESPPContainer< std::vector< ParticlePa
 
   real getLambda(longint pid1, longint pid2);
   void setLambda(longint pid1, longint pid2, real lambda);
-  void setLambdaAll(real lambda);
+  void setAllLambda(real lambda);
+  void incrementAllLambda(real d_lambda);
   /** Get the number of bonds in the GlobalPairs list */
   int size() { return pairsLambda.size(); }
 

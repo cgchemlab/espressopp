@@ -34,6 +34,8 @@
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
+#include "FixedPairListLambdaInteractionTemplate.hpp"
+#include "FixedPairListTypesLambdaInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -66,6 +68,8 @@ namespace espressopp {
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
     typedef class FixedPairListTypesInteractionTemplate <Tabulated> FixedPairListTypesTabulated;
+    typedef class FixedPairListLambdaInteractionTemplate <Tabulated> FixedPairListLambdaTabulated;
+    typedef class FixedPairListTypesLambdaInteractionTemplate <Tabulated> FixedPairListTypesLambdaTabulated;
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
@@ -137,6 +141,26 @@ namespace espressopp {
           .def("getPotential", &FixedPairListTypesTabulated::getPotentialPtr)
           .def("setFixedPairList", &FixedPairListTypesTabulated::setFixedPairList)
           .def("getFixedPairList", &FixedPairListTypesTabulated::getFixedPairList);
+
+      class_ <FixedPairListLambdaTabulated, bases <Interaction> >
+        ("interaction_FixedPairListLambdaTabulated",
+          init <shared_ptr<System>,
+                shared_ptr<FixedPairListLambda>,
+                shared_ptr<Tabulated> >()
+        )
+        .def("setPotential", &FixedPairListLambdaTabulated::setPotential)
+        .def("getPotential", &FixedPairListLambdaTabulated::getPotential)
+        .def("setFixedPairList", &FixedPairListLambdaTabulated::setFixedPairList)
+        .def("getFixedPairList", &FixedPairListLambdaTabulated::getFixedPairList);
+        ;
+
+      class_<FixedPairListTypesLambdaTabulated, bases<Interaction> >
+          ("interaction_FixedPairListTypesLambdaTabulated",
+           init< shared_ptr<System>, shared_ptr<FixedPairListLambda> >())
+          .def("setPotential", &FixedPairListTypesLambdaTabulated::setPotential)
+          .def("getPotential", &FixedPairListTypesLambdaTabulated::getPotentialPtr)
+          .def("setFixedPairList", &FixedPairListTypesLambdaTabulated::setFixedPairList)
+          .def("getFixedPairList", &FixedPairListTypesLambdaTabulated::getFixedPairList);
     }
     
   }

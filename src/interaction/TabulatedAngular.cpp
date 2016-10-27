@@ -29,6 +29,8 @@
 #include "InterpolationCubic.hpp"
 #include "FixedTripleListInteractionTemplate.hpp"
 #include "FixedTripleListTypesInteractionTemplate.hpp"
+#include "FixedTripleListLambdaInteractionTemplate.hpp"
+#include "FixedTripleListTypesLambdaInteractionTemplate.hpp"
 
 namespace espressopp {
     namespace interaction {
@@ -58,6 +60,11 @@ namespace espressopp {
         typedef class FixedTripleListTypesInteractionTemplate<TabulatedAngular>
             FixedTripleListTypesTabulatedAngular;
 
+        typedef class FixedTripleListLambdaInteractionTemplate <TabulatedAngular>
+            FixedTripleListLambdaTabulatedAngular;
+        typedef class FixedTripleListTypesLambdaInteractionTemplate<TabulatedAngular>
+            FixedTripleListTypesLambdaTabulatedAngular;
+
         //////////////////////////////////////////////////
         // REGISTRATION WITH PYTHON
         //////////////////////////////////////////////////
@@ -84,6 +91,22 @@ namespace espressopp {
                 .def("getPotential", &FixedTripleListTypesTabulatedAngular::getPotentialPtr)
                 .def("setFixedTripleList", &FixedTripleListTypesTabulatedAngular::setFixedTripleList)
                 .def("getFixedTripleList", &FixedTripleListTypesTabulatedAngular::getFixedTripleList);
+
+            class_ <FixedTripleListLambdaTabulatedAngular, bases <Interaction> >
+                ("interaction_FixedTripleListLambdaTabulatedAngular",
+                 init <shared_ptr<System>,
+                       shared_ptr <FixedTripleListLambda>,
+                       shared_ptr <TabulatedAngular> >())
+                .def("setPotential", &FixedTripleListLambdaTabulatedAngular::setPotential)
+                .def("getFixedTripleList", &FixedTripleListLambdaTabulatedAngular::getFixedTripleList);
+
+            class_< FixedTripleListTypesLambdaTabulatedAngular, bases< Interaction > >
+                ("interaction_FixedTripleListTypesLambdaTabulatedAngular",
+                 init< shared_ptr<System>, shared_ptr<FixedTripleListLambda> >())
+                .def("setPotential", &FixedTripleListTypesLambdaTabulatedAngular::setPotential)
+                .def("getPotential", &FixedTripleListTypesLambdaTabulatedAngular::getPotentialPtr)
+                .def("setFixedTripleList", &FixedTripleListTypesLambdaTabulatedAngular::setFixedTripleList)
+                .def("getFixedTripleList", &FixedTripleListTypesLambdaTabulatedAngular::getFixedTripleList);
         }
         
     } // ns interaction
