@@ -31,8 +31,11 @@ namespace integrator {
 LOG4ESPP_LOGGER(ATRPActivator::theLogger, "ATRPActivator");
 
 ATRPActivator::ATRPActivator(
-    shared_ptr<System> system, longint interval, longint num_per_interval)
-    : Extension(system), interval_(interval), num_per_interval_(num_per_interval) {
+    shared_ptr<System> system, longint interval, longint num_per_interval, real ratio_activator,
+    real ratio_deactivator, real delta_catalyst, real k_activate, real k_deactivate)
+    : Extension(system), interval_(interval), num_per_interval_(num_per_interval),
+      ratio_activator_(ratio_activator), ratio_deactivator_(ratio_deactivator), delta_catalyst_(delta_catalyst),
+      k_activate_(k_activate), k_deactivate_(k_deactivate){
   LOG4ESPP_INFO(theLogger, "ATRPActivator constructed");
 
   // Set RNG.
@@ -51,8 +54,7 @@ void ATRPActivator::addReactiveCenter(longint type_id,
                                       longint min_state,
                                       longint max_state,
                                       shared_ptr<ParticleProperties> pp,
-                                      longint delta_state,
-                                      real p) {
+                                      longint delta_state) {
   if (min_state > max_state)
     throw std::runtime_error("Min_state > max_state");
 
@@ -73,7 +75,7 @@ void ATRPActivator::addReactiveCenter(longint type_id,
     if (overlaps)
       throw std::runtime_error("Min/max state overlaps");
   }
-  species_map_.insert(std::make_pair(type_id, ReactiveCenter(min_state, max_state, delta_state, p, pp)));
+  species_map_.insert(std::make_pair(type_id, ReactiveCenter(min_state, max_state, delta_state, pp)));
 }
 
 void ATRPActivator::updateParticles() {
@@ -134,12 +136,25 @@ void ATRPActivator::updateParticles() {
       bool found = false;
       std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p->type());
       for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (p->state() >= it->second.min_state && p->state() < it->second.max_state) {
+        if (p->state() == it->second.min_state) {
           real W = (*rng_)();
-          if (W < it->second.p) {
+          if (W < ratio_deactivator_*k_deactivate_) {
             p->state() += it->second.delta_state;  // update chemical state.
             it->second.new_property->updateParticleProperties(p); // update particle property.
             modified_particles.push_back(p);
+            ratio_deactivator_-=delta_catalyst_;
+            ratio_activator_+=delta_catalyst_;
+          }
+          found = true;
+        }
+        else if (p->state() > it->second.min_state && p->state() < it->second.max_state) {
+          real W = (*rng_)();
+          if (W < ratio_activator_*k_activate_) {
+            p->state() += it->second.delta_state;  // update chemical state.
+            it->second.new_property->updateParticleProperties(p); // update particle property.
+            modified_particles.push_back(p);
+            ratio_activator_-=delta_catalyst_;
+            ratio_deactivator_+=delta_catalyst_;
           }
           found = true;
         }
@@ -306,7 +321,7 @@ void ATRPActivator::registerPython() {
   using namespace espressopp::python;  // NOLINT
 
   class_<ATRPActivator, shared_ptr<ATRPActivator>, bases<Extension> >
-      ("integrator_ATRPActivator", init<shared_ptr<System>, longint, longint>())
+      ("integrator_ATRPActivator", init<shared_ptr<System>, longint, longint, real, real, real, real, real>())
       .def("add_reactive_center", &ATRPActivator::addReactiveCenter)
       .def("update_particles", &ATRPActivator::updateParticles)
       .def("connect", &ATRPActivator::connect)

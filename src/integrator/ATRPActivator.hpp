@@ -39,29 +39,27 @@ struct ReactiveCenter {
   longint min_state;  ///<! minimal chemical state
   longint max_state;  ///<! maximum chemical state
   longint delta_state;  ///<! update of chemical potential
-  real p;  ///<! probability constant [0, 1);
   shared_ptr<ParticleProperties> new_property;  ///<! new property
 
   ReactiveCenter() {
     min_state = -1;
     max_state = -1;
     delta_state = 0;
-    p = 0.0;
   }
 
-  ReactiveCenter(longint min_state_, longint max_state_, longint delta_state_, real p_,
+  ReactiveCenter(longint min_state_, longint max_state_, longint delta_state_,
                  shared_ptr<ParticleProperties> new_property_) {
     min_state = min_state_;
     max_state = max_state_;
     delta_state = delta_state_;
-    p = p_;
     new_property = new_property_;
   }
 };
 
 class ATRPActivator: public Extension {
  public:
-  ATRPActivator(shared_ptr<System> system, longint interval, longint num_per_interval);
+  ATRPActivator(shared_ptr<System> system, longint interval, longint num_per_interval, real ratio_activator,
+                real ratio_deactivator, real delta_catalyst, real k_activate, real k_deactivate);
 
   virtual ~ATRPActivator() {};
 
@@ -69,8 +67,7 @@ class ATRPActivator: public Extension {
                          longint min_state,
                          longint max_state,
                          shared_ptr<ParticleProperties> pp,
-                         longint delta_state,
-                         real p);
+                         longint delta_state);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -79,6 +76,11 @@ class ATRPActivator: public Extension {
   boost::signals2::connection sig_aftIntV;
   longint interval_;
   longint num_per_interval_;
+  real ratio_activator_;
+  real ratio_deactivator_;
+  real delta_catalyst_;
+  real k_activate_;
+  real k_deactivate_;
 
   typedef boost::unordered_multimap<longint, ReactiveCenter> SpeciesMap;
   SpeciesMap species_map_;

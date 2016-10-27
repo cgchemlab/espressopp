@@ -27,7 +27,9 @@ state.
 
 
 
-.. function:: espressopp.integrator.ATRPActivator(system, interval, num_per_interval, old_type_id, new_type_id)
+.. function:: espressopp.integrator.ATRPActivator(system, interval, num_per_interval, ratio_activator,
+                                                  ratio_deactivator, delta_catalyst, k_activate,
+                                                  k_deactivate, old_type_id, new_type_id)
 
 		:param system: The system object.
 		:param interval: Run every n-th MD steps.
@@ -35,9 +37,19 @@ state.
 		:type interval: int
 		:param num_per_interval: Modify i-th particles per interval.
 		:type num_per_interval: int
+		:param ratio_activator: ratio of the CuI to total number of Cu.
+		:type ratio_activator:float
+		:param ratio_deactivator: ratio of the CuII to total number of Cu.
+		:type ratio_deactivator:float
+		:param delta_catalyst: the increasement of ratio_activator/deactivator.
+		:type delta_catalyst: float
+		:param k_activate: activate constant.
+		:type k_activate: float
+		:param k_deactivate: deactivate constant.
+		:type k_deactivate: float
 
 .. function:: espressopp.integrator.ATRPActivator.add_reactive_center(type_id, min_state, max_state,
-                                                                      new_property, delta_state, prob)
+                                                                      new_property, delta_state)
         Add defintion of reactive center and change of properties.
 
         :param type_id: The particle type.
@@ -50,8 +62,6 @@ state.
         :type new_property: espressopp.ParticleProperties
         :param delta_state: The change of chemical state.
         :type delta_state: int
-        :param prob: The probability constant.
-        :type prob: float
 
 """
 from espressopp.esutil import cxxinit
@@ -61,15 +71,17 @@ from _espressopp import integrator_ATRPActivator
 
 
 class ATRPActivatorLocal(ExtensionLocal, integrator_ATRPActivator):
-    def __init__(self, system, interval, num_per_interval):
+    def __init__(self, system, interval, num_per_interval, ratio_activator,
+                 ratio_deactivator, delta_catalyst, k_activate, k_deactivate):
         if pmi.workerIsActive():
-            cxxinit(self, integrator_ATRPActivator, system, interval, num_per_interval)
+            cxxinit(self, integrator_ATRPActivator, system, interval, num_per_interval, ratio_activator,
+                    ratio_deactivator, delta_catalyst, k_activate, k_deactivate)
 
-    def add_reactive_center(self, type_id, min_state, max_state, new_property, delta_state, prob):
+    def add_reactive_center(self, type_id, min_state, max_state, new_property, delta_state):
         """Defines reactive center"""
         if pmi.workerIsActive():
             self.cxxclass.add_reactive_center(
-                self, type_id, min_state, max_state, new_property, delta_state, prob)
+                self, type_id, min_state, max_state, new_property, delta_state)
 
 if pmi.isController :
     class ATRPActivator(Extension):
