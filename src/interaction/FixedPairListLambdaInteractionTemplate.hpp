@@ -19,15 +19,15 @@
 */
 
 // ESPP_CLASS
-#ifndef _INTERACTION_FIXEDPAIRLAMBDALISTINTERACTIONTEMPLATE_HPP
-#define _INTERACTION_FIXEDPAIRLAMBDALISTINTERACTIONTEMPLATE_HPP
+#ifndef _INTERACTION_FIXEDPAIRLISTLAMBDAINTERACTIONTEMPLATE_HPP
+#define _INTERACTION_FIXEDPAIRLISTLAMBDAINTERACTIONTEMPLATE_HPP
 
 #include "mpi.hpp"
 #include "Interaction.hpp"
 #include "Real3D.hpp"
 #include "Tensor.hpp"
 #include "Particle.hpp"
-#include "FixedPairLambdaList.hpp"
+#include "FixedPairListLambda.hpp"
 #include "esutil/Array2D.hpp"
 #include "bc/BC.hpp"
 #include "SystemAccess.hpp"
@@ -37,15 +37,15 @@
 namespace espressopp {
 namespace interaction {
 template<typename _Potential>
-class FixedPairLambdaListInteractionTemplate: public Interaction, SystemAccess {
+class FixedPairListLambdaInteractionTemplate: public Interaction, SystemAccess {
 
  protected:
   typedef _Potential Potential;
 
  public:
-  FixedPairLambdaListInteractionTemplate
+  FixedPairListLambdaInteractionTemplate
       (shared_ptr <System> system,
-       shared_ptr <FixedPairLambdaList> _fixedpairList,
+       shared_ptr <FixedPairListLambda> _fixedpairList,
        shared_ptr <Potential> _potential)
       : SystemAccess(system), fixedpairList(_fixedpairList),
         potential(_potential) {
@@ -54,14 +54,14 @@ class FixedPairLambdaListInteractionTemplate: public Interaction, SystemAccess {
     }
   }
 
-  virtual ~FixedPairLambdaListInteractionTemplate() {};
+  virtual ~FixedPairListLambdaInteractionTemplate() {};
 
   void
-  setFixedPairList(shared_ptr <FixedPairLambdaList> _fixedpairList) {
+  setFixedPairList(shared_ptr <FixedPairListLambda> _fixedpairList) {
     fixedpairList = _fixedpairList;
   }
 
-  shared_ptr <FixedPairLambdaList> getFixedPairList() {
+  shared_ptr <FixedPairListLambda> getFixedPairList() {
     return fixedpairList;
   }
 
@@ -93,7 +93,7 @@ class FixedPairLambdaListInteractionTemplate: public Interaction, SystemAccess {
 
  protected:
   int ntypes;
-  shared_ptr <FixedPairLambdaList> fixedpairList;
+  shared_ptr <FixedPairListLambda> fixedpairList;
   shared_ptr <Potential> potential;
 };
 
@@ -102,11 +102,11 @@ class FixedPairLambdaListInteractionTemplate: public Interaction, SystemAccess {
 //////////////////////////////////////////////////
 template<typename _Potential>
 inline void
-FixedPairLambdaListInteractionTemplate<_Potential>::addForces() {
-  LOG4ESPP_INFO(_Potential::theLogger, "adding forces of FixedPairLambdaList");
+FixedPairListLambdaInteractionTemplate<_Potential>::addForces() {
+  LOG4ESPP_INFO(_Potential::theLogger, "adding forces of FixedPairListLambda");
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
   real ltMaxBondSqr = fixedpairList->getLongtimeMaxBondSqr();
-  for (FixedPairLambdaList::Iterator it(*fixedpairList); it.isValid(); ++it) {
+  for (FixedPairListLambda::Iterator it(*fixedpairList); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
     real lambda = it->third;
@@ -135,13 +135,13 @@ FixedPairLambdaListInteractionTemplate<_Potential>::addForces() {
 }
 
 template<typename _Potential>
-inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeEnergy() {
+inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeEnergy() {
 
-  LOG4ESPP_INFO(theLogger, "compute energy of the FixedPairLambdaList pairs");
+  LOG4ESPP_INFO(theLogger, "compute energy of the FixedPairListLambda pairs");
 
   real e = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairLambdaList::Iterator it(*fixedpairList);
+  for (FixedPairListLambda::Iterator it(*fixedpairList);
        it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
@@ -156,39 +156,39 @@ inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeEnergy() 
 }
 
 template<typename _Potential>
-inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeEnergyDeriv() {
-  std::cout << "Warning! At the moment computeEnergyDeriv() in FixedPairLambdaListInteractionTemplate does not work."
+inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeEnergyDeriv() {
+  std::cout << "Warning! At the moment computeEnergyDeriv() in FixedPairListLambdaInteractionTemplate does not work."
             << std::endl;
   return 0.0;
 }
 
 template<typename _Potential>
-inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeEnergyAA() {
-  std::cout << "Warning! At the moment computeEnergyAA() in FixedPairLambdaListInteractionTemplate does not work."
+inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeEnergyAA() {
+  std::cout << "Warning! At the moment computeEnergyAA() in FixedPairListLambdaInteractionTemplate does not work."
             << std::endl;
   return 0.0;
 }
 
 template<typename _Potential>
-inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeEnergyCG() {
-  std::cout << "Warning! At the moment computeEnergyCG() in FixedPairLambdaListInteractionTemplate does not work."
+inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeEnergyCG() {
+  std::cout << "Warning! At the moment computeEnergyCG() in FixedPairListLambdaInteractionTemplate does not work."
             << std::endl;
   return 0.0;
 }
 
 template<typename _Potential>
-inline void FixedPairLambdaListInteractionTemplate<_Potential>::computeVirialX(std::vector <real> &p_xx_total, int bins) {
+inline void FixedPairListLambdaInteractionTemplate<_Potential>::computeVirialX(std::vector <real> &p_xx_total, int bins) {
   LOG4ESPP_INFO(theLogger, "compute virial p_xx of the pressure tensor slabwise");
 }
 
 
 template<typename _Potential>
-inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeVirial() {
+inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeVirial() {
   LOG4ESPP_INFO(theLogger, "compute the virial for the FixedPair List");
 
   real w = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairLambdaList::Iterator it(*fixedpairList);
+  for (FixedPairListLambda::Iterator it(*fixedpairList);
        it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
@@ -208,12 +208,12 @@ inline real FixedPairLambdaListInteractionTemplate<_Potential>::computeVirial() 
 }
 
 template<typename _Potential>
-inline void FixedPairLambdaListInteractionTemplate<_Potential>::computeVirialTensor(Tensor &w) {
+inline void FixedPairListLambdaInteractionTemplate<_Potential>::computeVirialTensor(Tensor &w) {
   LOG4ESPP_INFO(theLogger, "compute the virial tensor for the FixedPair List");
 
   Tensor wlocal(0.0);
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairLambdaList::Iterator it(*fixedpairList);
+  for (FixedPairListLambda::Iterator it(*fixedpairList);
        it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
@@ -234,17 +234,17 @@ inline void FixedPairLambdaListInteractionTemplate<_Potential>::computeVirialTen
 }
 
 template<typename _Potential>
-inline void FixedPairLambdaListInteractionTemplate<_Potential>::computeVirialTensor(Tensor &w, real z) {
+inline void FixedPairListLambdaInteractionTemplate<_Potential>::computeVirialTensor(Tensor &w, real z) {
 
 }
 
 template<typename _Potential>
-inline void FixedPairLambdaListInteractionTemplate<_Potential>::computeVirialTensor(Tensor *w, int n) {
+inline void FixedPairListLambdaInteractionTemplate<_Potential>::computeVirialTensor(Tensor *w, int n) {
 
 }
 
 template<typename _Potential>
-inline real FixedPairLambdaListInteractionTemplate<_Potential>::
+inline real FixedPairListLambdaInteractionTemplate<_Potential>::
 getMaxCutoff() {
   return potential->getCutoff();
 }

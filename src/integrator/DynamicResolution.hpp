@@ -48,7 +48,7 @@ class BasicDynamicResolutionType : public Extension {
   BasicDynamicResolutionType(shared_ptr<System> _system);
   ~BasicDynamicResolutionType();
 
-  void SetTypeRate(longint type, real rate) { rate_type_[type] = rate; }
+  void setTypeRate(longint type, real rate) { rate_type_[type] = rate; }
   /**
    * Define action after lambda reaches 1.0 or 0.0.
    */

@@ -42,12 +42,15 @@ from espressopp.VerletListTriple import *
 from espressopp.VerletListAdress import *
 from espressopp.FixedSingleList import *
 from espressopp.FixedPairList import *
+from espressopp.FixedPairListLambda import *
 from espressopp.FixedPairDistList import *
 from espressopp.FixedPairListAdress import *
 from espressopp.FixedTripleList import *
 from espressopp.FixedTripleAngleList import *
 from espressopp.FixedTripleListAdress import *
+from espressopp.FixedTripleListLambda import *
 from espressopp.FixedQuadrupleList import *
+from espressopp.FixedQuadrupleListLambda import *
 from espressopp.FixedQuadrupleListAdress import *
 from espressopp.FixedQuadrupleAngleList import *
 from espressopp.FixedTupleList import *

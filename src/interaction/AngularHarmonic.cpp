@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2016
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -22,8 +24,11 @@
 
 #include "python.hpp"
 #include "AngularHarmonic.hpp"
+#include <FixedTripleListLambda.hpp>
 #include "FixedTripleListInteractionTemplate.hpp"
 #include "FixedTripleListTypesInteractionTemplate.hpp"
+#include "FixedTripleListLambdaInteractionTemplate.hpp"
+#include "FixedTripleListTypesLambdaInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -45,6 +50,12 @@ namespace espressopp {
 
     typedef class FixedTripleListTypesInteractionTemplate<AngularHarmonic>
         FixedTripleListTypesAngularHarmonic;
+
+    typedef class FixedTripleListLambdaInteractionTemplate<AngularHarmonic>
+        FixedTripleListLambdaAngularHarmonic;
+
+    typedef class FixedTripleListTypesLambdaInteractionTemplate<AngularHarmonic>
+        FixedTripleListTypesLambdaAngularHarmonic;
         
       class_ <FixedTripleListAngularHarmonic, bases <Interaction> >
         ("interaction_FixedTripleListAngularHarmonic",
@@ -55,6 +66,14 @@ namespace espressopp {
         .def("setPotential", &FixedTripleListAngularHarmonic::setPotential)
         .def("getFixedTripleList", &FixedTripleListAngularHarmonic::getFixedTripleList);
 
+      class_ <FixedTripleListLambdaAngularHarmonic, bases <Interaction> >
+          ("interaction_FixedTripleListLambdaAngularHarmonic",
+           init<shared_ptr<System>,
+                shared_ptr<FixedTripleListLambda>,
+                shared_ptr<AngularHarmonic> >())
+          .def("setPotential", &FixedTripleListLambdaAngularHarmonic::setPotential)
+          .def("getFixedTripleList", &FixedTripleListLambdaAngularHarmonic::getFixedTripleList);
+
       class_< FixedTripleListTypesAngularHarmonic, bases< Interaction > >
           ("interaction_FixedTripleListTypesAngularHarmonic",
            init< shared_ptr<System>, shared_ptr<FixedTripleList> >())
@@ -62,6 +81,14 @@ namespace espressopp {
           .def("getPotential", &FixedTripleListTypesAngularHarmonic::getPotentialPtr)
           .def("setFixedTripleList", &FixedTripleListTypesAngularHarmonic::setFixedTripleList)
           .def("getFixedTripleList", &FixedTripleListTypesAngularHarmonic::getFixedTripleList);
+
+      class_< FixedTripleListTypesLambdaAngularHarmonic, bases< Interaction > >
+          ("interaction_FixedTripleListTypesLambdaAngularHarmonic",
+           init< shared_ptr<System>, shared_ptr<FixedTripleListLambda> >())
+          .def("setPotential", &FixedTripleListTypesLambdaAngularHarmonic::setPotential)
+          .def("getPotential", &FixedTripleListTypesLambdaAngularHarmonic::getPotentialPtr)
+          .def("setFixedTripleList", &FixedTripleListTypesLambdaAngularHarmonic::setFixedTripleList)
+          .def("getFixedTripleList", &FixedTripleListTypesLambdaAngularHarmonic::getFixedTripleList);
     }
   }
 }

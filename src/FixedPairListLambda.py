@@ -19,18 +19,18 @@
 
 r"""
 ********************************
-**espressopp.FixedPairLambdaList**
+**espressopp.FixedPairListLambda**
 ********************************
 
 
-.. function:: espressopp.FixedPairLambdaList(storage, initial_lambda)
+.. function:: espressopp.FixedPairListLambda(storage, initial_lambda)
 
 		:param storage: 
 		:type storage:
 		:param initial_lambda:
 		:type initial_lambda: float
 
-.. function:: espressopp.FixedPairLambdaList.add(pid1, pid2)
+.. function:: espressopp.FixedPairListLambda.add(pid1, pid2)
 
 		:param pid1: 
 		:param pid2: 
@@ -38,13 +38,13 @@ r"""
 		:type pid2: 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.addPairs(bondlist)
+.. function:: espressopp.FixedPairListLambda.addPairs(bondlist)
 
 		:param bondlist: 
 		:type bondlist: 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.getLambda(pid1, pid2)
+.. function:: espressopp.FixedPairListLambda.getLambda(pid1, pid2)
 
 		:param pid1: 
 		:param pid2: 
@@ -52,15 +52,15 @@ r"""
 		:type pid2: 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.getPairs()
+.. function:: espressopp.FixedPairListLambda.getBonds()
 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.getPairsLambda()
+.. function:: espressopp.FixedPairListLambda.getPairsLambda()
 
 		:rtype: 
 
-.. function:: espressopp.FixedPairLambdaList.size()
+.. function:: espressopp.FixedPairListLambda.size()
 
 		:rtype: 
 """
@@ -69,10 +69,11 @@ import _espressopp
 import espressopp
 from espressopp.esutil import cxxinit
 
-class FixedPairLambdaListLocal(_espressopp.FixedPairLambdaList):
+
+class FixedPairListLambdaLocal(_espressopp.FixedPairListLambda):
     def __init__(self, storage, initial_lambda=1.0):
         if pmi.workerIsActive():
-            cxxinit(self, _espressopp.FixedPairLambdaList, storage, initial_lambda)
+            cxxinit(self, _espressopp.FixedPairListLambda, storage, initial_lambda)
 
     def add(self, pid1, pid2):
         if pmi.workerIsActive():
@@ -82,29 +83,27 @@ class FixedPairLambdaListLocal(_espressopp.FixedPairLambdaList):
         if pmi.workerIsActive():
             return self.cxxclass.size(self)
 
-    def addPairs(self, bondlist):
+    def addBonds(self, bondlist):
         if pmi.workerIsActive():
-            for pid1, pid2 in bondlist:
+            for bond in bondlist:
+                pid1, pid2 = bond
                 self.cxxclass.add(self, pid1, pid2)
 
     def getPairs(self):
         if pmi.workerIsActive():
           return self.cxxclass.getPairs(self)
-
-    def getPairsDist(self):
-        if pmi.workerIsActive():
-          return self.cxxclass.getPairsDist(self)
         
     def getLambda(self, pid1, pid2):
         if pmi.workerIsActive():
           return self.cxxclass.getLambda(self, pid1, pid2)
-        
+
+
 if pmi.isController:
-  class FixedPairLambdaList(object):
+  class FixedPairListLambda(object):
       __metaclass__ = pmi.Proxy
       pmiproxydefs = dict(
-          cls = 'espressopp.FixedPairLambdaListLocal',
+          cls = 'espressopp.FixedPairListLambdaLocal',
           localcall = [ "add" ],
-          pmicall = [ "addPairs" ],
-          pmiinvoke = ['getPairs', 'getPairsLambda', 'size', 'getLambda']
+          pmicall = [ "addBonds", "setLambda", "setLambdaAll"],
+          pmiinvoke = ['getBonds', 'getPairsLambda', 'size', 'getLambda']
       )

@@ -237,10 +237,6 @@ void DynamicResolution::aftCalcF() {
   }
 }
 
-
-/****************************************************
-** REGISTRATION WITH PYTHON
-****************************************************/
 void DynamicResolution::registerPython() {
   using namespace espressopp::python;  // NOLINT
   class_<DynamicResolution, shared_ptr<DynamicResolution>, bases<Extension> >
@@ -281,7 +277,7 @@ void BasicDynamicResolutionType::registerPython() {
   using namespace espressopp::python;  // NOLINT
   class_<BasicDynamicResolutionType, shared_ptr<BasicDynamicResolutionType>, bases<Extension> >
       ("integrator_BasicDynamicResolutionType", init<shared_ptr<System> >())
-       .def("set_type_rate", &BasicDynamicResolutionType::SetTypeRate)
+      .def("set_type_rate", &BasicDynamicResolutionType::setTypeRate)
        .def("connect", &BasicDynamicResolutionType::connect)
        .def("disconnect", &BasicDynamicResolutionType::disconnect)
        .def("add_postprocess", &BasicDynamicResolutionType::addPostProcess);

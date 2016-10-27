@@ -62,6 +62,8 @@ from espressopp.interaction.AngularPotential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_AngularHarmonic, interaction_FixedTripleListAngularHarmonic
 from _espressopp import interaction_FixedTripleListTypesAngularHarmonic
+from _espressopp import interaction_FixedTripleListLambdaAngularHarmonic
+from _espressopp import interaction_FixedTripleListTypesLambdaAngularHarmonic
 
 class AngularHarmonicLocal(AngularPotentialLocal, interaction_AngularHarmonic):
 
@@ -80,10 +82,41 @@ class FixedTripleListAngularHarmonicLocal(InteractionLocal, interaction_FixedTri
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotential(self, type1, type2, potential)
 
+
+class FixedTripleListLambdaAngularHarmonicLocal(InteractionLocal, interaction_FixedTripleListLambdaAngularHarmonic):
+    def __init__(self, system, ftl, potential):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedTripleListLambdaAngularHarmonic, system, ftl, potential)
+
+    def setPotential(self, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, potential)
+
 class FixedTripleListTypesAngularHarmonicLocal(InteractionLocal, interaction_FixedTripleListTypesAngularHarmonic):
     def __init__(self, system, vl):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, interaction_FixedTripleListTypesAngularHarmonic, system, vl)
+
+    def setPotential(self, type1, type2, type3, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, type1, type2, type3, potential)
+
+    def getPotential(self, type1, type2):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPotential(self, type1, type2)
+
+    def setFixedTripleList(self, fixedtriplelist):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setFixedTripleList(self, fixedtriplelist)
+
+    def getFixedTripleList(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getFixedTripleList(self)
+
+class FixedTripleListTypesLambdaAngularHarmonicLocal(InteractionLocal, interaction_FixedTripleListTypesLambdaAngularHarmonic):
+    def __init__(self, system, ftl):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_FixedTripleListTypesLambdaAngularHarmonic, system, ftl)
 
     def setPotential(self, type1, type2, type3, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -115,9 +148,24 @@ if pmi.isController:
             cls =  'espressopp.interaction.FixedTripleListAngularHarmonicLocal',
             pmicall = ['setPotential', 'getFixedTripleList']
             )
+
+    class FixedTripleListLambdaAngularHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedTripleListLambdaAngularHarmonicLocal',
+            pmicall = ['setPotential', 'getFixedTripleList']
+        )
+
     class FixedTripleListTypesAngularHarmonic(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedTripleListTypesAngularHarmonicLocal',
+            pmicall = ['setPotential','getPotential','setFixedTripleList','getFixedTripleList']
+        )
+
+    class FixedTripleListTypesLambdaAngularHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedTripleListTypesLambdaAngularHarmonicLocal',
             pmicall = ['setPotential','getPotential','setFixedTripleList','getFixedTripleList']
         )

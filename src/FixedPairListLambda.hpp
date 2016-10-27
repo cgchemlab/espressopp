@@ -43,7 +43,7 @@ class ParticlePairLambda : public Triple< class Particle*, class Particle*, real
       : Super(&p1, &p2, l) {}
 };
 
-class FixedPairLambdaList: public esutil::ESPPContainer< std::vector< ParticlePairLambda > > {
+class FixedPairListLambda: public esutil::ESPPContainer< std::vector< ParticlePairLambda > > {
  protected:
   typedef std::multimap <longint, std::pair<longint, real> > PairsLambda;
   boost::signals2::connection con1, con2, con3;
@@ -52,18 +52,20 @@ class FixedPairLambdaList: public esutil::ESPPContainer< std::vector< ParticlePa
   real longtimeMaxBondSqr;
 
  public:
-  FixedPairLambdaList(shared_ptr <storage::Storage> _storage, real initLambda);
-  virtual ~FixedPairLambdaList();
+  FixedPairListLambda(shared_ptr <storage::Storage> _storage, real initLambda);
+  virtual ~FixedPairListLambda();
 
   virtual bool add(longint pid1, longint pid2);
   virtual void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
   void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
   virtual void onParticlesChanged();
 
-  python::list getPairs();
+  python::list getBonds();
   python::list getPairsLambda();
 
   real getLambda(longint pid1, longint pid2);
+  void setLambda(longint pid1, longint pid2, real lambda);
+  void setLambdaAll(real lambda);
   /** Get the number of bonds in the GlobalPairs list */
   int size() { return pairsLambda.size(); }
 

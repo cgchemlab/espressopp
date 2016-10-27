@@ -35,12 +35,14 @@
 #include <FixedSingleList.hpp>
 #include <FixedPairList.hpp>
 #include <FixedPairDistList.hpp>
-#include <FixedPairLambdaList.hpp>
+#include <FixedPairListLambda.hpp>
 #include <FixedPairListAdress.hpp>
 #include <FixedTripleList.hpp>
 #include <FixedTripleAngleList.hpp>
 #include <FixedTripleListAdress.hpp>
+#include <FixedTripleListLambda.hpp>
 #include <FixedQuadrupleList.hpp>
+#include <FixedQuadrupleListLambda.hpp>
 #include <FixedQuadrupleListAdress.hpp>
 #include <FixedQuadrupleAngleList.hpp>
 #include <FixedTupleList.hpp>
@@ -75,13 +77,15 @@ void espressopp::registerPython() {
   espressopp::VerletListTriple::registerPython();
   espressopp::FixedSingleList::registerPython();
   espressopp::FixedPairList::registerPython();
-  espressopp::FixedPairLambdaList::registerPython();
+  espressopp::FixedPairListLambda::registerPython();
   espressopp::FixedPairDistList::registerPython();
   espressopp::FixedPairListAdress::registerPython();
   espressopp::FixedTripleList::registerPython();
   espressopp::FixedTripleAngleList::registerPython();
   espressopp::FixedTripleListAdress::registerPython();
+  espressopp::FixedTripleListLambda::registerPython();
   espressopp::FixedQuadrupleList::registerPython();
+  espressopp::FixedQuadrupleListLambda::registerPython();
   espressopp::FixedQuadrupleListAdress::registerPython();
   espressopp::FixedQuadrupleAngleList::registerPython();
   espressopp::FixedTupleList::registerPython();

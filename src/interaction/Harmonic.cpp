@@ -24,7 +24,8 @@
 #include "Harmonic.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
-#include "FixedPairLambdaListInteractionTemplate.hpp"
+#include "FixedPairListLambdaInteractionTemplate.hpp"
+#include "FixedPairListTypesLambdaInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -46,8 +47,11 @@ namespace espressopp {
         FixedPairListHarmonic;
       typedef class FixedPairListTypesInteractionTemplate< Harmonic >
         FixedPairListTypesHarmonic;
-      typedef class FixedPairLambdaListInteractionTemplate<Harmonic>
-        FixedPairLambdaListHarmonic;
+      typedef class FixedPairListLambdaInteractionTemplate<Harmonic>
+        FixedPairListLambdaHarmonic;
+
+      typedef class FixedPairListTypesLambdaInteractionTemplate<Harmonic>
+        FixedPairListTypesLambdaHarmonic;
 
       class_< FixedPairListHarmonic, bases< Interaction > >
         ("interaction_FixedPairListHarmonic",
@@ -67,13 +71,22 @@ namespace espressopp {
         .def("setFixedPairList", &FixedPairListTypesHarmonic::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTypesHarmonic::getFixedPairList);
       ;
-      class_< FixedPairLambdaListHarmonic, bases< Interaction > >
-          ("interaction_FixedPairLambdaListHarmonic",
-           init< shared_ptr<System>, shared_ptr<FixedPairLambdaList>, shared_ptr<Harmonic> >())
-          .def("setPotential", &FixedPairLambdaListHarmonic::setPotential)
-          .def("getPotential", &FixedPairLambdaListHarmonic::getPotential)
-          .def("setFixedPairList", &FixedPairLambdaListHarmonic::setFixedPairList)
-          .def("setFixedPairList", &FixedPairLambdaListHarmonic::setFixedPairList);
+      class_< FixedPairListLambdaHarmonic, bases< Interaction > >
+          ("interaction_FixedPairListLambdaHarmonic",
+           init< shared_ptr<System>, shared_ptr<FixedPairListLambda>, shared_ptr<Harmonic> >())
+          .def("setPotential", &FixedPairListLambdaHarmonic::setPotential)
+          .def("getPotential", &FixedPairListLambdaHarmonic::getPotential)
+          .def("setFixedPairList", &FixedPairListLambdaHarmonic::setFixedPairList)
+          .def("setFixedPairList", &FixedPairListLambdaHarmonic::setFixedPairList);
+      ;
+
+      class_< FixedPairListTypesLambdaHarmonic, bases< Interaction > >
+          ("interaction_FixedPairListTypesLambdaHarmonic",
+           init< shared_ptr<System>, shared_ptr<FixedPairListLambda> >())
+          .def("setPotential", &FixedPairListTypesLambdaHarmonic::setPotential)
+          .def("getPotential", &FixedPairListTypesLambdaHarmonic::getPotentialPtr)
+          .def("setFixedPairList", &FixedPairListTypesLambdaHarmonic::setFixedPairList)
+          .def("getFixedPairList", &FixedPairListTypesLambdaHarmonic::getFixedPairList);
       ;
 
     }

@@ -35,11 +35,6 @@ By default the IUPAC convention is used, where :math:`\phi` is the angle between
 
 Reference: http://www.gromacs.org/Documentation/Manual
 
-
-
-
-
-
 .. function:: espressopp.interaction.DihedralRB(K0, K1, K2, K3, K4, K5, iupac)
 
 		:param K0: (default: 0.0)
@@ -88,6 +83,8 @@ from espressopp.interaction.Interaction import *  # NOQA
 from _espressopp import interaction_DihedralRB
 from _espressopp import interaction_FixedQuadrupleListDihedralRB
 from _espressopp import interaction_FixedQuadrupleListTypesDihedralRB
+from _espressopp import interaction_FixedQuadrupleListLambdaDihedralRB
+from _espressopp import interaction_FixedQuadrupleListTypesLambdaDihedralRB
 
 
 class DihedralRBLocal(DihedralPotentialLocal, interaction_DihedralRB):
@@ -141,6 +138,41 @@ class FixedQuadrupleListTypesDihedralRBLocal(InteractionLocal, interaction_Fixed
             return self.cxxclass.getFixedQuadrupleList(self)
 
 
+class FixedQuadrupleListLambdaDihedralRBLocal(InteractionLocal, interaction_FixedQuadrupleListLambdaDihedralRB):
+    def __init__(self, system, fql, potential):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedQuadrupleListLambdaDihedralRB, system, fql, potential)
+
+    def setPotential(self, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, potential)
+
+    def getFixedQuadrupleList(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getFixedQuadrupleList(self)
+
+class FixedQuadrupleListTypesLambdaDihedralRBLocal(InteractionLocal, interaction_FixedQuadrupleListTypesLambdaDihedralRB):
+    def __init__(self, system, fql):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_FixedQuadrupleListTypesLambdaDihedralRB, system, fql)
+
+    def setPotential(self, type1, type2, type3, type4, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, type1, type2, type3, type4, potential)
+
+    def getPotential(self, type1, type2, type3, type4):
+        if pmi.workerIsActive():
+            return self.cxxclass.getPotential(self, type1, type2, type3, type4)
+
+    def setFixedQuadrupleList(self, fixedlist):
+        if pmi.workerIsActive():
+            self.cxxclass.setFixedQuadrupleList(self, fixedlist)
+
+    def getFixedQuadrupleList(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getFixedQuadrupleList(self)
+
+
 if pmi.isController:
     class DihedralRB(DihedralPotential):
         """The  Ryckaert-Bellemans function for proper dihedrals.
@@ -164,5 +196,19 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedQuadrupleListTypesDihedralRBLocal',
+            pmicall = ['setPotential','getPotential','setFixedQuadrupleList','getFixedQuadrupleList']
+        )
+
+    class FixedQuadrupleListLambdaDihedralRB(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.interaction.FixedQuadrupleListLambdaDihedralRBLocal',
+            pmicall=['setPotential', 'getFixedQuadrupleList']
+        )
+
+    class FixedQuadrupleListTypesLambdaDihedralRB(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedQuadrupleListTypesLambdaDihedralRBLocal',
             pmicall = ['setPotential','getPotential','setFixedQuadrupleList','getFixedQuadrupleList']
         )
