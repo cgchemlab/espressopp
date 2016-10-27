@@ -203,6 +203,7 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
   // Fill out_buffer from the particles properties.
   longint data_length = modified_particles.size();
   longint p_id, p_type, p_state;
+  real p_mass, p_q;
 
   out_buffer.write(data_length);
 
@@ -210,9 +211,13 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
     p_id = (*it)->id();
     p_type = (*it)->type();
     p_state = (*it)->state();
+    p_mass = (*it)->mass();
+    p_q = (*it)->q();
     out_buffer.write(p_id);
     out_buffer.write(p_type);
     out_buffer.write(p_state);
+    out_buffer.write(p_mass);
+    out_buffer.write(p_q);
   }
 
   // Temporary data.
@@ -294,10 +299,14 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
           in_buffer_0.read(p_id);
           in_buffer_0.read(p_type);
           in_buffer_0.read(p_state);
+          in_buffer_0.read(p_mass);
+          in_buffer_0.read(p_q);
         } else {
           in_buffer_1.read(p_id);
           in_buffer_1.read(p_type);
           in_buffer_1.read(p_state);
+          in_buffer_1.read(p_mass);
+          in_buffer_1.read(p_q);
         }
 
         // Update the ghost particle data on neighbour CPUs.
@@ -307,6 +316,8 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
           LOG4ESPP_DEBUG(theLogger, "Update particle data");
           particle->setType(p_type);
           particle->setState(p_state);
+          particle->setMass(p_mass);
+          particle->setQ(p_q);
         }
       }
     }
