@@ -80,6 +80,7 @@ namespace espressopp {
       Adress::registerPython();
       BasicDynamicResolutionType::registerPython();
       DynamicResolution::registerPython();
+      FixedListDynamicResolution::registerPython();
       BerendsenBarostat::registerPython();
       BerendsenBarostatAnisotropic::registerPython();
       BerendsenThermostat::registerPython();
