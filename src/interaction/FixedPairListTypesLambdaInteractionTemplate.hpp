@@ -110,10 +110,10 @@ FixedPairListTypesLambdaInteractionTemplate<_Potential>::addForces() {
   LOG4ESPP_INFO(theLogger, "add forces computed by the FixedPair List");
   const bc::BC &bc = *getSystemRef().bc;
 
-  for (FixedPairListLambda::Iterator it(*fixedpairList); it.isValid(); ++it) {
-    Particle &p1 = *it->first;
-    Particle &p2 = *it->second;
-    real lambda = it->third;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    Particle &p1 = *it->p1;
+    Particle &p2 = *it->p2;
+    real lambda = it->lambda;
     int type1 = p1.type();
     int type2 = p2.type();
     const Potential &potential = getPotential(type1, type2);
@@ -135,19 +135,18 @@ FixedPairListTypesLambdaInteractionTemplate<_Potential>::
 computeEnergy() {
   LOG4ESPP_INFO(theLogger, "compute energy of the FixedPair list pairs");
 
-  real e = 0.0;
   real es = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairListLambda::Iterator it(*fixedpairList); it.isValid(); ++it) {
-    Particle &p1 = *it->first;
-    Particle &p2 = *it->second;
-    real lambda = it->third;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    Particle &p1 = *it->p1;
+    Particle &p2 = *it->p2;
+    real lambda = it->lambda;
     int type1 = p1.type();
     int type2 = p2.type();
     const Potential &potential = getPotential(type1, type2);
     Real3D r21;
     bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-    e = lambda*potential._computeEnergy(p1, p2, r21);
+    real e = lambda*potential._computeEnergy(p1, p2, r21);
     es += e;
     LOG4ESPP_TRACE(theLogger, "id1=" << p1.id() << " id2=" << p2.id() << " potential energy=" << e);
   }
@@ -205,13 +204,12 @@ computeVirial() {
 
   real w = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairListLambda::Iterator it(*fixedpairList);
-       it.isValid(); ++it) {
-    Particle &p1 = *it->first;
-    Particle &p2 = *it->second;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    Particle &p1 = *it->p1;
+    Particle &p2 = *it->p2;
     int type1 = p1.type();
     int type2 = p2.type();
-    real lambda = it->third;
+    real lambda = it->lambda;
     const Potential &potential = getPotential(type1, type2);
     // shared_ptr<Potential> potential = getPotential(type1, type2);
 

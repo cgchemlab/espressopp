@@ -32,6 +32,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <FixedPairListLambda.hpp>
 
 #include "types.hpp"
 #include "logging.hpp"
@@ -269,6 +270,23 @@ public:
             virtual_(false),
             intraresidual_(true),
             rate_(rate) { }
+
+  Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int min_state_2,
+           int max_state_2, shared_ptr<FixedPairListLambda> fpl, real rate)
+      :type_1_(type_1),
+       type_2_(type_2),
+       delta_1_(delta_1),
+       delta_2_(delta_2),
+       min_state_1_(min_state_1),
+       max_state_1_(max_state_1),
+       min_state_2_(min_state_2),
+       max_state_2_(max_state_2),
+       reverse_(false),
+       fixed_pair_list_(fpl),
+       active_(true),
+       virtual_(false),
+       intraresidual_(true),
+       rate_(rate) { }
 
   virtual ~Reaction() { }
 

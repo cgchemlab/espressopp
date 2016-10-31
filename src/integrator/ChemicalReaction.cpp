@@ -215,9 +215,8 @@ std::set<Particle *> Reaction::postProcess_T2(Particle &p, Particle &partner) {
 void Reaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<Reaction, shared_ptr<integrator::Reaction> >
-      ("integrator_Reaction",
-       init<int, int, int, int, int, int, int, int,
-            shared_ptr<FixedPairList>, real>())
+      ("integrator_Reaction", init<int, int, int, int, int, int, int, int, shared_ptr<FixedPairList>, real>())
+      .def(init<int, int, int, int, int, int, int, int, shared_ptr<FixedPairListLambda>, real>())
       .add_property("type_1", &Reaction::type_1, &Reaction::set_type_1)
       .add_property("type_2", &Reaction::type_2, &Reaction::set_type_2)
       .add_property("delta_1", &Reaction::delta_1, &Reaction::set_delta_1)
@@ -266,6 +265,7 @@ void RestrictReaction::registerPython() {
   class_<RestrictReaction, bases<Reaction>, shared_ptr<RestrictReaction> >
       ("integrator_RestrictReaction",
           init<int, int, int, int, int, int, int, int, shared_ptr<FixedPairList>, real>())
+          .def(init<int, int, int, int, int, int, int, int, shared_ptr<FixedPairListLambda>, real>())
           .add_property("type_1", &RestrictReaction::type_1, &Reaction::set_type_1)
           .add_property("type_2", &RestrictReaction::type_2, &Reaction::set_type_2)
           .add_property("delta_1", &RestrictReaction::delta_1, &RestrictReaction::set_delta_1)
@@ -341,6 +341,7 @@ void DissociationReaction::registerPython() {
         // type_1, type_2, delta_1, delta_2, min_state_1, max_state_1, min_state_2,
         // max_state_2, break_cutoff, fpl, rate
        init<int, int, int, int, int, int, int, int, real, shared_ptr<FixedPairList>, real>())
+      .def(init<int, int, int, int, int, int, int, int, real, shared_ptr<FixedPairListLambda>, real>())
       .add_property("type_1",
                     &DissociationReaction::type_1, &DissociationReaction::set_type_1)
       .add_property("type_2",

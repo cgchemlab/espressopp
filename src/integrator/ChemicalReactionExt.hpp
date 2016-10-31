@@ -25,6 +25,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/signals2.hpp>
 
+#include <fstream>
 #include <utility>
 #include <map>
 #include <set>
@@ -107,14 +108,9 @@ public:
       shared_ptr<storage::DomainDecomposition> _domdec, shared_ptr<TopologyManager> tm);
   ~ChemicalReaction();
 
-  void set_interval(int interval) {
-    *interval_ = interval;
-  }
-
   /// Gets interval between when reaction happens.
-  int interval() {
-    return *interval_;
-  }
+  int interval() { return *interval_; }
+  void set_interval(int interval) { *interval_ = interval; }
 
   bool is_nearest() { return is_nearest_; }
   void set_is_nearest(bool s_) { is_nearest_ = s_; }
@@ -129,13 +125,37 @@ private:
   void React();
 
   void sendMultiMap(integrator::ReactionMap &mm);
-  void UniqueA(integrator::ReactionMap &potential_candidates);
-  void UniqueB(integrator::ReactionMap &potential_candidates,
-      integrator::ReactionMap &effective_candidates);
-  void ApplyAR(std::set<Particle *> &modified_particles);
-  void ApplyDR(std::set<Particle *> &modified_particles);
+  void uniqueA(integrator::ReactionMap &potential_candidates);
+  void uniqueB(integrator::ReactionMap &potential_candidates, integrator::ReactionMap &effective_candidates);
+  void applyAR(std::set<Particle *> &modified_particles);
+  void applyDR(std::set<Particle *> &modified_particles);
 
   void updateGhost(const std::set<Particle *> &modified_particles);
+  void sortParticleReactionList(ReactionMap &mm);
+
+  void connect();
+  void disconnect();
+
+  void resetTimers() {
+    timeComm = 0.0;
+    timeUpdateGhost = 0.0;
+    timeApplyAR = 0.0;
+    timeApplyDR = 0.0;
+    timeLoopPair = 0.0;
+  }
+
+  // Pair distance statistic
+  void savePairDistances(std::string filename);
+  python::list getPairDistances();
+  void clearPairDistances() { pair_distances_.clear(); }
+  void set_pd_filename(std::string f_) {
+    if (f_ == "") {
+      save_pd_ = false;
+    } else {
+      pd_filename_ = f_;
+      save_pd_ = true;
+    }
+  }
 
   real current_cutoff_;  //!< Maximal cutoff use for VerletList.
 
@@ -143,7 +163,6 @@ private:
   shared_ptr<real> dt_;  //!< Timestep from the integrator.
 
   shared_ptr<storage::DomainDecomposition> domdec_;
-  shared_ptr<espressopp::interaction::Potential> potential_;
   shared_ptr<esutil::RNG> rng_;  //!< Random number generator.
   shared_ptr<VerletList> verlet_list_;  //!< Verlet list of used potential
 
@@ -159,9 +178,6 @@ private:
 
   bool is_nearest_;  //!< If set to True then nearest neighbour is taken instead of random particle.
 
-  void connect();
-  void disconnect();
-
   ///Timers
   esutil::WallTimer wallTimer;  //!< used for timing
 
@@ -171,18 +187,15 @@ private:
   real timeApplyDR;
   real timeLoopPair;
 
-  void resetTimers() {
-    timeComm = 0.0;
-    timeUpdateGhost = 0.0;
-    timeApplyAR = 0.0;
-    timeApplyDR = 0.0;
-    timeLoopPair = 0.0;
-  }
+  /// Pair distance statistic.
+  std::vector<real> pair_distances_;
+  std::string pd_filename_;
+  bool save_pd_;
 
   python::list getTimers();
 
+  // Debug function.
   void printMultiMap(ReactionMap &rmap, std::string comment);
-  void sortParticleReactionList(ReactionMap &mm);
 };
 }  // namespace integrator
 }  // namespace espressopp

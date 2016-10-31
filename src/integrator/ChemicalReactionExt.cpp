@@ -20,18 +20,12 @@
 
 #include "ChemicalReactionExt.hpp"
 
-#include <utility>
-#include <set>
-#include <numeric>
-#include <math.h>
 #include <fstream>
-#include <string>
-#include <algorithm>
+#include <boost/range/algorithm/random_shuffle.hpp>
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "esutil/RNG.hpp"
-#include "bc/BC.hpp"
 #include "storage/NodeGrid.hpp"
 #include "storage/DomainDecomposition.hpp"
 #include "FixDistances.hpp"
@@ -65,6 +59,8 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
 
   reaction_list_ = ReactionList();
   reverse_reaction_list_ = ReactionList();
+
+  save_pd_ = false;
 
   resetTimers();
 }
@@ -161,11 +157,11 @@ void ChemicalReaction::React() {
 
   // Here, reduce number of partners to each A to 1
   // Also, keep only non-ghost A
-  UniqueA(potential_pairs_);
+  uniqueA(potential_pairs_);
   sendMultiMap(potential_pairs_);
   // Here, reduce number of partners to each B to 1
   // Also, keep only non-ghost B
-  UniqueB(potential_pairs_, effective_pairs_);
+  uniqueB(potential_pairs_, effective_pairs_);
   // Distribute effective pairs
   sendMultiMap(effective_pairs_);
   timeComm += wallTimer.stopMeasure();
@@ -177,7 +173,7 @@ void ChemicalReaction::React() {
 
   wallTimer.startMeasure();
   // First, remove pairs.
-  ApplyDR(modified_particles);
+  applyDR(modified_particles);
   timeApplyDR += wallTimer.stopMeasure();
 
   // Synchronize, all cpus should finish dissocition part.
@@ -185,7 +181,7 @@ void ChemicalReaction::React() {
 
   wallTimer.startMeasure();
   // Now, accept new pairs.
-  ApplyAR(modified_particles);
+  applyAR(modified_particles);
   timeApplyAR += wallTimer.stopMeasure();
 
   // Synchronize, all cpus should finish association part.
@@ -196,14 +192,13 @@ void ChemicalReaction::React() {
   updateGhost(modified_particles);
   timeUpdateGhost += wallTimer.stopMeasure();
 
+  if (save_pd_) {
+    savePairDistances(pd_filename_);
+  }
+
   LOG4ESPP_DEBUG(theLogger, "Finished react()");
   LOG4ESPP_DEBUG(theLogger, "Leaving react()");
 }
-
-/** Performs two-way parallel communication to consolidate mm between
-   neighbours. The parallel scheme is taken from
-   storage::DomainDecomposition::doGhostCommunication
- */
 
 void ChemicalReaction::printMultiMap(ReactionMap &rmap, std::string comment) {
   System &system = getSystemRef();
@@ -214,6 +209,10 @@ void ChemicalReaction::printMultiMap(ReactionMap &rmap, std::string comment) {
   }
 }
 
+/** Performs two-way parallel communication to consolidate mm between
+   neighbours. The parallel scheme is taken from
+   storage::DomainDecomposition::doGhostCommunication
+ */
 void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
   LOG4ESPP_DEBUG(theLogger, "Entering sendMultiMap");
 
@@ -349,7 +348,9 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
 
         mm.insert(
             std::make_pair(
-                idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_))));
+                idx_a, std::make_pair(
+                    idx_b,
+                    ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_))));
       }
     }
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
@@ -554,8 +555,8 @@ void ChemicalReaction::updateGhost(const std::set<Particle *> &modified_particle
    each id1 and return it in place. In addition, only pairs for which
    id1 is local are kept.
  */
-void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "UniqueA");
+void ChemicalReaction::uniqueA(integrator::ReactionMap &potential_candidates) {// NOLINT
+  LOG4ESPP_DEBUG(theLogger, "uniqueA");
 
   System &system = getSystemRef();
   integrator::ReactionMap unique_list_of_candidates;
@@ -583,9 +584,9 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
     real max_rc;
 
     // reaction_coordinate => idx_b, ReactionDef(reaction_id, reaction_rate) or r_sqr distance
-    typedef boost::unordered_multimap<real, std::pair<longint, ReactionDef > > LocalRateIdx;
+    typedef std::multimap<real, std::pair<longint, ReactionDef > > LocalRateIdx;
     LocalRateIdx rc_idx_b;
-    LocalRateIdx::local_iterator idx_b_reaction_id;
+    LocalRateIdx::iterator idx_b_reaction_id;
 
     // Iterators for the equal_range.
     std::pair<integrator::ReactionMap::iterator,
@@ -596,13 +597,13 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
         it != a_indexes.end(); ++it) {
       idx_a = *it;
 
-      // Group the candidates by the reaction rate.
+      // Group the candidates by the reaction coordinate, rate or distance.
       if (is_nearest_)  // silly
         max_rc = 10e18;
       else
-        max_rc = -1;
+        max_rc = -1.0;
 
-      // Select all possible candidates
+      // Select all possible candidates of particle A
       candidates_b = potential_candidates.equal_range(idx_a);
 
       rc_idx_b.clear();
@@ -613,7 +614,7 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
         real reaction_rate = jt->second.second.reaction_rate;
         real reaction_r_sqr = jt->second.second.reaction_r_sqr;
 
-        if (is_nearest_) {
+        if (is_nearest_) {  // select nearest neighbour.
           if (reaction_r_sqr < max_rc)
             max_rc = reaction_r_sqr;
         } else {
@@ -629,28 +630,27 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
 
         // rc => (idx_b, reaction_id)
         rc_idx_b.insert(std::make_pair(rc, std::make_pair(jt->second.first, jt->second.second)));
-      }
+      }  // end preparing candidates of A.
 
       // Found reaction with the maximum rate. If there are several candidates with the same
       // rate, then we choose randomly.
-      if (max_rc != -1) {
-        int bucket_size = rc_idx_b.count(max_rc);
+      int bucket_size = rc_idx_b.count(max_rc);
 
-        int pick_offset = 0;
-        if (bucket_size > 1)
-          // Pick up random number in given range.
-          pick_offset = (*rng_)(bucket_size);
+      int pick_offset = 0;
+      if (bucket_size > 1)
+        // Pick up random number in given range.
+        pick_offset = (*rng_)(bucket_size-1);
 
-        idx_b_reaction_id = rc_idx_b.begin(rc_idx_b.bucket(max_rc));
+      idx_b_reaction_id = rc_idx_b.lower_bound(max_rc);
 
-        std::advance(idx_b_reaction_id, pick_offset);
+      std::advance(idx_b_reaction_id, pick_offset);
 
-        unique_list_of_candidates.insert(
-            std::make_pair(idx_a,
-                           std::make_pair(
-                               idx_b_reaction_id->second.first,
-                               idx_b_reaction_id->second.second)));
-      }
+      unique_list_of_candidates.insert(
+          std::make_pair(idx_a,
+                         std::make_pair(
+                             idx_b_reaction_id->second.first,
+                             idx_b_reaction_id->second.second)));
+
     }
   }
 
@@ -663,12 +663,12 @@ void ChemicalReaction::UniqueA(integrator::ReactionMap &potential_candidates) {/
    each id2 and return it in place. In addition, only pairs for which
    id2 is local are kept.
  */
-void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// NOLINT
+void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// NOLINT
                                integrator::ReactionMap &effective_candidates) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "UniqueB");
+  LOG4ESPP_DEBUG(theLogger, "uniqueB");
 
   typedef boost::unordered_set<longint> Indexes;
-  typedef boost::unordered_multimap<real, std::pair<longint, ReactionDef> > RateParticleIdx;
+  typedef std::multimap<real, std::pair<longint, ReactionDef> > RateParticleIdx;
 
   System &system = getSystemRef();
   Indexes b_indexes;
@@ -701,7 +701,7 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
 
     // rate => idx_a, reaction_id, reaction_rate
     RateParticleIdx rc_idx_a;
-    RateParticleIdx::local_iterator idx_a_reaction_id;
+    RateParticleIdx::iterator idx_a_reaction_id;
     std::pair<integrator::ReactionMap::iterator,
     integrator::ReactionMap::iterator> candidates_a;
 
@@ -743,22 +743,20 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
 
       // Found reaction with the maximum rate. If there are several candidates
       // then select randomly.
-      if (max_rc != -1) {
-        int bucket_size = rc_idx_a.count(max_rc);
-        int pick_offset = 0;
-        if (bucket_size > 1)
-          pick_offset = (*rng_)(bucket_size);
+      int bucket_size = rc_idx_a.count(max_rc);
+      int pick_offset = 0;
+      if (bucket_size > 1)
+        pick_offset = (*rng_)(bucket_size-1);
 
-        idx_a_reaction_id = rc_idx_a.begin(rc_idx_a.bucket(max_rc));
+      idx_a_reaction_id = rc_idx_a.lower_bound(max_rc);
 
-        std::advance(idx_a_reaction_id, pick_offset);
+      std::advance(idx_a_reaction_id, pick_offset);
 
-        effective_candidates.insert(
-            std::make_pair(
-                idx_a_reaction_id->second.first,
-                std::make_pair(idx_b,
-                               idx_a_reaction_id->second.second)));
-      }
+      effective_candidates.insert(
+          std::make_pair(
+              idx_a_reaction_id->second.first,
+              std::make_pair(idx_b,
+                             idx_a_reaction_id->second.second)));
     }
   }
 }
@@ -766,7 +764,7 @@ void ChemicalReaction::UniqueB(integrator::ReactionMap &potential_candidates,// 
 /** ApplyDR to remove bonds and change the state of the particles
  * accordingly
  */
-void ChemicalReaction::ApplyDR(std::set<Particle *> &modified_particles) {
+void ChemicalReaction::applyDR(std::set<Particle *> &modified_particles) {
   LOG4ESPP_DEBUG(theLogger, "Entering applyDR");
 
   // Iterate over reverse reaction. For every reaction, iterate overy particles pairs and
@@ -817,7 +815,7 @@ void ChemicalReaction::ApplyDR(std::set<Particle *> &modified_particles) {
 /** Use the (A,B) list "partners" to add bonds and change the state of the
    particles accordingly.
  */
-void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
+void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
   System &system = getSystemRef();
   std::set<Particle *> tmp;
 
@@ -877,7 +875,10 @@ void ChemicalReaction::ApplyAR(std::set<Particle *> &modified_particles) {
     if ((p1 != NULL) && (p2 != NULL) && valid_state && !reaction->virtual_reaction()) {
       if (!(p1->ghost() && p2->ghost())) {
         LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
-        reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+        bool retval = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+        if (retval && save_pd_) {
+          pair_distances_.push_back(it->second.second.reaction_r_sqr);
+        }
       }
     }
   }
@@ -891,8 +892,7 @@ void ChemicalReaction::disconnect() {
 }
 
 void ChemicalReaction::connect() {
-  react_ = integrator->aftIntV.connect(
-    boost::bind(&ChemicalReaction::React, this), boost::signals2::at_front);
+  react_ = integrator->aftIntV.connect(boost::bind(&ChemicalReaction::React, this), boost::signals2::at_front);
 }
 
 python::list ChemicalReaction::getTimers() {
@@ -906,9 +906,37 @@ python::list ChemicalReaction::getTimers() {
   return ret;
 }
 
-/****************************************************
-** REGISTRATION WITH PYTHON
-****************************************************/
+void ChemicalReaction::savePairDistances(std::string filename) {
+  std::vector<std::vector<real> > allDistances;
+  System &system = getSystemRef();
+  // Collect data from all CPUs.
+  if (system.comm->rank() == 0) {
+    mpi::gather(*(system.comm), pair_distances_, allDistances, 0);
+
+    // Write data to file.
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ofstream::out|std::ofstream::app);
+
+    for (std::vector<std::vector<real> >::iterator it = allDistances.begin(); it != allDistances.end(); ++it) {
+      for (std::vector<real>::iterator itv = it->begin(); itv != it->end(); ++itv) {
+        output_file << *itv << "\n";
+      }
+    }
+
+    output_file.close();
+  } else {
+    mpi::gather(*(system.comm), pair_distances_, allDistances, 0);
+  }
+  pair_distances_.clear();
+}
+python::list ChemicalReaction::getPairDistances() {
+  python::list ret_list;
+  for (std::vector<real>::iterator it = pair_distances_.begin(); it != pair_distances_.end(); ++it) {
+    ret_list.append(*it);
+  }
+  return ret_list;
+}
+
 void ChemicalReaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >(
@@ -919,14 +947,13 @@ void ChemicalReaction::registerPython() {
     .def("disconnect", &ChemicalReaction::disconnect)
     .def("add_reaction", &ChemicalReaction::addReaction)
     .def("get_timers", &ChemicalReaction::getTimers)
-    .add_property(
-      "interval",
-      &ChemicalReaction::interval,
-      &ChemicalReaction::set_interval)
-    .add_property(
-      "nearest_mode",
-      &ChemicalReaction::is_nearest,
-      &ChemicalReaction::set_is_nearest);
+    .def("save_pair_distances", &ChemicalReaction::savePairDistances)
+    .def("get_pair_distances", &ChemicalReaction::getPairDistances)
+    .def("clear_pair_distances", &ChemicalReaction::clearPairDistances)
+    .add_property("pair_distances_filename", &ChemicalReaction::pd_filename_, &ChemicalReaction::set_pd_filename)
+    .add_property("interval", &ChemicalReaction::interval, &ChemicalReaction::set_interval)
+    .add_property("nearest_mode", &ChemicalReaction::is_nearest, &ChemicalReaction::set_is_nearest);
 }
+
 }  // namespace integrator
 }  // namespace espressopp

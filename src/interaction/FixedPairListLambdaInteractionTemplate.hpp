@@ -97,19 +97,15 @@ class FixedPairListLambdaInteractionTemplate: public Interaction, SystemAccess {
   shared_ptr <Potential> potential;
 };
 
-//////////////////////////////////////////////////
-// INLINE IMPLEMENTATION
-//////////////////////////////////////////////////
 template<typename _Potential>
-inline void
-FixedPairListLambdaInteractionTemplate<_Potential>::addForces() {
+inline void FixedPairListLambdaInteractionTemplate<_Potential>::addForces() {
   LOG4ESPP_INFO(_Potential::theLogger, "adding forces of FixedPairListLambda");
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
   real ltMaxBondSqr = fixedpairList->getLongtimeMaxBondSqr();
-  for (FixedPairListLambda::Iterator it(*fixedpairList); it.isValid(); ++it) {
-    Particle &p1 = *it->first;
-    Particle &p2 = *it->second;
-    real lambda = it->third;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    Particle &p1 = *it->p1;
+    Particle &p2 = *it->p2;
+    real lambda = it->lambda;
     Real3D dist;
     bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
     Real3D force;
@@ -141,11 +137,10 @@ inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeEnergy() 
 
   real e = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairListLambda::Iterator it(*fixedpairList);
-       it.isValid(); ++it) {
-    const Particle &p1 = *it->first;
-    const Particle &p2 = *it->second;
-    real lambda = it->third;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    const Particle &p1 = *it->p1;
+    const Particle &p2 = *it->p2;
+    real lambda = it->lambda;
     Real3D r21;
     bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
     e += lambda*potential->_computeEnergy(r21);
@@ -188,11 +183,10 @@ inline real FixedPairListLambdaInteractionTemplate<_Potential>::computeVirial() 
 
   real w = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairListLambda::Iterator it(*fixedpairList);
-       it.isValid(); ++it) {
-    const Particle &p1 = *it->first;
-    const Particle &p2 = *it->second;
-    real lambda = it->third;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    const Particle &p1 = *it->p1;
+    const Particle &p2 = *it->p2;
+    real lambda = it->lambda;
 
     Real3D r21;
     bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
@@ -213,11 +207,10 @@ inline void FixedPairListLambdaInteractionTemplate<_Potential>::computeVirialTen
 
   Tensor wlocal(0.0);
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedPairListLambda::Iterator it(*fixedpairList);
-       it.isValid(); ++it) {
-    const Particle &p1 = *it->first;
-    const Particle &p2 = *it->second;
-    real lambda = it->third;
+  for (FixedPairListLambda::IteratorParticleLambda it(fixedpairList->getParticlePairs()); it.isValid(); ++it) {
+    const Particle &p1 = *it->p1;
+    const Particle &p2 = *it->p2;
+    real lambda = it->lambda;
 
     Real3D r21;
     bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());

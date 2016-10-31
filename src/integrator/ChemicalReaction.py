@@ -398,10 +398,11 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.ChemicalReactionLocal',
-            pmiproperty=('interval','nearest_mode'),
+            pmiproperty=('interval','nearest_mode', 'pair_distances_filename'),
             pmicall=(
-                'add_reaction', 'get_timers'
-                )
+                'add_reaction', 'get_timers', 'clear_pair_distances', 'save_pair_distances'
+                ),
+            pmiinvoke=('get_pair_distances',)
             )
 
     class PostProcessChangeProperty:

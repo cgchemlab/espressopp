@@ -18,7 +18,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
-// ESPP_CLASS
 #ifndef _FIXEDPAIRLAMBDALIST_HPP
 #define _FIXEDPAIRLAMBDALIST_HPP
 
@@ -26,62 +25,65 @@
 #include "python.hpp"
 #include "Particle.hpp"
 #include "esutil/ESPPIterator.hpp"
+#include "FixedPairList.hpp"
 #include <map>
 #include <boost/signals2.hpp>
 #include "types.hpp"
 
 namespace espressopp {
 
-class ParticlePairLambda : public Triple< class Particle*, class Particle*, real > {
- private:
-  typedef Triple< class Particle*, class Particle*, real> Super;
+class ParticlePairLambda {
  public:
-  ParticlePairLambda() : Super() {}
-  ParticlePairLambda(Particle* p1, Particle* p2, real l)
-      : Super(p1, p2, l) {}
-  ParticlePairLambda(Particle &p1, Particle &p2, real &l)
-      : Super(&p1, &p2, l) {}
+  ParticlePairLambda(Particle *p1_, Particle *p2_, real l)
+      : p1(p1_), p2(p2_), lambda(l) { }
+
+  Particle *p1;
+  Particle *p2;
+  real lambda;
 };
 
-class FixedPairListLambda: public esutil::ESPPContainer< std::vector< ParticlePairLambda > > {
+class FixedPairListLambda : public FixedPairList {
+ public:
+  typedef boost::unordered_multimap<longint, std::pair<longint, real> > PairsLambda;
+  typedef std::vector<ParticlePairLambda> ParticlePairsLambda;
+  typedef esutil::ESPPIterator<ParticlePairsLambda> IteratorParticleLambda;
+
  protected:
-  typedef std::multimap <longint, std::pair<longint, real> > PairsLambda;
-  boost::signals2::connection con1, con2, con3;
+  boost::signals2::connection sigBeforeSend, sigOnParticlesChanged, sigAfterRecv;
   shared_ptr <storage::Storage> storage;
-  PairsLambda pairsLambda;
-  real longtimeMaxBondSqr;
+  using PairList::add;
+  static LOG4ESPP_DECL_LOGGER(theLogger);
 
  public:
-  FixedPairListLambda(shared_ptr <storage::Storage> _storage, real initLambda);
-  virtual ~FixedPairListLambda();
+  FixedPairListLambda(shared_ptr <storage::Storage> _storage, real lambda0);
 
   virtual bool add(longint pid1, longint pid2);
-  virtual void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
-  void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
+  virtual bool iadd(longint pid1, longint pid2);
+  virtual bool remove(longint pid1, longint pid2, bool no_signal = false);
+
+  virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
+  virtual void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
   virtual void onParticlesChanged();
+  virtual void updateParticlesStorage();
 
-  python::list getBonds();
-  python::list getPairsLambda();
-
+  // Lambda support
   real getLambda(longint pid1, longint pid2);
   void setLambda(longint pid1, longint pid2, real lambda);
-  void setAllLambda(real lambda);
+  void setAllLambda(real lambda0);
   void incrementAllLambda(real d_lambda);
-  /** Get the number of bonds in the GlobalPairs list */
-  int size() { return pairsLambda.size(); }
 
-  real getLongtimeMaxBondSqr() { return longtimeMaxBondSqr; }
-  void setLongtimeMaxBondSqr(real d) { longtimeMaxBondSqr = d; };
-  void resetLongtimeMaxBondSqr() { longtimeMaxBondSqr = 0.0; }
+  ParticlePairsLambda& getParticlePairs() { return particlePairsLambda_; }
 
   boost::signals2::signal2 <void, longint, longint> onTupleAdded;
+  boost::signals2::signal2 <void, longint, longint> onTupleRemoved;
 
   static void registerPython();
  private:
-  real initLambda_;
-  static LOG4ESPP_DECL_LOGGER(theLogger);
+  real lambda0_;
+  PairsLambda pairsLambda_;
+  ParticlePairsLambda particlePairsLambda_;
 };
-}
 
+}
 #endif
 

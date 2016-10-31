@@ -18,9 +18,9 @@
 
 
 r"""
-********************************
+**********************************
 **espressopp.FixedPairListLambda**
-********************************
+**********************************
 
 
 .. function:: espressopp.FixedPairListLambda(storage, initial_lambda)
@@ -66,7 +66,6 @@ r"""
 """
 from espressopp import pmi
 import _espressopp 
-import espressopp
 from espressopp.esutil import cxxinit
 
 
