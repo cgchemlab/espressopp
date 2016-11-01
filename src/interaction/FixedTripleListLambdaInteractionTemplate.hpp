@@ -105,11 +105,11 @@ FixedTripleListLambdaInteractionTemplate<_AngularPotential>::
 addForces() {
   LOG4ESPP_INFO(theLogger, "add forces computed by FixedTripleListLambda");
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
     Particle &p3 = *it->third;
-    real lambda = it->fourth;
+    real lambda = it->lambda;
     Real3D dist12, dist32;
     bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
     bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
@@ -129,11 +129,11 @@ computeEnergy() {
 
   const bc::BC &bc = *getSystemRef().bc;
   real e = 0.0;
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
-    const real lambda = it->fourth;
+    const real lambda = it->lambda;
     Real3D dist12 = bc.getMinimumImageVector(p1.position(), p2.position());
     Real3D dist32 = bc.getMinimumImageVector(p3.position(), p2.position());
     e += lambda*potential->_computeEnergy(dist12, dist32);
@@ -186,11 +186,11 @@ computeVirial() {
 
   const bc::BC &bc = *getSystemRef().bc;
   real w = 0.0;
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
-    const real lambda = it->fourth;
+    const real lambda = it->lambda;
     //const Potential &potential = getPotential(p1.type(), p2.type());
     Real3D dist12, dist32;
     bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
@@ -212,11 +212,11 @@ computeVirialTensor(Tensor &w) {
 
   Tensor wlocal(0.0);
   const bc::BC &bc = *getSystemRef().bc;
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
-    const real lambda = it->fourth;
+    const real lambda = it->lambda;
     //const Potential &potential = getPotential(0, 0);
     Real3D r12, r32;
     bc.getMinimumImageVectorBox(r12, p1.position(), p2.position());

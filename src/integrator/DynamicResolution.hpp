@@ -93,6 +93,18 @@ class FixedListDynamicResolution : public Extension {
     fixed_quadruple_list_rate_.push_back(std::make_pair(fql, rate));
   }
 
+  void updatePairList(longint index, real rate) {
+    fixed_pair_list_rate_[index].second = rate;
+  }
+
+  void updateTripleList(longint index, real rate) {
+    fixed_triple_list_rate_[index].second = rate;
+  }
+
+  void updateQuadrupleList(longint index, real rate) {
+    fixed_quadruple_list_rate_[index].second = rate;
+  }
+
   void updateLists();
 
   static void registerPython();
@@ -110,7 +122,6 @@ class FixedListDynamicResolution : public Extension {
 
   boost::signals2::connection _aftIntV;
 };
-
 
 
 /**

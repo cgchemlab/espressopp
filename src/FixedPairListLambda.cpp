@@ -206,6 +206,7 @@ void FixedPairListLambda::onParticlesChanged() {
 
   this->clear();
   particlePairsLambda_.clear();
+
   longint lastpid1 = -1;
   Particle *p1;
   Particle *p2;
@@ -306,10 +307,60 @@ void FixedPairListLambda::setAllLambda(real lambda) {
 void FixedPairListLambda::incrementAllLambda(real d_lambda) {
   for (PairsLambda::iterator it2 = pairsLambda_.begin(); it2 != pairsLambda_.end(); ++it2) {
     it2->second.second += d_lambda;
+    if (it2->second.second > 1.0)
+      it2->second.second = 1.0;
   }
   for (ParticlePairsLambda::iterator it = particlePairsLambda_.begin(); it != particlePairsLambda_.end(); ++it) {
     it->lambda += d_lambda;
+    if (it->lambda > 1.0)
+      it->lambda = 1.0;
   }
+}
+
+std::vector<longint> FixedPairListLambda::getPairList() {
+  return FixedPairList::getPairList();
+}
+python::list FixedPairListLambda::getBonds() {
+  python::list bonds;
+  for (PairsLambda::const_iterator it=pairsLambda_.begin(); it != pairsLambda_.end(); it++) {
+    bonds.append(python::make_tuple(it->first, it->second.first));
+  }
+
+  return bonds;
+}
+python::list FixedPairListLambda::getAllBonds() {
+  std::vector<longint> local_bonds;
+  std::vector<std::vector<longint> > global_bonds;
+  python::list bonds;
+
+  for (PairsLambda::const_iterator it = pairsLambda_.begin(); it != pairsLambda_.end(); it++) {
+    local_bonds.push_back(it->first);
+    local_bonds.push_back(it->second.first);
+  }
+  System& system = storage->getSystemRef();
+  if (system.comm->rank() == 0) {
+    mpi::gather(*system.comm, local_bonds, global_bonds, 0);
+    python::tuple bond;
+
+    for (std::vector<std::vector<longint> >::iterator it = global_bonds.begin();
+         it != global_bonds.end(); ++it) {
+      for (std::vector<longint>::iterator iit = it->begin(); iit != it->end();) {
+        longint pid1 = *(iit++);
+        longint pid2 = *(iit++);
+        bonds.append(python::make_tuple(pid1, pid2));
+      }
+    }
+  } else {
+    mpi::gather(*system.comm, local_bonds, global_bonds, 0);
+  }
+  return bonds;
+}
+int FixedPairListLambda::totalSize() {
+  int local_size = pairsLambda_.size();
+  int global_size;
+  System& system = storage->getSystemRef();
+  mpi::all_reduce(*system.comm, local_size, global_size, std::plus<int>());
+  return global_size;
 }
 
 void FixedPairListLambda::registerPython() {
@@ -332,6 +383,4 @@ void FixedPairListLambda::registerPython() {
       .def("setLambda", &FixedPairListLambda::setLambda)
       .def("setAllLambda", &FixedPairListLambda::setAllLambda);
 }
-
-
 }  // end namespace espressopp

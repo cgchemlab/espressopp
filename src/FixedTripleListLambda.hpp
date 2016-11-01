@@ -23,6 +23,7 @@
 
 #include "log4espp.hpp"
 #include "python.hpp"
+#include "FixedTripleList.hpp"
 #include "Particle.hpp"
 #include "esutil/ESPPIterator.hpp"
 #include <map>
@@ -32,27 +33,31 @@
 
 namespace espressopp {
 
-class ParticleTripleLambda : public Quadruple<class Particle*, class Particle*, class Particle*, real> {
- private:
-  typedef Quadruple<class Particle*, class Particle*, class Particle*, real> Super;
+class ParticleTripleLambda {
  public:
-  ParticleTripleLambda() : Super() {}
-  ParticleTripleLambda(Particle* p1, Particle* p2, Particle* p3, real l)
-      : Super(p1, p2, p3, l) {}
-  ParticleTripleLambda(Particle &p1, Particle &p2, Particle &p3, real &l)
-      : Super(&p1, &p2, &p3, l) {}
+  ParticleTripleLambda(Particle *p1, Particle *p2, Particle *p3, real l)
+      : first(p1), second(p2), third(p3), lambda(l) {}
+
+  ParticleTripleLambda(Particle &p1, Particle &p2, Particle &p3, real l)
+      : first(&p1), second(&p2), third(&p3), lambda(l) {}
+
+  Particle *first;
+  Particle *second;
+  Particle *third;
+  real lambda;
 };
 
-class FixedTripleListLambda: public esutil::ESPPContainer< std::vector< ParticleTripleLambda > > {
+class FixedTripleListLambda: public FixedTripleList {
  protected:
-  typedef boost::unordered_multimap<longint, std::pair <longint, std::pair<longint, real> > > GlobalTriples;
+  typedef boost::unordered_multimap<longint, std::pair <longint, std::pair<longint, real> > > TriplesLambda;
   boost::signals2::connection sigAfterRecv, sigOnParticleChanged, sigBeforeSend;
   shared_ptr <storage::Storage> storage;
-  GlobalTriples globalTriples;
+  using TripleList::add;
 
  public:
+  typedef std::vector<ParticleTripleLambda> ParticleTriplesLambda;
+  typedef esutil::ESPPIterator<std::vector<ParticleTripleLambda> > IteratorParticleLambda;
   FixedTripleListLambda(shared_ptr <storage::Storage> _storage, real initLambda);
-  ~FixedTripleListLambda();
 
   bool add(longint pid1, longint pid2, longint pid3);
   bool iadd(longint pid1, longint pid2, longint pid3);
@@ -64,23 +69,27 @@ class FixedTripleListLambda: public esutil::ESPPContainer< std::vector< Particle
 
   python::list getTriples();
   python::list getTriplesLambda();
+  /** Get the number of triples in the GlobalTriples list */
+  virtual int size() { return triplesLambda_.size(); }
+  virtual int totalSize();
 
   real getLambda(longint pid1, longint pid2, longint pid3);
   void setLambda(longint pid1, longint pid2, longint pid3, real lambda);
   void setAllLambda(real lambda);
   void incrementAllLambda(real d_lambda);
 
-    /** Get the number of triplets in the GlobalTriples list */
-  int size() { return globalTriples.size(); }
-  int totalSize();
+  ParticleTriplesLambda& getParticleTriples() { return particleTriplesLambda_; }
 
   boost::signals2::signal3 <void, longint, longint, longint> onTupleAdded;
   boost::signals2::signal3 <void, longint, longint, longint> onTupleRemoved;
 
   static void registerPython();
  private:
-  real initLambda_;
+  real lambda0_;
+  TriplesLambda triplesLambda_;
+  ParticleTriplesLambda particleTriplesLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
+
 };
 }
 

@@ -29,7 +29,7 @@ namespace espressopp {
 LOG4ESPP_LOGGER(FixedTripleListLambda::theLogger, "FixedTripleListLambda");
 
 FixedTripleListLambda::FixedTripleListLambda(shared_ptr<storage::Storage> _storage, real initLambda)
-    : storage(_storage), globalTriples(), initLambda_(initLambda) {
+    : storage(_storage), lambda0_(initLambda) {
   LOG4ESPP_INFO(theLogger, "construct FixedTripleListLambda");
 
   sigBeforeSend = storage->beforeSendParticles.connect
@@ -40,17 +40,9 @@ FixedTripleListLambda::FixedTripleListLambda(shared_ptr<storage::Storage> _stora
       (boost::bind(&FixedTripleListLambda::onParticlesChanged, this));
 }
 
-FixedTripleListLambda::~FixedTripleListLambda() {
-  LOG4ESPP_INFO(theLogger, "FixedTripleListLambda");
-  sigBeforeSend.disconnect();
-  sigAfterRecv.disconnect();
-  sigOnParticleChanged.disconnect();
-}
-
 bool FixedTripleListLambda::iadd(longint pid1, longint pid2, longint pid3) {
   bool returnVal = true;
-  System &system = storage->getSystemRef();
-  esutil::Error err(system.comm);
+  System& system = storage->getSystemRef();
 
   Particle *p1 = storage->lookupLocalParticle(pid1);
   Particle *p2 = storage->lookupRealParticle(pid2);
@@ -76,21 +68,23 @@ bool FixedTripleListLambda::iadd(longint pid1, longint pid2, longint pid3) {
 
   if (returnVal) {
     bool found = false;
-    std::pair<GlobalTriples::const_iterator,
-              GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid2);
-    if (equalRange.first != globalTriples.end()) {
-      for (GlobalTriples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+    std::pair<TriplesLambda::const_iterator,
+              TriplesLambda::const_iterator> equalRange = triplesLambda_.equal_range(pid2);
+    if (equalRange.first != triplesLambda_.end()) {
+      for (TriplesLambda::const_iterator it = equalRange.first;
+           it != equalRange.second && !found; ++it) {
         found = ((it->second.first == pid1 && it->second.second.first == pid3) ||
             (it->second.first == pid3 && it->second.second.first == pid1));
       }
     }
     returnVal = !found;
     if (!found) {
-      this->push_back(ParticleTripleLambda(p1, p2, p3, initLambda_));
-      globalTriples.insert(equalRange.first,
-                           std::make_pair(pid2,
-                                          std::make_pair(pid1,
-                                                         std::make_pair(pid3, initLambda_))));
+      this->add(p1, p2, p3);
+      particleTriplesLambda_.push_back(ParticleTripleLambda(p1, p2, p3, lambda0_));
+      triplesLambda_.insert(equalRange.first,
+                            std::make_pair(pid2,
+                                           std::make_pair(pid1,
+                                                          std::make_pair(pid3, lambda0_))));
       onTupleAdded(pid1, pid2, pid3);
     }
     LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
@@ -128,21 +122,22 @@ bool FixedTripleListLambda::add(longint pid1, longint pid2, longint pid3) {
 
   if (returnVal) {
     bool found = false;
-    std::pair<GlobalTriples::const_iterator,
-              GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid2);
-    if (equalRange.first != globalTriples.end()) {
-      for (GlobalTriples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+    std::pair<TriplesLambda::const_iterator,
+              TriplesLambda::const_iterator> equalRange = triplesLambda_.equal_range(pid2);
+    if (equalRange.first != triplesLambda_.end()) {
+      for (TriplesLambda::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
         found = ((it->second.first == pid1 && it->second.second.first == pid3) ||
             (it->second.first == pid3 && it->second.second.first == pid1));
       }
     }
     returnVal = !found;
     if (!found) {
-      this->push_back(ParticleTripleLambda(p1, p2, p3, initLambda_));
-      globalTriples.insert(equalRange.first,
+      this->add(p1, p2, p3);
+      particleTriplesLambda_.push_back(ParticleTripleLambda(p1, p2, p3, lambda0_));
+      triplesLambda_.insert(equalRange.first,
                            std::make_pair(pid2,
                                           std::make_pair(pid1,
-                                                         std::make_pair(pid3, initLambda_))));
+                                                         std::make_pair(pid3, lambda0_))));
       onTupleAdded(pid1, pid2, pid3);
     }
     LOG4ESPP_INFO(theLogger, "added fixed triple to global triple list");
@@ -178,17 +173,17 @@ bool FixedTripleListLambda::remove(longint pid1, longint pid2, longint pid3) {
   bool returnVal = false;
   if (found) {
     // Remove entries.
-    std::pair<GlobalTriples::iterator, GlobalTriples::iterator> equalRange =
-        globalTriples.equal_range(pid2);
-    if (equalRange.first != globalTriples.end()) {
+    std::pair<TriplesLambda::iterator, TriplesLambda::iterator> equalRange =
+        triplesLambda_.equal_range(pid2);
+    if (equalRange.first != triplesLambda_.end()) {
       // otherwise test whether the triple already exists
-      for (GlobalTriples::iterator it = equalRange.first; it != equalRange.second;) {
+      for (TriplesLambda::iterator it = equalRange.first; it != equalRange.second;) {
           if ((it->second.first == pid1 && it->second.second.first == pid3) ||
               (it->second.first == pid3 && it->second.second.first == pid1)) {
           LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
                                                       << "-" << it->second.second.first);
           onTupleRemoved(it->second.first, it->first, it->second.second.first);
-          it = globalTriples.erase(it);
+          it = triplesLambda_.erase(it);
           returnVal = true;
         } else {
           ++it;
@@ -200,18 +195,17 @@ bool FixedTripleListLambda::remove(longint pid1, longint pid2, longint pid3) {
 }
 
 int FixedTripleListLambda::totalSize() {
-  int local_size = globalTriples.size();
+  int local_size = triplesLambda_.size();
   int global_size;
   System& system = storage->getSystemRef();
   mpi::all_reduce(*system.comm, local_size, global_size, std::plus<int>());
   return global_size;
 }
 
-python::list FixedTripleListLambda::getTriples()
-{
+python::list FixedTripleListLambda::getTriples() {
   python::tuple triple;
   python::list triples;
-  for (GlobalTriples::const_iterator it=globalTriples.begin(); it != globalTriples.end(); it++) {
+  for (TriplesLambda::const_iterator it=triplesLambda_.begin(); it != triplesLambda_.end(); it++) {
     triple = python::make_tuple(it->second.first, it->first, it->second.second.first);
     triples.append(triple);
   }
@@ -222,7 +216,7 @@ python::list FixedTripleListLambda::getTriples()
 python::list FixedTripleListLambda::getTriplesLambda() {
   python::tuple triple;
   python::list triples;
-  for (GlobalTriples::const_iterator it=globalTriples.begin(); it != globalTriples.end(); it++) {
+  for (TriplesLambda::const_iterator it=triplesLambda_.begin(); it != triplesLambda_.end(); it++) {
     triple = python::make_tuple(it->second.first, it->first, it->second.second.first, it->second.second.second);
     triples.append(triple);
   }
@@ -234,10 +228,10 @@ real FixedTripleListLambda::getLambda(longint pid1, longint pid2, longint pid3) 
   real returnVal = -3;
 
   bool found = false;
-  std::pair<GlobalTriples::const_iterator,
-            GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid2);
-  if (equalRange.first != globalTriples.end()) {
-    for (GlobalTriples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+  std::pair<TriplesLambda::const_iterator,
+            TriplesLambda::const_iterator> equalRange = triplesLambda_.equal_range(pid2);
+  if (equalRange.first != triplesLambda_.end()) {
+    for (TriplesLambda::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
       if ((it->second.first == pid1 && it->second.second.first == pid3) ||
           (it->second.first == pid3 && it->second.second.first == pid1)) {
         return it->second.second.second;
@@ -250,10 +244,10 @@ real FixedTripleListLambda::getLambda(longint pid1, longint pid2, longint pid3) 
 
 void FixedTripleListLambda::setLambda(longint pid1, longint pid2, longint pid3, real lambda) {
 
-  std::pair<GlobalTriples::iterator,
-            GlobalTriples::iterator> equalRange = globalTriples.equal_range(pid2);
-  if (equalRange.first != globalTriples.end()) {
-    for (GlobalTriples::iterator it = equalRange.first; it != equalRange.second; ++it) {
+  std::pair<TriplesLambda::iterator,
+            TriplesLambda::iterator> equalRange = triplesLambda_.equal_range(pid2);
+  if (equalRange.first != triplesLambda_.end()) {
+    for (TriplesLambda::iterator it = equalRange.first; it != equalRange.second; ++it) {
       if ((it->second.first == pid1 && it->second.second.first == pid3) ||
           (it->second.first == pid3 && it->second.second.first == pid1)) {
         it->second.second.second = lambda;
@@ -261,38 +255,38 @@ void FixedTripleListLambda::setLambda(longint pid1, longint pid2, longint pid3, 
     }
   }
 
-  for (FixedTripleListLambda::Iterator it(*this); it.isValid(); ++it) {
+  for (ParticleTriplesLambda::iterator it = particleTriplesLambda_.begin(); it != particleTriplesLambda_.end(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
     if ((p1.id() == pid1 && p2.id() == pid2 && p3.id() == pid3) ||
         (p1.id() == pid3 && p2.id() == pid2 && p3.id() == pid1) ){
-      it->fourth = lambda;
+      it->lambda = lambda;
     }
   }
 }
 
 void FixedTripleListLambda::setAllLambda(real lambda) {
-  for (GlobalTriples::iterator it = globalTriples.begin(); it != globalTriples.end(); ++it) {
+  for (TriplesLambda::iterator it = triplesLambda_.begin(); it != triplesLambda_.end(); ++it) {
     it->second.second.second = lambda;
   }
 
-  for (FixedTripleListLambda::Iterator it(*this); it.isValid(); ++it) {
-    it->fourth = lambda;
+  for (ParticleTriplesLambda::iterator it = particleTriplesLambda_.begin(); it != particleTriplesLambda_.end(); ++it) {
+    it->lambda = lambda;
   }
 }
 
 void FixedTripleListLambda::incrementAllLambda(real d_lambda) {
-  for (GlobalTriples::iterator it = globalTriples.begin(); it != globalTriples.end(); ++it) {
+  for (TriplesLambda::iterator it = triplesLambda_.begin(); it != triplesLambda_.end(); ++it) {
     it->second.second.second += d_lambda;
     if (it->second.second.second > 1.0)
       it->second.second.second = 1.0;
   }
 
-  for (FixedTripleListLambda::Iterator it(*this); it.isValid(); ++it) {
-    it->fourth += d_lambda;
-    if (it->fourth > 1.0)
-      it->fourth = 1.0;
+  for (ParticleTriplesLambda::iterator it = particleTriplesLambda_.begin(); it != particleTriplesLambda_.end(); ++it) {
+    it->lambda += d_lambda;
+    if (it->lambda > 1.0)
+      it->lambda = 1.0;
   }
 }
 
@@ -302,21 +296,21 @@ void FixedTripleListLambda::beforeSendParticles(ParticleList& pl, OutBuffer& buf
   // loop over the particle list
   for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
     longint pid = pit->id();
-    int n = globalTriples.count(pid);
+    int n = triplesLambda_.count(pid);
     if (n > 0) {
-      std::pair<GlobalTriples::const_iterator, GlobalTriples::const_iterator> equalRange = globalTriples.equal_range(pid);
+      std::pair<TriplesLambda::const_iterator, TriplesLambda::const_iterator> equalRange = triplesLambda_.equal_range(pid);
 
       toSend.reserve(toSend.size() + 2*n + 1);
       toSendReal.reserve(toSendReal.size() + n);
       toSend.push_back(pid);
       toSend.push_back(n);
-      for (GlobalTriples::const_iterator it = equalRange.first;
+      for (TriplesLambda::const_iterator it = equalRange.first;
            it != equalRange.second; ++it) {
         toSend.push_back(it->second.first);
         toSend.push_back(it->second.second.first);
         toSendReal.push_back(it->second.second.second);
       }
-      globalTriples.erase(equalRange.first, equalRange.second);
+      triplesLambda_.erase(equalRange.first, equalRange.second);
     }
   }
   buf.write(toSend);
@@ -330,7 +324,7 @@ void FixedTripleListLambda::afterRecvParticles(ParticleList &pl, InBuffer& buf) 
   int n;
   longint pid1, pid2, pid3;
   real lambdaVal;
-  GlobalTriples::iterator it = globalTriples.begin();
+  TriplesLambda::iterator it = triplesLambda_.begin();
   // receive the triple list
   buf.read(receivedInt);
   buf.read(receivedReal);
@@ -344,7 +338,7 @@ void FixedTripleListLambda::afterRecvParticles(ParticleList &pl, InBuffer& buf) 
       pid1 = receivedInt[i++];
       pid3 = receivedInt[i++];
       lambdaVal = receivedReal[j++];
-      it = globalTriples.insert(
+      it = triplesLambda_.insert(
           it, std::make_pair(pid2, std::make_pair(pid1, std::make_pair(pid3, lambdaVal))));
     }
   }
@@ -361,12 +355,13 @@ void FixedTripleListLambda::onParticlesChanged() {
 
   // (re-)generate the local triple list from the global list
   this->clear();
+  particleTriplesLambda_.clear();
   longint lastpid2 = -1;
   Particle *p1;
   Particle *p2;
   Particle *p3;
-  for (GlobalTriples::const_iterator it = globalTriples.begin();
-       it != globalTriples.end(); ++it) {
+  for (TriplesLambda::const_iterator it = triplesLambda_.begin();
+       it != triplesLambda_.end(); ++it) {
     //printf("lookup global triple %d %d %d\n", it->first, it->second.first, it->second.second);
     if (it->first != lastpid2) {
       p2 = storage->lookupRealParticle(it->first);
@@ -389,7 +384,8 @@ void FixedTripleListLambda::onParticlesChanged() {
       msg << "triple particle p3 " << it->second.second.first << " does not exists here";
       err.setException( msg.str() );
     }
-    this->push_back(ParticleTripleLambda(p1, p2, p3, it->second.second.second));
+    this->add(p1, p2, p3);
+    particleTriplesLambda_.push_back(ParticleTripleLambda(p1, p2, p3, it->second.second.second));
   }
   err.checkException();
 
@@ -399,13 +395,13 @@ void FixedTripleListLambda::onParticlesChanged() {
 void FixedTripleListLambda::updateParticlesStorage() {
   System& system = storage->getSystemRef();
 
-  // (re-)generate the local triple list from the global list
   this->clear();
+  particleTriplesLambda_.clear();
   longint lastpid2 = -1;
   Particle *p1;
   Particle *p2;
   Particle *p3;
-  for (GlobalTriples::const_iterator it = globalTriples.begin(); it != globalTriples.end(); ++it) {
+  for (TriplesLambda::const_iterator it = triplesLambda_.begin(); it != triplesLambda_.end(); ++it) {
     if (it->first != lastpid2) {
       p2 = storage->lookupRealParticle(it->first);
       if (p2 == NULL) {
@@ -427,7 +423,8 @@ void FixedTripleListLambda::updateParticlesStorage() {
       msg << "triple particle p3 " << it->second.second.first << " does not exists here";
       throw std::runtime_error(msg.str());
     }
-    this->push_back(ParticleTripleLambda(p1, p2, p3, it->second.second.second));
+    this->add(p1, p2, p3);
+    particleTriplesLambda_.push_back(ParticleTripleLambda(p1, p2, p3, it->second.second.second));
   }
 
   LOG4ESPP_INFO(theLogger, "regenerated local fixed triple list from global list");
@@ -440,8 +437,8 @@ void FixedTripleListLambda::registerPython() {
 
   class_<FixedTripleListLambda, shared_ptr<FixedTripleListLambda>, boost::noncopyable>
       ("FixedTripleListLambda", init<shared_ptr<storage::Storage>, real>())
-      .add_property("lambda0", make_getter(&FixedTripleListLambda::initLambda_),
-                    make_setter(&FixedTripleListLambda::initLambda_))
+      .add_property("lambda0", make_getter(&FixedTripleListLambda::lambda0_),
+                    make_setter(&FixedTripleListLambda::lambda0_))
       .def("add", pyAdd)
       .def("size", &FixedTripleListLambda::size)
       .def("getTriples", &FixedTripleListLambda::getTriples)
@@ -450,5 +447,6 @@ void FixedTripleListLambda::registerPython() {
       .def("setLambda", &FixedTripleListLambda::setLambda)
       .def("setAllLambda", &FixedTripleListLambda::setAllLambda);
 }
+
 
 }  // end namespace espressopp

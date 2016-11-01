@@ -1,4 +1,4 @@
-#  Copyright (c) 2015
+#  Copyright (c) 2015,2016
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
@@ -76,7 +76,7 @@ class FixedListDynamicResolutionLocal(ExtensionLocal, integrator_FixedListDynami
 
     def register_quadruple_list(self, fql, rate):
         if pmi.workerIsActive():
-            self.cxxclass.register_triple_list(self, fql, rate)
+            self.cxxclass.register_quadruple_list(self, fql, rate)
 
 if pmi.isController:
     class BasicDynamicResolution(Extension):
@@ -98,5 +98,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls = 'espressopp.integrator.FixedListDynamicResolutionLocal',
-            pmicall = ['register_pair_list', 'register_triple_list', 'register_quadruple_list']
+            pmicall = ['register_pair_list', 'register_triple_list', 'register_quadruple_list',
+                       'update_lists',
+                       'update_pair_list', 'update_triple_list', 'update_quadruple_list']
         )

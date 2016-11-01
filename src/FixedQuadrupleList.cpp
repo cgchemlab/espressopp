@@ -251,26 +251,6 @@ namespace espressopp {
     return returnVal;
   }
 
-  bool FixedQuadrupleList::removeByBond(longint pid1, longint pid2) {
-    bool returnVal = false;
-    std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange =
-        globalQuadruples.equal_range(pid1);
-    if (equalRange.first != globalQuadruples.end()) {
-      for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;) {
-        if (it->second.first == pid2) {
-          LOG4ESPP_DEBUG(theLogger, "removed quadruple " << it->first << "-" << it->second.first
-              << "-" << it->second.second << "-" << it->second.third
-              << " bond: " << pid1 << "-" << pid2);
-          it = globalQuadruples.erase(it);
-          onTupleRemoved(it->first, it->second.first, it->second.second, it->second.third);
-          returnVal = true;
-        } else {
-          ++it;
-        }
-      }
-    }
-    return returnVal;
-  }
 
   python::list FixedQuadrupleList::getQuadruples()
   {

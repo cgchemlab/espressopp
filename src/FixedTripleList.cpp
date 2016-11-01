@@ -257,27 +257,6 @@ namespace espressopp {
     return returnVal;
   }
 
-  bool FixedTripleList::removeByBond(longint pid1, longint pid2) {
-    bool returnVal = false;
-    std::pair<GlobalTriples::iterator, GlobalTriples::iterator> equalRange =
-        globalTriples.equal_range(pid1);
-    if (equalRange.first != globalTriples.end()) {
-      for (GlobalTriples::iterator it = equalRange.first; it != equalRange.second;) {
-        if (it->second.first == pid2 || it->second.second == pid2) {
-          LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
-                                    << "-" << it->second.second
-                                    << " bond: " << pid1 << "-" << pid2);
-          it = globalTriples.erase(it);
-          onTupleRemoved(it->second.first, pid1, it->second.second);
-          returnVal = true;
-        } else {
-          ++it;
-        }
-      }
-    }
-    return returnVal;
-  }
-
   python::list FixedTripleList::getTriples()
   {
 	python::tuple triple;

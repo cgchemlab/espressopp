@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015-2016
+  Copyright (C) 2015,2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -339,7 +339,8 @@ void FixedListDynamicResolution::updateLists() {
   }
 
   // Update QuadrupleLists
-  for (FixedQuadrupleListRate::iterator it = fixed_quadruple_list_rate_.begin(); it != fixed_quadruple_list_rate_.end(); ++it) {
+  for (FixedQuadrupleListRate::iterator it = fixed_quadruple_list_rate_.begin();
+       it != fixed_quadruple_list_rate_.end(); ++it) {
     it->first->incrementAllLambda(it->second);
   }
 }
@@ -350,9 +351,13 @@ void FixedListDynamicResolution::registerPython() {
       ("integrator_FixedListDynamicResolution", init<shared_ptr<System> >())
       .def("connect", &FixedListDynamicResolution::connect)
       .def("disconnect", &FixedListDynamicResolution::disconnect)
+      .def("update_lists", &FixedListDynamicResolution::updateLists)
       .def("register_pair_list", &FixedListDynamicResolution::registerPairList)
       .def("register_triple_list", &FixedListDynamicResolution::registerTripleList)
-      .def("register_quadruple_list", &FixedListDynamicResolution::registerQuadrupleList);
+      .def("register_quadruple_list", &FixedListDynamicResolution::registerQuadrupleList)
+      .def("update_pair_list", &FixedListDynamicResolution::updatePairList)
+      .def("update_triple_list", &FixedListDynamicResolution::updateTripleList)
+      .def("update_quadruple_list", &FixedListDynamicResolution::updateQuadrupleList);
 }
 
 }  // end namespace integrator

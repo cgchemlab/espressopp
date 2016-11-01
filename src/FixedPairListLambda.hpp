@@ -46,7 +46,7 @@ class FixedPairListLambda : public FixedPairList {
  public:
   typedef boost::unordered_multimap<longint, std::pair<longint, real> > PairsLambda;
   typedef std::vector<ParticlePairLambda> ParticlePairsLambda;
-  typedef esutil::ESPPIterator<ParticlePairsLambda> IteratorParticleLambda;
+  typedef esutil::ESPPIterator<std::vector<ParticlePairLambda> > IteratorParticleLambda;
 
  protected:
   boost::signals2::connection sigBeforeSend, sigOnParticlesChanged, sigAfterRecv;
@@ -65,6 +65,14 @@ class FixedPairListLambda : public FixedPairList {
   virtual void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
   virtual void onParticlesChanged();
   virtual void updateParticlesStorage();
+
+  virtual std::vector<longint> getPairList();
+  virtual python::list getBonds();
+  virtual python::list getAllBonds();
+
+  /** Get the number of bonds in the GlobalPairs list */
+  virtual int size() { return pairsLambda_.size(); }
+  virtual int totalSize();
 
   // Lambda support
   real getLambda(longint pid1, longint pid2);

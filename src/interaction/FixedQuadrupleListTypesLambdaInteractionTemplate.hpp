@@ -112,12 +112,12 @@ addForces() {
 
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
 
-  for (FixedQuadrupleListLambda::Iterator it(*fixedquadrupleList); it.isValid(); ++it) {
+  for (FixedQuadrupleListLambda::IteratorParticleLambda it(fixedquadrupleList->getParticleQuadruples()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
     Particle &p3 = *it->third;
     Particle &p4 = *it->fourth;
-    real lambda = it->fifth;
+    real lambda = it->lambda;
 
     longint type1 = p1.type();
     longint type2 = p2.type();
@@ -151,12 +151,12 @@ computeEnergy() {
 
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
   real e = 0.0;
-  for (FixedQuadrupleListLambda::Iterator it(*fixedquadrupleList); it.isValid(); ++it) {
+  for (FixedQuadrupleListLambda::IteratorParticleLambda it(fixedquadrupleList->getParticleQuadruples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
     const Particle &p4 = *it->fourth;
-    real lambda = it->fifth;
+    real lambda = it->lambda;
 
     longint type1 = p1.type();
     longint type2 = p2.type();
@@ -213,12 +213,12 @@ computeVirial() {
 
   real w = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedQuadrupleListLambda::Iterator it(*fixedquadrupleList); it.isValid(); ++it) {
+  for (FixedQuadrupleListLambda::IteratorParticleLambda it(fixedquadrupleList->getParticleQuadruples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
     const Particle &p4 = *it->fourth;
-    real lambda = it->fifth;
+    real lambda = it->lambda;
 
     longint type1 = p1.type();
     longint type2 = p2.type();
@@ -257,12 +257,12 @@ computeVirialTensor(Tensor &w) {
   Tensor wlocal(0.0);
   const bc::BC &bc = *getSystemRef().bc;
 
-  for (FixedQuadrupleListLambda::Iterator it(*fixedquadrupleList); it.isValid(); ++it) {
+  for (FixedQuadrupleListLambda::IteratorParticleLambda it(fixedquadrupleList->getParticleQuadruples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
     const Particle &p4 = *it->fourth;
-    real lambda = it->fifth;
+    real lambda = it->lambda;
 
     longint type1 = p1.type();
     longint type2 = p2.type();
@@ -305,12 +305,12 @@ computeVirialTensor(Tensor &w, real z) {
   std::cout << "Warning!!! computeVirialTensor in specified volume doesn't work for "
       "_FixedQuadrupleListTypesLambdaInteractionTemplate at the moment" << std::endl;
 
-  for (FixedQuadrupleListLambda::Iterator it(*fixedquadrupleList); it.isValid(); ++it) {
+  for (FixedQuadrupleListLambda::IteratorParticleLambda it(fixedquadrupleList->getParticleQuadruples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
     const Particle &p4 = *it->fourth;
-    real lambda = it->fifth;
+    real lambda = it->lambda;
 
     longint type1 = p1.type();
     longint type2 = p2.type();

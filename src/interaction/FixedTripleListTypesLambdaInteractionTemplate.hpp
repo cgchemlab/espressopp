@@ -111,11 +111,11 @@ FixedTripleListTypesLambdaInteractionTemplate<_Potential>::addForces() {
   LOG4ESPP_INFO(theLogger, "add forces computed by the FixedTriple List");
   const bc::BC &bc = *getSystemRef().bc;
 
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
     Particle &p2 = *it->second;
     Particle &p3 = *it->third;
-    real lambda = it->fourth;
+    real lambda = it->lambda;
     int type1 = p1.type();
     int type2 = p2.type();
     int type3 = p3.type();
@@ -140,11 +140,11 @@ computeEnergy() {
 
   real e = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
-    real lambda = it->fourth;
+    real lambda = it->lambda;
     int type1 = p1.type();
     int type2 = p2.type();
     int type3 = p3.type();
@@ -197,11 +197,11 @@ computeVirial() {
 
   real w = 0.0;
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
-    real lambda = it->fourth;
+    real lambda = it->lambda;
     int type1 = p1.type();
     int type2 = p2.type();
     int type3 = p3.type();
@@ -228,11 +228,11 @@ FixedTripleListTypesLambdaInteractionTemplate<_Potential>::computeVirialTensor(T
 
   Tensor wlocal(0.0);
   const bc::BC& bc = *getSystemRef().bc;
-  for (FixedTripleListLambda::Iterator it(*fixedtripleList); it.isValid(); ++it) {
+  for (FixedTripleListLambda::IteratorParticleLambda it(fixedtripleList->getParticleTriples()); it.isValid(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
-    real lambda = it->fourth;
+    real lambda = it->lambda;
     int type1 = p1.type();
     int type2 = p2.type();
     int type3 = p3.type();

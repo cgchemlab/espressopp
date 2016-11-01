@@ -29,7 +29,7 @@ namespace espressopp {
 LOG4ESPP_LOGGER(FixedQuadrupleListLambda::theLogger, "FixedQuadrupleListLambda");
 
 FixedQuadrupleListLambda::FixedQuadrupleListLambda(shared_ptr<storage::Storage> _storage, real initLambda)
-    : storage(_storage), globalQuadruples(), initLambda_(initLambda) {
+    : storage(_storage), lambda0_(initLambda) {
   LOG4ESPP_INFO(theLogger, "construct FixedQuadrupleListLambda");
 
   sigBeforeSend = storage->beforeSendParticles.connect
@@ -38,14 +38,6 @@ FixedQuadrupleListLambda::FixedQuadrupleListLambda(shared_ptr<storage::Storage> 
       (boost::bind(&FixedQuadrupleListLambda::afterRecvParticles, this, _1, _2));
   sigOnParticlesChanged = storage->onParticlesChanged.connect
       (boost::bind(&FixedQuadrupleListLambda::onParticlesChanged, this));
-}
-
-FixedQuadrupleListLambda::~FixedQuadrupleListLambda() {
-  LOG4ESPP_INFO(theLogger, "~FixedQuadrupleListLambda");
-
-  sigBeforeSend.disconnect();
-  sigAfterRecv.disconnect();
-  sigOnParticlesChanged.disconnect();
 }
 
 bool FixedQuadrupleListLambda::iadd(longint pid1, longint pid2, longint pid3, longint pid4) {
@@ -78,25 +70,27 @@ bool FixedQuadrupleListLambda::iadd(longint pid1, longint pid2, longint pid3, lo
   }
 
   if (returnVal) {
+
+    // ADD THE GLOBAL QUADRUPLET
+    // see whether the particle already has quadruples
     bool found = false;
-    std::pair<GlobalQuadruples::const_iterator,
-              GlobalQuadruples::const_iterator> equalRange
-        = globalQuadruples.equal_range(pid1);
-    if (equalRange.first != globalQuadruples.end()) {
-      for (GlobalQuadruples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it)
+    std::pair<QuadruplesLambda::const_iterator, QuadruplesLambda::const_iterator>
+        equalRange = quadruplesLambda_.equal_range(pid1);
+    if (equalRange.first != quadruplesLambda_.end()) {
+      // otherwise test whether the quadruple already exists
+      for (QuadruplesLambda::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it)
         if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4))
           found = true;
     }
     returnVal = !found;
     if (!found) {
-      // add the quadruple locally
-      this->push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, initLambda_));
-      // if not, insert the new quadruple
-      globalQuadruples.insert(equalRange.first,
-                              std::make_pair(pid1,
-                                             std::make_pair(
-                                                 Triple<longint, longint, longint>(pid2, pid3, pid4),
-                                                 initLambda_)));
+      this->add(p1, p2, p3, p4);
+      quadruplesLambda_.insert(
+          equalRange.first,
+          std::make_pair(
+              pid1, std::make_pair(
+                  Triple<longint, longint, longint>(pid2, pid3, pid4), lambda0_)));
+      particleQuadruplesLambda_.push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, lambda0_));
       onTupleAdded(pid1, pid2, pid3, pid4);
       LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
     }
@@ -139,24 +133,31 @@ bool FixedQuadrupleListLambda::add(longint pid1, longint pid2, longint pid3, lon
   err.checkException();
 
   if (returnVal) {
+
+    // ADD THE GLOBAL QUADRUPLET
+    // see whether the particle already has quadruples
     bool found = false;
-    std::pair<GlobalQuadruples::const_iterator,
-              GlobalQuadruples::const_iterator> equalRange
-        = globalQuadruples.equal_range(pid1);
-    if (equalRange.first != globalQuadruples.end()) {
-      for (GlobalQuadruples::const_iterator it = equalRange.first;
+    std::pair<QuadruplesLambda::const_iterator, QuadruplesLambda::const_iterator>
+        equalRange = quadruplesLambda_.equal_range(pid1);
+    if (equalRange.first != quadruplesLambda_.end()) {
+      // otherwise test whether the quadruple already exists
+      for (QuadruplesLambda::const_iterator it = equalRange.first;
            it != equalRange.second && !found; ++it)
         if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4))
           found = true;
     }
     returnVal = !found;
     if (!found) {
-      this->push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, initLambda_));
-      globalQuadruples.insert(equalRange.first,
-                              std::make_pair(pid1,
-                                             std::make_pair(
-                                                 Triple<longint, longint, longint>(pid2, pid3, pid4),
-                                                 initLambda_)));
+      // add the quadruple locally
+      this->add(p1, p2, p3, p4);
+      // if not, insert the new quadruple
+      quadruplesLambda_.insert(equalRange.first,
+                               std::make_pair(
+                                   pid1,
+                                   std::make_pair(
+                                       Triple<longint, longint, longint>(pid2, pid3, pid4),
+                                       lambda0_)));
+      particleQuadruplesLambda_.push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, lambda0_));
       onTupleAdded(pid1, pid2, pid3, pid4);
       LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
     }
@@ -165,17 +166,14 @@ bool FixedQuadrupleListLambda::add(longint pid1, longint pid2, longint pid3, lon
 }
 
 bool FixedQuadrupleListLambda::remove(longint pid1, longint pid2, longint pid3, longint pid4) {
-  // here we assume pid1 < pid2 < pid3 < pid4
   bool found = true;
   System &system = storage->getSystemRef();
 
-  // ADD THE LOCAL QUADRUPLET
   Particle *p1 = storage->lookupRealParticle(pid1);
   Particle *p2 = storage->lookupLocalParticle(pid2);
   Particle *p3 = storage->lookupLocalParticle(pid3);
   Particle *p4 = storage->lookupLocalParticle(pid4);
   if (!p1) {
-    // Particle does not exist here, return false
     found = false;
   } else {
     std::stringstream msg;
@@ -195,15 +193,14 @@ bool FixedQuadrupleListLambda::remove(longint pid1, longint pid2, longint pid3, 
 
   bool returnVal = false;
   if (found) {
-    std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange
-        = globalQuadruples.equal_range(pid1);
-    if (equalRange.first != globalQuadruples.end()) {
-      // otherwise test whether the quadruple already exists
-      for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
+    std::pair<QuadruplesLambda::iterator, QuadruplesLambda::iterator> equalRange
+        = quadruplesLambda_.equal_range(pid1);
+    if (equalRange.first != quadruplesLambda_.end()) {
+      for (QuadruplesLambda::iterator it = equalRange.first; it != equalRange.second;)
         if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
           onTupleRemoved(pid1, pid2, pid3, pid4);
           returnVal = true;
-          it = globalQuadruples.erase(it);
+          it = quadruplesLambda_.erase(it);
         } else {
           ++it;
         }
@@ -215,7 +212,7 @@ bool FixedQuadrupleListLambda::remove(longint pid1, longint pid2, longint pid3, 
 python::list FixedQuadrupleListLambda::getQuadruples() {
   python::tuple quadruple;
   python::list quadruples;
-  for (GlobalQuadruples::const_iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); it++) {
+  for (QuadruplesLambda::const_iterator it = quadruplesLambda_.begin(); it != quadruplesLambda_.end(); it++) {
     quadruple = python::make_tuple(it->first, it->second.first.first, it->second.first.second, it->second.first.third);
     quadruples.append(quadruple);
   }
@@ -225,43 +222,39 @@ python::list FixedQuadrupleListLambda::getQuadruples() {
 
 void FixedQuadrupleListLambda::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
   std::vector<longint> toSend;
-  std::vector<real> toSendReal;
+  std::vector<real> toSendLambda;
   for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
     longint pid = pit->id();
     int n = globalQuadruples.count(pid);
-
     if (n > 0) {
-      std::pair<GlobalQuadruples::const_iterator, GlobalQuadruples::const_iterator>
-          equalRange = globalQuadruples.equal_range(pid);
+      std::pair<QuadruplesLambda::const_iterator, QuadruplesLambda::const_iterator>
+          equalRange = quadruplesLambda_.equal_range(pid);
       toSend.reserve(toSend.size() + 3 * n + 1);
+      toSendLambda.reserve(toSendLambda.size() + 3*n);
       toSend.push_back(pid);
       toSend.push_back(n);
-      for (GlobalQuadruples::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
+      for (QuadruplesLambda::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
         toSend.push_back(it->second.first.first);
         toSend.push_back(it->second.first.second);
         toSend.push_back(it->second.first.third);
-        toSendReal.push_back(it->second.second);
+        toSendLambda.push_back(it->second.second);
       }
-      // delete all of these quadruples from the global list
-      globalQuadruples.erase(equalRange.first, equalRange.second);
+      quadruplesLambda_.erase(equalRange.first, equalRange.second);
     }
   }
-  // send the list
   buf.write(toSend);
-  buf.write(toSendReal);
+  buf.write(toSendLambda);
   LOG4ESPP_INFO(theLogger, "prepared fixed quadruple list before send particles");
 }
 
 void FixedQuadrupleListLambda::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
-
   std::vector<longint> received;
-  std::vector<real> receivedReal;
+  std::vector<real> receivedLambda;
   int n;
-  real lambdaVal;
   longint pid1, pid2, pid3, pid4;
-  GlobalQuadruples::iterator it = globalQuadruples.begin();
+  real lambdaVal;
+  QuadruplesLambda::iterator it = quadruplesLambda_.begin();
   buf.read(received);
-  buf.read(receivedReal);
   int size = received.size();
   int i = 0, j = 0;
   while (i < size) {
@@ -271,11 +264,12 @@ void FixedQuadrupleListLambda::afterRecvParticles(ParticleList &pl, InBuffer &bu
       pid2 = received[i++];
       pid3 = received[i++];
       pid4 = received[i++];
-      lambdaVal = receivedReal[j++];
-      it = globalQuadruples.insert(it, std::make_pair(pid1,
-                                                      std::make_pair(
-                                                          Triple<longint, longint, longint>(pid2, pid3, pid4),
-                                                          lambdaVal)));
+      lambdaVal = receivedLambda[j++];
+      it = quadruplesLambda_.insert(
+          it, std::make_pair(pid1,
+                             std::make_pair(
+                                 Triple<longint, longint, longint>(pid2, pid3, pid4),
+                                 lambdaVal)));
     }
   }
   if (i != size) {
@@ -289,12 +283,13 @@ void FixedQuadrupleListLambda::onParticlesChanged() {
   esutil::Error err(system.comm);
 
   this->clear();
+  particleQuadruplesLambda_.clear();
   longint lastpid1 = -1;
   Particle *p1;
   Particle *p2;
   Particle *p3;
   Particle *p4;
-  for (GlobalQuadruples::const_iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
+  for (QuadruplesLambda::const_iterator it = quadruplesLambda_.begin(); it != quadruplesLambda_.end(); ++it) {
     if (it->first != lastpid1) {
       p1 = storage->lookupRealParticle(it->first);
       if (p1 == NULL) {
@@ -322,21 +317,24 @@ void FixedQuadrupleListLambda::onParticlesChanged() {
       msg << "quadruple particle p4 " << it->second.first.third << " does not exists here";
       err.setException(msg.str());
     }
-    this->push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, it->second.second));
+    this->add(p1, p2, p3, p4);
+    particleQuadruplesLambda_.push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, it->second.second));
   }
   LOG4ESPP_INFO(theLogger, "regenerated local fixed quadruple list from global list");
 }
 
 void FixedQuadrupleListLambda::updateParticlesStorage() {
-  System &system = storage->getSystemRef();
+  // (re-)generate the local quadruple list from the global list
+  System& system = storage->getSystemRef();
 
   this->clear();
+  particleQuadruplesLambda_.clear();
   longint lastpid1 = -1;
   Particle *p1;
   Particle *p2;
   Particle *p3;
   Particle *p4;
-  for (GlobalQuadruples::const_iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
+  for (QuadruplesLambda::const_iterator it = quadruplesLambda_.begin(); it != quadruplesLambda_.end(); ++it) {
     if (it->first != lastpid1) {
       p1 = storage->lookupRealParticle(it->first);
       if (p1 == NULL) {
@@ -364,27 +362,22 @@ void FixedQuadrupleListLambda::updateParticlesStorage() {
       msg << "quadruple particle p4 " << it->second.first.third << " does not exists here";
       throw std::runtime_error(msg.str());
     }
-    this->push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, it->second.second));
+    this->add(p1, p2, p3, p4);
+    particleQuadruplesLambda_.push_back(ParticleQuadrupleLambda(p1, p2, p3, p4, it->second.second));
   }
   LOG4ESPP_INFO(theLogger, "regenerated local fixed quadruple list from global list");
 }
 
-int FixedQuadrupleListLambda::totalSize() {
-  int local_size = globalQuadruples.size();
-  int global_size;
-  System &system = storage->getSystemRef();
-  mpi::all_reduce(*system.comm, local_size, global_size, std::plus<int>());
-  return global_size;
-}
-
 python::list FixedQuadrupleListLambda::getQuadruplesLambda() {
   python::list quaruples;
-  for (GlobalQuadruples::const_iterator it=globalQuadruples.begin(); it != globalQuadruples.end(); it++) {
+  for (QuadruplesLambda::const_iterator it = quadruplesLambda_.begin(); it != quadruplesLambda_.end(); it++) {
     quaruples.append(python::make_tuple(
         it->first,
         it->second.first.first,
         it->second.first.second,
-        it->second.first.third));
+        it->second.first.third,
+        it->second.second
+    ));
   }
   return quaruples;
 }
@@ -393,10 +386,10 @@ real FixedQuadrupleListLambda::getLambda(longint pid1, longint pid2, longint pid
   real returnVal = -3;
 
   bool found = false;
-  std::pair<GlobalQuadruples::const_iterator,
-            GlobalQuadruples::const_iterator> equalRange = globalQuadruples.equal_range(pid1);
-  if (equalRange.first != globalQuadruples.end()) {
-    for (GlobalQuadruples::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
+  std::pair<QuadruplesLambda::const_iterator,
+            QuadruplesLambda::const_iterator> equalRange = quadruplesLambda_.equal_range(pid1);
+  if (equalRange.first != quadruplesLambda_.end()) {
+    for (QuadruplesLambda::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
       if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
         return it->second.second;
       }
@@ -407,49 +400,53 @@ real FixedQuadrupleListLambda::getLambda(longint pid1, longint pid2, longint pid
 }
 
 void FixedQuadrupleListLambda::setLambda(longint pid1, longint pid2, longint pid3, longint pid4, real lambda) {
-  std::pair<GlobalQuadruples::iterator,
-            GlobalQuadruples::iterator> equalRange = globalQuadruples.equal_range(pid1);
-  if (equalRange.first != globalQuadruples.end()) {
-    for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second; ++it) {
+  std::pair<QuadruplesLambda::iterator,
+            QuadruplesLambda::iterator> equalRange = quadruplesLambda_.equal_range(pid1);
+  if (equalRange.first != quadruplesLambda_.end()) {
+    for (QuadruplesLambda::iterator it = equalRange.first; it != equalRange.second; ++it) {
       if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
         it->second.second = lambda;
       }
     }
   }
 
-  for (FixedQuadrupleListLambda::Iterator it(*this); it.isValid(); ++it) {
+  for (ParticleQuadruplesLambda::iterator it = particleQuadruplesLambda_.begin();
+       it != particleQuadruplesLambda_.end(); ++it) {
     const Particle &p1 = *it->first;
     const Particle &p2 = *it->second;
     const Particle &p3 = *it->third;
     const Particle &p4 = *it->fourth;
     if ((p1.id() == pid1 && p2.id() == pid2 && p3.id() == pid3 && p4.id() == pid4) ||
-        (p1.id() == pid4 && p2.id() == pid3 && p3.id() == pid2 && p4.id() == pid1) ){
-      it->fifth = lambda;
+        (p1.id() == pid4 && p2.id() == pid3 && p3.id() == pid2 && p4.id() == pid1)) {
+      it->lambda = lambda;
     }
   }
 }
 
 void FixedQuadrupleListLambda::setAllLambda(real lambda) {
-  for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
+  for (QuadruplesLambda::iterator it = quadruplesLambda_.begin(); it != quadruplesLambda_.end(); ++it) {
     it->second.second = lambda;
   }
 
-  for (FixedQuadrupleListLambda::Iterator it(*this); it.isValid(); ++it) {
-    it->fifth = lambda;
+  for (ParticleQuadruplesLambda::iterator it = particleQuadruplesLambda_.begin();
+       it != particleQuadruplesLambda_.end(); ++it) {
+    it->lambda = lambda;
   }
 }
 
 void FixedQuadrupleListLambda::incrementAllLambda(real d_lambda) {
-  for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end(); ++it) {
+  for (QuadruplesLambda::iterator it = quadruplesLambda_.begin();
+       it != quadruplesLambda_.end(); ++it) {
     it->second.second += d_lambda;
     if (it->second.second > 1.0)
       it->second.second = 1.0;
   }
 
-  for (FixedQuadrupleListLambda::Iterator it(*this); it.isValid(); ++it) {
-    it->fifth += d_lambda;
-    if (it->fifth > 1.0)
-      it->fifth = 1.0;
+  for (ParticleQuadruplesLambda::iterator it = particleQuadruplesLambda_.begin();
+       it != particleQuadruplesLambda_.end(); ++it) {
+    it->lambda += d_lambda;
+    if (it->lambda > 1.0)
+      it->lambda = 1.0;
   }
 }
 

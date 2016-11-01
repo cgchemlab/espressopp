@@ -45,6 +45,7 @@ namespace espressopp {
     using QuadrupleList::add;
 
   public:
+    FixedQuadrupleList() { }
     FixedQuadrupleList(shared_ptr< storage::Storage > _storage);
     ~FixedQuadrupleList();
 
@@ -55,26 +56,25 @@ namespace espressopp {
 	
 	\return whether the quadruple was inserted on this processor.
     */
-    bool add(longint pid1, longint pid2, longint pid3, longint pid4);
+    virtual bool add(longint pid1, longint pid2, longint pid3, longint pid4);
     /// Non-blocking add method.
-    bool iadd(longint pid1, longint pid2, longint pid3, longint pid4);
+    virtual bool iadd(longint pid1, longint pid2, longint pid3, longint pid4);
 
-    bool remove(longint pid1, longint pid2, longint pid3, longint pid4);
-    bool removeByBond(longint pid1, longint pid2);
+    virtual bool remove(longint pid1, longint pid2, longint pid3, longint pid4);
 
-    void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
-    void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
+    virtual void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
+    virtual void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
     virtual void onParticlesChanged();
     virtual void updateParticlesStorage();
 
-    python::list getQuadruples();
+    virtual python::list getQuadruples();
 
     /** Get the number of quadruples in the GlobalQuadruples list */
-    int size() {
+    virtual int size() {
     	return globalQuadruples.size();
     }
 
-    int totalSize();
+    virtual int totalSize();
 
     boost::signals2::signal4 <void, longint, longint, longint, longint> onTupleAdded;
     boost::signals2::signal4 <void, longint, longint, longint, longint> onTupleRemoved;

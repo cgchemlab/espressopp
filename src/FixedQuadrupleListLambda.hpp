@@ -27,6 +27,7 @@
 #include "Triple.hpp"
 
 #include "Particle.hpp"
+#include "FixedQuadrupleList.hpp"
 #include "esutil/ESPPIterator.hpp"
 #include <boost/unordered_map.hpp>
 #include <boost/signals2.hpp>
@@ -37,28 +38,31 @@ namespace espressopp {
 class ParticleQuadrupleLambda {
  public:
   ParticleQuadrupleLambda(Particle *p1, Particle *p2, Particle *p3, Particle *p4, real l)
-      : first(p1), second(p2), third(p3), fourth(p4), fifth(l) {}
+      : first(p1), second(p2), third(p3), fourth(p4), lambda(l) {}
 
   ParticleQuadrupleLambda(Particle &p1, Particle &p2, Particle &p3, Particle &p4, real l)
-      : first(&p1), second(&p2), third(&p3), fourth(&p4), fifth(l) {}
+      : first(&p1), second(&p2), third(&p3), fourth(&p4), lambda(l) {}
 
   Particle *first;
   Particle *second;
   Particle *third;
   Particle *fourth;
-  real fifth;
+  real lambda;
 };
 
-class FixedQuadrupleListLambda: public esutil::ESPPContainer< std::vector<ParticleQuadrupleLambda> > {
+class FixedQuadrupleListLambda : public FixedQuadrupleList {
  protected:
   boost::signals2::connection sigBeforeSend, sigAfterRecv, sigOnParticlesChanged;
   shared_ptr<storage::Storage> storage;
-  typedef boost::unordered_multimap<longint, std::pair<Triple<longint, longint, longint>, real> > GlobalQuadruples;
-  GlobalQuadruples globalQuadruples;
+  typedef boost::unordered_multimap<longint, std::pair<Triple<longint, longint, longint>, real> > QuadruplesLambda;
+  using QuadrupleList::add;
 
  public:
-  FixedQuadrupleListLambda(shared_ptr <storage::Storage> _storage, real initLambda);
-  ~FixedQuadrupleListLambda();
+  typedef std::vector<ParticleQuadrupleLambda> ParticleQuadruplesLambda;
+  typedef esutil::ESPPIterator<ParticleQuadruplesLambda> IteratorParticleLambda;
+
+ public:
+  FixedQuadrupleListLambda(shared_ptr <storage::Storage> _storage, real lambda0);
 
   bool add(longint pid1, longint pid2, longint pid3, longint pid4);
   /// Non-blocking add method.
@@ -77,14 +81,9 @@ class FixedQuadrupleListLambda: public esutil::ESPPContainer< std::vector<Partic
   void setAllLambda(real lambda);
   void incrementAllLambda(real d_lambda);
 
+  ParticleQuadruplesLambda& getParticleQuadruples() { return particleQuadruplesLambda_; }
+
   boost::python::list getQuadruplesLambda();
-
-  /** Get the number of quadruples in the GlobalQuadruples list */
-  int size() {
-    return globalQuadruples.size();
-  }
-
-  int totalSize();
 
   boost::signals2::signal4<void, longint, longint, longint, longint> onTupleAdded;
   boost::signals2::signal4<void, longint, longint, longint, longint> onTupleRemoved;
@@ -92,7 +91,9 @@ class FixedQuadrupleListLambda: public esutil::ESPPContainer< std::vector<Partic
   static void registerPython();
 
  private:
-  real initLambda_;
+  real lambda0_;
+  QuadruplesLambda quadruplesLambda_;
+  ParticleQuadruplesLambda particleQuadruplesLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 }

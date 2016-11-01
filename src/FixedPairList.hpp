@@ -69,19 +69,15 @@ namespace espressopp {
 		virtual void onParticlesChanged();
 	    virtual void updateParticlesStorage();
 
-	    std::vector<longint> getPairList();
-	    python::list getBonds();
-	    python::list getAllBonds();
-	    GlobalPairs* getGlobalPairs() {return &globalPairs;};
+	    virtual std::vector<longint> getPairList();
+	    virtual python::list getBonds();
+	    virtual python::list getAllBonds();
+	   GlobalPairs* getGlobalPairs() {return &globalPairs;};
 
 	    /** Get the number of bonds in the GlobalPairs list */
-	    int size() {
-	    	return globalPairs.size();
-	    }
+	    virtual int size() { return globalPairs.size(); }
 
-	    int totalSize();
-
-	    void handleException(std::vector<int> &pids);
+	    virtual int totalSize();
 
 	  	boost::signals2::signal2 <void, longint, longint> onTupleAdded;
 	    boost::signals2::signal2 <void, longint, longint> onTupleRemoved;
