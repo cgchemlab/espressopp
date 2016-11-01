@@ -34,44 +34,6 @@
 namespace espressopp {
 namespace integrator {
 
-void TopologyParticleProperties::registerPython() {
-  using namespace python;
-  class_<TopologyParticleProperties, shared_ptr<TopologyParticleProperties> >
-      ("integrator_TopologyParticleProperties", no_init)
-      .add_property(
-          "type",
-          make_getter(&TopologyParticleProperties::type_id),
-          &TopologyParticleProperties::setTypeId)
-      .add_property(
-          "mass",
-          make_getter(&TopologyParticleProperties::mass),
-          &TopologyParticleProperties::setMass)
-      .add_property(
-          "q",
-          make_getter(&TopologyParticleProperties::q),
-          &TopologyParticleProperties::setQ)
-      .add_property(
-          "state",
-          make_getter(&TopologyParticleProperties::state),
-          &TopologyParticleProperties::setState)
-      .add_property(
-          "res_id",
-          make_getter(&TopologyParticleProperties::res_id),
-          &TopologyParticleProperties::setResId)
-      .add_property(
-          "lambda_adr",
-          make_getter(&TopologyParticleProperties::lambda),
-          &TopologyParticleProperties::setLambda)
-      .add_property(
-          "v",
-          make_getter(&TopologyParticleProperties::v),
-          &TopologyParticleProperties::setV)
-      .def(
-          "init",
-          &TopologyParticleProperties::init
-      );
-}
-
 
 LOG4ESPP_LOGGER(TopologyManager::theLogger, "TopologyManager");
 
@@ -161,8 +123,7 @@ void TopologyManager::InitializeTopology() {
   std::map<longint, std::set<int> > tmp_resGraph;
   std::vector<std::pair<longint, longint> > local_resid;
 
-  for (std::vector< shared_ptr<FixedPairList> >::iterator it = tuples_.begin();
-       it != tuples_.end(); ++it) {
+  for (std::vector< shared_ptr<FixedPairList> >::iterator it = tuples_.begin(); it != tuples_.end(); ++it) {
     for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
@@ -913,6 +874,10 @@ bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {
 
 void TopologyManager::registerPython() {
   using namespace espressopp::python;
+
+  boost::python::implicitly_convertible<shared_ptr<FixedPairListLambda>, shared_ptr<FixedPairList> >();
+  boost::python::implicitly_convertible<shared_ptr<FixedTripleListLambda>, shared_ptr<FixedTripleList> >();
+  boost::python::implicitly_convertible<shared_ptr<FixedQuadrupleListLambda>, shared_ptr<FixedQuadrupleList> >();
 
   class_<TopologyManager, shared_ptr<TopologyManager>, bases<Extension> >
       ("integrator_TopologyManager", init<shared_ptr<System> >())

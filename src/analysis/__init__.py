@@ -69,4 +69,6 @@ from espressopp.analysis.KineticEnergy import *
 from espressopp.analysis.NFixedListEntries import *
 from espressopp.analysis.ChemicalConversion import *
 
+from espressopp.analysis.Resolution import *
+
 from espressopp.analysis.MaxAvgMinForce import *

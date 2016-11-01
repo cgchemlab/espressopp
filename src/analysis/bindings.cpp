@@ -72,6 +72,8 @@
 #include "NFixedListEntries.hpp"
 #include "ChemicalConversion.hpp"
 
+#include "Resolution.hpp"
+
 #include "MaxAvgMinForce.hpp"
 
 namespace espressopp {
@@ -130,6 +132,9 @@ namespace espressopp {
       NFixedQuadrupleListEntries::registerPython();
       ChemicalConversion::registerPython();
       ChemicalConversionTypeSequence::registerPython();
+
+      Resolution::registerPython();
+      ResolutionFixedPairList::registerPython();
 
       MaxForce::registerPython();
     }
