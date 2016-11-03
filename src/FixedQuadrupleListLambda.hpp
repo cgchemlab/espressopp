@@ -52,9 +52,8 @@ class ParticleQuadrupleLambda {
 
 class FixedQuadrupleListLambda : public FixedQuadrupleList {
  protected:
-  boost::signals2::connection sigBeforeSend, sigAfterRecv, sigOnParticlesChanged;
-  shared_ptr<storage::Storage> storage;
   typedef boost::unordered_multimap<longint, std::pair<Triple<longint, longint, longint>, real> > QuadruplesLambda;
+  shared_ptr <storage::Storage> storage;
   using QuadrupleList::add;
 
  public:
@@ -84,9 +83,6 @@ class FixedQuadrupleListLambda : public FixedQuadrupleList {
   ParticleQuadruplesLambda& getParticleQuadruples() { return particleQuadruplesLambda_; }
 
   boost::python::list getQuadruplesLambda();
-
-  boost::signals2::signal4<void, longint, longint, longint, longint> onTupleAdded;
-  boost::signals2::signal4<void, longint, longint, longint, longint> onTupleRemoved;
 
   static void registerPython();
 

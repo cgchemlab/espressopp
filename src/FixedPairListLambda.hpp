@@ -49,7 +49,6 @@ class FixedPairListLambda : public FixedPairList {
   typedef esutil::ESPPIterator<std::vector<ParticlePairLambda> > IteratorParticleLambda;
 
  protected:
-  boost::signals2::connection sigBeforeSend, sigOnParticlesChanged, sigAfterRecv;
   shared_ptr <storage::Storage> storage;
   using PairList::add;
   static LOG4ESPP_DECL_LOGGER(theLogger);
@@ -92,15 +91,11 @@ class FixedPairListLambda : public FixedPairList {
 
   ParticlePairsLambda& getParticlePairs() { return particlePairsLambda_; }
 
-  boost::signals2::signal2 <void, longint, longint> onTupleAdded;
-  boost::signals2::signal2 <void, longint, longint> onTupleRemoved;
-
   static void registerPython();
  private:
   real lambda0_;
   PairsLambda pairsLambda_;
   ParticlePairsLambda particlePairsLambda_;
-
 };
 
 }

@@ -50,7 +50,6 @@ class ParticleTripleLambda {
 class FixedTripleListLambda: public FixedTripleList {
  protected:
   typedef boost::unordered_multimap<longint, std::pair <longint, std::pair<longint, real> > > TriplesLambda;
-  boost::signals2::connection sigAfterRecv, sigOnParticleChanged, sigBeforeSend;
   shared_ptr <storage::Storage> storage;
   using TripleList::add;
 
@@ -80,16 +79,12 @@ class FixedTripleListLambda: public FixedTripleList {
 
   ParticleTriplesLambda& getParticleTriples() { return particleTriplesLambda_; }
 
-  boost::signals2::signal3 <void, longint, longint, longint> onTupleAdded;
-  boost::signals2::signal3 <void, longint, longint, longint> onTupleRemoved;
-
   static void registerPython();
  private:
   real lambda0_;
   TriplesLambda triplesLambda_;
   ParticleTriplesLambda particleTriplesLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
-
 };
 }
 
