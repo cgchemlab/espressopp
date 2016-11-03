@@ -36,21 +36,20 @@ namespace espressopp {
 namespace integrator {
 
 struct ReactiveCenter {
-  longint min_state;  ///<! minimal chemical state
-  longint max_state;  ///<! maximum chemical state
+  longint state;  ///<! minimal chemical state
+  bool is_activator;
   longint delta_state;  ///<! update of chemical potential
   shared_ptr<ParticleProperties> new_property;  ///<! new property
 
   ReactiveCenter() {
-    min_state = -1;
-    max_state = -1;
+    state = -1;
     delta_state = 0;
   }
 
-  ReactiveCenter(longint min_state_, longint max_state_, longint delta_state_,
+  ReactiveCenter(longint state_, bool is_activator_, longint delta_state_,
                  shared_ptr<ParticleProperties> new_property_) {
-    min_state = min_state_;
-    max_state = max_state_;
+    state = state_;
+    is_activator = is_activator_;
     delta_state = delta_state_;
     new_property = new_property_;
   }
@@ -64,8 +63,8 @@ class ATRPActivator: public Extension {
   virtual ~ATRPActivator() {};
 
   void addReactiveCenter(longint type_id,
-                         longint min_state,
-                         longint max_state,
+                         longint state,
+                         bool is_activator,
                          shared_ptr<ParticleProperties> pp,
                          longint delta_state);
 

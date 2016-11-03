@@ -51,31 +51,11 @@ void ATRPActivator::connect() {
 }
 
 void ATRPActivator::addReactiveCenter(longint type_id,
-                                      longint min_state,
-                                      longint max_state,
+                                      longint state,
+                                      bool is_activator,
                                       shared_ptr<ParticleProperties> pp,
                                       longint delta_state) {
-  if (min_state > max_state)
-    throw std::runtime_error("Min_state > max_state");
-
-  if (species_map_.count(type_id) != 0) {
-    std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(type_id);
-    std::vector<std::pair<longint, longint> > ranges;
-    ranges.push_back(std::make_pair(min_state, max_state));  // put the possible range
-    for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second; ++it) {
-      ranges.push_back(std::make_pair(it->second.min_state, it->second.max_state));
-    }
-    std::sort(ranges.begin(), ranges.end());  // sort by first element, min_state
-    bool overlaps = false;
-    for (int i = 0; i < ranges.size() - 1; i++) {
-      if (ranges[i].second > ranges[i+1].first) {
-        overlaps = true;
-      }
-    }
-    if (overlaps)
-      throw std::runtime_error("Min/max state overlaps");
-  }
-  species_map_.insert(std::make_pair(type_id, ReactiveCenter(min_state, max_state, delta_state, pp)));
+  species_map_.insert(std::make_pair(type_id, ReactiveCenter(state, is_activator, delta_state, pp)));
 }
 
 void ATRPActivator::updateParticles() {
@@ -94,7 +74,7 @@ void ATRPActivator::updateParticles() {
       // Check if the particle is in the given state.
       std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p.type());
       for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (p.state() >= it->second.min_state && p.state() < it->second.max_state) {
+        if (p.state() == it->second.state) {
           local_type_pids.push_back(p.id());
           found = true;
         }
@@ -136,38 +116,27 @@ void ATRPActivator::updateParticles() {
       bool found = false;
       std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p->type());
       for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (p->state() == it->second.min_state) {
+        if (p->state() == it->second.state) {
           real W = (*rng_)();
-          if (W < ratio_deactivator_*k_deactivate_) {
-            p->state() += it->second.delta_state;  // update chemical state.
-            it->second.new_property->updateParticleProperties(p); // update particle property.
-            modified_particles.push_back(p);
-            ratio_deactivator_-=delta_catalyst_;
-            ratio_activator_+=delta_catalyst_;
+          if (it->second.is_activator) {
+            if (W < ratio_deactivator_*k_deactivate_) {
+              p->state() += it->second.delta_state;  // update chemical state.
+              it->second.new_property->updateParticleProperties(p); // update particle property.
+              modified_particles.push_back(p);
+              ratio_deactivator_-=delta_catalyst_;
+              ratio_activator_+=delta_catalyst_;
+            }
+          } else {
+            if (W < ratio_activator_*k_activate_) {
+              p->state() += it->second.delta_state;  // update chemical state.
+              it->second.new_property->updateParticleProperties(p); // update particle property.
+              modified_particles.push_back(p);
+              ratio_activator_-=delta_catalyst_;
+              ratio_deactivator_+=delta_catalyst_;
+            }
           }
-          found = true;
-        }
-        else if (p->state() > it->second.min_state && p->state() < it->second.max_state) {
-          real W = (*rng_)();
-          if (W < ratio_activator_*k_activate_) {
-            p->state() += it->second.delta_state;  // update chemical state.
-            it->second.new_property->updateParticleProperties(p); // update particle property.
-            modified_particles.push_back(p);
-            ratio_activator_-=delta_catalyst_;
-            ratio_deactivator_+=delta_catalyst_;
-          }
-          found = true;
         }
       }
-      if (!found) {
-        std::stringstream ss;
-        ss << "Wrong particle on rank: " << system.comm->rank()
-           << " particle in state: " << p->state()
-           << " id: " << p->id()
-           << " type: " << p->type();
-        throw std::runtime_error(ss.str());
-      }
-
     }
   }
   // Synchronize all processess

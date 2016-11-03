@@ -48,16 +48,16 @@ state.
 		:param k_deactivate: deactivate constant.
 		:type k_deactivate: float
 
-.. function:: espressopp.integrator.ATRPActivator.add_reactive_center(type_id, min_state, max_state,
+.. function:: espressopp.integrator.ATRPActivator.add_reactive_center(type_id, state, is_activator,
                                                                       new_property, delta_state)
         Add defintion of reactive center and change of properties.
 
         :param type_id: The particle type.
         :type type_id: int
-        :param min_state: The min state.
-        :type min_state: int
-        :param max_state: The max state.
-        :type max_state: int
+        :param state: The state.
+        :type state: int
+        :param is_activator:
+        :type is_activator: bool
         :param new_property: The new property of particle.
         :type new_property: espressopp.ParticleProperties
         :param delta_state: The change of chemical state.
@@ -77,11 +77,11 @@ class ATRPActivatorLocal(ExtensionLocal, integrator_ATRPActivator):
             cxxinit(self, integrator_ATRPActivator, system, interval, num_per_interval, ratio_activator,
                     ratio_deactivator, delta_catalyst, k_activate, k_deactivate)
 
-    def add_reactive_center(self, type_id, min_state, max_state, new_property, delta_state):
+    def add_reactive_center(self, type_id, state, is_activator, new_property, delta_state):
         """Defines reactive center"""
         if pmi.workerIsActive():
             self.cxxclass.add_reactive_center(
-                self, type_id, min_state, max_state, new_property, delta_state)
+                self, type_id, state, is_activator, new_property, delta_state)
 
 if pmi.isController :
     class ATRPActivator(Extension):
