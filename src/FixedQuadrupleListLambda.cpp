@@ -225,7 +225,7 @@ void FixedQuadrupleListLambda::beforeSendParticles(ParticleList &pl, OutBuffer &
   std::vector<real> toSendLambda;
   for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
     longint pid = pit->id();
-    int n = globalQuadruples.count(pid);
+    int n = quadruplesLambda_.count(pid);
     if (n > 0) {
       std::pair<QuadruplesLambda::const_iterator, QuadruplesLambda::const_iterator>
           equalRange = quadruplesLambda_.equal_range(pid);

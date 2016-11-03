@@ -176,7 +176,7 @@ void FixedPairListLambda::beforeSendParticles(ParticleList &pl, OutBuffer &buf) 
 
     LOG4ESPP_DEBUG(theLogger, "send particle with pid " << pid << ", find pairs");
 
-    int n = globalPairs.count(pid);
+    int n = pairsLambda_.count(pid);
 
     if (n > 0) {
       std::pair<PairsLambda::iterator, PairsLambda::iterator> rangeLambda = pairsLambda_.equal_range(pid);
