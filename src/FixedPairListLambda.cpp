@@ -125,9 +125,9 @@ bool FixedPairListLambda::iadd(longint pid1, longint pid2) {
 bool FixedPairListLambda::remove(longint pid1, longint pid2, bool no_signal) {
   LOG4ESPP_DEBUG(theLogger, "FPL remove " << pid1 << "-" << pid2);
   bool returnValue = false;
-  std::pair<PairsLambda::const_iterator, PairsLambda::const_iterator> equalRange = pairsLambda_.equal_range(pid1);
+  std::pair<PairsLambda::iterator, PairsLambda::iterator> equalRange = pairsLambda_.equal_range(pid1);
   if (equalRange.first != pairsLambda_.end()) {
-    for (PairsLambda::const_iterator it = equalRange.first; it != equalRange.second; ++it) {
+    for (PairsLambda::iterator it = equalRange.first; it != equalRange.second; ++it) {
       if (it->second.first == pid2) {
         LOG4ESPP_DEBUG(theLogger, "FPL, found " << it->first << " - " << it->second.first);
         if (!no_signal)
@@ -137,6 +137,32 @@ bool FixedPairListLambda::remove(longint pid1, longint pid2, bool no_signal) {
       } else {
         it++;
       }
+    }
+  }
+  return returnValue;
+}
+
+bool FixedPairListLambda::removeByPid1(longint pid1, bool noSignal, bool removeAll, longint removeCounter) {
+  bool returnValue = false;
+  std::pair<PairsLambda::iterator, PairsLambda::iterator> equalRange = pairsLambda_.equal_range(pid1);
+  if (equalRange.first == pairsLambda_.end())
+    return returnValue;
+
+  if (removeAll) {
+    for(PairsLambda::iterator it = equalRange.first; it != equalRange.second;) {
+      if (!noSignal)
+        onTupleRemoved(it->first, it->second.first);
+      it = pairsLambda_.erase(it);
+      returnValue = true;
+    }
+  } else {
+    longint num_removed = 0;
+    for(PairsLambda::iterator it = equalRange.first; it != equalRange.second && num_removed < removeCounter;) {
+      if (!noSignal)
+        onTupleRemoved(it->first, it->second.first);
+      it = pairsLambda_.erase(it);
+      returnValue = true;
+      num_removed++;
     }
   }
   return returnValue;
@@ -318,7 +344,12 @@ void FixedPairListLambda::incrementAllLambda(real d_lambda) {
 }
 
 std::vector<longint> FixedPairListLambda::getPairList() {
-  return FixedPairList::getPairList();
+  std::vector<longint> ret;
+  for (PairsLambda::const_iterator it = pairsLambda_.begin(); it != pairsLambda_.end(); it++) {
+    ret.push_back(it->first);
+    ret.push_back(it->second.first);
+  }
+  return ret;
 }
 python::list FixedPairListLambda::getBonds() {
   python::list bonds;

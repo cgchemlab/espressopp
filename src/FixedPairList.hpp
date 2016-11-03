@@ -63,6 +63,7 @@ namespace espressopp {
 		virtual bool add(longint pid1, longint pid2);
 		virtual bool iadd(longint pid1, longint pid2);
 	    virtual bool remove(longint pid1, longint pid2, bool no_signal = false);
+	    virtual bool removeByPid1(longint pid1, bool noSignal, bool removeAll, longint removeCounter);
 
 	    virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
 		virtual void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
@@ -72,7 +73,7 @@ namespace espressopp {
 	    virtual std::vector<longint> getPairList();
 	    virtual python::list getBonds();
 	    virtual python::list getAllBonds();
-	   GlobalPairs* getGlobalPairs() {return &globalPairs;};
+	    virtual GlobalPairs* getGlobalPairs() {return &globalPairs;};
 
 	    /** Get the number of bonds in the GlobalPairs list */
 	    virtual int size() { return globalPairs.size(); }

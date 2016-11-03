@@ -137,23 +137,9 @@ std::vector<Particle *> PostProcessRemoveBond::process(Particle &p, Particle &pa
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessRemoveBond::operator()");
 
   std::vector<Particle *> ret;
-
-  typedef FixedPairList::GlobalPairs GlobalPairs;
-
-  GlobalPairs *gpl = fpl_->getGlobalPairs();
-  std::pair<GlobalPairs::const_iterator, GlobalPairs::const_iterator> equalRange = gpl->equal_range(
-    partner.id());
-
   // Removes n-bonds.
-  int remove_bonds = 0;
-
-  for (GlobalPairs::const_iterator it = equalRange.first; it != equalRange.second && remove_bonds <
-      nr_; ++it) {
-    if (fpl_->remove(it->first, it->second)) {
-      LOG4ESPP_DEBUG(theLogger, "removed bond "
-              << it->first << "-" << it->second << " p=" << p.id() << " partner=" << partner.id());
-      remove_bonds++;
-    }
+  if (fpl_->removeByPid1(p.id(), false, false, nr_)) {
+    LOG4ESPP_DEBUG(theLogger, "removed bond ");
   }
 
   return ret;
@@ -161,6 +147,8 @@ std::vector<Particle *> PostProcessRemoveBond::process(Particle &p, Particle &pa
 
 void PostProcessRemoveBond::registerPython() {
   using namespace espressopp::python;// NOLINT
+
+  boost::python::implicitly_convertible<shared_ptr<FixedPairListLambda>, shared_ptr<FixedPairList> >();
 
   class_<PostProcessRemoveBond, bases<integrator::ChemicalReactionPostProcess>,
   boost::shared_ptr<integrator::PostProcessRemoveBond> >

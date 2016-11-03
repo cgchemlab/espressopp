@@ -60,6 +60,15 @@ class FixedPairListLambda : public FixedPairList {
   virtual bool add(longint pid1, longint pid2);
   virtual bool iadd(longint pid1, longint pid2);
   virtual bool remove(longint pid1, longint pid2, bool no_signal = false);
+  /**
+   * Remove all bonds where first argument is pid1 or remove n-th bonds.
+   * @param pid1 Particle id
+   * @param noSignal Do not throw onTupleRemoved signal
+   * @param removeAll if true then remove all bonds with pid1
+   * @param removeCounter remove n-th bonds
+   * @return
+   */
+  virtual bool removeByPid1(longint pid1, bool noSignal, bool removeAll, longint removeCounter);
 
   virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
   virtual void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
@@ -69,6 +78,7 @@ class FixedPairListLambda : public FixedPairList {
   virtual std::vector<longint> getPairList();
   virtual python::list getBonds();
   virtual python::list getAllBonds();
+  virtual GlobalPairs* getGlobalPairs() { throw std::runtime_error("getGlobalPairs method not implemented!"); };
 
   /** Get the number of bonds in the GlobalPairs list */
   virtual int size() { return pairsLambda_.size(); }
@@ -90,6 +100,7 @@ class FixedPairListLambda : public FixedPairList {
   real lambda0_;
   PairsLambda pairsLambda_;
   ParticlePairsLambda particlePairsLambda_;
+
 };
 
 }

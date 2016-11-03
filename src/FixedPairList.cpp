@@ -211,6 +211,32 @@ namespace espressopp {
     return returnValue;
   }
 
+  bool FixedPairList::removeByPid1(longint pid1, bool noSignal, bool removeAll, longint removeCounter) {
+    bool returnValue = false;
+    std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange = globalPairs.equal_range(pid1);
+    if (equalRange.first == globalPairs.end())
+      return returnValue;
+
+    if (removeAll) {
+      for(GlobalPairs::iterator it = equalRange.first; it != equalRange.second;) {
+        if (!noSignal)
+          onTupleRemoved(it->first, it->second);
+        it = globalPairs.erase(it);
+        returnValue = true;
+      }
+    } else {
+      longint num_removed = 0;
+      for(GlobalPairs::iterator it = equalRange.first; it != equalRange.second && num_removed < removeCounter;) {
+        if (!noSignal)
+          onTupleRemoved(it->first, it->second);
+        it = globalPairs.erase(it);
+        returnValue = true;
+        num_removed++;
+      }
+    }
+    return returnValue;
+  }
+
   python::list FixedPairList::getBonds()
   {
 	python::tuple bond;
@@ -433,4 +459,5 @@ namespace espressopp {
       .def("getLongtimeMaxBondSqr", &FixedPairList::getLongtimeMaxBondSqr)
       ;
   }
+
 }

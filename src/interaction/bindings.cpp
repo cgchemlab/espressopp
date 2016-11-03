@@ -35,6 +35,7 @@
 #include "LennardJonesGeneric.hpp"
 #include "LennardJonesForceCapped.hpp"
 #include "LennardJonesLambda.hpp"
+#include "LennardJonesSoftCoreLambda.hpp"
 #include "LJcos.hpp"
 #include "Morse.hpp"
 #include "CoulombTruncatedUniqueCharge.hpp"
@@ -111,6 +112,7 @@ namespace espressopp {
       LennardJonesGeneric::registerPython();
       LennardJonesLambda::registerPython();
       LennardJonesUnique::registerPython();
+      LennardJonesSoftCoreLambda::registerPython();
       Morse::registerPython();
       CoulombTruncatedUniqueCharge::registerPython();
       CoulombTruncated::registerPython();

@@ -41,6 +41,7 @@ from espressopp.interaction.LennardJonesGromacs import *
 from espressopp.interaction.LennardJonesSoftcoreTI import *
 from espressopp.interaction.LennardJonesGeneric import *
 from espressopp.interaction.LennardJonesLambda import *
+from espressopp.interaction.LennardJonesSoftCoreLambda import *
 from espressopp.interaction.LJcos import *
 from espressopp.interaction.Morse import *
 from espressopp.interaction.CoulombTruncatedUniqueCharge import *
