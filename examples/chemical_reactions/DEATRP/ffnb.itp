@@ -4,7 +4,7 @@
 [ atomstate ]
 MA 1
 PA 1
-FA 2
+FA 3
 
 [ bondtypes ]
 ; i j func
