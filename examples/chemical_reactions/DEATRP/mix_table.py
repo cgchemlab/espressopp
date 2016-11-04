@@ -1,26 +1,38 @@
 #! /usr/bin/env python
+#  Copyright (C) 2016
+#      Jakub Krajniak (jkrajniak at gmail.com)
 #
-# Copyright (c) 2016 Jakub Krajniak <jkrajniak@gmail.com>
+#  This file is part of ChemLab.
 #
-# Distributed under terms of the GNU GPLv3 license.
+#  ChemLab is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
 #
+#  ChemLab is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
 import datetime
 import numpy as np
 
-import gromacs_topology_new
+from chemlab import gromacs_topology
 
 parser = argparse.ArgumentParser('Mix table')
 parser.add_argument('--top', default='topol.top')
-parser.add_argument('--scaling', type=float, default=0.5)
-parser.add_argument('--constant', type=float, default=0.0)
+parser.add_argument('--scaling', help='Scalling factor', type=float, default=0.5)
+parser.add_argument('--constant', help='Constant value, useful for geometric type', type=float, default=0.0)
 parser.add_argument('--mix_type', type=int, default=0, choices=[0, 1],
                     help='coupling type, 0 for arithmetic, 1 for geometric')
 
 args = parser.parse_args()
 
-topol = gromacs_topology_new.GromacsTopology(args.top)
+topol = gromacs_topology.GromacsTopology(args.top)
 topol.read()
 
 
@@ -92,7 +104,7 @@ def mix_geometric(tab1, tab2, coupling, constant):
     return out_tab
 
 for (t1, t2), params in topol.topol.nonbond_params.items():
-    if params['func'] == 9 or params['func'] == 10:
+    if params['func'] == 9:
         mono_tab = convertGromacsESPP(np.loadtxt('table_{}_{}.xvg'.format(t1, t1)))
         poly_tab = convertGromacsESPP(np.loadtxt('table_{}_{}.xvg'.format(t2, t2)))
         out_name = 'table_{}_{}.pot'.format(params['params'][1], params['params'][0])

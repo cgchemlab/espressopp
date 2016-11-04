@@ -98,7 +98,7 @@ def _args():
                         help='Name of output trajectory file')
     parser.add_argument('--thermostat',
                         default='lv',
-                        choices=('lv', 'vr'),
+                        choices=('lv', 'vr', 'iso'),
                         help='Thermostat to use, lv: Langevine, vr: Stochastic velocity rescale')
     parser.add_argument('--barostat', default='lv', choices=('lv', 'br'),
                         help='Barostat to use, lv: Langevine, br: Berendsen')
@@ -136,21 +136,38 @@ def _args():
                         help='Configuration file with chemical reactions')
     parser.add_argument('--debug', default=None, help='Turn on logging mechanism')
     parser.add_argument('--start_ar', default=0, type=int, help='When to start chemical reactions')
-    parser.add_argument('--store_species', default=False, type=ast.literal_eval,
+    parser.add_argument('--stop_ar', default=-1, type=int, help='When to stop chemical reactions')
+    parser.add_argument('--store_species', default=True, type=ast.literal_eval,
                         help='Store particle types')
     parser.add_argument('--store_state', default=True, type=ast.literal_eval,
                         help='Store chemical state')
+    parser.add_argument('--store_position', default=True, type=ast.literal_eval,
+                        help='Store positions')
     parser.add_argument('--store_lambda', default=False, type=ast.literal_eval,
                         help='Store lambda parameter')
     parser.add_argument('--store_force', default=False, type=ast.literal_eval,
                         help='Store forces')
+    parser.add_argument('--store_velocity', default=False, type=ast.literal_eval,
+                        help='Store velocity')
+    parser.add_argument('--store_charge', default=False, type=ast.literal_eval,
+                        help='Store charge')
+    parser.add_argument('--store_pressure', default=False, type=ast.literal_eval,
+                        help='Compute and store pressure')
+    parser.add_argument('--store_single_precision', default=True, type=ast.literal_eval,
+                        help='Write data in single precision format')
     parser.add_argument('--maximum_conversion',
                         default=None,
                         help=('The comma separated list of conditions on which '
                               'the simulation will stop. (format: atom type symbol:max number:total number)'))
+    parser.add_argument('--eq_steps', default=0, help=('Run simulation after conversion reached for n-steps'), type=int)
     parser.add_argument('--table_groups', default=None,
                         help='The list of atom type names that should be simulated with tabulated potential.')
     parser.add_argument('--max_force', default=-1, type=float,
                         help='Maximum force in the system.')
+    parser.add_argument('--rate_arrhenius', default=False, help='Change rate based on the Arrhenius equation.',
+                        type=ast.literal_eval)
+    parser.add_argument('--exclusion_list', default=None, help='Read exclusion list from external file')
+    parser.add_argument('--count_tuples', default=False, type=ast.literal_eval, help='Count tuples')
+    parser.add_argument('--benchmark_data', default=None, help='Store time measurment in the file')
 
     return parser
