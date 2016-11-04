@@ -44,24 +44,24 @@ RA RA 8 6 1.0 ;b8
 
 [ nonbond_params ]
 ; i    j func = 8, reads from table: table_{i}_{j}.xvg
- MA   MA      8
- MA   ML      8
- ML   ML      8
- PA   PA      8
- PA   FA      8
- PA   DA      8
- PA   RA      8
- PA   PL      8
- FA   FA      8
- FA   DA      8
- FA   RA      8
- FA   PL      8
- DA   DA      8
- DA   RA      8
- DA   PL      8
- RA   RA      8
- RA   PL      8
- PL   PL      8
+ MA   MA   8   table_MA_MA.xvg
+ MA   ML   8   table_MA_ML.xvg
+ ML   ML   8   table_ML_ML.xvg
+ PA   PA   8   table_PA_PA.xvg
+ PA   FA   8   table_PA_FA.xvg
+ PA   DA   8   table_PA_DA.xvg
+ PA   RA   8   table_PA_RA.xvg
+ PA   PL   8   table_PA_PL.xvg
+ FA   FA   8   table_FA_FA.xvg
+ FA   DA   8   table_FA_DA.xvg
+ FA   RA   8   table_FA_RA.xvg
+ FA   PL   8   table_FA_PL.xvg
+ DA   DA   8   table_DA_DA.xvg
+ DA   RA   8   table_DA_RA.xvg
+ DA   PL   8   table_DA_PL.xvg
+ RA   RA   8   table_RA_RA.xvg
+ RA   PL   8   table_RA_PL.xvg
+ PL   PL   8   table_PL_PL.xvg
 ; list of mixed tables
 ; i j func=9 nr tab_prefix atom_type ntotal min_cr max_cr default
 ; l j func=10 table1 table2 atom_type ntotal

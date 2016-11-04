@@ -11,7 +11,7 @@
   PL    60.052800      0.000     A        0            0
 
 [ moleculetype ]
-MOL 3
+EGD 3
 
 [atoms]
 ; nr type resnr residue atom cgnr charge mass
