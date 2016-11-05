@@ -42,22 +42,31 @@ def hook_init_reaction(system, integrator, topol, args):
         if system.storage.particleExists(pid):
             p = system.storage.getParticle(pid)
             if p.type == name2type['MA']:
-                if not activated_monomer:
+                if not activated_monomer:  # Activate only one MA per residue
                     new_property = topol.gt.atomtypes['FA']
                     # Transfer type to FA
                     p.type = name2type['FA']
                     p.state = 3
                     p.mass = new_property['mass']
+                    system.storage.modifyParticle(pid, 'type', p.type)
+                    system.storage.modifyParticle(pid, 'state', p.state)
+                    system.storage.modifyParticle(pid, 'mass', p.mass)
                     activated_monomer = True
                 else:
                     new_property = topol.gt.atomtypes['PA']
                     # Transfer type to PA
                     p.type = name2type['PA']
                     p.mass = new_property['mass']
+                    system.storage.modifyParticle(pid, 'type', p.type)
+                    system.storage.modifyParticle(pid, 'mass', p.mass)
             elif p.type == name2type['ML']:
                 new_property = topol.gt.atomtypes['PL']
                 p.type = name2type['PL']
                 p.mass = new_property['mass']
+                system.storage.modifyParticle(pid, 'type', p.type)
+                system.storage.modifyParticle(pid, 'mass', p.mass)
+            else:
+                print('Ignore {} with type {}'.format(pid, p.type))
             if last_res_id != p.res_id:
                 last_res_id = p.res_id
                 activated += 1
