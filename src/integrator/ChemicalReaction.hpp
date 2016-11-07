@@ -371,13 +371,15 @@ public:
   void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int type = 0) {
     switch (type) {
       case 1:
-        post_process_T1.push_back(pp); break;
+        post_process_T1.insert(std::make_pair(pp->getOrder(), pp)); break;
       case 2:
-        post_process_T2.push_back(pp); break;
+        post_process_T2.insert(std::make_pair(pp->getOrder(), pp)); break;
       case 0:
-        post_process_T1.push_back(pp);
-        post_process_T2.push_back(pp);
+        post_process_T1.insert(std::make_pair(pp->getOrder(), pp));
+        post_process_T2.insert(std::make_pair(pp->getOrder(), pp));
         break;
+      default:
+        throw std::runtime_error("Wrong type");
     }
   }
 
@@ -435,8 +437,9 @@ protected:
 
   real rate_; //<! Global rate.
 
-  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T1;  //!<List of post-process methods.
-  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_T2;  //!<List of post-process methods.
+  typedef std::multimap<longint, shared_ptr<integrator::ChemicalReactionPostProcess> > PostProcessMap;
+  PostProcessMap post_process_T1;  //!<Ordered List of post-process methods.
+  PostProcessMap post_process_T2;  //!<Ordered List of post-process methods.
 
   shared_ptr<ReactionCutoff> reaction_cutoff_;
 

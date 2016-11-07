@@ -301,15 +301,15 @@ void BasicDynamicResolutionType::UpdateWeights() {
 
     vp.lambda() = new_lambda;
     vp.lambdaDeriv() = 0.0;
+
+    /** Run PostProcess methods whenever resolution reaches 1 or 0. */
     if (lambda_0) {
-      for (std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> >::iterator it = post_process_0.begin();
-           it != post_process_0.end(); ++it) {
-        (*it)->process(vp, vp);
+      for (PostProcessMap::iterator it = post_process_0.begin(); it != post_process_0.end(); ++it) {
+        it->second->process(vp, vp);
       }
     } else if (lambda_1) {
-      for (std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> >::iterator it = post_process_1.begin();
-           it != post_process_1.end(); ++it) {
-        (*it)->process(vp, vp);
+      for (PostProcessMap::iterator it = post_process_1.begin(); it != post_process_1.end(); ++it) {
+        it->second->process(vp, vp);
       }
     }
   }

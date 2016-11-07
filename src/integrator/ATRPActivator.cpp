@@ -18,6 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include <fstream>
 #include "python.hpp"
 #include "ATRPActivator.hpp"
 
@@ -40,6 +41,7 @@ ATRPActivator::ATRPActivator(
 
   // Set RNG.
   rng_ = system->rng;
+  stats_filename_ = "atrp_stats.dat";
 }
 
 void ATRPActivator::disconnect() {
@@ -62,9 +64,22 @@ void ATRPActivator::updateParticles() {
   if (integrator->getStep() % (interval_) != 0)
     return;
 
-  // Collect on every process, list of pids of given types, active or dormant species.
-  std::vector<longint> local_type_pids;
   System &system = getSystemRef();
+
+  stats_k_activator.push_back(integrator->getStep());
+  stats_k_activator.push_back(ratio_activator_);
+  stats_k_activator.push_back(ratio_deactivator_);
+
+  if (system.comm->rank() == 0) {
+    std::fstream fs(stats_filename_.c_str(), std::fstream::out | std::fstream::app);
+    fs << integrator->getStep() << " "
+       << std::scientific << ratio_activator_ << " "
+       << std::scientific << ratio_deactivator_ << std::endl;
+    fs.close();
+  }
+
+  // Collect on every process, list of pids of given types, active or dormant species.
+  std::vector<longint> local_type_pids_state;
   CellList cl = system.storage->getRealCells();
 
   for (espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
@@ -75,7 +90,9 @@ void ATRPActivator::updateParticles() {
       std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p.type());
       for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
         if (p.state() == it->second.state) {
-          local_type_pids.push_back(p.id());
+          local_type_pids_state.push_back(p.id());
+          local_type_pids_state.push_back(p.type());
+          local_type_pids_state.push_back(p.state());
           found = true;
         }
       }
@@ -84,57 +101,72 @@ void ATRPActivator::updateParticles() {
 
   // Every CPU sends list of particle ids to root CPU.
   std::vector<std::vector<longint> > global_type_pids;
-  std::vector<longint> selected_pids;
+  std::vector<longint> selected_pids_state;
 
   if (system.comm->rank() == 0) {
-    mpi::gather(*(system.comm), local_type_pids, global_type_pids, 0);
+    mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
 
-    // Root CPU select randomly :num_per_interval particles.
-    std::vector<longint> all_pids;
-    for (std::vector<std::vector<longint> >::iterator it = global_type_pids.begin();
-         it != global_type_pids.end(); ++it) {
-      all_pids.insert(all_pids.end(), it->begin(), it->end());
+    // Root CPU select randomly :num_per_interval particles. Flat the list.
+    std::vector<longint > all_pids_state;
+    for (std::vector<std::vector<longint > >::iterator it = global_type_pids.begin(); it != global_type_pids.end(); ++it) {
+      all_pids_state.insert(all_pids_state.end(), it->begin(), it->end());
     }
-    shared_ptr<esutil::RNG> rng = system.rng;
-    boost::range::random_shuffle(all_pids, *(rng));
-    for (int n = 0; n < num_per_interval_ && n < all_pids.size(); n++) {
-      selected_pids.push_back(all_pids[n]);
+
+    std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange;
+    for (int n = 0; n < num_per_interval_ && n < all_pids_state.size();) {
+      // Activate or deactivate given pid.
+      longint p_id = all_pids_state[n++];
+      longint p_type = all_pids_state[n++];
+      longint p_state = all_pids_state[n++];
+
+      equalRange = species_map_.equal_range(p_type);
+      bool found = false;
+      for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
+        if (p_state == it->second.state) {
+          real W = (*rng_)();
+          found = true;
+          if (it->second.is_activator) {
+            if (W < ratio_deactivator_*k_deactivate_) {
+              p_state += it->second.delta_state;  // update chemical state.
+              ratio_deactivator_-=delta_catalyst_;
+              ratio_activator_+=delta_catalyst_;
+              selected_pids_state.push_back(p_id);
+            }
+          } else {
+            if (W < ratio_activator_*k_activate_) {
+              p_state += it->second.delta_state;  // update chemical state.
+              ratio_activator_-=delta_catalyst_;
+              ratio_deactivator_+=delta_catalyst_;
+              selected_pids_state.push_back(p_id);
+            }
+          }
+        }
+      }
     }
   } else {
-    mpi::gather(*(system.comm), local_type_pids, global_type_pids, 0);
+    mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
   }
 
   // Broadcast selected particles id to all CPUs.
   // TODO(jakub): instead of broadcast all selected pids, send only to CPUs that posses those particles.
-  mpi::broadcast(*(system.comm), selected_pids, 0);
+  mpi::broadcast(*(system.comm), selected_pids_state, 0);
+  mpi::broadcast(*(system.comm), ratio_activator_, 0);
+  mpi::broadcast(*(system.comm), ratio_deactivator_, 0);
 
   // On every CPU, iterate over list of pids. If particle is on this CPU then process it.
   std::vector<Particle *> modified_particles;
-  for (std::vector<longint>::iterator it = selected_pids.begin(); it != selected_pids.end(); ++it) {
-    Particle *p = system.storage->lookupRealParticle(*it);  // check if particle is on this CPU.
+  for (int n = 0; n < selected_pids_state.size(); n++) {
+    longint p_pid = selected_pids_state[n];
+    Particle *p = system.storage->lookupRealParticle(p_pid);  // check if particle is on this CPU.
     if (p) {
       bool found = false;
       std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p->type());
       for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
         if (p->state() == it->second.state) {
-          real W = (*rng_)();
-          if (it->second.is_activator) {
-            if (W < ratio_deactivator_*k_deactivate_) {
-              p->state() += it->second.delta_state;  // update chemical state.
-              it->second.new_property->updateParticleProperties(p); // update particle property.
-              modified_particles.push_back(p);
-              ratio_deactivator_-=delta_catalyst_;
-              ratio_activator_+=delta_catalyst_;
-            }
-          } else {
-            if (W < ratio_activator_*k_activate_) {
-              p->state() += it->second.delta_state;  // update chemical state.
-              it->second.new_property->updateParticleProperties(p); // update particle property.
-              modified_particles.push_back(p);
-              ratio_activator_-=delta_catalyst_;
-              ratio_deactivator_+=delta_catalyst_;
-            }
-          }
+          found = true;
+          p->state() += it->second.delta_state;
+          it->second.new_property->updateParticleProperties(p);
+          modified_particles.push_back(p);
         }
       }
     }
@@ -297,17 +329,34 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
   LOG4ESPP_DEBUG(theLogger, "Leaving updateGhost");
 }
 
+void ATRPActivator::saveStatistics(std::string filename) {
+  System &system = getSystemRef();
+  if (system.comm->rank() == 0) {
+    std::fstream fs(filename.c_str(), std::fstream::out);
+    fs << "# step ratio_activator ratio_deactivator" << std::endl;
+    for (std::vector<real>::iterator it = stats_k_activator.begin(); it != stats_k_activator.end();) {
+      int step = (int) *(it++);
+      real ratio_activator = *(it++);
+      real ratio_deactivator = *(it++);
+      fs << step << " " << std::scientific << ratio_activator << " " << std::scientific << ratio_deactivator
+         << std::endl;
+    }
+    fs.close();
+  }
+}
+
 void ATRPActivator::registerPython() {
   using namespace espressopp::python;  // NOLINT
 
   class_<ATRPActivator, shared_ptr<ATRPActivator>, bases<Extension> >
       ("integrator_ATRPActivator", init<shared_ptr<System>, longint, longint, real, real, real, real, real>())
+      .add_property("stats_filename", make_getter(&ATRPActivator::stats_filename_), make_setter(&ATRPActivator::stats_filename_))
       .def("add_reactive_center", &ATRPActivator::addReactiveCenter)
       .def("update_particles", &ATRPActivator::updateParticles)
+      .def("save_statistics", &ATRPActivator::saveStatistics)
       .def("connect", &ATRPActivator::connect)
       .def("disconnect", &ATRPActivator::disconnect);
 }
-
 
 }  // end namespace integrator
 }  // end namespace espressopp

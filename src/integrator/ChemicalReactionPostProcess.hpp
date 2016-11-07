@@ -76,6 +76,8 @@ public:
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
+  /** Order parameter. lowest ordere execute first. */
+  virtual longint getOrder() = 0;
 protected:
   shared_ptr<System> system_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
@@ -98,6 +100,7 @@ public:
 
   void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void removeChangeProperty(int type_id);
+  longint getOrder() { return 9; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -130,6 +133,8 @@ public:
 
   std::vector<Particle *> process(Particle &p, Particle &partner);
 
+  longint getOrder() { return 2; }
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
@@ -150,6 +155,8 @@ public:
   PostProcessChangeNeighboursProperty(shared_ptr<TopologyManager> tm): topology_manager_(tm) { }
 
   std::vector<Particle *> process(Particle &p, Particle &partner);
+
+  longint getOrder() { return 5; }
 
   /** Register property change.
    *
@@ -183,6 +190,8 @@ class PostProcessRemoveNeighbourBond : public ChemicalReactionPostProcess {
     return std::vector<Particle* >();
   }
 
+  longint getOrder() { return 0; }
+
   static void registerPython();
  private:
   shared_ptr<TopologyManager> topology_manager_;
@@ -209,6 +218,8 @@ class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
   void addChangeProperty(longint type_id, shared_ptr<ParticleProperties> pp, longint state) {
     type_state_pp_.insert(std::make_pair(std::make_pair(type_id, state), pp));
   }
+
+  longint getOrder() { return 9; }
 
   static void registerPython();
 

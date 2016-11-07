@@ -34,6 +34,7 @@
 #include "FixedPairListLambda.hpp"
 #include "FixedTripleListLambda.hpp"
 #include "FixedQuadrupleListLambda.hpp"
+#include <map>
 
 #include "boost/signals2.hpp"
 
@@ -55,9 +56,9 @@ class BasicDynamicResolutionType : public Extension {
    */
   void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int when = 1) {
     if (when == 1) {
-      post_process_1.push_back(pp);
+      post_process_1.insert(std::make_pair(pp->getOrder(), pp));
     } else if (when == 0) {
-      post_process_0.push_back(pp);
+      post_process_0.insert(std::make_pair(pp->getOrder(), pp));
     } else {
       throw std::runtime_error("Wrong value of when.");
     }
@@ -70,8 +71,9 @@ class BasicDynamicResolutionType : public Extension {
   boost::unordered_map<longint, real> rate_type_;
   void UpdateWeights();
   boost::signals2::connection _aftIntV;
-  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_0;
-  std::vector<shared_ptr<integrator::ChemicalReactionPostProcess> > post_process_1;
+  typedef std::multimap<longint, shared_ptr<integrator::ChemicalReactionPostProcess> > PostProcessMap;
+  PostProcessMap post_process_0;
+  PostProcessMap post_process_1;
 };
 
 

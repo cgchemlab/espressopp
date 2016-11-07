@@ -80,6 +80,9 @@ class ATRPActivator: public Extension {
   real delta_catalyst_;
   real k_activate_;
   real k_deactivate_;
+  std::string stats_filename_;
+
+  std::vector<real> stats_k_activator;
 
   typedef boost::unordered_multimap<longint, ReactiveCenter> SpeciesMap;
   SpeciesMap species_map_;
@@ -87,13 +90,16 @@ class ATRPActivator: public Extension {
   shared_ptr<esutil::RNG> rng_;
 
   void updateParticles();
+  void updateGhost(const std::vector<Particle *> &modified_particles);
+
+  void saveStatistics(std::string filename);
 
   void connect();
   void disconnect();
 
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
-  void updateGhost(const std::vector<Particle *> &modified_particles);
+
 
 };
 

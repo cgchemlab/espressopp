@@ -104,6 +104,8 @@ class PostProcessReleaseParticles : public integrator::ChemicalReactionPostProce
   PostProcessReleaseParticles(shared_ptr<FixDistances> fd, int nr) : fd_(fd), nr_(nr) {}
   std::vector<Particle*> process(Particle &p, Particle &partner);
 
+  longint getOrder() { return 5; }
+
   static void registerPython();
  private:
   int nr_;
@@ -116,6 +118,9 @@ class PostProcessJoinParticles : public integrator::ChemicalReactionPostProcess 
  public:
   PostProcessJoinParticles(shared_ptr<FixDistances> fd, real distance) : fd_(fd), distance_(distance) {}
   std::vector<Particle*> process(Particle &p, Particle &partner);
+
+  longint getOrder() { return 5; }
+
   static void registerPython();
 
  private:

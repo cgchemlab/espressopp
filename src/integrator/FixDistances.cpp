@@ -327,8 +327,8 @@ LOG4ESPP_LOGGER(PostProcessJoinParticles::theLogger, "PostProcessJoinParticles")
 
 std::vector<Particle*> PostProcessJoinParticles::process(Particle &p, Particle &partner) {
   std::vector<Particle*> ret;
-  LOG4ESPP_DEBUG(theLogger, "Adding triplet anchor: " << partner.id() << " guest: " << p.id() << " at d=" << distance_);
-  fd_->add_triplet(partner.id(), p.id(), distance_);
+  LOG4ESPP_DEBUG(theLogger, "Adding triplet anchor: " << p.id() << " guest: " << partner.id() << " at d=" << distance_);
+  fd_->add_triplet(p.id(), partner.id(), distance_);
 
   return ret;
 }
