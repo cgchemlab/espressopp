@@ -368,19 +368,25 @@ public:
    *     if set to 1 then applied only to type_1 particle,
    *     if set to 2 then applied only to type_2 particle.
    */
-  void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int type = 0) {
+  void addPostProcess(const shared_ptr<ChemicalReactionPostProcess> pp, int type = 0) {
     switch (type) {
       case 1:
-        post_process_T1.insert(std::make_pair(pp->getOrder(), pp)); break;
+        post_process_T1.push_back(pp); break;
       case 2:
-        post_process_T2.insert(std::make_pair(pp->getOrder(), pp)); break;
+        post_process_T2.push_back(pp); break;
       case 0:
-        post_process_T1.insert(std::make_pair(pp->getOrder(), pp));
-        post_process_T2.insert(std::make_pair(pp->getOrder(), pp));
+        post_process_T1.push_back(pp);
+        post_process_T2.push_back(pp);
         break;
       default:
         throw std::runtime_error("Wrong type");
     }
+    std::sort(post_process_T1.begin(), post_process_T1.end(), wayToSortPostProcess);
+    std::sort(post_process_T2.begin(), post_process_T2.end(), wayToSortPostProcess);
+  }
+  static bool wayToSortPostProcess(shared_ptr<ChemicalReactionPostProcess> i,
+                            shared_ptr<ChemicalReactionPostProcess> j) {
+    return i->getOrder() < j->getOrder();
   }
 
   /** Sets reaction cutoff object.*/
@@ -437,7 +443,7 @@ protected:
 
   real rate_; //<! Global rate.
 
-  typedef std::multimap<longint, shared_ptr<integrator::ChemicalReactionPostProcess> > PostProcessMap;
+  typedef std::vector<shared_ptr<ChemicalReactionPostProcess> > PostProcessMap;
   PostProcessMap post_process_T1;  //!<Ordered List of post-process methods.
   PostProcessMap post_process_T2;  //!<Ordered List of post-process methods.
 

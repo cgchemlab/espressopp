@@ -305,11 +305,11 @@ void BasicDynamicResolutionType::UpdateWeights() {
     /** Run PostProcess methods whenever resolution reaches 1 or 0. */
     if (lambda_0) {
       for (PostProcessMap::iterator it = post_process_0.begin(); it != post_process_0.end(); ++it) {
-        it->second->process(vp, vp);
+        (*it)->process(vp, vp);
       }
     } else if (lambda_1) {
       for (PostProcessMap::iterator it = post_process_1.begin(); it != post_process_1.end(); ++it) {
-        it->second->process(vp, vp);
+        (*it)->process(vp, vp);
       }
     }
   }

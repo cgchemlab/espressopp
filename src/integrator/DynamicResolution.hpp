@@ -56,12 +56,18 @@ class BasicDynamicResolutionType : public Extension {
    */
   void addPostProcess(const shared_ptr<integrator::ChemicalReactionPostProcess> pp, int when = 1) {
     if (when == 1) {
-      post_process_1.insert(std::make_pair(pp->getOrder(), pp));
+      post_process_1.push_back(pp);
     } else if (when == 0) {
-      post_process_0.insert(std::make_pair(pp->getOrder(), pp));
+      post_process_0.push_back(pp);
     } else {
       throw std::runtime_error("Wrong value of when.");
     }
+    std::sort(post_process_1.begin(), post_process_1.end(), wayToSortPostProcess);
+    std::sort(post_process_0.begin(), post_process_0.end(), wayToSortPostProcess);
+  }
+  static bool wayToSortPostProcess(shared_ptr<ChemicalReactionPostProcess> i,
+                                   shared_ptr<ChemicalReactionPostProcess> j) {
+    return i->getOrder() < j->getOrder();
   }
 
   static void registerPython();
@@ -71,7 +77,7 @@ class BasicDynamicResolutionType : public Extension {
   boost::unordered_map<longint, real> rate_type_;
   void UpdateWeights();
   boost::signals2::connection _aftIntV;
-  typedef std::multimap<longint, shared_ptr<integrator::ChemicalReactionPostProcess> > PostProcessMap;
+  typedef std::vector<shared_ptr<ChemicalReactionPostProcess> > PostProcessMap;
   PostProcessMap post_process_0;
   PostProcessMap post_process_1;
 };

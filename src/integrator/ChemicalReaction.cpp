@@ -191,7 +191,7 @@ std::set<Particle *> Reaction::postProcess_T1(Particle &p, Particle &partner) {
   std::vector<Particle *> ret;
 
   for (PostProcessMap::iterator it = post_process_T1.begin(); it != post_process_T1.end(); ++it) {
-    ret = it->second->process(p, partner);
+    ret = (*it)->process(p, partner);
     output.insert(ret.begin(), ret.end());
   }
 
@@ -203,7 +203,7 @@ std::set<Particle *> Reaction::postProcess_T2(Particle &p, Particle &partner) {
   std::vector<Particle *> ret;
 
   for (PostProcessMap::iterator it = post_process_T2.begin(); it != post_process_T2.end(); ++it) {
-    ret = it->second->process(p, partner);
+    ret = (*it)->process(p, partner);
     output.insert(ret.begin(), ret.end());
   }
 
