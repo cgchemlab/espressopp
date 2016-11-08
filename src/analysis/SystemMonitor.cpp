@@ -24,6 +24,7 @@
 #include <vector>
 #include "SystemMonitor.hpp"
 #include "integrator/MDIntegrator.hpp"
+#include <iomanip>
 
 namespace espressopp {
 namespace analysis {
@@ -60,6 +61,9 @@ void SystemMonitor::info() {
   if (system_->comm->rank() == 0) {
     int idx = 0;
     if (!header_shown_) {
+      if (elapsed_time_) {
+        std::cout << "elapsed\t";
+      }
       for (std::vector<std::string>::iterator it = header_->begin(); it != header_->end(); ++it) {
         if (visible_observables_[idx] == 1) {
           std::cout << *it;
@@ -70,9 +74,13 @@ void SystemMonitor::info() {
       }
       std::cout << std::endl;
       header_shown_ = true;
+
     }
     // Print data
     idx = 0;
+    if (elapsed_time_) {
+      std::cout << timer_.elapsed() << "\t";
+    }
     for (std::vector<real>::iterator it = values_->begin(); it != values_->end(); ++it) {
       if (visible_observables_[idx] == 1) {
         std::cout << *it;
@@ -88,10 +96,11 @@ void SystemMonitor::info() {
 void SystemMonitor::addObservable(std::string name, shared_ptr<Observable> obs, bool is_visible) {
   observables_.push_back(std::make_pair(name, obs));
   header_->push_back(name);
-  if (is_visible)
+  if (is_visible) {
     visible_observables_.push_back(1);
-  else
+  } else {
     visible_observables_.push_back(0);
+  }
 }
 
 void SystemMonitor::registerPython() {

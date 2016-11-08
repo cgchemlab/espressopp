@@ -77,9 +77,12 @@ from _espressopp import analysis_ChemicalConversionTypeSequence
 
 class ChemicalConversionLocal(ObservableLocal, analysis_ChemicalConversion):
     """The (local) compute of conversion."""
-    def __init__(self, system, particle_type, total_count):
+    def __init__(self, system, particle_type, total_count=None):
         if pmi.workerIsActive():
-            cxxinit(self, analysis_ChemicalConversion, system, particle_type, total_count)
+            if total_count is None:
+                cxxinit(self, analysis_ChemicalConversion, system, particle_type)
+            else:
+                cxxinit(self, analysis_ChemicalConversion, system, particle_type, total_count)
 
 class ChemicalConversionTypeSequenceLocal(ObservableLocal, analysis_ChemicalConversionTypeSequence):
     """The (local) compute of conversion."""

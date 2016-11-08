@@ -38,6 +38,12 @@ class ChemicalConversion : public Observable {
   ChemicalConversion(shared_ptr<System> system, longint _p_type, longint total) :
       Observable(system), total_value(total), p_type(_p_type) {
     result_type = real_scalar;
+    absolute_value_ = false;
+  }
+  ChemicalConversion(shared_ptr<System> system, longint _p_type) :
+      Observable(system), p_type(_p_type) {
+    result_type = real_scalar;
+    absolute_value_ = true;
   }
 
   ~ChemicalConversion() {}
@@ -47,6 +53,7 @@ class ChemicalConversion : public Observable {
 
   static void registerPython();
  private:
+  bool absolute_value_;
   real total_value;
   longint p_type;
 };

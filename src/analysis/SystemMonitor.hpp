@@ -35,6 +35,7 @@
 #include "NPart.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
+#include <boost/mpi/timer.hpp>
 
 namespace espressopp {
 namespace analysis {
@@ -95,6 +96,7 @@ class SystemMonitor : public ParticleAccess {
       visible_observables_.push_back(1);
       visible_observables_.push_back(1);
     }
+    elapsed_time_ = true;
   }
 
   ~SystemMonitor() {
@@ -111,6 +113,9 @@ class SystemMonitor : public ParticleAccess {
 
   int current_step_;
   bool header_shown_;
+  bool elapsed_time_;
+  boost::mpi::timer timer_;
+
   shared_ptr<std::vector<real> > values_;
   shared_ptr<std::vector<std::string> > header_;
   std::vector<int> visible_observables_;
