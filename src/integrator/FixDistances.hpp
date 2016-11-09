@@ -91,6 +91,7 @@ class FixDistances : public Extension {
   void printTriplets();
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
+  python::list getAllTriplets();
 };
 
 /**

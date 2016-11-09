@@ -73,7 +73,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.FixDistancesLocal',
-            pmicall=['addConstraints', 'add_postprocess', 'totalSize'],
+            pmicall=['addConstraints', 'add_postprocess', 'totalSize', 'get_all_triplets'],
             pmiinvoke=['print_triplets'])
 
     class PostProcessReleaseParticles:

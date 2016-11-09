@@ -20,10 +20,9 @@
 
 #include "TopologyManager.hpp"
 
-#include <algorithm>
 #include <queue>
-#include <utility>
 
+#include "boost/format.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "boost/serialization/map.hpp"
@@ -142,10 +141,16 @@ void TopologyManager::InitializeTopology() {
         tmp_resGraph[p1.res_id()].insert(p2.res_id());
         tmp_resGraph[p2.res_id()].insert(p1.res_id());
       }
-      local_resid.push_back(std::make_pair(p1.id(), p1.res_id()));
-      local_resid.push_back(std::make_pair(p2.id(), p2.res_id()));
+      //local_resid.push_back(std::make_pair(p1.id(), p1.res_id()));
+      //local_resid.push_back(std::make_pair(p2.id(), p2.res_id()));
     }
   }
+  // Make global map of pid->res_id
+  CellList cells = system_->storage->getRealCells();
+  for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
+    local_resid.push_back(std::make_pair(cit->id(), cit->res_id()));
+  }
+
   output.push_back(std::make_pair(edges.size(), res_ids.size()));
   output.push_back(std::make_pair(local_resid.size(), 0));
   output.insert(output.end(), edges.begin(), edges.end());
@@ -298,7 +303,7 @@ void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
 }
 
 void TopologyManager::deleteEdge(longint pid1, longint pid2) {
-  removeBond(pid1, pid2);
+  removeBond(pid1, pid2);  // remove bond from fpl
 
   if (graph_->count(pid1) > 0)
     graph_->at(pid1)->erase(pid2);
@@ -309,8 +314,16 @@ void TopologyManager::deleteEdge(longint pid1, longint pid2) {
   longint rid1 = pid_rid[pid1];
   longint rid2 = pid_rid[pid2];
   // Get list of particles in given residues.
-  std::set<longint> *Pset1 = residues_->at(rid1);
-  std::set<longint> *Pset2 = residues_->at(rid2);
+  std::set<longint> *Pset1;
+  if (residues_->find(rid1) != residues_->end())
+    Pset1 = residues_->at(rid1);
+  else
+    throw std::runtime_error((const std::string &) (boost::format("Pset1 residue id %d not found") % rid1));
+  std::set<longint> *Pset2;
+  if (residues_->find(rid2) != residues_->end())
+    Pset2 = residues_->at(rid2);
+  else
+    throw std::runtime_error((const std::string &) (boost::format("Pset2 residue id %d not found") % rid2));
 
   // Scan through the bonds that can be created between two residues and check if bond exitst.
   // if not then remove bond between residues.
@@ -349,6 +362,8 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
 
   if (fpl) {
     fpl->remove(pid1, pid2);
+  } else {
+    throw std::runtime_error((const std::string &) (boost::format("Tuple for pair type %d-%d not found") % t1 % t2));
   }
 
   // Generate list of angles/dihedrals to remove, based on the graph.
@@ -420,6 +435,7 @@ void TopologyManager::exchangeData() {
       nb_distance_particles_size = *(itm++);
       new_edge_size = *(itm++);
       remove_edge_size = *(itm++);
+
       for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
         int particle_id = *(itm++);
         removeNeighbourEdges(particle_id);
@@ -636,8 +652,15 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
                                               longint pid2,
                                               std::set<Quadruplets> &quadruplets,
                                               std::set<Triplets> &triplets) {
-  std::set<longint> *nb1 = graph_->at(pid1);
-  std::set<longint> *nb2 = graph_->at(pid2);
+  std::set<longint> *nb1, *nb2;
+  if (graph_->find(pid1) != graph_->end())
+    nb1 = graph_->at(pid1);
+  else
+    throw std::runtime_error((const std::string &) (boost::format("Node pid1 %d not found") % pid1));
+  if (graph_->find(pid2) != graph_->end())
+    nb2 = graph_->at(pid2);
+  else
+    throw std::runtime_error((const std::string &) (boost::format("Node pid2 %d not found") % pid1));
   // Case pid2 pid1 <> <>
   if (nb1) {
     //Iterates over p1 neighbours
@@ -738,36 +761,38 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
 }
 
 void TopologyManager::removeNeighbourEdges(size_t pid) {
+
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
 
   Particle *root = system_->storage->lookupLocalParticle(pid);
   if (!root)
     return;
-
   Q.push(root->id());
   visitedDistance.insert(std::make_pair(root->id(), 0));
 
-  boost::unordered_map<longint, DistanceEdges>::iterator distance_edges = edges_type_distance_pair_types_.find(root->type());
-  boost::unordered_set<std::pair<longint, longint> > pair_types_at_distance;
-  DistanceEdges::iterator pair_types_at_distance_iter_;
+  boost::unordered_map<longint, DistanceEdges>::iterator distance_edges = edges_type_distance_pair_types_.find(
+      root->type());
+
   if (distance_edges == edges_type_distance_pair_types_.end())
     return;
 
+  boost::unordered_set<std::pair<longint, longint> > pair_types_at_distance;
+  DistanceEdges::iterator pair_types_at_distance_iter_;
   boost::unordered_set<std::pair<longint, longint> > edges_to_remove;
 
-  longint current, node, new_distance;
+  longint current_node, node, new_distance;
   longint type_p1 = -1;
   longint type_p2 = -1;
   while (!Q.empty()) {
-    current = Q.front();
-    Particle *p1_current = system_->storage->lookupLocalParticle(current);
+    current_node = Q.front();
+    Particle *p1_current = system_->storage->lookupLocalParticle(current_node);
     if (p1_current)
       type_p1 = p1_current->type();
-    new_distance = visitedDistance[current] + 1;
+    new_distance = visitedDistance[current_node] + 1;
     pair_types_at_distance_iter_ = distance_edges->second.find(new_distance);
     try {
-      std::set<longint> *adj = graph_->at(current);
+      std::set<longint> *adj = graph_->at(current_node);
       bool has_pairs_at_distance = false;
       if (pair_types_at_distance_iter_ != distance_edges->second.end()) {
         pair_types_at_distance = pair_types_at_distance_iter_->second;
@@ -781,8 +806,8 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
             if (p1_node && p1_current) {
               type_p2 = p1_node->type();
               if (pair_types_at_distance.count(std::make_pair(type_p1, type_p2)) != 0) {
-                if (edges_to_remove.count(std::make_pair(node, current)) == 0)
-                  edges_to_remove.insert(std::make_pair(current, node));
+                if (edges_to_remove.count(std::make_pair(node, current_node)) == 0)
+                  edges_to_remove.insert(std::make_pair(current_node, node));
               }
             }
           }
@@ -793,7 +818,7 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
         }
       }
     } catch (...) {
-      std::cout << "Exception graph_->at(current) = " << current << std::endl;
+      std::cout << "Exception graph_->at(current) = " << current_node << std::endl;
       throw new std::runtime_error("Exception graph_->at");
     }
     Q.pop();
@@ -806,7 +831,6 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
       deleteEdge(it->first, it->second);
     }
   }
-
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
@@ -839,8 +863,9 @@ void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
 
 void TopologyManager::invokeNeighbourBondRemove(Particle &root) {
   // Check if this root.type is on the list of possible edges to remove.
-  if (edges_type_distance_pair_types_.count(root.type()) == 1)
+  if (edges_type_distance_pair_types_.count(root.type()) == 1) {
     nb_edges_root_to_remove_.insert(nb_edges_root_to_remove_.end(), root.id());
+  }
 }
 
 void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) {

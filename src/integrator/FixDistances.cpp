@@ -21,6 +21,7 @@
 #include <functional>
 #include <utility>
 #include <vector>
+#include <stdlib.h>
 #include "python.hpp"
 #include "FixDistances.hpp"
 
@@ -225,7 +226,8 @@ void FixDistances::add_triplet(longint anchor, longint target, real distance) {
 }
 
 void FixDistances::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
-  std::vector<real> toSend;
+  std::vector<longint> toSend;
+  std::vector<real> toSendReal;
   int n;
   for (ParticleList::Iterator pit(pl); pit.isValid(); ++pit) {
     longint pid = pit->id();
@@ -239,28 +241,31 @@ void FixDistances::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
       for (Triplets::const_iterator it = equalRange.first;
            it != equalRange.second; ++it) {
         toSend.push_back(it->second.first);
-        toSend.push_back(it->second.second);
+        toSendReal.push_back(it->second.second);
       }
       distance_triplets_.erase(equalRange.first, equalRange.second);
     }
   }
   buf.write(toSend);
+  buf.write(toSendReal);
 }
 
 void FixDistances::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
-  std::vector<real> received;
+  std::vector<longint> received;
+  std::vector<real> receivedDistance;
   longint pid1, pid2, n;
   real distance;
   Triplets::iterator it = distance_triplets_.begin();
   buf.read(received);
+  buf.read(receivedDistance);
   int buf_size = received.size();
-  int i = 0;
+  int i = 0, j = 0;
   while (i < buf_size) {
     pid1 = received[i++];
     n = received[i++];
     for (; n > 0; n -= 2) {
       pid2 = received[i++];
-      distance = received[i++];
+      distance = receivedDistance[j++];
       it = distance_triplets_.insert(
           it, std::make_pair(pid1, std::pair<longint, real>(pid2, distance)));
     }
@@ -276,6 +281,36 @@ void FixDistances::printTriplets() {
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end(); ++it) {
      std::cout << it->first << "-" << it->second.first << " d=" <<it->second.second << std::endl;
   }
+}
+
+python::list FixDistances::getAllTriplets() {
+  System &system = getSystemRef();
+
+  std::vector<real> local_bonds;
+  std::vector<std::vector<real> > global_bonds;
+  python::list bonds;
+
+  for (Triplets::const_iterator it = distance_triplets_.begin(); it != distance_triplets_.end(); it++) {
+    local_bonds.push_back(it->first);
+    local_bonds.push_back(it->second.first);
+    local_bonds.push_back(it->second.second);
+  }
+  if (system.comm->rank() == 0) {
+    mpi::gather(*system.comm, local_bonds, global_bonds, 0);
+    python::tuple bond;
+
+    for (std::vector<std::vector<real> >::iterator it = global_bonds.begin(); it != global_bonds.end(); ++it) {
+      for (std::vector<real>::iterator iit = it->begin(); iit != it->end();) {
+        longint pid1 = (longint) *(iit++);
+        longint pid2 = (longint) *(iit++);
+        real distance = *(iit++);
+        bonds.append(python::make_tuple(pid1, pid2, distance));
+      }
+    }
+  } else {
+    mpi::gather(*system.comm, local_bonds, global_bonds, 0);
+  }
+  return bonds;
 }
 
 longint FixDistances::totalSize() {
@@ -296,7 +331,8 @@ void FixDistances::registerPython() {
     .def("disconnect", &FixDistances::disconnect)
     .def("add_triplet", &FixDistances::add_triplet)
     .def("add_postprocess", &FixDistances::add_postprocess)
-    .def("print_triplets", &FixDistances::printTriplets);
+    .def("print_triplets", &FixDistances::printTriplets)
+    .def("get_all_triplets", &FixDistances::getAllTriplets);
 }
 
 /** Post process after pairs were added.

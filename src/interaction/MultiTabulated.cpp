@@ -65,7 +65,6 @@ void MultiTabulated::registerTableOnRange(
     current_table = table;
     initialized = true;
   }
-  //  fpl->onTupleAdded.connect(boost::bind(&TopologyManager::onTupleAdded, this, _1, _2));
   chm->onValue.connect(
       boost::bind(&MultiTabulated::onValue, this, min_value, max_value, table, _1)
   );
