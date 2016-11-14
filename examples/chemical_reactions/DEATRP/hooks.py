@@ -41,7 +41,6 @@ def hook_init_reaction(system, integrator, topol, args):
     while pid <= max_pid and activated < number_to_activate:
         if system.storage.particleExists(pid):
             p = system.storage.getParticle(pid)
-            print last_res_id, p.res_id, activated_monomer, activated
             if last_res_id != p.res_id:
                 last_res_id = p.res_id
                 activated_monomer = False
