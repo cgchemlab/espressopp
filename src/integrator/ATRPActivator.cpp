@@ -24,6 +24,7 @@
 
 #include "esutil/RNG.hpp"
 #include "boost/range/algorithm.hpp"
+#include "boost/filesystem/operations.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -57,12 +58,16 @@ void ATRPActivator::addReactiveCenter(longint type_id,
                                       bool is_activator,
                                       shared_ptr<ParticleProperties> pp,
                                       longint delta_state) {
+  LOG4ESPP_DEBUG(theLogger, "ATRPActivator::addReactiveCenter type_id: " << type_id << " state:" << state
+                            << " is_activator:" << is_activator << " delta_state:" << delta_state);
   species_map_.insert(std::make_pair(type_id, ReactiveCenter(state, is_activator, delta_state, pp)));
 }
 
 void ATRPActivator::updateParticles() {
   if (integrator->getStep() % (interval_) != 0)
     return;
+
+  LOG4ESPP_INFO(theLogger, "ATRPActivator::updateParticles begin");
 
   System &system = getSystemRef();
 
@@ -71,6 +76,10 @@ void ATRPActivator::updateParticles() {
   stats_k_activator.push_back(ratio_deactivator_);
 
   if (system.comm->rank() == 0) {
+    if (!boost::filesystem::exists(stats_filename_.c_str())) {
+      std::fstream fs(stats_filename_.c_str(), std::fstream::out);
+      fs << "# step r_activator r_deactivator" << std::endl;
+    }
     std::fstream fs(stats_filename_.c_str(), std::fstream::out | std::fstream::app);
     fs << integrator->getStep() << " "
        << std::scientific << ratio_activator_ << " "
@@ -176,6 +185,8 @@ void ATRPActivator::updateParticles() {
 
   // Update neighbour ghosts
   updateGhost(modified_particles);
+
+  LOG4ESPP_INFO(theLogger, "ATRPActivator::updateParticles end");
 }
 
 
@@ -184,7 +195,7 @@ void ATRPActivator::updateParticles() {
  * storage::DomainDecomposition::doGhostCommunication
  */
 void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particles) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "Entering updateGhost");
+  LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost begin");
 
   int kCrCommTag = 0x6b;
 
@@ -326,7 +337,7 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
   }
 
-  LOG4ESPP_DEBUG(theLogger, "Leaving updateGhost");
+  LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost end");
 }
 
 void ATRPActivator::saveStatistics(std::string filename) {
