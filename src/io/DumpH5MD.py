@@ -172,7 +172,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.single_prec = is_single_prec
 
         self.system = system
-        self.file = pyh5md.H5MD_File(filename, 'w', driver='mpio', comm=MPI.COMM_WORLD,
+        self.file = pyh5md.H5MD_File(filename, 'w',
                                      creator='espressopp',
                                      creator_version=espressopp.VersionLocal().info(),
                                      author=author, email=email)

@@ -4,7 +4,7 @@
 [ atomstate ]
 MA 1
 PA 1
-FA 3
+FA 2
 
 [ bondtypes ]
 ; i j func
@@ -65,13 +65,13 @@ RA RA 8 6 1.0 ;b8
 ; list of mixed tables
 ; i j func=9 nr tab_prefix atom_type ntotal min_cr max_cr default
 ; l j func=10 table1 table2 atom_type ntotal
- MA   PA   10  table_PA_PA.xvg   table_MA_MA.xvg   RA 1000
- MA   FA   10  table_FA_FA.xvg   table_MA_MA.xvg   RA 1000
- MA   DA   10  table_DA_DA.xvg   table_MA_MA.xvg   RA 1000
- MA   RA   10  table_RA_RA.xvg   table_MA_MA.xvg   RA 1000
- MA   PL   10  table_PL_PL.xvg   table_MA_MA.xvg   RA 1000
- ML   PA   10  table_PA_PA.xvg   table_ML_ML.xvg   RA 1000
- ML   FA   10  table_FA_FA.xvg   table_ML_ML.xvg   RA 1000
- ML   DA   10  table_DA_DA.xvg   table_ML_ML.xvg   RA 1000
- ML   RA   10  table_RA_RA.xvg   table_ML_ML.xvg   RA 1000
- ML   PL   10  table_PL_PL.xvg   table_MA_MA.xvg   RA 1000
+ MA   PA   10  table_PA_PA.xvg   table_MA_MA.xvg   PL 1000
+ MA   FA   10  table_FA_FA.xvg   table_MA_MA.xvg   PL 1000
+ MA   DA   10  table_DA_DA.xvg   table_MA_MA.xvg   PL 1000
+ MA   RA   10  table_RA_RA.xvg   table_MA_MA.xvg   PL 1000
+ MA   PL   10  table_PL_PL.xvg   table_MA_MA.xvg   PL 1000
+ ML   PA   10  table_PA_PA.xvg   table_ML_ML.xvg   PL 1000
+ ML   FA   10  table_FA_FA.xvg   table_ML_ML.xvg   PL 1000
+ ML   DA   10  table_DA_DA.xvg   table_ML_ML.xvg   PL 1000
+ ML   RA   10  table_RA_RA.xvg   table_ML_ML.xvg   PL 1000
+ ML   PL   10  table_PL_PL.xvg   table_MA_MA.xvg   PL 1000
