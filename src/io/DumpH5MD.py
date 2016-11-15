@@ -103,12 +103,10 @@ from espressopp.esutil import cxxinit
 from espressopp import pmi
 from _espressopp import io_DumpH5MD
 from mpi4py import MPI
+import h5py
 import numpy as np
-try:
-    import h5py
-    import pyh5md
-except ImportError:
-    print 'missing pyh5md'
+import pyh5md
+import os
 
 import time as py_time
 
@@ -167,68 +165,73 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.store_lambda = store_lambda
         self.store_res_id = store_res_id
         self.static_box = static_box
-        self.chunk_size = chunk_size
+        self.chunk_size = 128
         self.do_sort = do_sort
         self.single_prec = is_single_prec
 
         self.system = system
-        self.file = pyh5md.H5MD_File(filename, 'w',
-                                     creator='espressopp',
-                                     creator_version=espressopp.VersionLocal().info(),
-                                     author=author, email=email)
+
+        if os.path.exists(filename):
+            new_filename = '{}_{}'.format(int(py_time.time()), filename)
+            os.rename(filename, new_filename)
+            print('File {} exists, moved to {}'.format(filename, new_filename))
+
+        self.file = pyh5md.File(
+            filename, 'w',
+            creator='espressopp',
+            creator_version=espressopp.VersionLocal().info(),
+            author=author,
+            author_email=email)
 
         self._system_data()
 
         self.float_type = np.float32 if is_single_prec else np.float64
+        self.int_type = np.int32 if is_single_prec else np.int
 
         part = self.file.particles_group(self.group_name)
         if self.static_box:
-            self.box = part.box(dimension=3,
-                                boundary=['periodic', 'periodic', 'periodic'],
-                                time=False,
-                                edges=np.array(
-                                    [ed_i for ed_i in self.system.bc.boxL],
-                                    dtype=self.float_type
-                                ))
+            self.box = part.create_box(
+                dimension=3,
+                boundary=['periodic', 'periodic', 'periodic'],
+                store='fixed',
+                data=np.array([ed_i for ed_i in self.system.bc.boxL], dtype=self.float_type))
         else:
             self.box = part.box(
                 dimension=3,
                 boundary=['periodic', 'periodic', 'periodic'],
-                time=True,
-                edges=np.zeros(3, dtype=self.float_type))
+                store='time',
+                data=np.zeros(3, dtype=self.float_type))
 
-        self.id_e = part.trajectory(
-            'id', (self.chunk_size,), np.int32, chunks=(1, self.chunk_size), fillvalue=-1)
-        self.mass = part.trajectory(
-            'mass', (self.chunk_size,), self.float_type, chunks=(1, self.chunk_size), fillvalue=-1)
+        self.id_e = pyh5md.element(part, 'id', store='time', maxshape=(None, ), shape=(self.chunk_size,),
+                                   dtype=self.int_type, time=True, fillvalue=-1)
+        self.mass = pyh5md.element(part, 'mass', store='time', maxshape=(None, ), shape=(self.chunk_size,),
+                                   dtype=self.float_type, fillvalue=-1)
         if self.store_position:
-            self.position = part.trajectory(
-                'position', (self.chunk_size, 3), self.float_type, chunks=(1, self.chunk_size, 3))
-            self.image = part.trajectory(
-                'image', (self.chunk_size, 3), self.float_type, chunks=(1, self.chunk_size, 3))
+            self.position = pyh5md.element(part, 'position', store='time', maxshape=(None, 3),
+                                           shape=(self.chunk_size, 3), dtype=self.float_type)
+            self.image = pyh5md.element(part, 'image', store='time', maxshape=(None, 3),
+                                        shape=(self.chunk_size, 3), dtype=self.float_type)
         if self.store_species:
-            self.species = part.trajectory(
-                'species', (self.chunk_size,), np.int32, chunks=(1, self.chunk_size), fillvalue=-1)
+            self.species = pyh5md.element(part, 'species', store='time', maxshape=(None, ),
+                                          shape=(self.chunk_size,), dtype=self.int_type, fillvalue=-1)
         if self.store_state:
-            self.state = part.trajectory(
-                'state', (self.chunk_size,), np.int32, chunks=(1, self.chunk_size), fillvalue=-1)
+            self.state = pyh5md.element(part, 'state', store='time', maxshape=(None, ),
+                                        shape=(self.chunk_size,), dtype=self.int_type,  fillvalue=-1)
         if self.store_velocity:
-            self.velocity = part.trajectory(
-                'velocity', (self.chunk_size, 3), self.float_type, chunks=(1, self.chunk_size, 3))
+            self.velocity = pyh5md.element(part, 'velocity', store='time', maxshape=(None, 3),
+                                           shape=(self.chunk_size, 3), dtype=self.float_type)
         if self.store_force:
-            self.force = part.trajectory(
-                'force', (self.chunk_size, 3), self.float_type, chunks=(1, self.chunk_size, 3))
+            self.force = pyh5md.element(part, 'force', store='time', maxshape=(None, 3),
+                                        shape=(self.chunk_size, 3), dtype=self.float_type)
         if self.store_charge:
-            self.charge = part.trajectory(
-                'charge', (self.chunk_size,), self.float_type, chunks=(1, self.chunk_size), fillvalue=-1)
+            self.charge = pyh5md.element(part, 'charge', store='time', maxshape=(None, ),
+                                         shape=(self.chunk_size,), dtype=self.float_type, fillvalue=-1)
         if self.store_lambda:
-            self.lambda_adr = part.trajectory(
-                'lambda_adr', (self.chunk_size,), self.float_type,
-                chunks=(1, self.chunk_size), fillvalue=-1)
+            self.lambda_adr = pyh5md.element(part, 'lambda_adr', store='time', maxshape=(None, ),
+                                             shape=(self.chunk_size,), dtype=self.float_type,  fillvalue=-1)
         if self.store_res_id:
-            self.res_id = part.trajectory(
-                'res_id', (self.chunk_size, ), np.int32,
-                chunks=(1, self.chunk_size), fillvalue=-1)
+            self.res_id = pyh5md.element(part, 'res_id', store='time', maxshape=(None, ),
+                                         shape=(self.chunk_size, ), dtype=self.int_type,  fillvalue=-1)
         self._system_data()
 
         self.commTimer = 0.0
@@ -260,15 +263,15 @@ class DumpH5MDLocal(io_DumpH5MD):
 
     def set_parameters(self, paramters):
         if pmi.workerIsActive():
-            if 'parameters' not in self.file.f:
-                self.file.f.create_group('parameters')
-            g_params = self.file.f['parameters']
+            if 'parameters' not in self.file:
+                self.file.create_group('parameters')
+            g_params = self.file['parameters']
             for k, v in paramters.iteritems():
                 g_params.attrs[k] = v
 
     def get_file(self):
         if pmi.workerIsActive():
-            return self.file.f
+            return self.file
 
     def update(self):
         if pmi.workerIsActive():
@@ -427,7 +430,7 @@ class DumpH5MDLocal(io_DumpH5MD):
     def close(self):
         if pmi.workerIsActive():
             time0 = py_time.time()
-            self.file.f.close()
+            self.file.close()
             self.closeTimer += (py_time.time() - time0)
 
     def flush(self):
