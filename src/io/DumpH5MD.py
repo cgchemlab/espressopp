@@ -165,7 +165,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.store_lambda = store_lambda
         self.store_res_id = store_res_id
         self.static_box = static_box
-        self.chunk_size = 128
+        self.chunk_size = chunk_size
         self.do_sort = do_sort
         self.single_prec = is_single_prec
 
@@ -241,6 +241,8 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.writeTimer = 0.0
         self.flushTimer = 0.0
         self.closeTimer = 0.0
+        self.resizeCounter = 0
+
 
     def _system_data(self):
         """Stores specific information about simulation."""
@@ -260,7 +262,8 @@ class DumpH5MDLocal(io_DumpH5MD):
                     'updateTimer': self.updateTimer,
                     'writeTimer': self.writeTimer,
                     'flushTimer': self.flushTimer,
-                    'closeTimer': self.closeTimer
+                    'closeTimer': self.closeTimer,
+                    'resizeCounter': self.resizeCounter
                    }
 
     def set_parameters(self, paramters):
@@ -350,10 +353,13 @@ class DumpH5MDLocal(io_DumpH5MD):
         idx_1 = idx_0+NLocal
         self.commTimer += (py_time.time() - time0)
 
+        isResized = False
+
         time0 = py_time.time()
         # Store ids. Always!
         id_ar = np.asarray(self.getId())
         if total_size > self.id_e.value.shape[1]:
+            isResized = True
             self.id_e.value.resize(total_size, axis=1)
         self.id_e.append(id_ar, step, time, region=(idx_0, idx_1))
 
@@ -367,6 +373,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.store_position:
             pos = np.asarray(self.getPosition(), dtype=self.float_type)
             if total_size > self.position.value.shape[1]:
+                isResized = True
                 self.position.value.resize(total_size, axis=1)
             self.position.append(pos, step, time, region=(idx_0, idx_1))
             # Store image.
@@ -379,24 +386,28 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.store_velocity:
             vel = np.asarray(self.getVelocity(), dtype=self.float_type)
             if total_size > self.velocity.value.shape[1]:
+                isResized = True
                 self.velocity.value.resize(total_size, axis=1)
             self.velocity.append(vel, step, time, region=(idx_0, idx_1))
 
         if self.store_force:
             force = np.asarray(self.getForce(), dtype=self.float_type)
             if total_size > self.force.value.shape[1]:
+                isResized = True
                 self.force.value.resize(total_size, axis=1)
             self.force.append(force, step, time, region=(idx_0, idx_1))
 
         if self.store_charge:
             charge = np.asarray(self.getCharge(), dtype=self.float_type)
             if total_size > self.charge.value.shape[1]:
+                isResized = True
                 self.charge.value.resize(total_size, axis=1)
             self.charge.append(charge, step, time, region=(idx_0, idx_1))
 
         # Store mass.
         mass = np.asarray(self.getMass(), dtype=self.float_type)
         if total_size > self.mass.value.shape[1]:
+            isResized = True
             self.mass.value.resize(total_size, axis=1)
         self.mass.append(mass, step, time, region=(idx_0, idx_1))
 
@@ -404,6 +415,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.store_species:
             species = np.asarray(self.getSpecies())
             if total_size > self.species.value.shape[1]:
+                isResized = True
                 self.species.value.resize(total_size, axis=1)
             self.species.append(species, step, time, region=(idx_0, idx_1))
 
@@ -411,6 +423,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.store_state:
             state = np.asarray(self.getState())
             if total_size > self.state.value.shape[1]:
+                isResized = True
                 self.state.value.resize(total_size, axis=1)
             self.state.append(state, step, time, region=(idx_0, idx_1))
 
@@ -418,6 +431,7 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.store_lambda:
             lambda_adr = np.asarray(self.getLambda())
             if total_size > self.lambda_adr.value.shape[1]:
+                isResized = True
                 self.lambda_adr.value.resize(total_size, axis=1)
             self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1))
 
@@ -425,9 +439,12 @@ class DumpH5MDLocal(io_DumpH5MD):
         if self.store_res_id:
             res_id = np.asarray(self.getResId())
             if total_size > self.res_id.value.shape[1]:
+                isResized = True
                 self.res_id.value.resize(total_size, axis=1)
             self.res_id.append(res_id, step, time, region=(idx_0, idx_1))
         self.writeTimer += (py_time.time() - time0)
+        if isResized:
+            self.resizeCounter += 1
 
     def close(self):
         if pmi.workerIsActive():
