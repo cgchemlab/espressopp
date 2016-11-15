@@ -126,8 +126,8 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                 self.connectivity,
                 name,
                 store='time',
+                maxshape=(None, 2),
                 shape=(self.chunk_size, 2),
-                chunks=(1, self.chunk_size, 2),
                 dtype=self.h5md_file.int_type,
                 fillvalue=-1)
             g.attrs['particle_group'] = particle_group
