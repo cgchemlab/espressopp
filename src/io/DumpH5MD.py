@@ -165,9 +165,12 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.store_lambda = store_lambda
         self.store_res_id = store_res_id
         self.static_box = static_box
-        self.chunk_size = 128
+        self.chunk_size = chunk_size
         self.do_sort = do_sort
         self.single_prec = is_single_prec
+
+        print('DumpH5MD: filename={} chunk_size={} single_prec={} do_sort={}'.format(
+            filename, chunk_size, is_single_prec, do_sort))
 
         self.system = system
 
