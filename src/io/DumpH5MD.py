@@ -169,6 +169,9 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.do_sort = do_sort
         self.single_prec = is_single_prec
 
+        print('DumpH5MD: filename={} chunk_size={} single_prec={} do_sort={}'.format(
+            filename, chunk_size, is_single_prec, do_sort))
+
         self.system = system
 
         if os.path.exists(filename):
