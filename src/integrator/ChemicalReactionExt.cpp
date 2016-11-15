@@ -850,7 +850,6 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
 #endif
 
     bool valid_state = true;
-    std::cout << "processing pair " << it->first << "-" << it->second.first << std::endl;
 
     if (p1 && p2 ) {
       valid_state = (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1));
