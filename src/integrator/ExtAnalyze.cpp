@@ -48,7 +48,7 @@ namespace espressopp {
 
     void ExtAnalyze::connect(){
       // connection to end of integrator
-      _aftIntV  = integrator->aftIntV.connect( boost::bind(&ExtAnalyze::perform_action, this), boost::signals2::at_back);
+      _aftIntV  = integrator->aftIntV.connect(extensionOrder, boost::bind(&ExtAnalyze::perform_action, this));
     }
 
     //void ExtAnalyze::performMeasurement() {

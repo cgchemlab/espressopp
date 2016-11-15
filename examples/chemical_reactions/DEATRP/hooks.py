@@ -30,11 +30,11 @@ import collections
 import espressopp
 import random
 
-random.seed(None)
 
 def hook_init_reaction(system, integrator, topol, args):
     name2type = topol.atomsym_atomtype
     number_to_activate = 10
+    random.seed(system.rng.get_seed())
 
     max_pid = espressopp.analysis.MaxPID(system).compute()
     pid = 0

@@ -76,7 +76,6 @@ std::vector<Particle *> PostProcessChangeProperty::process(Particle &p1, Particl
   TypeParticlePropertiesMap::iterator it;
   std::vector<Particle *> mod_particles;
 
-
   LOG4ESPP_DEBUG(theLogger, "Entering PostProcessChangeProperty::process()");
 
   // Process particle p1.
@@ -87,26 +86,7 @@ std::vector<Particle *> PostProcessChangeProperty::process(Particle &p1, Particl
   LOG4ESPP_DEBUG(theLogger, "type " << it->second->type);
 
   if (it != type_properties_.end()) {
-    if (it->second->type != NULL) {
-      p1.setType(it->second->type);
-      mod = true;
-    }
-
-    if (it->second->mass != NULL) {
-      p1.setMass(it->second->mass);
-      mod = true;
-    }
-
-    if (it->second->q != NULL) {
-      p1.setQ(it->second->q);
-      mod = true;
-    }
-
-    if (it->second->lambda != NULL) {
-      p1.setLambda(it->second->lambda);
-      mod = true;
-    }
-
+    mod = it->second->updateParticleProperties(&p1);
     LOG4ESPP_DEBUG(theLogger, "Modified particle A: " << p1.id());
   }
 
