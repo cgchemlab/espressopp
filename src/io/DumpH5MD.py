@@ -189,6 +189,8 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.int_type = np.int32 if is_single_prec else np.int
 
         part = self.file.particles_group(self.group_name)
+        self.particle_group = part
+
         if self.static_box:
             self.box = part.create_box(
                 dimension=3,
@@ -363,37 +365,37 @@ class DumpH5MDLocal(io_DumpH5MD):
                 time)
 
         if self.store_position:
-            pos = np.asarray(self.getPosition())
+            pos = np.asarray(self.getPosition(), dtype=self.float_type)
             if total_size > self.position.value.shape[1]:
                 self.position.value.resize(total_size, axis=1)
             self.position.append(pos, step, time, region=(idx_0, idx_1))
             # Store image.
-            image = np.asarray(self.getImage())
+            image = np.asarray(self.getImage(), dtype=self.int_type)
             if total_size > self.image.value.shape[1]:
                 self.image.value.resize(total_size, axis=1)
             self.image.append(image, step, time, region=(idx_0, idx_1))
 
         # Store velocity.
         if self.store_velocity:
-            vel = np.asarray(self.getVelocity())
+            vel = np.asarray(self.getVelocity(), dtype=self.float_type)
             if total_size > self.velocity.value.shape[1]:
                 self.velocity.value.resize(total_size, axis=1)
             self.velocity.append(vel, step, time, region=(idx_0, idx_1))
 
         if self.store_force:
-            force = np.asarray(self.getForce())
+            force = np.asarray(self.getForce(), dtype=self.float_type)
             if total_size > self.force.value.shape[1]:
                 self.force.value.resize(total_size, axis=1)
             self.force.append(force, step, time, region=(idx_0, idx_1))
 
         if self.store_charge:
-            charge = np.asarray(self.getCharge())
+            charge = np.asarray(self.getCharge(), dtype=self.float_type)
             if total_size > self.charge.value.shape[1]:
                 self.charge.value.resize(total_size, axis=1)
             self.charge.append(charge, step, time, region=(idx_0, idx_1))
 
         # Store mass.
-        mass = np.asarray(self.getMass())
+        mass = np.asarray(self.getMass(), dtype=self.float_type)
         if total_size > self.mass.value.shape[1]:
             self.mass.value.resize(total_size, axis=1)
         self.mass.append(mass, step, time, region=(idx_0, idx_1))
