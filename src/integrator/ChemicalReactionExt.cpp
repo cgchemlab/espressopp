@@ -46,6 +46,7 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
           verlet_list_(verletList),
           domdec_(domdec), tm_(tm), is_nearest_(false) {
   type = Extension::Reaction;
+  extensionOrder = 8;
 
   current_cutoff_ = verletList->getVerletCutoff() - system->getSkin();
 
@@ -892,7 +893,7 @@ void ChemicalReaction::disconnect() {
 }
 
 void ChemicalReaction::connect() {
-  react_ = integrator->aftIntV.connect(boost::bind(&ChemicalReaction::React, this), boost::signals2::at_front);
+  react_ = integrator->aftIntV.connect(extensionOrder, boost::bind(&ChemicalReaction::React, this));
 }
 
 python::list ChemicalReaction::getTimers() {

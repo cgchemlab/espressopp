@@ -43,6 +43,8 @@ ATRPActivator::ATRPActivator(
   // Set RNG.
   rng_ = system->rng;
   stats_filename_ = "atrp_stats.dat";
+
+  extensionOrder = 7;
 }
 
 void ATRPActivator::disconnect() {
@@ -50,7 +52,7 @@ void ATRPActivator::disconnect() {
 }
 
 void ATRPActivator::connect() {
-  sig_aftIntV = integrator->aftIntV.connect(boost::bind(&ATRPActivator::updateParticles, this));
+  sig_aftIntV = integrator->aftIntV.connect(extensionOrder, boost::bind(&ATRPActivator::updateParticles, this));
 }
 
 void ATRPActivator::addReactiveCenter(longint type_id,

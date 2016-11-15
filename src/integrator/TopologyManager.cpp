@@ -49,6 +49,8 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
 
   update_angles_dihedrals = false;
   wallTimer.reset();
+
+  extensionOrder = 9;
 }
 
 TopologyManager::~TopologyManager() {
@@ -74,7 +76,7 @@ TopologyManager::~TopologyManager() {
 }
 
 void TopologyManager::connect() {
-  aftIntV2_ = integrator->aftIntV2.connect(boost::bind(&TopologyManager::exchangeData, this));
+  aftIntV2_ = integrator->aftIntV.connect(extensionOrder, boost::bind(&TopologyManager::exchangeData, this));
 }
 
 void TopologyManager::disconnect() {
