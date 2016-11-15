@@ -30,6 +30,7 @@ import collections
 import espressopp
 import random
 
+random.seed(None)
 
 def hook_init_reaction(system, integrator, topol, args):
     name2type = topol.atomsym_atomtype
@@ -48,7 +49,6 @@ def hook_init_reaction(system, integrator, topol, args):
             res_ids.add(p.res_id)
             res_id2pids[p.res_id].append(pid)
         pid += 1
-
     print('Get {} res_ids'.format(len(res_ids)))
     res_ids = random.sample(res_ids, number_to_activate)
     print('Selected {} res_ids'.format(len(res_ids)))
