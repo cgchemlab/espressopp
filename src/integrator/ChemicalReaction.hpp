@@ -452,6 +452,15 @@ protected:
   bool intraresidual_;  //!<Allows to intraresidual bonds if set to true;
 };
 
+inline std::ostream& operator<<(std::ostream &output, Reaction &r) {
+  output << "r.type_1=" << r.type_1() << " r.type_2=" << r.type_2();
+  output << " r.state_1: [" << r.min_state_1() << "," << r.max_state_1() << ") ";
+  output << " r.state_2: [" << r.min_state_2() << "," << r.max_state_2() << ") ";
+  output << " r.delta_1=" << r.delta_1() << " r.delta_2=" << r.delta_2();
+  output << " r.rate=" << r.rate();
+  return output;
+}
+
 
 class RestrictReaction : public Reaction {
  public:

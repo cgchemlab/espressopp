@@ -203,6 +203,7 @@ void ChemicalReaction::React() {
 
 void ChemicalReaction::printMultiMap(ReactionMap &rmap, std::string comment) {
   System &system = getSystemRef();
+
   for (integrator::ReactionMap::iterator it = rmap.begin(); it != rmap.end(); it++) {
     std::cout << comment << "mm on\t" << system.comm->rank() << "\t" << it->first << "\t" << it->second.first
         << "\t" << it->second.second.reaction_id << "\t"
@@ -847,30 +848,53 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
               << p2->type() << " B.type=" << p2->type());
     }
 #endif
+
     bool valid_state = true;
-    if (p1 != NULL) {
-      if (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1)) {
+    std::cout << "processing pair " << it->first << "-" << it->second.first << std::endl;
+
+    if (p1 && p2 ) {
+      valid_state = (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1));
+      valid_state &= (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2));
+//      std::cout << *reaction;
+//      std::cout << " p1.type=" << p1->type() << " p1.state=" << p1->state();
+//      std::cout << " p2.type=" << p2->type() << " p2.state=" << p2->state() << std::endl;
+      // Whole pair has to be valid before the state can be changed.
+      if (valid_state) {
         p1->setState(p1->getState() + reaction->delta_1());
         tmp = reaction->postProcess_T1(*p1, *p2);
-
-        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-          modified_particles.insert(*pit);
-      } else {
-        valid_state = false;
-      }
-    }
-
-    if (p2 != NULL) {
-      if (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2)) {
+        modified_particles.insert(tmp.begin(), tmp.end());
         p2->setState(p2->getState() + reaction->delta_2());
         tmp = reaction->postProcess_T2(*p2, *p1);
-
-        for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-          modified_particles.insert(*pit);
-      } else {
-        valid_state = false;
+        modified_particles.insert(tmp.begin(), tmp.end());
       }
     }
+//    } else {
+//      if (p1 != NULL) {
+//        std::cout << "updating p1-" << p1->id() << " p1-state=" << p1->state() << " p1-type=" << p1->type() << std::endl;
+//        if (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1)) {
+//          p1->setState(p1->getState() + reaction->delta_1());
+//          tmp = reaction->postProcess_T1(*p1, *p2);
+//
+//          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+//            modified_particles.insert(*pit);
+//        } else {
+//          valid_state = false;
+//        }
+//      }
+//
+//      if (p2 != NULL) {
+//        std::cout << "updating p2-" << p2->id() << " p2-state=" << p2->state() << " p2-type=" << p2->type() << std::endl;
+//        if (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2)) {
+//          p2->setState(p2->getState() + reaction->delta_2());
+//          tmp = reaction->postProcess_T2(*p2, *p1);
+//
+//          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
+//            modified_particles.insert(*pit);
+//        } else {
+//          valid_state = false;
+//        }
+//      }
+//    }
 
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if ((p1 != NULL) && (p2 != NULL) && valid_state && !reaction->virtual_reaction()) {
