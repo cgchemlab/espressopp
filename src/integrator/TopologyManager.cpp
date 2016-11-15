@@ -48,7 +48,6 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
   residues_ = new GraphMap();
 
   update_angles_dihedrals = false;
-
   wallTimer.reset();
 }
 
@@ -377,12 +376,11 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
     undefineAngles(*triplets);
     undefineDihedrals(*quadruplets);
     undefine14tuples(*quadruplets);
-    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin();
-        it != triples_.end(); ++it) {
+    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
       (*it)->updateParticlesStorage();
     }
     for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
-        it != quadruples_.end(); ++it) {
+         it != quadruples_.end(); ++it) {
       (*it)->updateParticlesStorage();
     }
   }
@@ -641,8 +639,7 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
         if (!ret)
           ret = fpl->remove(p4->id(), p1->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
-                                "Remove dihedral: " << it->first << "-"
-                                    << it->second.second.second);
+                                "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
       }
     }
   }

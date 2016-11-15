@@ -132,6 +132,7 @@ namespace espressopp {
       NFixedQuadrupleListEntries::registerPython();
       ChemicalConversion::registerPython();
       ChemicalConversionTypeSequence::registerPython();
+      ChemicalConversionTypeState::registerPython();
 
       Resolution::registerPython();
       ResolutionFixedPairList::registerPython();

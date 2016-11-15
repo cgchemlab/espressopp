@@ -82,6 +82,33 @@ class ChemicalConversionTypeSequence : public Observable {
   shared_ptr<ParticleGroup> particle_group_;
 };
 
+class ChemicalConversionTypeState : public Observable {
+ public:
+  ChemicalConversionTypeState(shared_ptr<System> system, longint p_type, longint p_state, longint total) :
+      Observable(system), total_value_(total), p_state_(p_state), p_type_(p_type) {
+    result_type = real_scalar;
+    absolute_value_ = false;
+  }
+
+  ChemicalConversionTypeState(shared_ptr<System> system, longint p_type, longint p_state)
+      : Observable(system), p_type_(p_type), p_state_(p_state) {
+    result_type = real_scalar;
+    absolute_value_ = true;
+  }
+
+  ~ChemicalConversionTypeState() {}
+  real compute_real() const;
+
+  boost::signals2::signal1<void, real> onValue;
+
+  static void registerPython();
+ private:
+  bool absolute_value_;
+  real total_value_;
+  longint p_type_;
+  longint p_state_;
+};
+
 }  // end namespace analysis
 }  // end namespace espressopp
 

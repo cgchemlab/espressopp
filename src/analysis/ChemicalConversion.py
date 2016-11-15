@@ -73,6 +73,7 @@ from espressopp import pmi
 from espressopp.analysis.Observable import *  # NOQA
 from _espressopp import analysis_ChemicalConversion
 from _espressopp import analysis_ChemicalConversionTypeSequence
+from _espressopp import analysis_ChemicalConversionTypeState
 
 
 class ChemicalConversionLocal(ObservableLocal, analysis_ChemicalConversion):
@@ -83,6 +84,16 @@ class ChemicalConversionLocal(ObservableLocal, analysis_ChemicalConversion):
                 cxxinit(self, analysis_ChemicalConversion, system, particle_type)
             else:
                 cxxinit(self, analysis_ChemicalConversion, system, particle_type, total_count)
+
+class ChemicalConversionTypeStateLocal(ObservableLocal, analysis_ChemicalConversionTypeState):
+    """The (local) compute of conversion."""
+    def __init__(self, system, particle_type, particle_state, total_count=None):
+        if pmi.workerIsActive():
+            if total_count is None:
+                cxxinit(self, analysis_ChemicalConversionTypeState, system, particle_type, particle_state)
+            else:
+                cxxinit(self, analysis_ChemicalConversionTypeState, system, particle_type, particle_state, total_count)
+
 
 class ChemicalConversionTypeSequenceLocal(ObservableLocal, analysis_ChemicalConversionTypeSequence):
     """The (local) compute of conversion."""
@@ -97,6 +108,12 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.ChemicalConversionLocal',
+        )
+
+    class ChemicalConversionTypeState(Observable):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.analysis.ChemicalConversionTypeStateLocal',
         )
 
     class ChemicalConversionTypeSequence(Observable):

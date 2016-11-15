@@ -119,5 +119,35 @@ void ChemicalConversionTypeSequence::registerPython() {
 }
 
 
+real ChemicalConversionTypeState::compute_real() const {
+  System& system = getSystemRef();
+  CellList realCells = system.storage->getRealCells();
+
+  longint local_count = 0;
+  for (iterator::CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+    if (cit->type() == p_type_ && cit->state() == p_state_)
+      local_count++;
+  }
+
+  longint global_count = 0;
+  boost::mpi::all_reduce(*getSystem()->comm, local_count, global_count, std::plus<longint>());
+
+  real value = global_count;
+  if (!absolute_value_)
+    value = global_count / total_value_;
+  // Send value via signal.
+  onValue(value);
+
+  return value;
+}
+
+void ChemicalConversionTypeState::registerPython() {
+  using namespace espressopp::python;  //NOLINT
+  class_<ChemicalConversionTypeState, bases<Observable>, boost::noncopyable>
+      ("analysis_ChemicalConversionTypeState",
+       init< shared_ptr<System>, longint, longint, longint >())
+      .def(init<shared_ptr<System>, longint, longint>());
+}
+
 }  // end namespace analysis
 }  // end namespace espressopp

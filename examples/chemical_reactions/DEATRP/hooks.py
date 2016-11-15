@@ -26,7 +26,9 @@
 # This file do not need to be system independent.
 
 
+import collections
 import espressopp
+import random
 
 
 def hook_init_reaction(system, integrator, topol, args):
@@ -38,31 +40,36 @@ def hook_init_reaction(system, integrator, topol, args):
     activated = 0
     last_res_id = -1
     activated_monomer = False
-    while pid <= max_pid and activated < number_to_activate:
+    res_ids = set()
+    res_id2pids = collections.defaultdict(list)
+    while pid <= max_pid:
         if system.storage.particleExists(pid):
             p = system.storage.getParticle(pid)
-            if last_res_id != p.res_id:
-                last_res_id = p.res_id
-                activated_monomer = False
+            res_ids.add(p.res_id)
+            res_id2pids[p.res_id].append(pid)
+        pid += 1
+
+    print('Get {} res_ids'.format(len(res_ids)))
+    res_ids = random.sample(res_ids, number_to_activate)
+    print('Selected {} res_ids'.format(len(res_ids)))
+
+    for res_id in res_ids:
+        activated_monomer = False
+        for pid in res_id2pids[res_id]:
+            p = system.storage.getParticle(pid)
             if p.type == name2type['MA']:
-                if not activated_monomer:  # Activate only one MA per residue
+                if not activated_monomer:
                     new_property = topol.gt.atomtypes['FA']
-                    # Transfer type to FA
-                    p.type = name2type['FA']
-                    p.state = 2
-                    p.mass = new_property['mass']
-                    system.storage.modifyParticle(pid, 'type', p.type)
-                    system.storage.modifyParticle(pid, 'state', p.state)
-                    system.storage.modifyParticle(pid, 'mass', p.mass)
+                    system.storage.modifyParticle(pid, 'type', name2type['FA'])
+                    system.storage.modifyParticle(pid, 'state', 2)
+                    system.storage.modifyParticle(pid, 'mass', new_property['mass'])
                     activated_monomer = True
                 else:
                     new_property = topol.gt.atomtypes['PA']
-                    # Transfer type to PA
                     p.type = name2type['PA']
                     p.mass = new_property['mass']
                     system.storage.modifyParticle(pid, 'type', p.type)
                     system.storage.modifyParticle(pid, 'mass', p.mass)
-                    activated += 1
             elif p.type == name2type['ML']:
                 new_property = topol.gt.atomtypes['PL']
                 p.type = name2type['PL']
@@ -71,7 +78,16 @@ def hook_init_reaction(system, integrator, topol, args):
                 system.storage.modifyParticle(pid, 'mass', p.mass)
             else:
                 print('Ignore {} with type {}'.format(pid, p.type))
-        pid += 1
-    print('Activated: {}'.format(activated))
-    print('Number to activated: {}'.format(number_to_activate))
-    return activated == number_to_activate
+    print ('Activated {} monomers'.format(number_to_activate))
+
+    # Double check
+    type_list = []
+    for res_id in res_ids:
+        for pid in res_id2pids[res_id]:
+            p = system.storage.getParticle(pid)
+            type_list.append(p.type)
+    print res_ids
+    assert type_list.count(name2type['FA']) == number_to_activate
+    assert type_list.count(name2type['PA']) == number_to_activate
+    assert type_list.count(name2type['PL']) == number_to_activate
+    return True

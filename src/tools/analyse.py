@@ -75,5 +75,6 @@ def final_info(system, integrator, vl, start_time, end_time):
   sys.stdout.write('Ave neighs/atom = %.1f\n' % (vl.totalSize() / float(NPart)))
   sys.stdout.write('Neighbor list builds = %d\n' % vl.builds)
   sys.stdout.write('Integration steps = %d\n' % integrator.step)
-  sys.stdout.write('CPUs = %i CPU time per CPU = %.5f\n' % (espressopp.MPI.COMM_WORLD.size, end_time - start_time))
+  sys.stdout.write('CPUs = %i CPU time per CPU = %.5f\n' % (espressopp.MPI.COMM_WORLD.size,
+                                                            (end_time - start_time)/float(espressopp.MPI.COMM_WORLD.size)))
 
