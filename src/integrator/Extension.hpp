@@ -57,6 +57,17 @@ namespace espressopp {
             Reaction=8
         };
 
+        enum ExtensionOrder {
+          beforeAll=0,
+          beforeReaction=7,
+          withReaction=8,
+          afterReaction=9,
+          beforeExtAnalyze=10,
+          withExtAnalyze=11,
+          afterExtAnalyze=12,
+          atEnd=100
+        };
+
 
         //type of extension
         ExtensionType type;

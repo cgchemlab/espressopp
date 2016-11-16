@@ -31,7 +31,7 @@ namespace espressopp {
     LOG4ESPP_LOGGER(Extension::theLogger, "Extension");
 
     Extension::Extension(shared_ptr<System> system)
-      :SystemAccess(system){
+      :SystemAccess(system), extensionOrder(0) {
 
         if (!system->storage) {
            throw std::runtime_error("system has no storage");

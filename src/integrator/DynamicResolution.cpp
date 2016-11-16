@@ -316,8 +316,7 @@ void BasicDynamicResolutionType::UpdateWeights() {
 }
 
 void FixedListDynamicResolution::connect() {
-  _aftIntV = integrator->aftIntV.connect(
-      boost::bind(&FixedListDynamicResolution::updateLists, this), boost::signals2::at_back);
+  _aftIntV = integrator->aftIntV.connect(boost::bind(&FixedListDynamicResolution::updateLists, this));
 }
 
 void FixedListDynamicResolution::disconnect() {
