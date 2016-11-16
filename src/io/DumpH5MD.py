@@ -121,13 +121,14 @@ class DumpH5MDLocal(io_DumpH5MD):
                  store_charge=False,
                  store_lambda=False,
                  store_res_id=False,
+                 store_mass=True,
                  static_box=True,
                  is_adress=False,
                  author='xxx',
                  email='xxx',
                  chunk_size=128,
                  is_single_prec=False,
-                 do_sort=True, **kwargs):
+                 do_sort=True):
         """
         Args:
             system: The system object.
@@ -141,6 +142,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             store_charge: If set to True then charge will be stored. (default: False)
             store_lambda: If set to True then lambda (AdResS) will be stored. (default: False)
             store_res_id: If set to True then store res_id. (default: False)
+            store_mass: If set to True then store mass. (default: True)
             static_box: If set to True then box is static (like in NVT ensemble) (default: True)
             is_adress: If set to True then AdResS particles will be save instead of
                 coarse-grained.
@@ -164,13 +166,11 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.store_charge = store_charge
         self.store_lambda = store_lambda
         self.store_res_id = store_res_id
+        self.store_mass = store_mass
         self.static_box = static_box
         self.chunk_size = chunk_size
         self.do_sort = do_sort
         self.single_prec = is_single_prec
-
-        print('DumpH5MD: filename={} chunk_size={} single_prec={} do_sort={}'.format(
-            filename, chunk_size, is_single_prec, do_sort))
 
         self.system = system
 
@@ -184,7 +184,9 @@ class DumpH5MDLocal(io_DumpH5MD):
             creator='espressopp',
             creator_version=espressopp.VersionLocal().info(),
             author=author,
-            author_email=email)
+            author_email=email,
+            driver='mpio',
+            comm=MPI.COMM_WORLD)
 
         self._system_data()
 
@@ -204,38 +206,39 @@ class DumpH5MDLocal(io_DumpH5MD):
             self.box = part.box(
                 dimension=3,
                 boundary=['periodic', 'periodic', 'periodic'],
-                store='time',
+                store='time', time=True,
                 data=np.zeros(3, dtype=self.float_type))
 
-        self.id_e = pyh5md.element(part, 'id', store='time', maxshape=(None, ), shape=(self.chunk_size,),
-                                   dtype=self.int_type, time=True, fillvalue=-1)
-        self.mass = pyh5md.element(part, 'mass', store='time', maxshape=(None, ), shape=(self.chunk_size,),
-                                   dtype=self.float_type, fillvalue=-1)
+        self.id_e = pyh5md.element(part, 'id', store='time', time=True, shape=(self.chunk_size,), maxshape=(None, ),
+                                   dtype=self.int_type, fillvalue=-1)
+        if store_mass:
+            self.mass = pyh5md.element(part, 'mass', store='time', time=True, maxshape=(None, ),
+                                       shape=(self.chunk_size,), dtype=self.float_type, fillvalue=-1)
         if self.store_position:
-            self.position = pyh5md.element(part, 'position', store='time', maxshape=(None, 3),
+            self.position = pyh5md.element(part, 'position', store='time', time=True, maxshape=(None, 3),
                                            shape=(self.chunk_size, 3), dtype=self.float_type)
-            self.image = pyh5md.element(part, 'image', store='time', maxshape=(None, 3),
+            self.image = pyh5md.element(part, 'image', store='time', time=True, maxshape=(None, 3),
                                         shape=(self.chunk_size, 3), dtype=self.float_type)
         if self.store_species:
-            self.species = pyh5md.element(part, 'species', store='time', maxshape=(None, ),
+            self.species = pyh5md.element(part, 'species', store='time', time=True, maxshape=(None, ),
                                           shape=(self.chunk_size,), dtype=self.int_type, fillvalue=-1)
         if self.store_state:
-            self.state = pyh5md.element(part, 'state', store='time', maxshape=(None, ),
+            self.state = pyh5md.element(part, 'state', store='time', time=True, maxshape=(None, ),
                                         shape=(self.chunk_size,), dtype=self.int_type,  fillvalue=-1)
         if self.store_velocity:
-            self.velocity = pyh5md.element(part, 'velocity', store='time', maxshape=(None, 3),
+            self.velocity = pyh5md.element(part, 'velocity', store='time', time=True, maxshape=(None, 3),
                                            shape=(self.chunk_size, 3), dtype=self.float_type)
         if self.store_force:
-            self.force = pyh5md.element(part, 'force', store='time', maxshape=(None, 3),
+            self.force = pyh5md.element(part, 'force', store='time', time=True, maxshape=(None, 3),
                                         shape=(self.chunk_size, 3), dtype=self.float_type)
         if self.store_charge:
-            self.charge = pyh5md.element(part, 'charge', store='time', maxshape=(None, ),
+            self.charge = pyh5md.element(part, 'charge', store='time', time=True, maxshape=(None, ),
                                          shape=(self.chunk_size,), dtype=self.float_type, fillvalue=-1)
         if self.store_lambda:
-            self.lambda_adr = pyh5md.element(part, 'lambda_adr', store='time', maxshape=(None, ),
+            self.lambda_adr = pyh5md.element(part, 'lambda_adr', store='time', time=True, maxshape=(None, ),
                                              shape=(self.chunk_size,), dtype=self.float_type,  fillvalue=-1)
         if self.store_res_id:
-            self.res_id = pyh5md.element(part, 'res_id', store='time', maxshape=(None, ),
+            self.res_id = pyh5md.element(part, 'res_id', store='time', time=True, maxshape=(None, ),
                                          shape=(self.chunk_size, ), dtype=self.int_type,  fillvalue=-1)
         self._system_data()
 
@@ -408,11 +411,12 @@ class DumpH5MDLocal(io_DumpH5MD):
             self.charge.append(charge, step, time, region=(idx_0, idx_1))
 
         # Store mass.
-        mass = np.asarray(self.getMass(), dtype=self.float_type)
-        if total_size > self.mass.value.shape[1]:
-            isResized = True
-            self.mass.value.resize(total_size, axis=1)
-        self.mass.append(mass, step, time, region=(idx_0, idx_1))
+        if self.store_mass:
+            mass = np.asarray(self.getMass(), dtype=self.float_type)
+            if total_size > self.mass.value.shape[1]:
+                isResized = True
+                self.mass.value.resize(total_size, axis=1)
+            self.mass.append(mass, step, time, region=(idx_0, idx_1))
 
         # Store species.
         if self.store_species:
@@ -490,7 +494,7 @@ if pmi.isController:
                      'dump', 'clear_buffers', 'flush', 'get_file', 'set_parameters'],
             pmiinvoke=['getTimers'],
             pmiproperty=['store_position', 'store_species', 'store_state', 'store_velocity',
-                         'store_charge', 'store_res_id', 'store_lambda'])
+                         'store_charge', 'store_res_id', 'store_lambda', 'store_mass'])
 
         def close(self):
             pmi.call(self.pmiobject, "close")

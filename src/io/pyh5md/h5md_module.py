@@ -106,7 +106,7 @@ class TimeElement(h5py.Group, Element):
             time = kwargs.pop('time', None)
             if time is not None:
                 if self.own_step:
-                    if time==True:
+                    if time:
                         self.time = g.create_dataset('time', dtype=float, shape=(0,), maxshape=(None,))
                     else:
                         raise ValueError("Time must be True or None for TimeElement")

@@ -115,6 +115,7 @@ namespace espressopp {
         if (store_force) free_pb(&force);
         if (store_lambda) free_pb(&lambda);
         if (store_res_id) free_pb(&res_id);
+        if (store_mass) free_pb(&mass);
         cleared = true;
       }
     }
@@ -135,7 +136,7 @@ namespace espressopp {
         init_pb<longint>(&image, 2, shape);
       }
       init_pb<longint>(&id, 1, shape);
-      init_pb<real>(&mass, 1, shape);
+      if (store_mass) init_pb<real>(&mass, 1, shape);
       if (store_species) init_pb<int>(&species, 1, shape);
       if (store_state) init_pb<int>(&state, 1, shape);
       if (store_velocity) init_pb<real>(&velocity, 2, shape);
@@ -171,7 +172,7 @@ namespace espressopp {
               }
 
               ((longint *) id.buf)[i] = at.id();
-              ((real *) mass.buf)[i] = at.mass();
+              if (store_mass) ((real *) mass.buf)[i] = at.mass();
               if (store_species) ((int *) species.buf)[i] = at.type();
               if (store_state) ((int *) state.buf)[i] = at.state();
               if (store_velocity) {
@@ -207,7 +208,7 @@ namespace espressopp {
             ((longint *) image.buf)[3*i+2] = tmpImage[2];
           }
           ((longint *) id.buf)[i] = cit->getId();
-          ((real *) mass.buf)[i] = cit->getMass();
+          if (store_mass) ((real *) mass.buf)[i] = cit->getMass();
           if (store_species) ((int *) species.buf)[i] = cit->getType();
           if (store_state) ((int *) state.buf)[i] = cit->getState();
           if (store_velocity) {
@@ -275,7 +276,7 @@ namespace espressopp {
     }
 
     PyObject* DumpH5MD::getMass() {
-      if (mass.len)
+      if (store_mass && mass.len)
         return PyMemoryView_FromBuffer(&mass);
       Py_INCREF(Py_None);
       return Py_None;
@@ -329,6 +330,7 @@ namespace espressopp {
         .add_property("store_charge", &DumpH5MD::get_store_charge, &DumpH5MD::set_store_charge)
         .add_property("store_lambda", &DumpH5MD::get_store_lambda, &DumpH5MD::set_store_lambda)
         .add_property("store_res_id", &DumpH5MD::get_store_res_id, &DumpH5MD::set_store_res_id)
+        .add_property("store_mass", &DumpH5MD::get_store_mass, &DumpH5MD::set_store_mass)
         ;
     }
   }
