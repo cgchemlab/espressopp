@@ -31,6 +31,8 @@
 #include "integrator/MDIntegrator.hpp"
 #include "storage/Storage.hpp"
 #include "FixedPairList.hpp"
+#include "FixedTripleList.hpp"
+#include "FixedQuadrupleList.hpp"
 #include "esutil/Error.hpp"
 
 
@@ -47,6 +49,8 @@ class DumpTopology: public ParticleAccess {
   }
 
   void observeTuple(shared_ptr<FixedPairList> fpl);
+  void observeTriple(shared_ptr<FixedTripleList> ftl);
+  void observeQuadruple(shared_ptr<FixedQuadrupleList> fql);
 
   python::list getData();
 
@@ -63,6 +67,8 @@ class DumpTopology: public ParticleAccess {
   FplBuffer fpl_buffer_;
 
   std::vector<shared_ptr<FixedPairList> > fpls_;
+  std::vector<shared_ptr<FixedTripleList> > ftls_;
+  std::vector<shared_ptr<FixedQuadrupleList> > fqls_;
 
   void saveDataToBuffer();
 };

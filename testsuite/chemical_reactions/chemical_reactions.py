@@ -163,12 +163,11 @@ class TestBasicReaction(ESPPTestCase):
             cutoff=1.0)
         self.ar.add_reaction(r_type_1)
 
-        fpl1_before = self.fpl1.getBonds()[0]
+        self.assertFalse(self.topology_manager.is_particle_connected(1, 2))
         self.integrator.run(10)
         fpl1_after = self.fpl1.getBonds()[0]
-
-        assert fpl1_before != fpl1_after
-        assert fpl1_after == [(1, 2)]
+        self.assertItemsEqual(fpl1_after, [(1, 2)])
+        self.assertTrue(self.topology_manager.is_particle_connected(1, 2))
 
     def test_synthesis_reaction_wrong_state(self):
         """Runs synthesis reaction but with not valid conditions for min/max state."""
@@ -472,6 +471,107 @@ class TestCaseRemoveNeighbourBond(ESPPTestCase):
         self.assertEqual(self.fpl24.getAllBonds(), [(2, 7)])
         self.assertEqual(self.fpl34.getAllBonds(), [(3, 4), (3, 5)])
         self.assertEqual(self.ftl234.getTriples(), [[]])  # Clean up also triplets because the bond 2-3 is removed.
+
+
+class TestCaseExchangeReaction(ESPPTestCase):
+    def setUp(self):
+        super(TestCaseExchangeReaction, self).setUp()
+        import logging
+        # 0-1-2-3-2-1-2-3-2-1-0
+        particle_list = [
+            (3, 0, espressopp.Real3D(3.0, 2.0, 2.0), 2, 1),
+            (4, 1, espressopp.Real3D(3.2, 2.0, 2.0), 2, 0),
+            (5, 2, espressopp.Real3D(3.4, 2.0, 2.0), 2, 2),
+
+            (6, 3, espressopp.Real3D(3.6, 2.0, 2.0), 3, 3),
+
+            (7, 2, espressopp.Real3D(3.8, 2.0, 2.0), 4, 2),
+            (8, 1, espressopp.Real3D(4.0, 2.0, 2.0), 4, 0),
+            (9, 2, espressopp.Real3D(4.2, 2.0, 2.0), 4, 2),
+
+            (10, 3, espressopp.Real3D(4.4, 2.0, 2.0), 5, 3),
+
+            (11, 2, espressopp.Real3D(4.6, 2.0, 2.0), 6, 2),
+            (12, 1, espressopp.Real3D(4.8, 2.0, 2.0), 6, 0),
+            (13, 0, espressopp.Real3D(5.0, 2.0, 2.0), 6, 2),
+
+            (14, 4, espressopp.Real3D(4.2, 1.8, 2.0), 7, 4),
+        ]
+        self.system.storage.addParticles(particle_list, *self.part_prop)
+        self.system.storage.decompose()
+        # ('id', 'type', 'pos', 'res_id', 'state')
+
+        self.fpl_static = espressopp.FixedPairList(self.system.storage)
+        self.ftl_static = espressopp.FixedTripleList(self.system.storage)
+        self.ftl123 = espressopp.FixedTripleList(self.system.storage)
+        self.ftl232 = espressopp.FixedTripleList(self.system.storage)
+        self.fpl_chem = espressopp.FixedPairList(self.system.storage)
+
+        self.dynamic_exclude = espressopp.DynamicExcludeList(self.integrator)
+        self.dynamic_exclude.observe_tuple(self.fpl_static)
+        self.dynamic_exclude.observe_tuple(self.fpl_chem)
+        self.dynamic_exclude.observe_triple(self.ftl_static)
+        self.dynamic_exclude.observe_triple(self.ftl123)
+        self.dynamic_exclude.observe_triple(self.ftl232)
+        self.dynamic_exclude.observe_tuple(self.fpl_chem)
+
+        self.fpl_static.addBonds([(3, 4), (4, 5), (7, 8), (8, 9), (11, 12), (12, 13)])
+        self.topology_manager.observe_tuple(self.fpl_static)
+
+        self.ftl_static.addTriples([(3, 4, 5), (7, 8, 9), (11, 12, 13)])
+
+        self.ftl123.addTriples([(4, 5, 6), (6, 7, 8), (8, 9, 10), (10, 11, 12)])
+        self.topology_manager.register_triplet(self.ftl123, 1, 2, 3)
+
+        self.ftl232.addTriples([(5, 6, 7), (9, 10, 11)])
+        self.topology_manager.register_triplet(self.ftl232, 2, 3, 2)
+
+        self.fpl_chem.addBonds([(5, 6), (6, 7), (9, 10), (10, 11)])
+        self.topology_manager.register_tuple(self.fpl_chem, 2, 3)
+        self.topology_manager.initialize_topology()
+        self.dynamic_exclude.update()
+
+    def test_remove_bond(self):
+        r_type_1 = espressopp.integrator.Reaction(
+            type_1=2,
+            type_2=4,
+            delta_1=1,
+            delta_2=1,
+            min_state_1=2,
+            max_state_1=4,
+            min_state_2=4,
+            max_state_2=5,
+            rate=400.0,
+            fpl=self.fpl_chem,
+            cutoff=0.2)
+        r_type_1.is_virtual = True
+        pp_type_1 = espressopp.integrator.PostProcessRemoveNeighbourBond(self.topology_manager)
+        pp_type_1.add_bond_to_remove(2, 1, 2, 3)
+        r_type_1.add_postprocess(pp_type_1, 'type_1')
+
+        fd = espressopp.integrator.FixDistances(self.system, None, 2, 4)
+        self.integrator.addExtension(fd)
+
+        self.assertEqual(fd.totalSize(), 0)
+
+        pp_join_fd = espressopp.integrator.PostProcessJoinParticles(fd, 0.5)
+        r_type_1.add_postprocess(pp_join_fd, 'type_1')
+
+        self.ar.add_reaction(r_type_1)
+
+        static_angles = self.ftl_static.getTriples()
+
+        self.assertEqual(self.dynamic_exclude.size, 38)
+
+        self.integrator.run(2)
+        self.assertEqual(fd.totalSize(), 1)
+
+        self.assertItemsEqual(self.fpl_chem.getAllBonds(), [(5, 6), (6, 7), (10, 11)])
+        self.assertItemsEqual(self.ftl_static.getTriples(), static_angles)
+        self.assertItemsEqual(self.ftl232.getAllTriples(), [(5, 6, 7)])
+        self.assertItemsEqual(self.ftl123.getAllTriples(), [(4, 5, 6), (6, 7, 8), (10, 11, 12)])
+
+        self.assertEqual(self.dynamic_exclude.size, 32)
 
 
 if __name__ == '__main__':

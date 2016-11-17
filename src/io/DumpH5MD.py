@@ -174,10 +174,13 @@ class DumpH5MDLocal(io_DumpH5MD):
 
         self.system = system
 
-        if os.path.exists(filename):
-            new_filename = '{}_{}'.format(int(py_time.time()), filename)
-            os.rename(filename, new_filename)
-            print('File {} exists, moved to {}'.format(filename, new_filename))
+        if pmi.isController:
+            if os.path.exists(filename):
+                basename = os.path.basename(filename)
+                dirname = os.path.dirname(filename)
+                new_filename = '{}/{}_{}'.format(dirname, int(py_time.time()), os.path.basename(filename))
+                os.rename(filename, new_filename)
+                print('File {} exists, moved to {}'.format(filename, new_filename))
 
         self.file = pyh5md.File(
             filename, 'w',

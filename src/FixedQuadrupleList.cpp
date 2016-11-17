@@ -114,16 +114,23 @@ namespace espressopp {
       // ADD THE GLOBAL QUADRUPLET
       // see whether the particle already has quadruples
       bool found = false;
-      std::pair<GlobalQuadruples::const_iterator,
-                GlobalQuadruples::const_iterator> equalRange
-          = globalQuadruples.equal_range(pid1);
+      std::pair<GlobalQuadruples::const_iterator, GlobalQuadruples::const_iterator> equalRange, equalRange_rev;
+      equalRange = globalQuadruples.equal_range(pid1);
       if (equalRange.first != globalQuadruples.end()) {
         // otherwise test whether the quadruple already exists
-        for (GlobalQuadruples::const_iterator it = equalRange.first;
-             it != equalRange.second && !found; ++it)
-          if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4))
-            found = true;
+        for (GlobalQuadruples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it)
+          found = found || (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4));
       }
+      // Check reverse order.
+      if (!found) {
+        equalRange_rev = globalQuadruples.equal_range(pid4);
+        if (equalRange_rev.first != globalQuadruples.end()) {
+          for (GlobalQuadruples::const_iterator it = equalRange_rev.first; it != equalRange_rev.second && !found; ++it) {
+            found = found || (it->second == Triple<longint, longint, longint>(pid3, pid2, pid1));
+          }
+        }
+      }
+
       returnVal = !found;
       if (!found) {
         // add the quadruple locally
@@ -179,16 +186,24 @@ namespace espressopp {
       // ADD THE GLOBAL QUADRUPLET
       // see whether the particle already has quadruples
       bool found = false;
-      std::pair<GlobalQuadruples::const_iterator,
-                GlobalQuadruples::const_iterator> equalRange
-        = globalQuadruples.equal_range(pid1);
+      std::pair<GlobalQuadruples::const_iterator, GlobalQuadruples::const_iterator> equalRange, equalRange_rev;
+      equalRange = globalQuadruples.equal_range(pid1);
       if (equalRange.first != globalQuadruples.end()) {
         // otherwise test whether the quadruple already exists
-        for (GlobalQuadruples::const_iterator it = equalRange.first;
-             it != equalRange.second && !found; ++it)
-          if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4))
-            found = true;
+        for (GlobalQuadruples::const_iterator it = equalRange.first; it != equalRange.second && !found; ++it)
+          found = found || (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4));
       }
+      // Check reverse order.
+      if (!found) {
+        equalRange_rev = globalQuadruples.equal_range(pid4);
+        if (equalRange_rev.first != globalQuadruples.end()) {
+          for (GlobalQuadruples::const_iterator it = equalRange_rev.first;
+               it != equalRange_rev.second && !found; ++it) {
+            found = found || (it->second == Triple<longint, longint, longint>(pid3, pid2, pid1));
+          }
+        }
+      }
+
       returnVal = !found;
       if (!found) {
         // add the quadruple locally
@@ -234,13 +249,25 @@ namespace espressopp {
 
     bool returnVal = false;
     if (found) {
-      std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange
-          = globalQuadruples.equal_range(pid1);
+      std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange, equalRange_rev;
+      equalRange = globalQuadruples.equal_range(pid1);
       if (equalRange.first != globalQuadruples.end()) {
         // otherwise test whether the quadruple already exists
         for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
           if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
             onTupleRemoved(pid1, pid2, pid3, pid4);
+            returnVal = true;
+            it = globalQuadruples.erase(it);
+          } else {
+            ++it;
+          }
+      }
+      equalRange_rev = globalQuadruples.equal_range(pid4);
+      if (equalRange_rev.first != globalQuadruples.end()) {
+        // otherwise test whether the quadruple already exists
+        for (GlobalQuadruples::iterator it = equalRange_rev.first; it != equalRange_rev.second;)
+          if (it->second == Triple<longint, longint, longint>(pid3, pid2, pid1)) {
+            onTupleRemoved(pid4, pid3, pid2, pid1);
             returnVal = true;
             it = globalQuadruples.erase(it);
           } else {

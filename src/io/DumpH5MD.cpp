@@ -107,7 +107,6 @@ namespace espressopp {
           free_pb(&image);
         }
         free_pb(&id);
-        free_pb(&mass); 
         if (store_species) free_pb(&species);
         if (store_state) free_pb(&state);
         if (store_velocity) free_pb(&velocity);

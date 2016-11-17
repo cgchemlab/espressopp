@@ -91,7 +91,11 @@ class FixedTripleListLocal(_espressopp.FixedTripleList):
     def getTriples(self):
         if pmi.workerIsActive():
           triples = self.cxxclass.getTriples(self)
-          return triples 
+          return triples
+
+    def getAllTriples(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getAllTriples(self)
 
 if pmi.isController:
     class FixedTripleList(object):
@@ -99,6 +103,6 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedTripleListLocal',
             localcall = [ "add" ],
-            pmicall = [ "addTriples", "totalSize"],
+            pmicall = [ "addTriples", "totalSize", "getAllTriples"],
             pmiinvoke = ["getTriples", "size"]
         )

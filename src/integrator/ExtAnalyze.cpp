@@ -39,7 +39,7 @@ namespace espressopp {
       //analysis     = _analysis;
       particle_access     = _particle_access;
       type = Extension::ExtAnalysis;
-      extensionOrder = 10;
+      extensionOrder = Extension::withExtAnalyze;
     }
 
     void ExtAnalyze::disconnect(){

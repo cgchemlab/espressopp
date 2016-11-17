@@ -52,12 +52,14 @@ DynamicExcludeList::~DynamicExcludeList() {
 
 void DynamicExcludeList::connect() {
   LOG4ESPP_INFO(theLogger, "Connected to integrator");
-  aftIntV = integrator_->aftIntV2.connect(boost::bind(&DynamicExcludeList::updateList, this));
+  befIntP = integrator_->befIntP.connect(boost::bind(&DynamicExcludeList::updateList, this));
+  runInit = integrator_->runInit.connect(boost::bind(&DynamicExcludeList::updateList, this));
 }
 
 void DynamicExcludeList::disconnect() {
   LOG4ESPP_INFO(theLogger, "Disconnected from integrator");
-  aftIntV.disconnect();
+  befIntP.disconnect();
+  runInit.disconnect();
 }
 
 void DynamicExcludeList::observe_tuple(shared_ptr<FixedPairList> fpl) {

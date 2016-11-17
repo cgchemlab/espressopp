@@ -43,6 +43,7 @@ FixDistances::FixDistances(shared_ptr<System> system)
   LOG4ESPP_INFO(theLogger, "FixDistances");
   type = Extension::Constraint;
   has_types_ = false;
+  extensionOrder = Extension::beforeExtAnalyze;
 }
 
 FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longint target_type)
@@ -50,12 +51,13 @@ FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longi
   LOG4ESPP_INFO(theLogger, "FixDistances");
   type = Extension::Constraint;
   has_types_ = true;
+  extensionOrder = Extension::beforeExtAnalyze;
 }
 
 void FixDistances::disconnect() {
   aftInitF_.disconnect();
   if (has_types_) {
-    aftIntV2_.disconnect();
+    aftIntV_.disconnect();
   }
   sigBeforeSend.disconnect();
   sigAfterRecv.disconnect();
@@ -68,7 +70,7 @@ void FixDistances::connect() {
   // If use particle types then update constraints at every time step at last.
   System &system = getSystemRef();
   if (has_types_) {
-    aftIntV2_ = integrator->aftIntV2.connect(boost::bind(&FixDistances::onAftIntV2, this));
+    aftIntV_ = integrator->aftIntV.connect(extensionOrder, boost::bind(&FixDistances::onAftIntV, this));
   }
 
   sigBeforeSend = system.storage->beforeSendParticles.connect(
@@ -77,7 +79,7 @@ void FixDistances::connect() {
       boost::bind(&FixDistances::afterRecvParticles, this, _1, _2));
 }
 
-void FixDistances::onAftIntV2() {
+void FixDistances::onAftIntV() {
   if (!has_types_)
     return;
   std::vector<std::pair<Particle*, Particle*> > affected_particles;

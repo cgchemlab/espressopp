@@ -61,8 +61,10 @@ class TopologyManager: public Extension {
    * @param type2 particle type
    * @param level tuple level; number of bonds between two particles on the list
    */
-  void registerTuple(shared_ptr<FixedPairList> fpl,
-                    longint type1, longint type2, longint level);
+  void registerTuple(shared_ptr<FixedPairList> fpl, longint type1, longint type2);
+
+  void register14Tuple(shared_ptr<FixedPairList> fpl, longint type1, longint type2);
+
   /**
    * Register triple pair list with desire atom types.
    * @param ftl FixedTripleList
@@ -239,10 +241,12 @@ class TopologyManager: public Extension {
   bool update_angles_dihedrals;
 
   std::vector<shared_ptr<FixedPairList> > tuples_;
+  std::vector<shared_ptr<FixedPairList> > tuples14_;
   std::vector<shared_ptr<FixedTripleList> > triples_;
   std::vector<shared_ptr<FixedQuadrupleList> > quadruples_;
 
   TupleMap tupleMap_;
+  TupleMap tuple14Map_;
   TripleMap tripleMap_;
   QuadrupleMap quadrupleMap_;
 
@@ -273,6 +277,8 @@ class TopologyManager: public Extension {
   boost::unordered_map<longint, DistanceEdges> edges_type_distance_pair_types_;
 
   void updateParticlePropertiesAtDistance(int id, int distance);
+
+  bool is_dirty_;  ///<! If true then exchangeData will run.
 
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);

@@ -27,21 +27,19 @@ if(NOT BUILD_SHARED_LIBS)
   message(WARNING "Building static libraries might lead to problems with python modules - you are on your own!")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
-
-option(USE_GCOV "Enable gcov support" OFF)
-if(USE_GCOV)
-  message(STATUS "Enabling gcov support")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -O0")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -O0")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
-endif()
-
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING
       "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
       FORCE)
+endif()
+
+option(USE_GCOV "Enable gcov support" OFF)
+if(USE_GCOV)
+    message(STATUS "Enabling gcov support")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -O0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -O0")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
 endif()
 
 check_cxx_compiler_flag("-std=c++98" COMPILER_SUPPORTS_CXX98)
@@ -50,6 +48,11 @@ if(COMPILER_SUPPORTS_CXX98)
 else(COMPILER_SUPPORTS_CXX98)
     message(FATAL_ERROR "Compiler flag -std=c++98 not supported")
 endif(COMPILER_SUPPORTS_CXX98)
+
+if (CMAKE_BUILD_TYPE MATCHES Release)
+    message("set -DLOG4ESPP_LEVEL_WARN")
+    add_definitions(-DLOG4ESPP_LEVEL_WARN)
+endif(CMAKE_BUILD_TYPE MATCHES Release)
 
 ########################################################################
 #VampirTrace settings

@@ -67,6 +67,7 @@ namespace espressopp {
 		virtual void updateParticlesStorage();
 
 		virtual python::list getTriples();
+		virtual python::list getAllTriples();
 	    /** Get the number of triples in the GlobalTriples list */
 	    virtual int size() { return globalTriples.size(); }
 	    virtual int totalSize();

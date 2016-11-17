@@ -46,7 +46,7 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
           verlet_list_(verletList),
           domdec_(domdec), tm_(tm), is_nearest_(false) {
   type = Extension::Reaction;
-  extensionOrder = 8;
+  extensionOrder = Extension::withReaction;
 
   current_cutoff_ = verletList->getVerletCutoff() - system->getSkin();
 

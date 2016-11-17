@@ -174,7 +174,9 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                     data.append((b1, b2))
                 max_size = max(len(data), max_size)
                 step_data[step][fpl_idx] = np.array(data, dtype=self.h5md_file.int_type)
+
             MPI.COMM_WORLD.Barrier()
+
             NMaxLocal = np.array(max_size, 'i')
             NMaxGlobal = np.array(0, 'i')
             MPI.COMM_WORLD.Allreduce(NMaxLocal, NMaxGlobal, op=MPI.MAX)

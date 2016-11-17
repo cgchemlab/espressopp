@@ -50,7 +50,11 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
   update_angles_dihedrals = false;
   wallTimer.reset();
 
-  extensionOrder = 9;
+  resetTimers();
+
+  extensionOrder = Extension::afterReaction;
+
+  is_dirty_ = true;
 }
 
 TopologyManager::~TopologyManager() {
@@ -93,10 +97,16 @@ void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
 
 /** Registers methods, those FixedList are only to updated and no to take data. */
 void TopologyManager::registerTuple(
-    shared_ptr<FixedPairList> fpl, longint type1, longint type2, longint level) {
+    shared_ptr<FixedPairList> fpl, longint type1, longint type2) {
   tuples_.push_back(fpl);
   tupleMap_[type1][type2] = fpl;
   tupleMap_[type2][type1] = fpl;
+}
+
+void TopologyManager::register14Tuple(shared_ptr<FixedPairList> fpl, longint type1, longint type2) {
+  tuples14_.push_back(fpl);
+  tuple14Map_[type1][type2] = fpl;
+  tuple14Map_[type2][type1] = fpl;
 }
 
 void TopologyManager::registerTriple(shared_ptr<FixedTripleList> ftl,
@@ -196,49 +206,11 @@ void TopologyManager::InitializeTopology() {
       residues_->at(rid)->insert(pid);
     }
   }
+
+  is_dirty_ = true;
 }
 
-void TopologyManager::PrintTopology() {
-  for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
-    if (it->second != NULL) {
-      std::cout << it->first << ": ";
-      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
-        std::cout << *itv << " ";
-      }
-      std::cout << std::endl;
-    }
-  }
-}
 
-void TopologyManager::PrintResTopology() {
-  for (GraphMap::iterator it = res_graph_->begin(); it != res_graph_->end(); ++it) {
-    if (it->second != NULL) {
-      std::cout << it->first << ": ";
-      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
-        std::cout << *itv << " ";
-      }
-      std::cout << std::endl;
-    }
-  }
-}
-
-void TopologyManager::PrintResidues() {
-  for (GraphMap::iterator it = residues_->begin(); it != residues_->end(); ++it) {
-    if (it->second != NULL) {
-      std::cout << it->first << ": ";
-      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
-        std::cout << *itv << " ";
-      }
-      std::cout << std::endl;
-    }
-  }
-
-  std::cout << "Map PID->RID" << std::endl;
-  for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
-    std::cout << it->first << ": " << it->second << std::endl;
-  }
-
-}
 
 python::list TopologyManager::getNeighbourLists() {
   python::list nodes;
@@ -254,10 +226,12 @@ python::list TopologyManager::getNeighbourLists() {
   return nodes;
 }
 
-
 void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
-  LOG4ESPP_DEBUG(theLogger, "onTupleAdded pid1=" << pid1 << " pid2=" << pid2);
-  newEdges_.push_back(std::make_pair(pid1, pid2));
+  if (!isParticleConnected(pid1, pid2)) {
+    LOG4ESPP_DEBUG(theLogger, "onTupleAdded pid1=" << pid1 << " pid2=" << pid2);
+    newEdges_.push_back(std::make_pair(pid1, pid2));
+    is_dirty_ = true;
+  }
 }
 
 
@@ -274,7 +248,7 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
 
   // Generate angles, dihedrals, based on updated graph.
-  wallTimer.startMeasure();
+  real time0 = wallTimer.getElapsedTime();
   if (update_angles_dihedrals) {
     std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
     std::set<Triplets> *triplets = new std::set<Triplets>();
@@ -284,7 +258,7 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     defineDihedrals(*quadruplets);
     define14tuples(*quadruplets);
   }
-  timeGenerateAnglesDihedrals += wallTimer.stopMeasure();
+  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
@@ -299,8 +273,10 @@ void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
 }
 
 void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
-
-  removedEdges_.push_back(std::make_pair(pid1, pid2));
+  if (isParticleConnected(pid1, pid2)) {
+    removedEdges_.push_back(std::make_pair(pid1, pid2));
+    is_dirty_ = true;
+  }
 }
 
 void TopologyManager::deleteEdge(longint pid1, longint pid2) {
@@ -358,17 +334,19 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
   longint t2 = p2->type();
   // Update fpl and remove bond.
   shared_ptr<FixedPairList> fpl = tupleMap_[t1][t2];
-  if (!fpl)
-    fpl = tupleMap_[t2][t1];
 
   if (fpl) {
-    fpl->remove(pid1, pid2);
+    bool removed = fpl->remove(pid1, pid2);
+    if (!removed) {
+      std::cout << "bond not removed " << pid1 << "-" << pid2 << std::endl;
+      throw std::runtime_error("FPL pair %d %d not removed");
+    }
   } else {
-    throw std::runtime_error((const std::string &) (boost::format("Tuple for pair type %d-%d not found") % t1 % t2));
+    throw std::runtime_error("Tuple for pair not found");
   }
 
   // Generate list of angles/dihedrals to remove, based on the graph.
-  wallTimer.startMeasure();
+  real time0 = wallTimer.getElapsedTime();
   if (update_angles_dihedrals) {
     std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
     std::set <Triplets> *triplets = new std::set<Triplets>();
@@ -386,7 +364,7 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
       (*it)->updateParticlesStorage();
     }
   }
-  timeGenerateAnglesDihedrals += wallTimer.stopMeasure();
+  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 /**
@@ -395,7 +373,16 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
  */
 void TopologyManager::exchangeData() {
   LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
-  wallTimer.startMeasure();
+  real time0 = wallTimer.getElapsedTime();
+
+  // Check the is_dirty_ flag on all CPUs, if somewhere is true then do the exchangeData steps.
+  bool global_is_dirty = false;
+  mpi::all_reduce(*(system_->comm), is_dirty_, global_is_dirty, std::logical_or<bool>());
+
+  if (!global_is_dirty) {
+    timeExchangeData += wallTimer.getElapsedTime() - time0;
+    return;
+  }
 
   // Collect all message from other CPUs. Both for res_id and new graph edges.
   typedef std::vector<std::vector<longint> > GlobalMerge;
@@ -437,7 +424,7 @@ void TopologyManager::exchangeData() {
       remove_edge_size = *(itm++);
 
       for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
-        int particle_id = *(itm++);
+        longint particle_id = *(itm++);
         removeNeighbourEdges(particle_id);
       }
 
@@ -461,8 +448,11 @@ void TopologyManager::exchangeData() {
   newEdges_.clear();
   removedEdges_.clear();
   nb_distance_particles_.clear();
+  nb_edges_root_to_remove_.clear();
 
-  timeExchangeData += wallTimer.stopMeasure();
+  is_dirty_ = false;
+
+  timeExchangeData += wallTimer.getElapsedTime() - time0;
   LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
 }
 
@@ -540,9 +530,9 @@ void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
       t1 = p1->type();
       t4 = p4->type();
       // Look for fixed triple list which should be updated.
-      fpl = tupleMap_[t1][t4];
+      fpl = tuple14Map_[t1][t4];
       if (!fpl)
-        fpl = tupleMap_[t4][t1];
+        fpl = tuple14Map_[t4][t1];
       if (fpl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t4);
         bool ret = fpl->iadd(p1->id(), p4->id());
@@ -632,9 +622,9 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
       t1 = p1->type();
       t4 = p4->type();
       // Look for fixed triple list which should be updated.
-      fpl = tupleMap_[t1][t4];
+      fpl = tuple14Map_[t1][t4];
       if (!fpl)
-        fpl = tupleMap_[t4][t1];
+        fpl = tuple14Map_[t4][t1];
       if (fpl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t4);
         bool ret = fpl->remove(p1->id(), p4->id());
@@ -760,7 +750,6 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
 }
 
 void TopologyManager::removeNeighbourEdges(size_t pid) {
-
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
 
@@ -785,9 +774,6 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
   longint type_p2 = -1;
   while (!Q.empty()) {
     current_node = Q.front();
-    Particle *p1_current = system_->storage->lookupLocalParticle(current_node);
-    if (p1_current)
-      type_p1 = p1_current->type();
     new_distance = visitedDistance[current_node] + 1;
     pair_types_at_distance_iter_ = distance_edges->second.find(new_distance);
     try {
@@ -802,7 +788,9 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
         if (visitedDistance.count(node) == 0) {
           if (has_pairs_at_distance) {
             Particle *p1_node = system_->storage->lookupLocalParticle(node);
-            if (p1_node && p1_current) {
+            Particle *p1_current = system_->storage->lookupLocalParticle(current_node);
+            if (p1_node && p1_current) {  // Only if both nodes are here.
+              type_p1 = p1_current->type();
               type_p2 = p1_node->type();
               if (pair_types_at_distance.count(std::make_pair(type_p1, type_p2)) != 0) {
                 if (edges_to_remove.count(std::make_pair(node, current_node)) == 0)
@@ -839,6 +827,7 @@ void TopologyManager::registerNeighbourPropertyChange(
   max_nb_distance_ = std::max(max_nb_distance_, nb_level);
   nb_distances_.insert(nb_level);
   distance_type_pp_[nb_level][type_id] = pp;
+  is_dirty_ = true;
 }
 
 void TopologyManager::registerNeighbourBondToRemove(longint type_id,
@@ -848,22 +837,27 @@ void TopologyManager::registerNeighbourBondToRemove(longint type_id,
   max_bond_nb_distance_ = std::max(max_bond_nb_distance_, nb_level);
   edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid1, type_pid2));
   edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid2, type_pid1));
+
+  is_dirty_ = true;
 }
 
 
 void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
-  wallTimer.startMeasure();
+  real time0 = wallTimer.getElapsedTime();
   std::vector<longint> nb = getNodesAtDistances(root.id());
   LOG4ESPP_DEBUG(theLogger, "inovokeNeighbourPropertyChange from root=" << root.id()
       << " generates=" << nb.size() << " of neighbour particles");
   nb_distance_particles_.insert(nb_distance_particles_.end(), nb.begin(), nb.end());
-  timeUpdateNeighbourProperty += wallTimer.stopMeasure();
+  timeUpdateNeighbourProperty += wallTimer.getElapsedTime() - time0;
+
+  is_dirty_ = true;
 }
 
 void TopologyManager::invokeNeighbourBondRemove(Particle &root) {
   // Check if this root.type is on the list of possible edges to remove.
   if (edges_type_distance_pair_types_.count(root.type()) == 1) {
     nb_edges_root_to_remove_.insert(nb_edges_root_to_remove_.end(), root.id());
+    is_dirty_ = true;
   }
 }
 
@@ -884,17 +878,61 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
 }
 
 bool TopologyManager::isResiduesConnected(longint rid1, longint rid2) {
-  wallTimer.startMeasure();
+  real time0 = wallTimer.getElapsedTime();
   bool ret = (res_graph_->count(rid1) == 1 && res_graph_->at(rid1)->count(rid2) == 1);
-  timeIsResidueConnected += wallTimer.stopMeasure();
+  timeIsResidueConnected += wallTimer.getElapsedTime() - time0;
   return ret;
 }
 
 bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {
-  bool ret = (graph_->count(pid1) == 1 && graph_->at(pid1)->count(pid2) == 1);
-  return ret;
+  if (graph_->count(pid1) == 1)
+    if (graph_->at(pid1)->count(pid2) == 1)
+      return true;
+  return false;
 }
 
+
+void TopologyManager::PrintTopology() {
+  for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+    if (it->second != NULL) {
+      std::cout << it->first << ": ";
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        std::cout << *itv << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+}
+
+void TopologyManager::PrintResTopology() {
+  for (GraphMap::iterator it = res_graph_->begin(); it != res_graph_->end(); ++it) {
+    if (it->second != NULL) {
+      std::cout << it->first << ": ";
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        std::cout << *itv << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+}
+
+void TopologyManager::PrintResidues() {
+  for (GraphMap::iterator it = residues_->begin(); it != residues_->end(); ++it) {
+    if (it->second != NULL) {
+      std::cout << it->first << ": ";
+      for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+        std::cout << *itv << " ";
+      }
+      std::cout << std::endl;
+    }
+  }
+
+  std::cout << "Map PID->RID" << std::endl;
+  for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
+    std::cout << it->first << ": " << it->second << std::endl;
+  }
+
+}
 
 void TopologyManager::registerPython() {
   using namespace espressopp::python;
@@ -909,6 +947,7 @@ void TopologyManager::registerPython() {
       .def("disconnect", &TopologyManager::disconnect)
       .def("observe_tuple", &TopologyManager::observeTuple)
       .def("register_tuple", &TopologyManager::registerTuple)
+      .def("register_14tuple", &TopologyManager::register14Tuple)
       .def("register_triple", &TopologyManager::registerTriple)
       .def("register_quadruple", &TopologyManager::registerQuadruple)
       .def("initialize", &TopologyManager::InitializeTopology)

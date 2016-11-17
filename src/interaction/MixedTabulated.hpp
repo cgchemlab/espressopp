@@ -53,19 +53,19 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
     // Set first table.
     boost::mpi::communicator world;
     switch (itype) {
-      case 1:
+      case 1:  // Linear interpolation
         table1 = make_shared<InterpolationLinear>();
         table1->read(world, filename1);
         table2 = make_shared<InterpolationLinear>();
         table2->read(world, filename2);
         break;
-      case 2:
+      case 2:  // Akima interpolation
         table1 = make_shared<InterpolationAkima>();
         table1->read(world, filename1);
         table2 = make_shared<InterpolationAkima>();
         table2->read(world, filename2);
         break;
-      case 3:
+      case 3:  // Cubic interpolation
         table1 = make_shared<InterpolationCubic>();
         table1->read(world, filename1);
         table2 = make_shared<InterpolationCubic>();

@@ -72,7 +72,7 @@ namespace espressopp {
         //type of extension
         ExtensionType type;
 
-        longint extensionOrder;
+        ExtensionOrder extensionOrder;
 
         /** Register this class so it can be used from Python. */
         static void registerPython();

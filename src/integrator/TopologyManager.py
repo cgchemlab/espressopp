@@ -50,7 +50,13 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             if type2 is None:
                 type2 = type1
-            self.cxxclass.register_tuple(self, fpl, type1, type2, 4)
+            self.cxxclass.register_tuple(self, fpl, type1, type2)
+
+    def register_14tuple(self, fpl, type1, type2=None):
+        if pmi.workerIsActive():
+            if type2 is None:
+                type2 = type1
+            self.cxxclass.register_14tuple(self, fpl, type1, type2)
 
     def register_triplet(self, ftl, type1, type2=None, type3=None):
         if pmi.workerIsActive():
@@ -72,14 +78,18 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             return self.cxxclass.is_residue_connected(self, rid1, rid2)
 
+    def is_particle_connected(self, pid1, pid2):
+        if pmi.workerIsActive():
+            return self.cxxclass.is_particle_connected(self, pid1, pid2)
+
 if pmi.isController :
     class TopologyManager(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.TopologyManagerLocal',
-            pmicall = ['observe_tuple', 'register_tuple', 'register_triplet',
+            pmicall = ['observe_tuple', 'register_tuple', 'register_14tuple', 'register_triplet',
                        'register_quadruplet', 'initialize_topology', 'exchange_data',
-                       'is_residue_connected'
+                       'is_residue_connected', 'is_particle_connected'
                       ],
             pmiinvoke = ['print_topology', 'print_res_topology', 'print_residues', 'get_neighbour_lists', 'get_timers']
             )

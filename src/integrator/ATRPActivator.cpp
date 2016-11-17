@@ -1,6 +1,7 @@
 /*
   Copyright (C) 2016
       Jakub Krajniak (jkrajniak at gmail.com)
+      Zidan Zhang (zidan.zhang at kuleuven.be)
   
   This file is part of ESPResSo++.
   
@@ -44,7 +45,7 @@ ATRPActivator::ATRPActivator(
   rng_ = system->rng;
   stats_filename_ = "atrp_stats.dat";
 
-  extensionOrder = 7;
+  extensionOrder = Extension::beforeReaction;
 }
 
 void ATRPActivator::disconnect() {

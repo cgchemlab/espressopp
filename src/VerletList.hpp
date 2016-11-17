@@ -67,7 +67,7 @@ class DynamicExcludeList {
   std::vector<longint> exList_remove;
   void updateList();
 
-  boost::signals2::connection aftIntV;
+  boost::signals2::connection befIntP, runInit;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
 };
