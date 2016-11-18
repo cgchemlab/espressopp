@@ -81,6 +81,8 @@ class FixDistances : public Extension {
   longint anchor_type_, target_type_;
   bool has_types_;
 
+  python::list getAllTriplets();
+
   void connect();
   void disconnect();
 
@@ -91,7 +93,14 @@ class FixDistances : public Extension {
   void printTriplets();
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
-  python::list getAllTriplets();
+
+  /** Timers */
+  real timeRestorePosition;
+  real timeUpdateList;
+  real timeComm;
+
+  esutil::WallTimer wallTimer;
+  python::list getTimers();
 };
 
 /**

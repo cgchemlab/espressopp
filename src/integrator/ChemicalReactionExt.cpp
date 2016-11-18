@@ -926,6 +926,7 @@ python::list ChemicalReaction::getTimers() {
   ret.append(python::make_tuple("timeApplyAR", timeApplyAR));
   ret.append(python::make_tuple("timeApplyDR", timeApplyDR));
   ret.append(python::make_tuple("timeLoopPair", timeLoopPair));
+  ret.append(python::make_tuple("timeAll", timeComm + timeUpdateGhost + timeApplyAR + timeApplyDR + timeLoopPair));
 
   return ret;
 }

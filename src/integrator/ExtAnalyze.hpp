@@ -45,6 +45,19 @@ namespace espressopp {
         /** Register this class so it can be used from Python. */
         static void registerPython();
 
+      protected:
+          python::list getTimers() {
+              python::list ret;
+              ret.append(python::make_tuple("timePerformAction", timer_));
+              ret.append(python::make_tuple("timeAll", timer_));
+              return ret;
+
+          }
+          void resetTimers() {
+              wallTimer.reset();
+              timer_ = 0.0;
+          }
+
       private:
         boost::signals2::connection _aftIntV;
         void connect();
@@ -55,9 +68,7 @@ namespace espressopp {
         shared_ptr< ParticleAccess > particle_access;
         int interval;
 
-        esutil::WallTimer wallTimer;  //!< used for timing
         real timer_;
-        real getTimer();
 
         /** Logger */
         static LOG4ESPP_DECL_LOGGER(theLogger);

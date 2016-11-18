@@ -224,6 +224,8 @@ void DynamicExcludeList::registerPython() {
 
     // make a connection to System to invoke rebuild on resort
     connect();
+
+    resetTimers();
   }
   real VerletList::getVerletCutoff(){
     return cutVerlet;
@@ -253,6 +255,7 @@ void DynamicExcludeList::registerPython() {
   
   void VerletList::rebuild()
   {
+    real time0 = wallTimer.getElapsedTime();
     cutVerlet = cut + getSystem() -> getSkin();
     cutsq = cutVerlet * cutVerlet;
     
@@ -269,6 +272,7 @@ void DynamicExcludeList::registerPython() {
     builds++;
     LOG4ESPP_DEBUG(theLogger, "rebuilt VerletList (count=" << builds << "), cutsq = " << cutsq
                  << " local size = " << vlPairs.size());
+    timeRebuild_ += wallTimer.getElapsedTime() - time0;
   }
   
 
@@ -377,6 +381,7 @@ void DynamicExcludeList::registerPython() {
       .def("disconnect", &VerletList::disconnect)
       .def("getVerletCutoff", &VerletList::getVerletCutoff)
       .def("setVerletCutoff", &VerletList::setVerletCutoff)
+      .def("get_timers", &VerletList::getTimers)
       ;
   }
 

@@ -284,6 +284,7 @@ void BasicDynamicResolutionType::registerPython() {
 }
 
 void BasicDynamicResolutionType::UpdateWeights() {
+  real time0 = wallTimer.getElapsedTime();
   System &system = getSystemRef();
   for (CellListIterator cit(system.storage->getLocalCells()); !cit.isDone(); ++cit) {
     Particle &vp = *cit;
@@ -313,6 +314,7 @@ void BasicDynamicResolutionType::UpdateWeights() {
       }
     }
   }
+  timeUpdateWeights += wallTimer.getElapsedTime() - time0;
 }
 
 void FixedListDynamicResolution::connect() {
@@ -327,6 +329,7 @@ void FixedListDynamicResolution::disconnect() {
  * Update lambda parameters on fixed lists.
  */
 void FixedListDynamicResolution::updateLists() {
+  real time0 = wallTimer.getElapsedTime();
   // Update FixedPairLists
   for (FixedPairListRate::iterator it = fixed_pair_list_rate_.begin(); it != fixed_pair_list_rate_.end(); ++it) {
     it->first->incrementAllLambda(it->second);
@@ -342,6 +345,7 @@ void FixedListDynamicResolution::updateLists() {
        it != fixed_quadruple_list_rate_.end(); ++it) {
     it->first->incrementAllLambda(it->second);
   }
+  timeUpdateLists += wallTimer.getElapsedTime() - time0;
 }
 
 void FixedListDynamicResolution::registerPython() {

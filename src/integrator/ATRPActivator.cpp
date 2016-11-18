@@ -46,6 +46,8 @@ ATRPActivator::ATRPActivator(
   stats_filename_ = "atrp_stats.dat";
 
   extensionOrder = Extension::beforeReaction;
+
+  resetTimers();
 }
 
 void ATRPActivator::disconnect() {
@@ -67,6 +69,7 @@ void ATRPActivator::addReactiveCenter(longint type_id,
 }
 
 void ATRPActivator::updateParticles() {
+  real time0 = wallTimer.getElapsedTime();
   if (integrator->getStep() % (interval_) != 0)
     return;
 
@@ -186,6 +189,8 @@ void ATRPActivator::updateParticles() {
   // Synchronize all processess
   (*system.comm).barrier();
 
+  timeUpdateParticles += wallTimer.getElapsedTime() - time0;
+
   // Update neighbour ghosts
   updateGhost(modified_particles);
 
@@ -197,7 +202,8 @@ void ATRPActivator::updateParticles() {
  * The parallel scheme is taken from
  * storage::DomainDecomposition::doGhostCommunication
  */
-void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particles) {// NOLINT
+void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particles) {  // NOLINT
+  real time0 = wallTimer.getElapsedTime();
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost begin");
 
   int kCrCommTag = 0x6b;
@@ -341,6 +347,7 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
   }
 
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost end");
+  timeUpdateGhost += wallTimer.getElapsedTime() - time0;
 }
 
 void ATRPActivator::saveStatistics(std::string filename) {
@@ -359,6 +366,16 @@ void ATRPActivator::saveStatistics(std::string filename) {
   }
 }
 
+python::list ATRPActivator::getTimers() {
+  python::list ret;
+
+  ret.append(python::make_tuple("timeUpdateParticles", timeUpdateParticles));
+  ret.append(python::make_tuple("timeUpdateGhost", timeUpdateGhost));
+  ret.append(python::make_tuple("timeAll", timeUpdateGhost+timeUpdateParticles));
+
+  return ret;
+}
+
 void ATRPActivator::registerPython() {
   using namespace espressopp::python;  // NOLINT
 
@@ -371,6 +388,7 @@ void ATRPActivator::registerPython() {
       .def("connect", &ATRPActivator::connect)
       .def("disconnect", &ATRPActivator::disconnect);
 }
+
 
 }  // end namespace integrator
 }  // end namespace espressopp

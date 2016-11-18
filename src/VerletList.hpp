@@ -140,6 +140,21 @@ class DynamicExcludeList {
     int builds;
     boost::signals2::connection connectionResort;
 
+    /** timers */
+    esutil::WallTimer wallTimer;
+    real timeRebuild_;
+    python::list getTimers() {
+      python::list ret;
+      ret.append(python::make_tuple("timeRebuild", timeRebuild_));
+      return ret;
+    }
+
+    void resetTimers() {
+      timeRebuild_ = 0.0;
+      wallTimer.reset();
+    }
+
+
     static LOG4ESPP_DECL_LOGGER(theLogger);
   };
 

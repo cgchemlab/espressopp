@@ -22,6 +22,7 @@
 #define _INTEGRATOR_ATRPActivator_HPP
 
 #include <algorithm>
+#include <esutil/Timer.hpp>
 #include "types.hpp"
 #include "logging.hpp"
 #include "Extension.hpp"
@@ -100,7 +101,19 @@ class ATRPActivator: public Extension {
   /** Logger */
   static LOG4ESPP_DECL_LOGGER(theLogger);
 
+  /** Timers */
+  real timeUpdateParticles;
+  real timeUpdateGhost;
+  esutil::WallTimer wallTimer;
 
+  void resetTimers() {
+      wallTimer.reset();
+
+      timeUpdateParticles = 0.0;
+      timeUpdateGhost = 0.0;
+  }
+
+  python::list getTimers();
 };
 
 }

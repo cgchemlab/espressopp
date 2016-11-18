@@ -71,6 +71,22 @@ class BasicDynamicResolutionType : public Extension {
   }
 
   static void registerPython();
+
+ protected:
+  real timeUpdateWeights;
+
+  python::list getTimers() {
+    python::list ret;
+    ret.append(python::make_tuple("timeUpdateWeights", timeUpdateWeights));
+    ret.append(python::make_tuple("timeAll", timeUpdateWeights));
+    return ret;
+
+  }
+  void resetTimers() {
+    wallTimer.reset();
+    timeUpdateWeights = 0.0;
+  }
+
  private:
   void connect();
   void disconnect();
@@ -116,6 +132,20 @@ class FixedListDynamicResolution : public Extension {
   void updateLists();
 
   static void registerPython();
+
+ protected:
+  python::list getTimers() {
+    python::list ret;
+    ret.append(python::make_tuple("timeUpdateLists", timeUpdateLists));
+    ret.append(python::make_tuple("timeAll", timeUpdateLists));
+    return ret;
+
+  }
+  void resetTimers() {
+    wallTimer.reset();
+    timeUpdateLists = 0.0;
+  }
+
  private:
   void connect();
   void disconnect();
@@ -129,6 +159,7 @@ class FixedListDynamicResolution : public Extension {
   FixedQuadrupleListRate fixed_quadruple_list_rate_;
 
   boost::signals2::connection _aftIntV;
+  real timeUpdateLists;
 };
 
 

@@ -63,7 +63,7 @@ class MDIntegratorLocal(object):
             # set integrator and connect to it
             extension.cxxclass.setIntegrator(extension, self)
             extension.cxxclass.connect(extension)
-            
+
             return self.cxxclass.addExtension(self, extension)
         
     def getExtension(self, k):

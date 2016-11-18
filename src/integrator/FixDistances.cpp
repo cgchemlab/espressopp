@@ -44,6 +44,8 @@ FixDistances::FixDistances(shared_ptr<System> system)
   type = Extension::Constraint;
   has_types_ = false;
   extensionOrder = Extension::beforeExtAnalyze;
+
+  wallTimer.reset();
 }
 
 FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longint target_type)
@@ -52,6 +54,8 @@ FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longi
   type = Extension::Constraint;
   has_types_ = true;
   extensionOrder = Extension::beforeExtAnalyze;
+
+  wallTimer.reset();
 }
 
 void FixDistances::disconnect() {
@@ -80,6 +84,7 @@ void FixDistances::connect() {
 }
 
 void FixDistances::onAftIntV() {
+  real time0 = wallTimer.getElapsedTime();
   if (!has_types_)
     return;
   std::vector<std::pair<Particle*, Particle*> > affected_particles;
@@ -113,9 +118,13 @@ void FixDistances::onAftIntV() {
       p1->setF(Real3D(0.0, 0.0, 0.0));
     }
   }
+
+  timeUpdateList += wallTimer.getElapsedTime() - time0;
 }
 
 void FixDistances::restore_positions() {
+  real time0 = wallTimer.getElapsedTime();
+
   System &system = getSystemRef();
   const bc::BC &bc = *(system.bc);
   real dt2 = integrator->getTimeStep()*integrator->getTimeStep();
@@ -129,12 +138,16 @@ void FixDistances::restore_positions() {
       Real3D anchor_pos = anchor->position();
       Real3D dst_pos = dst->position();
       Real3D unit_trans;
+
+#ifdef LOG4ESPP_DEBUG_ENABLED
       if (dst_pos.isNaNInf()) {
         LOG4ESPP_ERROR(theLogger, "Particle " << dst->id() << " of anchor " << anchor->id()
             << " has pos: " << dst_pos << " anchor_pos: " << anchor_pos
             << " dst.ghost=" << dst->ghost());
         exit(1);
       }
+#endif
+
       // Compute force that will cause to keep dst particle at particular distance from
       // anchor.
       Real3D trans;
@@ -149,6 +162,7 @@ void FixDistances::restore_positions() {
           << " new_force " << (new_trans*(dst->mass())/dt2));
 
       Real3D newF = (new_trans*(dst->mass())/dt2) + dst->getF();
+#ifdef LOG4ESPP_DEBUG_ENABLED
       if (newF.isNaNInf()) {
         std::cout << "new_trans=" << new_trans << std::endl;
         std::cout << "mass=" << dst->mass() << std::endl;
@@ -157,12 +171,14 @@ void FixDistances::restore_positions() {
         std::cout << "anchor_pos=" << anchor_pos << std::endl;
         exit(1);
       }
+#endif
 
       dst->setF(newF);
       // dst->setV(anchor->velocity());
       dst->setV(0.0);
     }
   }
+  timeRestorePosition += wallTimer.getElapsedTime() - time0;
 }
 
 std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_) {
@@ -228,6 +244,7 @@ void FixDistances::add_triplet(longint anchor, longint target, real distance) {
 }
 
 void FixDistances::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
+  real time0 = wallTimer.getElapsedTime();
   std::vector<longint> toSend;
   std::vector<real> toSendReal;
   int n;
@@ -250,9 +267,11 @@ void FixDistances::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
   }
   buf.write(toSend);
   buf.write(toSendReal);
+  timeComm += wallTimer.getElapsedTime() - time0;
 }
 
 void FixDistances::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
+  real time0 = wallTimer.getElapsedTime();
   std::vector<longint> received;
   std::vector<real> receivedDistance;
   longint pid1, pid2, n;
@@ -277,6 +296,7 @@ void FixDistances::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
         "ATTENTION: read garbage during receiving particles\n");
   }
   LOG4ESPP_INFO(theLogger, "received fixed pair list after receive particles");
+  timeComm += wallTimer.getElapsedTime() - time0;
 }
 
 void FixDistances::printTriplets() {
@@ -323,6 +343,16 @@ longint FixDistances::totalSize() {
   return global_size;
 }
 
+python::list FixDistances::getTimers() {
+  python::list ret;
+  ret.append(python::make_tuple("timeRestorePosition", timeRestorePosition));
+  ret.append(python::make_tuple("timeUpdateList", timeUpdateList));
+  ret.append(python::make_tuple("timeComm", timeComm));
+  ret.append(python::make_tuple("timeAll", timeRestorePosition+timeUpdateList+timeComm));
+
+  return ret;
+}
+
 void FixDistances::registerPython() {
   using namespace espressopp::python;  //NOLINT
   class_<FixDistances, shared_ptr<FixDistances>, bases<Extension> >
@@ -334,8 +364,10 @@ void FixDistances::registerPython() {
     .def("add_triplet", &FixDistances::add_triplet)
     .def("add_postprocess", &FixDistances::add_postprocess)
     .def("print_triplets", &FixDistances::printTriplets)
+    .def("get_timers", &FixDistances::getTimers)
     .def("get_all_triplets", &FixDistances::getAllTriplets);
 }
+
 
 /** Post process after pairs were added.
  *
