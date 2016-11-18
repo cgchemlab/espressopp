@@ -90,6 +90,7 @@
 
 #include "MultiTabulated.hpp"
 #include "MixedTabulated.hpp"
+#include "TabulatedCapped.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -121,6 +122,7 @@ namespace espressopp {
       ReactionFieldGeneralizedTI::registerPython();
       SoftCosine::registerPython();
       Tabulated::registerPython();
+      TabulatedCapped::registerPython();
       FENE::registerPython();
       FENECapped::registerPython();
       Harmonic::registerPython();
