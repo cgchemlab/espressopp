@@ -22,7 +22,6 @@
 #ifndef _INTERACTION_TABULATEDCAPPED_HPP
 #define _INTERACTION_TABULATEDCAPPED_HPP
 
-//#include <stdexcept>
 #include "Potential.hpp"
 #include "Interpolation.hpp"
 #include "../include/esconfig.hpp"
@@ -60,7 +59,7 @@ class TabulatedCapped: public PotentialTemplate<TabulatedCapped> {
     interpolationType = 0;
     caprad_ = 0.0;
     capradSqr_ = 0.0;
-    //std::cout << "using default tabulated potential ...\n";
+    initialized = false;
   }
 
   // used for fixedpairlist (2-body bonded interaction)

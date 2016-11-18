@@ -40,6 +40,8 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
   MixedTabulated() {
     setShift(0.0);
     setCutoff(infinity);
+    initialized = false;
+    interpolationType = 0;
   }
 
   MixedTabulated(longint itype,
@@ -50,6 +52,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
                  real cutoff) {
     setShift(0.0);
     setCutoff(cutoff);
+    interpolationType = itype;
     // Set first table.
     boost::mpi::communicator world;
     switch (itype) {
@@ -87,6 +90,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
                  real cutoff) {
     setShift(0.0);
     setCutoff(cutoff);
+    interpolationType = itype;
     // Set first table.
     boost::mpi::communicator world;
     switch (itype) {
@@ -117,32 +121,41 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
 
   /** Returns energy value for given distance square. */
   real _computeEnergySqrRaw(real distSqr) const {
-    real dist = sqrt(distSqr);
-    real e1 = table1->getEnergy(dist);
-    real e2 = table2->getEnergy(dist);
+    if (interpolationType != 0) {
 
-    real val = mix_value_*e1 + (1.0 - mix_value_)*e2;
+      real dist = sqrt(distSqr);
+      real e1 = table1->getEnergy(dist);
+      real e2 = table2->getEnergy(dist);
 
-    LOG4ESPP_DEBUG(theLocalLogger,
-                   "Energy, e1=" << e1 << " e2=" << e2
-                       << " x=" << mix_value_ << " val=" << val);
-    return val;
+      real val = mix_value_ * e1 + (1.0 - mix_value_) * e2;
+
+      LOG4ESPP_DEBUG(theLocalLogger,
+                     "Energy, e1=" << e1 << " e2=" << e2
+                                   << " x=" << mix_value_ << " val=" << val);
+      return val;
+    } else {
+      return 0.0;
+    }
   }
 
   bool _computeForceRaw(Real3D &force, const Real3D &dist, real distSqr) const {
-    real ffactor1, ffactor2, ffactor;
-    real distrt = sqrt(distSqr);
-    ffactor1 = table1->getForce(distrt);
-    ffactor2 = table2->getForce(distrt);
+    if (interpolationType) {
+      real ffactor1, ffactor2, ffactor;
+      real distrt = sqrt(distSqr);
+      ffactor1 = table1->getForce(distrt);
+      ffactor2 = table2->getForce(distrt);
 
-    ffactor = mix_value_*ffactor1 + (1.0 - mix_value_)*ffactor2;
+      ffactor = mix_value_ * ffactor1 + (1.0 - mix_value_) * ffactor2;
 
-    LOG4ESPP_DEBUG(theLocalLogger,
-                   "Force, f1=" << ffactor1 << " f2=" << ffactor2
-                       << " x=" << mix_value_ << " val=" << ffactor);
+      LOG4ESPP_DEBUG(theLocalLogger,
+                     "Force, f1=" << ffactor1 << " f2=" << ffactor2
+                                  << " x=" << mix_value_ << " val=" << ffactor);
 
-    force = dist * ffactor;
-    return true;
+      force = dist * ffactor;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   static void registerPython();
@@ -150,6 +163,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
  private:
   real mix_value() { return mix_value_; }
   void set_mix_value(real s) { mix_value_ = s; }
+  longint interpolationType;
 
   real mix_value_;  //<! The value used for mixing.
   shared_ptr<Interpolation> table1;  //<! Table with U_I
