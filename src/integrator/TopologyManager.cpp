@@ -21,6 +21,7 @@
 #include "TopologyManager.hpp"
 
 #include <queue>
+#include <resolv.h>
 
 #include "boost/format.hpp"
 #include "storage/Storage.hpp"
@@ -339,6 +340,8 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
     bool removed = fpl->remove(pid1, pid2);
     if (!removed) {
       std::cout << "bond not removed " << pid1 << "-" << pid2 << std::endl;
+      std::cout << "p1.type=" << p1->type() << " p2.type=" << p2->type() << std::endl;
+      std::cout << " p1.ghost=" << p1->ghost() << " p2.ghost=" << p2->ghost() << std::endl;
       throw std::runtime_error("FPL pair %d %d not removed");
     }
   } else {
@@ -394,6 +397,7 @@ void TopologyManager::exchangeData() {
   output.push_back(nb_distance_particles_.size() / 2);  // vector of particles to updates.
   output.push_back(newEdges_.size());  // vector of new edges.
   output.push_back(removedEdges_.size());  // vector of edges to remove.
+  output.push_back(new_local_particle_properties_.size());
 
   output.insert(output.end(), nb_edges_root_to_remove_.begin(), nb_edges_root_to_remove_.end());
   output.insert(output.end(), nb_distance_particles_.begin(), nb_distance_particles_.end());
@@ -409,19 +413,28 @@ void TopologyManager::exchangeData() {
     output.push_back(it->first);
     output.push_back(it->second);
   }
+  output.insert(output.end(), new_local_particle_properties_.begin(), new_local_particle_properties_.end());
 
+  // End packing data.
   // Send and gather data from all nodes.
   mpi::all_gather(*(system_->comm), output, global_merge_sets);
 
-  // Merge data from other nodes.
-  longint f1, f2, nb_edges_root_to_remove_size;
+  // Merge data from other nodes and perform local actions if particle is present.
+  longint f1, f2, nb_edges_root_to_remove_size, new_local_particle_properties_size;
   longint new_edge_size, remove_edge_size, nb_distance_particles_size;
+
+  longint update_particle_property_counter = 0;
+  longint total_update_particle_property_counter = 0;
+
   for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
     for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
       nb_edges_root_to_remove_size = *(itm++);
       nb_distance_particles_size = *(itm++);
       new_edge_size = *(itm++);
       remove_edge_size = *(itm++);
+      new_local_particle_properties_size = *(itm++);
+
+      total_update_particle_property_counter += new_local_particle_properties_size;
 
       for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
         longint particle_id = *(itm++);
@@ -433,6 +446,7 @@ void TopologyManager::exchangeData() {
         int particle_id = *(itm++);
         updateParticlePropertiesAtDistance(particle_id, distance);
       }
+
       for (int i = 0; i < new_edge_size; i++) {
         f1 = *(itm++);
         f2 = *(itm++);
@@ -443,12 +457,21 @@ void TopologyManager::exchangeData() {
         f2 = *(itm++);
         deleteEdge(f1, f2);
       }
+      // Change particle properties.
+      for (int i = 0; i < new_local_particle_properties_size; i++) {
+        longint particle_id = *(itm++);
+        bool update_property = updateParticleProperties(particle_id);
+        if (update_property)
+          update_particle_property_counter++;
+      }
     }
   }
+
   newEdges_.clear();
   removedEdges_.clear();
   nb_distance_particles_.clear();
   nb_edges_root_to_remove_.clear();
+  new_local_particle_properties_.clear();
 
   is_dirty_ = false;
 
@@ -861,6 +884,8 @@ void TopologyManager::invokeNeighbourBondRemove(Particle &root) {
   }
 }
 
+
+
 void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) {
   LOG4ESPP_DEBUG(theLogger, "update particle properties id=" << pid << " at distance=" << distance);
   // We will update both ghost and normal particles as ghost can also take part in reactions.
@@ -873,6 +898,36 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
         shared_ptr<ParticleProperties> pp = distance_type_pp_[distance][p_type];
         pp->updateParticleProperties(p);
       }
+    }
+  }
+}
+
+bool TopologyManager::updateParticleProperties(longint pid) {
+  Particle *p = system_->storage->lookupLocalParticle(pid);
+  if (p) {
+    longint p_type = p->type();
+    if (new_type_pp_.count(p_type) == 1) {
+      new_type_pp_[p_type]->updateParticleProperties(p);
+      return true;
+    }
+  }
+  return false;
+}
+
+
+void TopologyManager::invokeParticlePropertiesChange(longint pid) {
+  new_local_particle_properties_.push_back(pid);
+  is_dirty_ = true;
+}
+
+void TopologyManager::registerLocalPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp) {
+  std::map<longint, shared_ptr<ParticleProperties> >::iterator it = new_type_pp_.find(type_id);
+  if (it == new_type_pp_.end()) {
+    new_type_pp_.insert(std::make_pair(type_id, pp));
+  } else {
+    if (!(*pp == *(it->second))) {  // TODO(jakub): define operator != in ParticleProperties struct instead of this
+      throw std::runtime_error((const std::string &) (
+          boost::format("Local property of type %d already defined") % type_id));
     }
   }
 }
@@ -934,6 +989,19 @@ void TopologyManager::PrintResidues() {
 
 }
 
+python::list TopologyManager::getTimers() {
+  python::list ret;
+  ret.append(python::make_tuple("timeExchangeData", timeExchangeData));
+  ret.append(python::make_tuple("timeGenerateAnglesDihedrals", timeGenerateAnglesDihedrals));
+  ret.append(python::make_tuple("timeUpdateNeighbourProperty", timeUpdateNeighbourProperty));
+  ret.append(python::make_tuple("timeIsResidueConnected", timeIsResidueConnected));
+  ret.append(python::make_tuple(
+      "timeAll", timeExchangeData+timeGenerateAnglesDihedrals+timeUpdateNeighbourProperty+timeIsResidueConnected));
+
+  return ret;
+}
+
+
 void TopologyManager::registerPython() {
   using namespace espressopp::python;
 
@@ -961,16 +1029,6 @@ void TopologyManager::registerPython() {
       .def("is_particle_connected", &TopologyManager::isParticleConnected)
       ;
 }
-python::list TopologyManager::getTimers() {
-  python::list ret;
-  ret.append(python::make_tuple("timeExchangeData", timeExchangeData));
-  ret.append(python::make_tuple("timeGenerateAnglesDihedrals", timeGenerateAnglesDihedrals));
-  ret.append(python::make_tuple("timeUpdateNeighbourProperty", timeUpdateNeighbourProperty));
-  ret.append(python::make_tuple("timeIsResidueConnected", timeIsResidueConnected));
-
-  return ret;
-}
-
 
 }  // end namespace integrator
 }  // end namespace espressoppp

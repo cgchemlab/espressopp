@@ -23,7 +23,8 @@
 **timers** - print timings from C++
 ***********************************
 
-"""Python functions to print timings from C++."""
+Python functions to print timings from C++.
+"""
 
 import sys
 

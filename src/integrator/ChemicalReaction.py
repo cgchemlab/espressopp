@@ -168,6 +168,7 @@ from _espressopp import integrator_DissociationReaction
 
 from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessChangeProperty
+from _espressopp import integrator_PostProcessChangePropertyByTopologyManager
 from _espressopp import integrator_PostProcessRemoveBond
 from _espressopp import integrator_PostProcessChangeNeighboursProperty
 from _espressopp import integrator_PostProcessChangePropertyOnState
@@ -217,6 +218,18 @@ class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
     def remove_change_property(self, type_id):
         if pmi.workerIsActive():
             self.cxxclass.remove_change_property(self, type_id)
+
+
+class PostProcessChangePropertyByTopologyManagerLocal(integrator_PostProcessChangePropertyByTopologyManager,
+                                     integrator_ChemicalReactionPostProcess):
+    """Post process of reaction that changes particle property."""
+    def __init__(self, tm):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_PostProcessChangePropertyByTopologyManager, tm)
+
+    def add_change_property(self, type_id, prop):
+        if pmi.workerIsActive():
+            self.cxxclass.add_change_property(self, type_id, prop)
 
 
 class PostProcessChangeNeighboursPropertyLocal(integrator_PostProcessChangeNeighboursProperty,
@@ -410,6 +423,13 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls='espressopp.integrator.PostProcessChangePropertyLocal',
             pmicall=('add_change_property', 'remove_change_property')
+        )
+
+    class PostProcessChangePropertyByTopologyManager:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.integrator.PostProcessChangePropertyByTopologyManagerLocal',
+            pmicall=('add_change_property',)
         )
 
     class PostProcessChangeNeighboursProperty:

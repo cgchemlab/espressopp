@@ -108,8 +108,29 @@ class TopologyManager: public Extension {
 
   void invokeNeighbourBondRemove(Particle &root);
 
+  /**
+   * Schedule particle properties change. This is done after all other operations on topology. This is a local
+   * operation, no communication is required.
+   *
+   * @param pid particle to change
+   */
+  void invokeParticlePropertiesChange(longint pid);
+  void registerLocalPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp);
+
+  /**
+   * Interface for checking if two residues are connected.
+   * @param rid1 residue id
+   * @param rid2 residue id
+   * @return true if connected otherwise false
+   */
   bool isResiduesConnected(longint rid1, longint rid2);
 
+  /**
+   * Check if two particles are connected.
+   * @param pid1 particle id
+   * @param pid2 particle id
+   * @return true if connected otherwise false
+   */
   bool isParticleConnected(longint pid1, longint pid2);
 
   /**
@@ -146,6 +167,7 @@ class TopologyManager: public Extension {
   typedef std::pair<longint, std::pair<longint, longint> > Triplets;
   typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
+  typedef std::vector<std::pair<Particle*, shared_ptr<ParticleProperties> > > NewLocalParticleProperties;
 
   /**
    * Process removing of the bond.
@@ -206,6 +228,8 @@ class TopologyManager: public Extension {
    * @retval The list of node ids.
    */
   std::vector<longint> getNodesAtDistances(longint root);
+
+  void updateParticlePropertiesAtDistance(int id, int distance);
 
   /**
    * Connecting/Disconnecting to signals.
@@ -276,7 +300,9 @@ class TopologyManager: public Extension {
   std::vector<longint> nb_edges_root_to_remove_;  //<! Stores the pairs: distance; particle_id1, particle_id2
   boost::unordered_map<longint, DistanceEdges> edges_type_distance_pair_types_;
 
-  void updateParticlePropertiesAtDistance(int id, int distance);
+  std::map<longint, shared_ptr<ParticleProperties> > new_type_pp_;
+  std::vector<longint> new_local_particle_properties_;
+  bool updateParticleProperties(longint pid);
 
   bool is_dirty_;  ///<! If true then exchangeData will run.
 
@@ -299,7 +325,6 @@ class TopologyManager: public Extension {
   }
 
   python::list getTimers();
-
 };
 
 }  // end namespace integrator

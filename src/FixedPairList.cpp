@@ -193,8 +193,8 @@ namespace espressopp {
   bool FixedPairList::remove(longint pid1, longint pid2, bool no_signal) {
     LOG4ESPP_DEBUG(theLogger, "FPL remove " << pid1 << "-" << pid2);
     bool returnValue = false;
-    std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange =
-        globalPairs.equal_range(pid1);
+    std::pair<GlobalPairs::iterator, GlobalPairs::iterator> equalRange, equalRange_rev;
+    equalRange = globalPairs.equal_range(pid1);
     if (equalRange.first != globalPairs.end()) {
       for (GlobalPairs::iterator it = equalRange.first; it != equalRange.second;) {
         if (it->second == pid2) {
@@ -205,6 +205,22 @@ namespace espressopp {
           returnValue = true;
         } else {
           it++;
+        }
+      }
+    }
+    if (!returnValue) {
+      equalRange_rev = globalPairs.equal_range(pid2);
+      if (equalRange_rev.first != globalPairs.end()) {
+        for (GlobalPairs::iterator it = equalRange_rev.first; it != equalRange_rev.second;) {
+          if (it->second == pid1) {
+            LOG4ESPP_DEBUG(theLogger, "FPL, found " << it->first << " - " << it->second);
+            if (!no_signal)
+              onTupleRemoved(pid1, pid2);
+            it = globalPairs.erase(it);
+            returnValue = true;
+          } else {
+            it++;
+          }
         }
       }
     }

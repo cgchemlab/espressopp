@@ -124,6 +124,7 @@ namespace espressopp {
       ChemicalReaction::registerPython();
       ChemicalReactionPostProcess::registerPython();
       PostProcessChangeProperty::registerPython();
+      PostProcessChangePropertyByTopologyManager::registerPython();
       PostProcessReleaseParticles::registerPython();
       PostProcessJoinParticles::registerPython();
       PostProcessRemoveBond::registerPython();

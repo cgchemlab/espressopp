@@ -105,6 +105,12 @@ namespace espressopp {
     }
 
     bool updateParticleProperties(Particle *p);
+    bool hasChanges() { return change_flag != 0; }
+
+    friend bool operator==(const ParticleProperties &l, const ParticleProperties &r) {
+      return (l.type == r.type && l.mass == r.mass && l.q == r.q && l.state == r.state &&
+          l.res_id == r.res_id && l.lambda == r.lambda && l.change_flag == r.change_flag);
+    }
 
   private:
     int change_flag;

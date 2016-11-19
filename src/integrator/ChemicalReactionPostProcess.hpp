@@ -111,6 +111,23 @@ private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
 
+class PostProcessChangePropertyByTopologyManager : public ChemicalReactionPostProcess {
+ public:
+  PostProcessChangePropertyByTopologyManager(shared_ptr<TopologyManager> tm) : tm_(tm) { }
+  std::vector<Particle *> process(Particle &p, Particle &partner);
+
+  void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
+  longint getOrder() { return 9; }
+
+  /** Register this class so it can be used from Python. */
+  static void registerPython();
+
+ private:
+  shared_ptr<TopologyManager> tm_;
+
+  static LOG4ESPP_DECL_LOGGER(theLogger);
+};
+
 
 /** PostProcess: remove bond.
  *
