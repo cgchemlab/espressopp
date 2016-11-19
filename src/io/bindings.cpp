@@ -28,6 +28,8 @@
 #include "DumpTopology.hpp"
 #include "FileBackup.hpp"
 
+#include "ReadNumpy.hpp"
+
 namespace espressopp {
   namespace io{
     void registerPython() {
@@ -36,6 +38,7 @@ namespace espressopp {
       DumpGROAdress::registerPython();
       DumpH5MD::registerPython();
       DumpTopology::registerPython();
+      ReadNumpy::registerPython();
     }
   }
 }

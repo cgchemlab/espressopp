@@ -31,3 +31,4 @@ try:
 except ImportError as ex:
     import warnings
     warnings.warn('H5MD format not supported ({})'.format(ex))
+from espressopp.io.ReadNumpy import *
