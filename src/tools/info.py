@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -18,7 +18,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
-
+"""
+******************************************
+**info** - get info on particles and bonds
+******************************************
+"""
 import espressopp
 
 def getAllParticles(system, *properties):
@@ -51,7 +55,7 @@ def getAllBonds(system):
   'return all bonds of the system (currently only FixedPairLists are supported)'
   bonds = []
   nInteractions = system.getNumberOfInteractions()
-  for i in range(nInteractions):
+  for i in xrange(nInteractions):
       if system.getInteraction(i).isBonded():
           try:
               FixedPairList = system.getInteraction(i).getFixedPairList().getBonds()

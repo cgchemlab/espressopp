@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -18,6 +18,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
+"""
+************************************
+**tabulated** - write tabulated file
+************************************
+"""
 
 import espressopp
 from espressopp import Real3D
@@ -37,7 +42,7 @@ def writeTabFile(pot, name, N, low=0.0, high=2.5, body=2):
     outfile = open(name, "w")
     delta = (high - low) / (N - 1)
 
-    for i in range(N):
+    for i in xrange(N):
         r = low + i * delta
         energy = pot.computeEnergy(r)
         if body == 2:# this is for 2-body potentials

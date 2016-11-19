@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -18,6 +18,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
+"""
+**************************************
+**replicate** - replicate polymer melt
+**************************************
+"""
 
 def replicate(bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
   """
@@ -39,9 +44,9 @@ def replicate(bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
   x_replicated = x[:]
   y_replicated = y[:]
   z_replicated = z[:]
-  for i in range(xdim):
-    for j in range(ydim):
-      for k in range(zdim):
+  for i in xrange(xdim):
+    for j in xrange(ydim):
+      for k in xrange(zdim):
         if(i + j + k != 0):
           for x_, y_, z_ in zip(x, y, z):
             x_replicated.append(x_ + i * Lx)
@@ -53,9 +58,9 @@ def replicate(bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
   num_particles_original = len(x)
   bonds_replicated = bonds[:]
   angles_replicated = angles[:]
-  for i in range(xdim):
-    for j in range(ydim):
-      for k in range(zdim):
+  for i in xrange(xdim):
+    for j in xrange(ydim):
+      for k in xrange(zdim):
         if(i + j + k != 0):
           ct = ct + 1
           for p1, p2 in bonds:
