@@ -78,10 +78,16 @@ public:
 
   /** Order parameter. lowest ordere execute first. */
   virtual longint getOrder() = 0;
+  virtual std::string getName() = 0;
 protected:
   shared_ptr<System> system_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };
+
+inline std::ostream& operator<<(std::ostream &output, ChemicalReactionPostProcess &r) {
+  output << r.getName();
+  return output;
+}
 
 /*** PostProcess: change property of particle
  *
@@ -101,6 +107,7 @@ public:
   void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   void removeChangeProperty(int type_id);
   longint getOrder() { return 9; }
+  std::string getName() { return "PostProcessChangeProperty"; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -118,6 +125,7 @@ class PostProcessChangePropertyByTopologyManager : public ChemicalReactionPostPr
 
   void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
   longint getOrder() { return 9; }
+  std::string getName() { return "PostProcessChangePropertyByTopologyManager"; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -151,6 +159,7 @@ public:
   std::vector<Particle *> process(Particle &p, Particle &partner);
 
   longint getOrder() { return 2; }
+  std::string getName() { return "PostProcessRemoveBond"; }
 
   /** Register this class so it can be used from Python. */
   static void registerPython();
@@ -174,6 +183,7 @@ public:
   std::vector<Particle *> process(Particle &p, Particle &partner);
 
   longint getOrder() { return 5; }
+  std::string getName() { return "PostProcessChangeNeighboursProperty"; }
 
   /** Register property change.
    *
@@ -208,6 +218,7 @@ class PostProcessRemoveNeighbourBond : public ChemicalReactionPostProcess {
   }
 
   longint getOrder() { return 0; }
+  std::string getName() { return "PostProcessRemoveNeighbourBond"; }
 
   static void registerPython();
  private:
@@ -237,6 +248,7 @@ class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
   }
 
   longint getOrder() { return 9; }
+  std::string getName() { return "PostProcessChangePropertyOnState"; }
 
   static void registerPython();
 

@@ -118,6 +118,7 @@ class PostProcessReleaseParticles : public integrator::ChemicalReactionPostProce
   std::vector<Particle*> process(Particle &p, Particle &partner);
 
   longint getOrder() { return 5; }
+  std::string getName() { return "PostProcessReleaseParticles"; }
 
   static void registerPython();
  private:
@@ -133,6 +134,7 @@ class PostProcessJoinParticles : public integrator::ChemicalReactionPostProcess 
   std::vector<Particle*> process(Particle &p, Particle &partner);
 
   longint getOrder() { return 5; }
+  std::string getName() { return "PostProcessJoinParticles"; }
 
   static void registerPython();
 
