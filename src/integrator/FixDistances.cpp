@@ -218,20 +218,12 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
 }
 
 void FixDistances::add_triplet(longint anchor, longint target, real distance, bool force) {
-  if (force) {
-    distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
-  } else {
+  // Stores only pairs of real particles.
+  Particle *p_anchor = system_->storage->lookupRealParticle(anchor);
+  Particle *p_target = system_->storage->lookupLocalParticle(target);
 
-    // Stores only pairs of real particles.
-    Particle *p_anchor = system_->storage->lookupRealParticle(anchor);
-    Particle *p_target = system_->storage->lookupLocalParticle(target);
-
-    bool found = (p_anchor && p_target);
-
-    if (found) {
-      if (has_types_)
-        if (has_types_ && (p_anchor->type() != anchor_type_ || p_target->type() != target_type_))
-          return;
+  if (p_anchor && p_target) {
+    if (force || !has_types_ || (p_anchor->type() == anchor_type_ && p_target->type() == target_type_)) {
       distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
     }
   }

@@ -256,6 +256,7 @@ void DynamicResolution::registerPython() {
 BasicDynamicResolutionType::BasicDynamicResolutionType(shared_ptr<System> system):
     Extension(system) {
   type = Extension::Adress;
+  extensionOrder = Extension::beforeExtAnalyze;
 }
 
 BasicDynamicResolutionType::~BasicDynamicResolutionType() {
@@ -264,9 +265,7 @@ BasicDynamicResolutionType::~BasicDynamicResolutionType() {
 }
 
 void BasicDynamicResolutionType::connect() {
-  _aftIntV = integrator->aftIntV.connect(
-      boost::bind(&BasicDynamicResolutionType::UpdateWeights, this),
-      boost::signals2::at_back);
+  _aftIntV = integrator->aftIntV.connect(extensionOrder, boost::bind(&BasicDynamicResolutionType::UpdateWeights, this));
 }
 
 void BasicDynamicResolutionType::disconnect() {
