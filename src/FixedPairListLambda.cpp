@@ -125,9 +125,10 @@ bool FixedPairListLambda::iadd(longint pid1, longint pid2) {
 bool FixedPairListLambda::remove(longint pid1, longint pid2, bool no_signal) {
   LOG4ESPP_DEBUG(theLogger, "FPL remove " << pid1 << "-" << pid2);
   bool returnValue = false;
-  std::pair<PairsLambda::iterator, PairsLambda::iterator> equalRange = pairsLambda_.equal_range(pid1);
+  std::pair<PairsLambda::iterator, PairsLambda::iterator> equalRange, equalRange_rev;
+  equalRange = pairsLambda_.equal_range(pid1);
   if (equalRange.first != pairsLambda_.end()) {
-    for (PairsLambda::iterator it = equalRange.first; it != equalRange.second; ++it) {
+    for (PairsLambda::iterator it = equalRange.first; it != equalRange.second;) {
       if (it->second.first == pid2) {
         LOG4ESPP_DEBUG(theLogger, "FPL, found " << it->first << " - " << it->second.first);
         if (!no_signal)
@@ -136,6 +137,23 @@ bool FixedPairListLambda::remove(longint pid1, longint pid2, bool no_signal) {
         returnValue = true;
       } else {
         it++;
+      }
+    }
+  }
+  // Reverse delete.
+  if (!returnValue) {
+    equalRange_rev = pairsLambda_.equal_range(pid2);
+    if (equalRange_rev.first != pairsLambda_.end()) {
+      for (PairsLambda::iterator it = equalRange.first; it != equalRange.second;) {
+        if (it->second.first == pid1) {
+          LOG4ESPP_DEBUG(theLogger, "FPL, found " << it->first << " - " << it->second.first);
+          if (!no_signal)
+            onTupleRemoved(pid1, pid2);
+          it = pairsLambda_.erase(it);
+          returnValue = true;
+        } else {
+          it++;
+        }
       }
     }
   }
