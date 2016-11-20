@@ -493,7 +493,7 @@ void TopologyManager::exchangeData() {
   }
   for (SetPids::iterator it = global_new_local_particle_properties.begin();
        it != global_new_local_particle_properties.end(); ++it) {
-    updateParticleProperties(*it))
+    updateParticleProperties(*it));
   }
 
   /** Check if every information where redistributed and applied correctly. */
