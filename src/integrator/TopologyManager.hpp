@@ -172,7 +172,7 @@ class TopologyManager: public Extension {
   /**
    * Process removing of the bond.
    */
-  void removeBond(longint pid1, longint pid2);
+  bool removeBond(longint pid1, longint pid2);
 
   /**
    * Process new edge in topology.
@@ -182,7 +182,7 @@ class TopologyManager: public Extension {
   /**
    * Process removing edge from topology.
    */
-  void deleteEdge(longint pid1, longint pid2);
+  bool deleteEdge(longint pid1, longint pid2);
 
   /**
    * Update registered FixedTripleList with new entries.
@@ -294,7 +294,13 @@ class TopologyManager: public Extension {
 
   /** Data for bond remove. */
   typedef boost::unordered_map<longint, boost::unordered_set<std::pair<longint, longint> > > DistanceEdges;
-  void removeNeighbourEdges(size_t pid);
+  /**
+   * Remove edges at distance from the pid (root node).
+   *
+   * @param pid The root pid.
+   * @return Number of bonds removed from the fixed pair list.
+   */
+  longint removeNeighbourEdges(size_t pid);
   std::set<longint> nb_bond_distances_;
   longint max_bond_nb_distance_;
   std::vector<longint> nb_edges_root_to_remove_;  //<! Stores the pairs: distance; particle_id1, particle_id2

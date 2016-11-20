@@ -280,8 +280,8 @@ void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
   }
 }
 
-void TopologyManager::deleteEdge(longint pid1, longint pid2) {
-  removeBond(pid1, pid2);  // remove bond from fpl
+bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
+  bool removed = removeBond(pid1, pid2);  // remove bond from fpl
 
   if (graph_->count(pid1) > 0)
     graph_->at(pid1)->erase(pid2);
@@ -318,9 +318,10 @@ void TopologyManager::deleteEdge(longint pid1, longint pid2) {
     res_graph_->at(rid1)->erase(rid2);
     res_graph_->at(rid2)->erase(rid1);
   }
+  return removed;
 }
 
-void TopologyManager::removeBond(longint pid1, longint pid2) {
+bool TopologyManager::removeBond(longint pid1, longint pid2) {
   LOG4ESPP_DEBUG(theLogger, "Removed bond; removing edge: " << pid1 << "-" << pid2);
 
   Particle *p1 = system_->storage->lookupLocalParticle(pid1);
@@ -328,7 +329,7 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
   if (p1->ghost() && !p2->ghost()) {
     std::swap(pid1, pid2);
   } else if (p1->ghost() && p2->ghost()) {
-    return;
+    return false;
   }
 
   longint t1 = p1->type();
@@ -336,14 +337,9 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
   // Update fpl and remove bond.
   shared_ptr<FixedPairList> fpl = tupleMap_[t1][t2];
 
+  bool removed;
   if (fpl) {
-    bool removed = fpl->remove(pid1, pid2);
-    if (!removed) {
-      std::cout << "bond not removed " << pid1 << "-" << pid2 << std::endl;
-      std::cout << "p1.type=" << p1->type() << " p2.type=" << p2->type() << std::endl;
-      std::cout << " p1.ghost=" << p1->ghost() << " p2.ghost=" << p2->ghost() << std::endl;
-      throw std::runtime_error("FPL pair %d %d not removed");
-    }
+    removed = fpl->remove(pid1, pid2);
   } else {
     throw std::runtime_error("Tuple for pair not found");
   }
@@ -368,6 +364,7 @@ void TopologyManager::removeBond(longint pid1, longint pid2) {
     }
   }
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
+  return removed;
 }
 
 /**
@@ -420,52 +417,110 @@ void TopologyManager::exchangeData() {
   mpi::all_gather(*(system_->comm), output, global_merge_sets);
 
   // Merge data from other nodes and perform local actions if particle is present.
-  longint f1, f2, nb_edges_root_to_remove_size, new_local_particle_properties_size;
-  longint new_edge_size, remove_edge_size, nb_distance_particles_size;
 
-  longint update_particle_property_counter = 0;
-  longint total_update_particle_property_counter = 0;
+  // Merged data from all nodes.
+  typedef std::set<std::pair<longint, longint> > SetPairs;
+  typedef std::map<longint, longint> MapPairs;
+  typedef std::set<longint> SetPids;
+  SetPids global_nb_edges_root_to_remove;
+  MapPairs global_nb_distance_particles;
+  SetPairs global_new_edge;
+  SetPairs global_remove_edge;
+  SetPids global_new_local_particle_properties;
 
   for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
     for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
-      nb_edges_root_to_remove_size = *(itm++);
-      nb_distance_particles_size = *(itm++);
-      new_edge_size = *(itm++);
-      remove_edge_size = *(itm++);
-      new_local_particle_properties_size = *(itm++);
-
-      total_update_particle_property_counter += new_local_particle_properties_size;
+      longint nb_edges_root_to_remove_size = *(itm++);
+      longint nb_distance_particles_size = *(itm++);
+      longint new_edge_size = *(itm++);
+      longint remove_edge_size = *(itm++);
+      longint new_local_particle_properties_size = *(itm++);
 
       for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
         longint particle_id = *(itm++);
-        removeNeighbourEdges(particle_id);
+        global_nb_edges_root_to_remove.insert(particle_id);
       }
 
       for (int i = 0; i < nb_distance_particles_size; i++) {
         int distance = *(itm++);
         int particle_id = *(itm++);
-        updateParticlePropertiesAtDistance(particle_id, distance);
+        if (global_nb_distance_particles.count(particle_id) == 0) {
+          global_nb_distance_particles.insert(std::make_pair(particle_id, distance));
+        } else {
+          if (global_nb_distance_particles[particle_id] != distance) {
+            std::cout << "Ambiguity, existing pair: " << particle_id << ":"
+                      << global_nb_distance_particles[particle_id] << std::endl;
+            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
+            throw std::runtime_error("Problem with merging incoming data");
+          }
+        }
       }
 
       for (int i = 0; i < new_edge_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        newEdge(f1, f2);
+        longint f1 = *(itm++);
+        longint f2 = *(itm++);
+        if (f1 > f2)
+          std::swap(f1, f2);
+        global_new_edge.insert(std::make_pair(f1, f2));
       }
       for (int i = 0; i < remove_edge_size; i++) {
-        f1 = *(itm++);
-        f2 = *(itm++);
-        deleteEdge(f1, f2);
+        longint f1 = *(itm++);
+        longint f2 = *(itm++);
+        if (f1 > f2)
+          std::swap(f1, f2);
+        global_remove_edge.insert(std::make_pair(f1, f2));
       }
       // Change particle properties.
       for (int i = 0; i < new_local_particle_properties_size; i++) {
         longint particle_id = *(itm++);
-        bool update_property = updateParticleProperties(particle_id);
-        if (update_property)
-          update_particle_property_counter++;
+        global_new_local_particle_properties.insert(particle_id);
       }
     }
   }
+  // End merging data from other nodes. Now apply it.
+  for (SetPids::iterator it = global_nb_edges_root_to_remove.begin();
+       it != global_nb_edges_root_to_remove.end(); ++it) {
+    removeNeighbourEdges(*it);
+  }
+  for (MapPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
+    updateParticlePropertiesAtDistance(it->first, it->second);
+  }
+  for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); ++it) {
+    newEdge(it->first, it->second);
+  }
+  for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
+    deleteEdge(it->first, it->second);
+  }
+  for (SetPids::iterator it = global_new_local_particle_properties.begin();
+       it != global_new_local_particle_properties.end(); ++it) {
+    updateParticleProperties(*it))
+  }
+
+  /** Check if every information where redistributed and applied correctly. */
+//  std::vector<longint> nums;
+//  nums.push_back(num_remove_nb_edges);
+//  nums.push_back(num_update_particle_properties);
+//
+//  if (system_->comm->rank() == 0) {
+//    std::vector<longint> total_nums;
+//    mpi::reduce(*(system_->comm), nums, total_nums, std::plus<longint>(), 0);
+//    bool wrong_number = false;
+//    if (total_nums[0] != global_nb_edges_root_to_remove.size()) {
+//      wrong_number = true;
+//      std::cout << "removed edges: expected=" << global_nb_edges_root_to_remove.size()
+//                << " is=" << total_nums[0] << std::endl;
+//    }
+//    if (total_nums[1] != global_new_local_particle_properties.size()) {
+//      wrong_number = true;
+//      std::cout << "update type: expected=" << global_new_local_particle_properties.size()
+//                << " is=" << total_nums[1] << std::endl;
+//    }
+//    if (wrong_number)
+//      throw std::runtime_error("TopologyManager.exchangeData: problems with exchange data.");
+//
+//  } else {
+//    mpi::reduce(*(system_->comm), nums, std::plus<longint>(), 0);
+//  }
 
   newEdges_.clear();
   removedEdges_.clear();
@@ -772,13 +827,14 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   return nb_at_distance;
 }
 
-void TopologyManager::removeNeighbourEdges(size_t pid) {
+longint TopologyManager::removeNeighbourEdges(size_t pid) {
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
 
   Particle *root = system_->storage->lookupLocalParticle(pid);
   if (!root)
-    return;
+    return 0;
+
   Q.push(root->id());
   visitedDistance.insert(std::make_pair(root->id(), 0));
 
@@ -786,7 +842,7 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
       root->type());
 
   if (distance_edges == edges_type_distance_pair_types_.end())
-    return;
+    return 0;
 
   boost::unordered_set<std::pair<longint, longint> > pair_types_at_distance;
   DistanceEdges::iterator pair_types_at_distance_iter_;
@@ -817,7 +873,7 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
               type_p2 = p1_node->type();
               if (pair_types_at_distance.count(std::make_pair(type_p1, type_p2)) != 0) {
                 if (edges_to_remove.count(std::make_pair(node, current_node)) == 0)
-                  edges_to_remove.insert(std::make_pair(current_node, node));
+                  edges_to_remove.insert(std::make_pair(node, current_node));
               }
             }
           }
@@ -834,13 +890,17 @@ void TopologyManager::removeNeighbourEdges(size_t pid) {
     Q.pop();
   }
 
+  longint removed_bonds = 0;
+
   if (edges_to_remove.size() > 0) {
     LOG4ESPP_DEBUG(theLogger, "edges to remove: " << edges_to_remove.size());
     for (boost::unordered_set<std::pair<longint, longint> >::iterator it = edges_to_remove.begin();
          it != edges_to_remove.end(); ++it) {
-      deleteEdge(it->first, it->second);
+      if (deleteEdge(it->first, it->second))
+        removed_bonds++;
     }
   }
+  return removed_bonds;
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
@@ -879,6 +939,7 @@ void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
 void TopologyManager::invokeNeighbourBondRemove(Particle &root) {
   // Check if this root.type is on the list of possible edges to remove.
   if (edges_type_distance_pair_types_.count(root.type()) == 1) {
+    System &system = getSystemRef();
     nb_edges_root_to_remove_.insert(nb_edges_root_to_remove_.end(), root.id());
     is_dirty_ = true;
   }
@@ -907,9 +968,14 @@ bool TopologyManager::updateParticleProperties(longint pid) {
   if (p) {
     longint p_type = p->type();
     if (new_type_pp_.count(p_type) == 1) {
+      std::cout << " update=" << pid << std::endl;
       new_type_pp_[p_type]->updateParticleProperties(p);
       return true;
+    } else {
+      std::cout << "type " << p_type << " pid=" << pid << " not found" << std::endl;
     }
+  } else {
+    std::cout << " particle = " << pid << " nof found" << std::endl;
   }
   return false;
 }
