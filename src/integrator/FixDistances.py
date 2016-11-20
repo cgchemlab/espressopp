@@ -43,7 +43,7 @@ class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
             else:
                 cxxinit(self, integrator_FixDistances, system)
             if cs_list:
-                self.addConstraints(cs_list, True)
+                self.addConstraints(cs_list, False)
 
     def addConstraints(self, cs_list, force=False):
         if pmi.workerIsActive():
