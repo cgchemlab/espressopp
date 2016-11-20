@@ -42,12 +42,12 @@ class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
             else:
                 cxxinit(self, integrator_FixDistances, system)
             if cs_list:
-                self.addConstraints(cs_list)
+                self.addConstraints(cs_list, True)
 
-    def addConstraints(self, cs_list):
+    def addConstraints(self, cs_list, force=False):
         if pmi.workerIsActive():
             for anchor_id, target_id, dist in cs_list:
-                self.cxxclass.add_triplet(self, anchor_id, target_id, dist)
+                self.cxxclass.add_triplet(self, anchor_id, target_id, dist, force)
 
     def totalSize(self):
         if pmi.workerIsActive():

@@ -221,25 +221,25 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
   return mod_particles;
 }
 
-void FixDistances::add_triplet(longint anchor, longint target, real distance) {
+void FixDistances::add_triplet(longint anchor, longint target, real distance, bool force) {
   System &system = getSystemRef();
 
-  // Stores only pairs of real particles.
-  Particle *p_anchor = system.storage->lookupRealParticle(anchor);
-  Particle *p_target = system.storage->lookupLocalParticle(target);
-
-  bool found = true;
-  if (!p_anchor)
-    found = false;
-  else
-    if (!p_target)
-      LOG4ESPP_DEBUG(theLogger, "Particle p2 " << target << " not found.");
-
-  if (found) {
-    if (has_types_)
-      if (has_types_ && (p_anchor->type() != anchor_type_ || p_target->type() != target_type_))
-        return;
+  if (force) {
     distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
+  } else {
+
+    // Stores only pairs of real particles.
+    Particle *p_anchor = system.storage->lookupRealParticle(anchor);
+    Particle *p_target = system.storage->lookupLocalParticle(target);
+
+    bool found = (p_anchor && p_target);
+
+    if (found) {
+      if (has_types_)
+        if (has_types_ && (p_anchor->type() != anchor_type_ || p_target->type() != target_type_))
+          return;
+      distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
+    }
   }
 }
 
@@ -398,7 +398,7 @@ LOG4ESPP_LOGGER(PostProcessJoinParticles::theLogger, "PostProcessJoinParticles")
 std::vector<Particle*> PostProcessJoinParticles::process(Particle &p, Particle &partner) {
   std::vector<Particle*> ret;
   LOG4ESPP_DEBUG(theLogger, "Adding triplet anchor: " << p.id() << " guest: " << partner.id() << " at d=" << distance_);
-  fd_->add_triplet(p.id(), partner.id(), distance_);
+  fd_->add_triplet(p.id(), partner.id(), distance_, true);
 
   return ret;
 }

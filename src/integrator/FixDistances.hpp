@@ -60,7 +60,7 @@ class FixDistances : public Extension {
    *  @param target: The id of target particle.
    *  @param distance: The distance on which particles will be kept.
    */
-  void add_triplet(longint anchor, longint target, real distance);
+  void add_triplet(longint anchor, longint target, real distance, bool force=false);
 
   void add_postprocess(const shared_ptr<integrator::PostProcessChangeProperty> pp) {
     post_process_ = pp;
