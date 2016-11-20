@@ -19,38 +19,19 @@
 */
 
 #include "python.hpp"
-#include "NFixedListEntries.hpp"
-#include "FixedPairList.hpp"
-#include "FixedTripleList.hpp"
-#include "FixedQuadrupleList.hpp"
+#include "NumFixDistances.hpp"
+#include "../integrator/FixDistances.hpp"
 
 using namespace espressopp;  //NOLINT
 
 namespace espressopp {
 namespace analysis {
 
-void NFixedPairListEntries::registerPython() {
+void NumFixDistances::registerPython() {
   using namespace espressopp::python;  //NOLINT
-  class_<NFixedPairListEntries, bases<Observable> >
-    ("analysis_NFixedPairListEntries",
-        init< shared_ptr<System>, shared_ptr<FixedPairList> >())
-    .add_property("value", &NFixedPairListEntries::compute_real);
-}
-
-void NFixedTripleListEntries::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-  class_<NFixedTripleListEntries, bases<Observable> >
-      ("analysis_NFixedTripleListEntries",
-       init< shared_ptr<System>, shared_ptr<FixedTripleList> >())
-      .add_property("value", &NFixedTripleListEntries::compute_real);
-}
-
-void NFixedQuadrupleListEntries::registerPython() {
-  using namespace espressopp::python;  //NOLINT
-  class_<NFixedQuadrupleListEntries, bases<Observable> >
-      ("analysis_NFixedQuadrupleListEntries",
-       init< shared_ptr<System>, shared_ptr<FixedQuadrupleList> >())
-      .add_property("value", &NFixedQuadrupleListEntries::compute_real);
+  class_<NumFixDistances, bases<Observable> >
+    ("analysis_NumFixDistances",
+        init< shared_ptr<System>, shared_ptr<integrator::FixDistances> >());
 }
 
 }  // end namespace analysis

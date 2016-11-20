@@ -39,7 +39,7 @@ namespace integrator {
 LOG4ESPP_LOGGER(FixDistances::theLogger, "FixDistances");
 
 FixDistances::FixDistances(shared_ptr<System> system)
-    : Extension(system) {
+    : Extension(system), system_(system) {
   LOG4ESPP_INFO(theLogger, "FixDistances");
   type = Extension::Constraint;
   has_types_ = false;
@@ -49,7 +49,7 @@ FixDistances::FixDistances(shared_ptr<System> system)
 }
 
 FixDistances::FixDistances(shared_ptr<System> system, longint anchor_type, longint target_type)
-    : Extension(system), anchor_type_(anchor_type), target_type_(target_type) {
+    : Extension(system), anchor_type_(anchor_type), target_type_(target_type), system_(system) {
   LOG4ESPP_INFO(theLogger, "FixDistances");
   type = Extension::Constraint;
   has_types_ = true;
@@ -72,14 +72,13 @@ void FixDistances::connect() {
   aftInitF_ = integrator->aftInitF.connect(boost::bind(&FixDistances::restore_positions, this));
 
   // If use particle types then update constraints at every time step at last.
-  System &system = getSystemRef();
   if (has_types_) {
     aftIntV_ = integrator->aftIntV.connect(extensionOrder, boost::bind(&FixDistances::onAftIntV, this));
   }
 
-  sigBeforeSend = system.storage->beforeSendParticles.connect(
+  sigBeforeSend = system_->storage->beforeSendParticles.connect(
       boost::bind(&FixDistances::beforeSendParticles, this, _1, _2));
-  sigAfterRecv = system.storage->afterRecvParticles.connect(
+  sigAfterRecv = system_->storage->afterRecvParticles.connect(
       boost::bind(&FixDistances::afterRecvParticles, this, _1, _2));
 }
 
@@ -89,10 +88,9 @@ void FixDistances::onAftIntV() {
     return;
   std::vector<std::pair<Particle*, Particle*> > affected_particles;
 
-  System &system = getSystemRef();
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end(); ) {
-    Particle *anchor = system.storage->lookupRealParticle(it->first);
-    Particle *dst = system.storage->lookupRealParticle(it->second.first);
+    Particle *anchor = system_->storage->lookupRealParticle(it->first);
+    Particle *dst = system_->storage->lookupRealParticle(it->second.first);
     if (anchor && dst) {
       if (anchor->type() != anchor_type_ || dst->type() != target_type_) {
         affected_particles.push_back(std::make_pair(anchor, dst));
@@ -125,13 +123,12 @@ void FixDistances::onAftIntV() {
 void FixDistances::restore_positions() {
   real time0 = wallTimer.getElapsedTime();
 
-  System &system = getSystemRef();
-  const bc::BC &bc = *(system.bc);
+  const bc::BC &bc = *(system_->bc);
   real dt2 = integrator->getTimeStep()*integrator->getTimeStep();
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end();
        ++it) {
-    Particle *anchor = system.storage->lookupRealParticle(it->first);
-    Particle *dst = system.storage->lookupLocalParticle(it->second.first);
+    Particle *anchor = system_->storage->lookupRealParticle(it->first);
+    Particle *dst = system_->storage->lookupLocalParticle(it->second.first);
     real dist = it->second.second;
 
     if (anchor != NULL && dst != NULL) {
@@ -187,9 +184,8 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
   std::vector<Particle*> mod_particles;
   if (total_size == 0)
     return mod_particles;
-  System &system = getSystemRef();
 
-  Particle *p_anchor = system.storage->lookupRealParticle(anchor_id);
+  Particle *p_anchor = system_->storage->lookupRealParticle(anchor_id);
   if (!p_anchor) {
     LOG4ESPP_DEBUG(theLogger, "release_particle, anchor_id=" << anchor_id << " not found");
     return mod_particles;
@@ -200,7 +196,7 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
   std::vector<Particle*> tmp;
   int removed = 0;
   for (Triplets::iterator it = equal_range.first; it != equal_range.second && removed < nr_;) {
-    Particle *p1 = system.storage->lookupLocalParticle(it->second.first);
+    Particle *p1 = system_->storage->lookupLocalParticle(it->second.first);
     if (p1) {
       if (post_process_) {
         tmp = post_process_->process(*p1, *p_anchor);
@@ -222,15 +218,13 @@ std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_
 }
 
 void FixDistances::add_triplet(longint anchor, longint target, real distance, bool force) {
-  System &system = getSystemRef();
-
   if (force) {
     distance_triplets_.insert(std::make_pair(anchor, std::pair<longint, real>(target, distance)));
   } else {
 
     // Stores only pairs of real particles.
-    Particle *p_anchor = system.storage->lookupRealParticle(anchor);
-    Particle *p_target = system.storage->lookupLocalParticle(target);
+    Particle *p_anchor = system_->storage->lookupRealParticle(anchor);
+    Particle *p_target = system_->storage->lookupLocalParticle(target);
 
     bool found = (p_anchor && p_target);
 
@@ -306,7 +300,6 @@ void FixDistances::printTriplets() {
 }
 
 python::list FixDistances::getAllTriplets() {
-  System &system = getSystemRef();
 
   std::vector<real> local_bonds;
   std::vector<std::vector<real> > global_bonds;
@@ -317,8 +310,8 @@ python::list FixDistances::getAllTriplets() {
     local_bonds.push_back(it->second.first);
     local_bonds.push_back(it->second.second);
   }
-  if (system.comm->rank() == 0) {
-    mpi::gather(*system.comm, local_bonds, global_bonds, 0);
+  if (system_->comm->rank() == 0) {
+    mpi::gather(*system_->comm, local_bonds, global_bonds, 0);
     python::tuple bond;
 
     for (std::vector<std::vector<real> >::iterator it = global_bonds.begin(); it != global_bonds.end(); ++it) {
@@ -330,18 +323,19 @@ python::list FixDistances::getAllTriplets() {
       }
     }
   } else {
-    mpi::gather(*system.comm, local_bonds, global_bonds, 0);
+    mpi::gather(*system_->comm, local_bonds, global_bonds, 0);
   }
   return bonds;
 }
 
-longint FixDistances::totalSize() {
-  System &system = getSystemRef();
+longint FixDistances::totalSize() const {
   longint local_size = distance_triplets_.size();
   longint global_size;
-  mpi::all_reduce(*system.comm, local_size, global_size, std::plus<longint>());
+  mpi::all_reduce(*system_->comm, local_size, global_size, std::plus<longint>());
   return global_size;
 }
+
+
 
 python::list FixDistances::getTimers() {
   python::list ret;
@@ -366,8 +360,9 @@ void FixDistances::registerPython() {
     .def("print_triplets", &FixDistances::printTriplets)
     .def("get_timers", &FixDistances::getTimers)
     .def("get_all_triplets", &FixDistances::getAllTriplets);
-}
 
+
+}
 
 /** Post process after pairs were added.
  *

@@ -1,4 +1,4 @@
-#  Copyright (C) 2015
+#  Copyright (C) 2016
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
@@ -16,66 +16,23 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-***************************************
-**espressopp.analysis.NFixedPairListEntries**
-***************************************
 
-The object that computes the number of entries in FixedPairList.
-
-.. function:: espressopp.analysis.NFixedPairListEntries(system, fixed_pair_lit)
-
-            :param system: The system object
-            :type system: espressopp.System
-            :param fixed_pair_list: The observed fpl.
-            :type interaction: espressopp.FixedPairList
-"""
 
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 
 from espressopp.analysis.Observable import *  # NOQA
-from _espressopp import analysis_NFixedPairListEntries
-from _espressopp import analysis_NFixedTripleListEntries
-from _espressopp import analysis_NFixedQuadrupleListEntries
+from _espressopp import analysis_NumFixDistances
 
 
-class NFixedPairListEntriesLocal(ObservableLocal, analysis_NFixedPairListEntries):
-    """The (local) compute of potential energy."""
-    def __init__(self, system, fl):
+class NumFixDistancesLocal(ObservableLocal, analysis_NumFixDistances):
+    def __init__(self, system, fix_distances):
         if pmi.workerIsActive():
-            cxxinit(self, analysis_NFixedPairListEntries, system, fl)
-
-class NFixedTripleListEntriesLocal(ObservableLocal, analysis_NFixedTripleListEntries):
-    """The (local) compute of potential energy."""
-    def __init__(self, system, fl):
-        if pmi.workerIsActive():
-            cxxinit(self, analysis_NFixedTripleListEntries, system, fl)
-
-class NFixedQuadrupleListEntriesLocal(ObservableLocal, analysis_NFixedQuadrupleListEntries):
-    """The (local) compute of potential energy."""
-    def __init__(self, system, fl):
-        if pmi.workerIsActive():
-            cxxinit(self, analysis_NFixedQuadrupleListEntries, system, fl)
+            cxxinit(self, analysis_NumFixDistances, system, fix_distances)
 
 if pmi.isController:
-    class NFixedPairListEntries(Observable):
+    class NumFixDistances(Observable):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.analysis.NFixedPairListEntriesLocal',
-            pmiproperty=['value']
-        )
-
-    class NFixedTripleListEntries(Observable):
-        __metaclass__ = pmi.Proxy
-        pmiproxydefs = dict(
-            cls='espressopp.analysis.NFixedTripleListEntriesLocal',
-            pmiproperty=['value']
-        )
-
-    class NFixedQuadrupleListEntries(Observable):
-        __metaclass__ = pmi.Proxy
-        pmiproxydefs = dict(
-            cls='espressopp.analysis.NFixedQuadrupleListEntriesLocal',
-            pmiproperty=['value']
+            cls='espressopp.analysis.NumFixDistancesLocal',
         )

@@ -19,67 +19,31 @@
 */
 
 // ESPP_CLASS
-#ifndef _ANALYSIS_NFIXEDLISTENTRIES_HPP
-#define _ANALYSIS_NFIXEDLISTENTRIES_HPP
+#ifndef _ANALYSIS_NFIXDISTANCES_HPP
+#define _ANALYSIS_NFIXDISTANCES_HPP
 
 #include "types.hpp"
 #include "Observable.hpp"
-#include "FixedPairList.hpp"
-#include "FixedTripleList.hpp"
-#include "FixedQuadrupleList.hpp"
+#include "integrator/FixDistances.hpp"
 
 namespace espressopp {
 namespace analysis {
 
-class NFixedPairListEntries : public Observable {
+class NumFixDistances : public Observable {
  public:
-  NFixedPairListEntries(shared_ptr<System> system, shared_ptr<FixedPairList> fpl) :
-      Observable(system), fpl_(fpl) {
+  NumFixDistances(shared_ptr<System> system, shared_ptr<integrator::FixDistances> fd) :
+      Observable(system), fd_(fd) {
     result_type = real_scalar;
   }
 
-  ~NFixedPairListEntries() {}
+  ~NumFixDistances() {}
   real compute_real() const {
-    return fpl_->totalSize();
+    return fd_->totalSize();
   }
 
   static void registerPython();
  private:
-  shared_ptr<FixedPairList> fpl_;
-};
-
-class NFixedTripleListEntries : public Observable {
- public:
-  NFixedTripleListEntries(shared_ptr<System> system, shared_ptr<FixedTripleList> fpl) :
-      Observable(system), fpl_(fpl) {
-    result_type = real_scalar;
-  }
-
-  ~NFixedTripleListEntries() {}
-  real compute_real() const {
-    return fpl_->totalSize();
-  }
-
-  static void registerPython();
- private:
-  shared_ptr<FixedTripleList> fpl_;
-};
-
-class NFixedQuadrupleListEntries : public Observable {
- public:
-  NFixedQuadrupleListEntries(shared_ptr<System> system, shared_ptr<FixedQuadrupleList> fpl) :
-      Observable(system), fpl_(fpl) {
-    result_type = real_scalar;
-  }
-
-  ~NFixedQuadrupleListEntries() {}
-  real compute_real() const {
-    return fpl_->totalSize();
-  }
-
-  static void registerPython();
- private:
-  shared_ptr<FixedQuadrupleList> fpl_;
+  shared_ptr<integrator::FixDistances> fd_;
 };
 
 }  // end namespace analysis

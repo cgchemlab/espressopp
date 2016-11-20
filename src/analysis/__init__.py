@@ -68,6 +68,7 @@ from espressopp.analysis.PotentialEnergy import *
 from espressopp.analysis.KineticEnergy import *
 from espressopp.analysis.NFixedListEntries import *
 from espressopp.analysis.ChemicalConversion import *
+from espressopp.analysis.NumFixDistances import *
 
 from espressopp.analysis.Resolution import *
 

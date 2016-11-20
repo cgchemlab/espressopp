@@ -26,6 +26,7 @@
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 from espressopp.integrator.Extension import *
+from espressopp.analysis.Observable import *
 from _espressopp import integrator_FixDistances
 from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessReleaseParticles
@@ -52,7 +53,6 @@ class FixDistancesLocal(ExtensionLocal, integrator_FixDistances):
     def totalSize(self):
         if pmi.workerIsActive():
             return self.cxxclass.get_size(self)
-
 
 class PostProcessReleaseParticlesLocal(integrator_PostProcessReleaseParticles,
                                        integrator_ChemicalReactionPostProcess):

@@ -33,6 +33,7 @@
 #include "Real3D.hpp"
 #include "Particle.hpp"
 #include "ChemicalReactionPostProcess.hpp"
+#include "analysis/Observable.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -60,13 +61,13 @@ class FixDistances : public Extension {
    *  @param target: The id of target particle.
    *  @param distance: The distance on which particles will be kept.
    */
-  void add_triplet(longint anchor, longint target, real distance, bool force=false);
+  void add_triplet(longint anchor, longint target, real distance, bool force);
 
   void add_postprocess(const shared_ptr<integrator::PostProcessChangeProperty> pp) {
     post_process_ = pp;
   }
 
-  int totalSize();
+  int totalSize() const;
   void restore_positions();
   std::vector<Particle*> release_particle(longint anchor_id, int nr_=1);
 
@@ -80,6 +81,8 @@ class FixDistances : public Extension {
 
   longint anchor_type_, target_type_;
   bool has_types_;
+
+  shared_ptr<System> system_;
 
   python::list getAllTriplets();
 

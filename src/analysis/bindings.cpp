@@ -72,6 +72,8 @@
 #include "NFixedListEntries.hpp"
 #include "ChemicalConversion.hpp"
 
+#include "NumFixDistances.hpp"
+
 #include "Resolution.hpp"
 
 #include "MaxAvgMinForce.hpp"
@@ -133,6 +135,8 @@ namespace espressopp {
       ChemicalConversion::registerPython();
       ChemicalConversionTypeSequence::registerPython();
       ChemicalConversionTypeState::registerPython();
+
+      NumFixDistances::registerPython();
 
       Resolution::registerPython();
       ResolutionFixedPairList::registerPython();
