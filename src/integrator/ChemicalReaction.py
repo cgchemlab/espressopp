@@ -413,9 +413,9 @@ if pmi.isController:
             cls='espressopp.integrator.ChemicalReactionLocal',
             pmiproperty=('interval','nearest_mode', 'pair_distances_filename'),
             pmicall=(
-                'add_reaction', 'get_timers', 'clear_pair_distances', 'save_pair_distances'
+                'add_reaction', 'clear_pair_distances', 'save_pair_distances'
                 ),
-            pmiinvoke=('get_pair_distances',)
+            pmiinvoke=('get_pair_distances', 'get_timers', )
             )
 
     class PostProcessChangeProperty:
