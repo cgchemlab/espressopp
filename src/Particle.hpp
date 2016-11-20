@@ -50,6 +50,8 @@ namespace espressopp {
     int state;
     int res_id;
 
+    int incr_state;
+
     static void registerPython();
 
     void init() {
@@ -62,6 +64,8 @@ namespace espressopp {
       state = 0;
       res_id = 0;
 
+      incr_state = 0;
+
       change_flag = 0;
     }
 
@@ -71,7 +75,8 @@ namespace espressopp {
       CHANGE_Q=4,
       CHANGE_STATE=8,
       CHANGE_RESID=16,
-      CHANGE_LAMBDA=32
+      CHANGE_LAMBDA=32,
+      INCR_STATE=64
     };
 
     void setType(size_t t) {
@@ -94,6 +99,11 @@ namespace espressopp {
       change_flag |= CHANGE_STATE;
     }
 
+    void setIncrState(int s) {
+      incr_state = 0;
+      change_flag |= INCR_STATE;
+    }
+
     void setResId(int rs) {
       res_id = rs;
       change_flag |= CHANGE_RESID;
@@ -108,8 +118,14 @@ namespace espressopp {
     bool hasChanges() { return change_flag != 0; }
 
     friend bool operator==(const ParticleProperties &l, const ParticleProperties &r) {
-      return (l.type == r.type && l.mass == r.mass && l.q == r.q && l.state == r.state &&
-          l.res_id == r.res_id && l.lambda == r.lambda && l.change_flag == r.change_flag);
+      return (l.type == r.type &&
+              l.mass == r.mass &&
+              l.q == r.q &&
+              l.state == r.state &&
+              l.res_id == r.res_id &&
+              l.lambda == r.lambda &&
+              l.incr_state == r.incr_state &&
+              l.change_flag == r.change_flag);
     }
 
   private:
@@ -128,6 +144,8 @@ namespace espressopp {
       ar & lambdaDeriv;
       ar & state;
       ar & res_id;
+      ar & change_flag;
+      ar & incr_state;
     }
   };
 

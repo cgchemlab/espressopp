@@ -34,6 +34,8 @@ namespace espressopp {
       p->setQ(q);
     if (change_flag & CHANGE_STATE)
       p->setState(state);
+    if (change_flag & INCR_STATE)
+      p->setState(p->getState() + incr_state);
     if (change_flag & CHANGE_RESID)
       p->setResId(res_id);
     if (change_flag & CHANGE_LAMBDA)
@@ -95,6 +97,10 @@ namespace espressopp {
            "lambda_adr",
            make_getter(&ParticleProperties::lambda),
            &ParticleProperties::setLambda)
+       .add_property(
+           "incr_state",
+           make_getter(&ParticleProperties::incr_state),
+           &ParticleProperties::setIncrState)
       .def(
           "init",
           &ParticleProperties::init

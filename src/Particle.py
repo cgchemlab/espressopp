@@ -188,9 +188,8 @@ class ParticleLocal(object):
 
 
 class ParticlePropertiesLocal(_espressopp._ParticleProperties):
-    def __init__(self, type=None, mass=None, q=None, lambda_adr=None):
-        if (not (pmi._PMIComm and pmi._PMIComm.isActive()) or
-                pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup()):
+    def __init__(self, type=None, mass=None, q=None, lambda_adr=None, incr_state=None):
+        if pmi.workerIsActive():
             cxxinit(self, _espressopp._ParticleProperties)
             self.cxxclass.init(self)
             if type is not None:
@@ -201,6 +200,8 @@ class ParticlePropertiesLocal(_espressopp._ParticleProperties):
                 self.q = q
             if lambda_adr is not None:
                 self.lambda_adr = lambda_adr
+            if incr_state is not None:
+                self.incr_state = incr_state
 
 
 if pmi.isController:
@@ -212,7 +213,8 @@ if pmi.isController:
               'type',
               'mass',
               'q',
-              'lambda_adr'
+              'lambda_adr',
+              'incr_state'
               ]
           )
 
