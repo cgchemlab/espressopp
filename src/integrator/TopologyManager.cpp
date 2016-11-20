@@ -968,14 +968,9 @@ bool TopologyManager::updateParticleProperties(longint pid) {
   if (p) {
     longint p_type = p->type();
     if (new_type_pp_.count(p_type) == 1) {
-      std::cout << " update=" << pid << std::endl;
       new_type_pp_[p_type]->updateParticleProperties(p);
       return true;
-    } else {
-      std::cout << "type " << p_type << " pid=" << pid << " not found" << std::endl;
     }
-  } else {
-    std::cout << " particle = " << pid << " nof found" << std::endl;
   }
   return false;
 }
