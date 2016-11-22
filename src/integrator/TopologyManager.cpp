@@ -345,7 +345,9 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
   if (fpl) {
     removed = fpl->remove(pid1, pid2);
   } else {
-    throw std::runtime_error("Tuple for pair not found");
+    throw std::runtime_error(
+        (const std::string &)
+            (boost::format("Tuple for pair %d-%d of types %d,%d not found") % pid1 % pid2 % t1 % t2));
   }
 
   // Generate list of angles/dihedrals to remove, based on the graph.
