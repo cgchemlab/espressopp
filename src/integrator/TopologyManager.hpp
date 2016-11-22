@@ -168,6 +168,9 @@ class TopologyManager: public Extension {
   typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
   typedef std::vector<std::pair<Particle*, shared_ptr<ParticleProperties> > > NewLocalParticleProperties;
+  typedef std::set<std::pair<longint, longint> > SetPairs;
+  typedef std::map<longint, longint> MapPairs;
+  typedef std::set<longint> SetPids;
 
   /**
    * Process removing of the bond.
@@ -298,9 +301,9 @@ class TopologyManager: public Extension {
    * Remove edges at distance from the pid (root node).
    *
    * @param pid The root pid.
-   * @return Number of bonds removed from the fixed pair list.
+   * @param edges_to_remove The list of edges to remove.
    */
-  longint removeNeighbourEdges(size_t pid);
+  void removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove);
   std::set<longint> nb_bond_distances_;
   longint max_bond_nb_distance_;
   std::vector<longint> nb_edges_root_to_remove_;  //<! Stores the pairs: distance; particle_id1, particle_id2

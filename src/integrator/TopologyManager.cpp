@@ -419,9 +419,7 @@ void TopologyManager::exchangeData() {
   // Merge data from other nodes and perform local actions if particle is present.
 
   // Merged data from all nodes.
-  typedef std::set<std::pair<longint, longint> > SetPairs;
-  typedef std::map<longint, longint> MapPairs;
-  typedef std::set<longint> SetPids;
+
   SetPids global_nb_edges_root_to_remove;
   MapPairs global_nb_distance_particles;
   SetPairs global_new_edge;
@@ -477,10 +475,11 @@ void TopologyManager::exchangeData() {
       }
     }
   }
+
   // End merging data from other nodes. Now apply it.
   for (SetPids::iterator it = global_nb_edges_root_to_remove.begin();
        it != global_nb_edges_root_to_remove.end(); ++it) {
-    removeNeighbourEdges(*it);
+    removeNeighbourEdges(*it, global_remove_edge);
   }
   for (MapPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
     updateParticlePropertiesAtDistance(it->first, it->second);
@@ -827,13 +826,13 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   return nb_at_distance;
 }
 
-longint TopologyManager::removeNeighbourEdges(size_t pid) {
+void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove) {
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
 
   Particle *root = system_->storage->lookupLocalParticle(pid);
   if (!root)
-    return 0;
+    return;
 
   Q.push(root->id());
   visitedDistance.insert(std::make_pair(root->id(), 0));
@@ -842,11 +841,10 @@ longint TopologyManager::removeNeighbourEdges(size_t pid) {
       root->type());
 
   if (distance_edges == edges_type_distance_pair_types_.end())
-    return 0;
+    return;
 
   boost::unordered_set<std::pair<longint, longint> > pair_types_at_distance;
   DistanceEdges::iterator pair_types_at_distance_iter_;
-  boost::unordered_set<std::pair<longint, longint> > edges_to_remove;
 
   longint current_node, node, new_distance;
   longint type_p1 = -1;
@@ -890,17 +888,14 @@ longint TopologyManager::removeNeighbourEdges(size_t pid) {
     Q.pop();
   }
 
-  longint removed_bonds = 0;
-
-  if (edges_to_remove.size() > 0) {
-    LOG4ESPP_DEBUG(theLogger, "edges to remove: " << edges_to_remove.size());
-    for (boost::unordered_set<std::pair<longint, longint> >::iterator it = edges_to_remove.begin();
-         it != edges_to_remove.end(); ++it) {
-      if (deleteEdge(it->first, it->second))
-        removed_bonds++;
-    }
-  }
-  return removed_bonds;
+//  if (edges_to_remove.size() > 0) {
+//    LOG4ESPP_DEBUG(theLogger, "edges to remove: " << edges_to_remove.size());
+//    for (boost::unordered_set<std::pair<longint, longint> >::iterator it = edges_to_remove.begin();
+//         it != edges_to_remove.end(); ++it) {
+//      if (deleteEdge(it->first, it->second))
+//        removed_bonds++;
+//    }
+//  }
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
