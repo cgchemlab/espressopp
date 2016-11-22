@@ -487,14 +487,14 @@ void TopologyManager::exchangeData() {
        it != global_nb_edges_root_to_remove.end(); ++it) {
     removeNeighbourEdges(*it, global_remove_edge);
   }
-  for (MapPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
-    updateParticlePropertiesAtDistance(it->first, it->second);
-  }
   for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); ++it) {
     newEdge(it->first, it->second);
   }
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
+  }
+  for (MapPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
+    updateParticlePropertiesAtDistance(it->first, it->second);
   }
   for (SetPids::iterator it = global_new_local_particle_properties.begin();
        it != global_new_local_particle_properties.end(); ++it) {
