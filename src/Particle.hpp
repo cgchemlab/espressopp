@@ -57,7 +57,7 @@ namespace espressopp {
     void init() {
       id = 0;
       type = 0;
-      mass = 1.0;
+      mass = 0.0;
       q = 0.0;
       lambda = 0.0;
       lambdaDeriv = 0.0;

@@ -206,17 +206,20 @@ class ParticlePropertiesLocal(_espressopp._ParticleProperties):
 
 if pmi.isController:
     class ParticleProperties(object):
-      __metaclass__ = pmi.Proxy
-      pmiproxydefs = dict(
-          cls='espressopp.ParticlePropertiesLocal',
-          pmiproperty=[
-              'type',
-              'mass',
-              'q',
-              'lambda_adr',
-              'incr_state'
-              ]
-          )
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.ParticlePropertiesLocal',
+            pmiproperty=[
+            'type',
+            'mass',
+            'q',
+            'lambda_adr',
+            'incr_state'])
+
+        def __str__(self):
+            obj = self.pmiobject
+            return 'ParticleProperties(type={}, mass={}, q={}, lambda={}, incr_state={})'.format(
+                obj.type, obj.mass, obj.q, obj.lambda_adr, obj.incr_state)
 
     class Particle(object):
         __metaclass__ = pmi.Proxy

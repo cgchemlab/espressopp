@@ -925,6 +925,7 @@ void TopologyManager::registerNeighbourBondToRemove(longint type_id,
                                                     longint type_pid1,
                                                     longint type_pid2) {
   max_bond_nb_distance_ = std::max(max_bond_nb_distance_, nb_level);
+
   edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid1, type_pid2));
   edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid2, type_pid1));
 
