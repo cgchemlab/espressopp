@@ -904,7 +904,19 @@ void TopologyManager::registerNeighbourPropertyChange(
       << " at level=" << nb_level);
   max_nb_distance_ = std::max(max_nb_distance_, nb_level);
   nb_distances_.insert(nb_level);
-  distance_type_pp_[nb_level][type_id] = pp;
+  if (distance_type_pp_.count(nb_level) == 0) {
+    distance_type_pp_[nb_level][type_id] = pp;
+  } else {
+    if (distance_type_pp_[nb_level].count(type_id) == 0) {
+      distance_type_pp_[nb_level][type_id] = pp;
+    } else {
+      if (distance_type_pp_[nb_level][type_id] != pp) {
+        std::stringstream ss;
+        ss << "registerNeighbourPropertyChange, dist=" << nb_level << " type=" << type_id;;
+        throw std::runtime_error(ss.str());
+      }
+    }
+  }
   is_dirty_ = true;
 }
 
