@@ -55,6 +55,10 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
 
   extensionOrder = Extension::afterReaction;
 
+  update_angles_dihedrals = false;
+  max_nb_distance_ = 0;
+  max_bond_nb_distance_ = 0;
+
   is_dirty_ = true;
 }
 

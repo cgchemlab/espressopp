@@ -70,13 +70,13 @@ namespace espressopp {
     }
 
     enum ChangeFlags {
-      CHANGE_TYPE=1,
-      CHANGE_MASS=2,
-      CHANGE_Q=4,
-      CHANGE_STATE=8,
-      CHANGE_RESID=16,
-      CHANGE_LAMBDA=32,
-      INCR_STATE=64
+      CHANGE_TYPE=1,  // 0
+      CHANGE_MASS=2,  // 1
+      CHANGE_Q=4,  // 2
+      CHANGE_STATE=8,  // 3
+      CHANGE_RESID=16,  // 4
+      CHANGE_LAMBDA=32,  // 5
+      INCR_STATE=64  // 6
     };
 
     void setType(size_t t) {
@@ -100,7 +100,7 @@ namespace espressopp {
     }
 
     void setIncrState(int s) {
-      incr_state = 0;
+      incr_state = s;
       change_flag |= INCR_STATE;
     }
 
