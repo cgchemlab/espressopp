@@ -188,10 +188,13 @@ class ParticleLocal(object):
 
 
 class ParticlePropertiesLocal(_espressopp._ParticleProperties):
-    def __init__(self, type=None, mass=None, q=None, lambda_adr=None, incr_state=None):
+    def __init__(self, type=None, mass=None, q=None, lambda_adr=None, incr_state=None, state=None):
         if pmi.workerIsActive():
             cxxinit(self, _espressopp._ParticleProperties)
             self.cxxclass.init(self)
+            if incr_state is not None and state is not None:
+                raise RuntimeError('Ambiguity, cannot set incr_state and state at the same time')
+
             if type is not None:
                 self.type = int(type)
             if mass is not None:
@@ -202,6 +205,8 @@ class ParticlePropertiesLocal(_espressopp._ParticleProperties):
                 self.lambda_adr = lambda_adr
             if incr_state is not None:
                 self.incr_state = incr_state
+            if state is not None:
+                self.state = state
 
 
 if pmi.isController:
@@ -213,6 +218,7 @@ if pmi.isController:
             'type',
             'mass',
             'q',
+            'state',
             'lambda_adr',
             'incr_state'])
 
