@@ -808,7 +808,7 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   while (!Q.empty()) {
     current = Q.front();
     new_distance = visitedDistance[current] + 1;
-    try {
+    if (graph_->count(current) == 1) {
       std::set<longint> *adj = graph_->at(current);
       for (std::set<longint>::iterator ia = adj->begin(); ia != adj->end(); ++ia) {
         node = *ia;
@@ -823,9 +823,6 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
           visitedDistance.insert(std::make_pair(node, new_distance));
         }
       }
-    } catch (...) {
-      std::cout << "Exception graph_->at(current) = " << current << std::endl;
-      throw new std::runtime_error("Exception graph_->at");
     }
     Q.pop();
   }
@@ -859,7 +856,7 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
     current_node = Q.front();
     new_distance = visitedDistance[current_node] + 1;
     pair_types_at_distance_iter_ = distance_edges->second.find(new_distance);
-    try {
+    if (graph_->count(current_node) == 1) {
       std::set<longint> *adj = graph_->at(current_node);
       bool has_pairs_at_distance = false;
       if (pair_types_at_distance_iter_ != distance_edges->second.end()) {
@@ -887,9 +884,6 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
           visitedDistance.insert(std::make_pair(node, new_distance));
         }
       }
-    } catch (...) {
-      std::cout << "Exception graph_->at(current) = " << current_node << std::endl;
-      throw new std::runtime_error("Exception graph_->at");
     }
     Q.pop();
   }
