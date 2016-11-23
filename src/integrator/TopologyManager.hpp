@@ -133,6 +133,8 @@ class TopologyManager: public Extension {
    */
   bool isParticleConnected(longint pid1, longint pid2);
 
+  bool isNeighbourParticleInState(longint root_id, longint nb_type_id, longint min_state, longint max_state);
+
   /**
    * Handle signal from FixedPairList that new bond was created.
    */

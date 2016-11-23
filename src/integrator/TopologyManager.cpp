@@ -1015,6 +1015,24 @@ bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {
   return false;
 }
 
+bool TopologyManager::isNeighbourParticleInState(
+    longint root_id, longint nb_type_id, longint min_state, longint max_state) {
+  bool valid = true;
+
+  if (graph_->count(root_id) == 1) {
+    std::set<longint> *adj = graph_->at(root_id);
+    for (std::set<longint>::iterator it = adj->begin(); it != adj->end(); ++it) {
+      Particle *p = system_->storage->lookupLocalParticle(*it);
+      if (p) {
+        if (p->type() == nb_type_id) {
+          return (p->state() >= min_state && p->state() < max_state);
+        }
+      }
+    }
+  }
+  return valid;
+}
+
 
 void TopologyManager::PrintTopology() {
   for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {

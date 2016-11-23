@@ -131,6 +131,9 @@ namespace espressopp {
       PostProcessChangeNeighboursProperty::registerPython();
       PostProcessChangePropertyOnState::registerPython();
       PostProcessRemoveNeighbourBond::registerPython();
+
+      ReactionConstraint::registerPython();
+      ReactionConstraintNeighbourState::registerPython();
       
       MinimizeEnergy::registerPython();
       ChangeInRegion::registerPython();

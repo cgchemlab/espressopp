@@ -214,6 +214,38 @@ private:
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> > generator_;
 };
 
+class ReactionConstraint {
+ public:
+  explicit ReactionConstraint() { }
+  virtual bool checkPair(Particle *p1, Particle *p2) = 0;
+
+  void setTopologyManager(shared_ptr<TopologyManager> tm) {
+    topology_manager_ = tm;
+  }
+
+  static void registerPython();
+
+ protected:
+  shared_ptr<TopologyManager> topology_manager_;
+};
+
+class ReactionConstraintNeighbourState : public ReactionConstraint {
+ public:
+  ReactionConstraintNeighbourState(longint nb_type_id, longint min_state, longint max_state)
+      : nb_type_id_(nb_type_id), min_state_(min_state), max_state_(max_state) { }
+
+  bool checkPair(Particle *p1, Particle *p2) {
+    return topology_manager_->isNeighbourParticleInState(p1->id(), nb_type_id_, min_state_, max_state_);
+  }
+
+  static void registerPython();
+
+ private:
+  longint nb_type_id_;
+  longint min_state_;
+  longint max_state_;
+};
+
 /** Base class for performing addition reaction.
  *
  * It modeled following reaction:
@@ -384,6 +416,22 @@ public:
     std::sort(post_process_T1.begin(), post_process_T1.end(), wayToSortPostProcess);
     std::sort(post_process_T2.begin(), post_process_T2.end(), wayToSortPostProcess);
   }
+
+  void addConstraint(shared_ptr<ReactionConstraint> rc, int type = 0) {
+    rc->setTopologyManager(topology_manager_);  // inject TopologyManager.
+    switch (type) {
+      case 1:
+        reaction_constraint_T1.push_back(rc); break;
+      case 2:
+        reaction_constraint_T2.push_back(rc); break;
+      case 0:
+        reaction_constraint_T1.push_back(rc);
+        reaction_constraint_T2.push_back(rc); break;
+      default:
+        throw std::runtime_error("Wrong type");
+    }
+  }
+
   static bool wayToSortPostProcess(shared_ptr<ChemicalReactionPostProcess> i,
                             shared_ptr<ChemicalReactionPostProcess> j) {
     return i->getOrder() < j->getOrder();
@@ -446,6 +494,10 @@ protected:
   typedef std::vector<shared_ptr<ChemicalReactionPostProcess> > PostProcessMap;
   PostProcessMap post_process_T1;  //!<Ordered List of post-process methods.
   PostProcessMap post_process_T2;  //!<Ordered List of post-process methods.
+
+  typedef std::vector<shared_ptr<ReactionConstraint> > ReactionConstraintList;
+  ReactionConstraintList reaction_constraint_T1;
+  ReactionConstraintList reaction_constraint_T2;
 
   shared_ptr<ReactionCutoff> reaction_cutoff_;
 
@@ -550,6 +602,7 @@ private:
   real break_cutoff_;
   real break_cutoff_sqr_;
 };
+
 }// namespace integrator
 }// namespace espressopp
 

@@ -88,6 +88,21 @@ void ReactionCutoffRandom::registerPython() {
                       &ReactionCutoffRandom::set_sigma);
 }
 
+
+void ReactionConstraint::registerPython() {
+  using namespace espressopp::python;// NOLINT
+  class_<ReactionConstraint, shared_ptr<ReactionConstraint>, boost::noncopyable>
+      ("integrator_ReactionConstraint", no_init);
+}
+
+void ReactionConstraintNeighbourState::registerPython() {
+  using namespace espressopp::python;// NOLINT
+  class_<ReactionConstraintNeighbourState, bases<ReactionConstraint>, shared_ptr<ReactionConstraintNeighbourState> >
+      ("integrator_ReactionConstraintNeighbourState", init<longint, longint, longint>());
+}
+
+
+
 /** Checks if the particles pair is valid. */
 bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering Reaction::isValidPair");

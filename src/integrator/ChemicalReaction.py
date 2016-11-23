@@ -178,6 +178,9 @@ from _espressopp import integrator_ReactionCutoffStatic
 from _espressopp import integrator_ReactionCutoffRandom
 from _espressopp import integrator_ReactionCutoff
 
+from _espressopp import integrator_ReactionConstraint
+from _espressopp import integrator_ReactionConstraintNeighbourState
+
 
 class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
     """Chemical Reaction integrator extension."""
@@ -288,6 +291,12 @@ class ReactionCutoffRandomLocal(integrator_ReactionCutoffRandom, integrator_Reac
             cxxinit(self, integrator_ReactionCutoffRandom, eq_distance, eq_width, seed)
 
 
+class ReactionConstraintNeighbourStateLocal(integrator_ReactionConstraintNeighbourState, integrator_ReactionConstraint):
+    def __init__(self, nb_type_id, min_state, max_state):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_ReactionConstraintNeighbourState, nb_type_id, min_state, max_state)
+
+
 class ReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
@@ -325,6 +334,11 @@ class ReactionLocal(integrator_Reaction):
         if pmi.workerIsActive():
             self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
 
+    def add_constraint(self, constraint, reactant_switch=0):
+        if pmi.workerIsActive():
+            name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
+            self.cxxclass.add_constraint(self, constraint, name_switch.get(reactant_switch, reactant_switch))
+
 
 class RestrictReactionLocal(integrator_Reaction):
     """Synthesis reaction."""
@@ -357,6 +371,12 @@ class RestrictReactionLocal(integrator_Reaction):
         if pmi.workerIsActive():
             name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
             self.cxxclass.add_postprocess(self, post_process, name_switch.get(reactant_switch, reactant_switch))
+
+    def add_constraint(self, constraint, reactant_switch=0):
+        if pmi.workerIsActive():
+            name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
+            self.cxxclass.add_constraint(self, constraint, name_switch.get(reactant_switch, reactant_switch))
+
 
     def set_reaction_cutoff(self, reaction_cutoff):
         """Set cutoff object."""
@@ -405,6 +425,12 @@ class DissociationReactionLocal(integrator_DissociationReaction):
         """
         if pmi.workerIsActive():
             self.cxxclass.add_postprocess(self, post_process, reactant_switch)
+
+    def add_constraint(self, constraint, reactant_switch=0):
+        if pmi.workerIsActive():
+            name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
+            self.cxxclass.add_constraint(self, constraint, name_switch.get(reactant_switch, reactant_switch))
+
 
 if pmi.isController:
     class ChemicalReaction(Extension):
@@ -471,6 +497,12 @@ if pmi.isController:
             'pmiproperty': ('sigma', 'eq_distance')
         }
 
+    class ReactionConstraintNeighbourState:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = {
+            'cls': 'espressopp.integrator.ReactionConstraintNeighbourStateLocal'
+        }
+
     class Reaction:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
@@ -478,7 +510,8 @@ if pmi.isController:
             pmicall=(
                 'add_postprocess',
                 'set_reaction_cutoff',
-                'get_reaction_cutoff'
+                'get_reaction_cutoff',
+                'add_constraint'
             ),
             pmiproperty=(
                 'type_1',
@@ -505,7 +538,8 @@ if pmi.isController:
                 'add_postprocess',
                 'set_reaction_cutoff',
                 'get_reaction_cutoff',
-                'define_connection'
+                'define_connection',
+                'add_constraint'
             ),
             pmiproperty=(
                 'type_1',
@@ -530,6 +564,7 @@ if pmi.isController:
                 cls='espressopp.integrator.DissociationReactionLocal',
                 pmicall=(
                     'add_postprocess',
+                    'add_constraint'
                 ),
                 pmiproperty=(
                     'type_1',
