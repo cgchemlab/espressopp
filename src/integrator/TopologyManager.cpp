@@ -1001,20 +1001,23 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
     longint p_type = p->type();
     if (distance_type_pp_.count(distance) > 0) {
       std::pair<TypeId2PP::iterator, TypeId2PP::iterator> equalRange;
-      equalRange = distance_type_pp_[distance].equal_range(p_type);
-      int update_counter = 0;   // it has to be one, otherwise throw exception.
-      shared_ptr<TopologyParticleProperties> tpp;
-      for (TypeId2PP::iterator it = equalRange.first; it != equalRange.second; ++it) {
-        if (it->second->isValid(p)) {
-          update_counter++;
-          tpp = it->second;
+      TypeId2PP type_pp = distance_type_pp_[distance];
+      equalRange = type_pp.equal_range(p_type);
+      if (equalRange.first != type_pp.end()) {
+        int update_counter = 0;   // it has to be one, otherwise throw exception.
+        shared_ptr<TopologyParticleProperties> tpp;
+        for (TypeId2PP::iterator it = equalRange.first; it != equalRange.second; ++it) {
+          if (it->second->isValid(p)) {
+            update_counter++;
+            tpp = it->second;
+          }
         }
+        if (update_counter > 1)
+          throw std::runtime_error("updateParticlePropertiesAtDistance, found multiple updates");
+        if (!tpp)
+          throw std::runtime_error("updateParticlePropertiesAtDistance, nocorrect TopologyParticleProperties to apply");
+        tpp->updateParticleProperties(p);
       }
-      if (update_counter > 1)
-        throw std::runtime_error("updateParticlePropertiesAtDistance, found multiple updates");
-      if (!tpp)
-        throw std::runtime_error("updateParticlePropertiesAtDistance, nocorrect TopologyParticleProperties to apply");
-      tpp->updateParticleProperties(p);
     }
   }
 }

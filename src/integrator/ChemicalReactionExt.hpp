@@ -121,7 +121,7 @@ public:
 private:
   static LOG4ESPP_DECL_LOGGER(theLogger);
   void addReaction(boost::shared_ptr<integrator::Reaction> reaction);
-  boost::shared_ptr<Reaction> getReaction(longint reaction_idx);
+  boost::shared_ptr<integrator::Reaction> getReaction(longint reaction_idx);
 
   void React();
 

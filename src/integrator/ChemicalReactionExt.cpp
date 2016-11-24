@@ -108,7 +108,7 @@ void ChemicalReaction::addReaction(boost::shared_ptr<integrator::Reaction> react
   }
 }
 
-shared_ptr<Reaction> ChemicalReaction::getReaction(longint reaction_idx) {
+boost::shared_ptr<integrator::Reaction> ChemicalReaction::getReaction(longint reaction_idx) {
   if (reaction_idx > reaction_list_.size())
     throw std::runtime_error("Wrong reaction idx, maximum=" + reaction_list_.size());
   return reaction_list_[reaction_idx];
@@ -977,6 +977,7 @@ void ChemicalReaction::registerPython() {
     .def("connect", &ChemicalReaction::connect)
     .def("disconnect", &ChemicalReaction::disconnect)
     .def("add_reaction", &ChemicalReaction::addReaction)
+    .def("get_reaction", &ChemicalReaction::getReaction)
     .def("get_timers", &ChemicalReaction::getTimers)
     .def("save_pair_distances", &ChemicalReaction::savePairDistances)
     .def("get_pair_distances", &ChemicalReaction::getPairDistances)

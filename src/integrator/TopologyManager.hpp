@@ -53,6 +53,8 @@ class TopologyParticleProperties {
     incr_state_ = 0;
     change_flag_ = 0;
     condition_ = false;
+    min_state_ = 0;
+    max_state_ = 0;
   }
 
   TopologyParticleProperties(const ParticleProperties &p) {
@@ -63,6 +65,8 @@ class TopologyParticleProperties {
     res_id_ = p.res_id;
     incr_state_ = p.incr_state;
     change_flag_ = p.change_flag;
+    min_state_ = 0;
+    max_state_ = 0;
     condition_ = false;
   }
 
@@ -116,7 +120,7 @@ class TopologyParticleProperties {
   bool updateParticleProperties(Particle *p);
 
   bool isValid(Particle *p);
-  
+
   bool operator==(const TopologyParticleProperties &r) {
     return (type_id_ == r.type_id_ &&
         mass_ == r.mass_ &&
@@ -124,6 +128,8 @@ class TopologyParticleProperties {
         state_ == r.state_ &&
         res_id_ == r.res_id_ &&
         lambda_ == r.lambda_ &&
+        min_state_ == r.min_state_ &&
+        max_state_ == r.max_state_ &&
         incr_state_ == r.incr_state_ &&
         change_flag_ == r.change_flag_);
   }
