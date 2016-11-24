@@ -1081,11 +1081,10 @@ bool TopologyManager::isNeighbourParticleInState(
           num_type++;
         }
       } else
-        throw std::runtime_error(boost::format("particle %d of root=%d type=%d not found") % (*it) % root_id % nb_type_id);
+        throw std::runtime_error((const std::string &) (boost::format("particle %d of root=%d type=%d not found") % (*it) % root_id % nb_type_id));
     }
     if (num_type > 1)
-      throw std::runtime_error(
-          boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id % num_type % nb_type_id);
+      throw std::runtime_error((const std::string &) (boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id % num_type % nb_type_id));
     longint p_state = p->state();
     valid = (p_state >= min_state && p_state < max_state);
   }
