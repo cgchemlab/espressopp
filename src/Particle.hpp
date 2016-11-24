@@ -144,8 +144,6 @@ namespace espressopp {
       ar & lambdaDeriv;
       ar & state;
       ar & res_id;
-      ar & change_flag;
-      ar & incr_state;
     }
   };
 

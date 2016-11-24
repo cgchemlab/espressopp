@@ -511,7 +511,8 @@ if pmi.isController:
                 'add_postprocess',
                 'set_reaction_cutoff',
                 'get_reaction_cutoff',
-                'add_constraint'
+                'add_constraint',
+                'get_reaction'
             ),
             pmiproperty=(
                 'type_1',

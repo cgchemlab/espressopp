@@ -108,6 +108,12 @@ void ChemicalReaction::addReaction(boost::shared_ptr<integrator::Reaction> react
   }
 }
 
+shared_ptr<Reaction> ChemicalReaction::getReaction(longint reaction_idx) {
+  if (reaction_idx > reaction_list_.size())
+    throw std::runtime_error("Wrong reaction idx, maximum=" + reaction_list_.size());
+  return reaction_list_[reaction_idx];
+}
+
 /** Performs all steps of the reactive scheme. */
 void ChemicalReaction::React() {
   if (integrator->getStep() % (*interval_) != 0)
