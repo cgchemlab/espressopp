@@ -1067,16 +1067,24 @@ bool TopologyManager::isNeighbourParticleInState(
     longint root_id, longint nb_type_id, longint min_state, longint max_state) {
   bool valid = true;
 
-  if (graph_->count(root_id) == 1) {
+  if (graph_->count(root_id)) {
     std::set<longint> *adj = graph_->at(root_id);
+    longint num_type = 0;
+    Particle *p;
     for (std::set<longint>::iterator it = adj->begin(); it != adj->end(); ++it) {
-      Particle *p = system_->storage->lookupLocalParticle(*it);
+      p = system_->storage->lookupLocalParticle(*it);
       if (p) {
         if (p->type() == nb_type_id) {
-          return (p->state() >= min_state && p->state() < max_state);
+          num_type++;
         }
-      }
+      } else
+        throw std::runtime_error(boost::format("particle %d of root=%d type=%d not found") % (*it) % root_id % nb_type_id);
     }
+    if (num_type > 1)
+      throw std::runtime_error(
+          boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id % num_type % nb_type_id);
+    longint p_state = p->state();
+    valid = (p_state >= min_state && p_state < max_state);
   }
   return valid;
 }
