@@ -57,6 +57,10 @@ class TopologyParticlePropertiesLocal(integrator_TopologyParticleProperties):
             if state is not None:
                 self.state = state
 
+    def set_min_max_state(self, min_state, max_state):
+        if pmi.workerIsActive():
+            self.cxxclass.set_min_max_state(self, min_state, max_state)
+
 
 class TopologyManagerLocal(integrator_TopologyManager):
 
