@@ -39,6 +39,47 @@ LOG4ESPP_LOGGER(TopologyManager::theLogger, "TopologyManager");
 
 using namespace espressopp::iterator;
 
+void TopologyParticleProperties::registerPython() {
+  using namespace espressopp::python;
+
+  class_<TopologyParticleProperties, shared_ptr<TopologyParticleProperties> >
+      ("integrator_TopologyParticleProperties", init<>())
+      .add_property("type_id", make_getter(&TopologyParticleProperties::type_id_), &TopologyParticleProperties::setType)
+      .add_property("mass", make_getter(&TopologyParticleProperties::mass_), &TopologyParticleProperties::setMass)
+      .add_property("state", make_getter(&TopologyParticleProperties::state_), &TopologyParticleProperties::setState)
+      .add_property("incr_state", make_getter(&TopologyParticleProperties::incr_state_),
+                    &TopologyParticleProperties::setIncrState)
+      .add_property("res_id", make_getter(&TopologyParticleProperties::res_id_),
+                    &TopologyParticleProperties::setResId)
+      .add_property("lambda_adr", make_getter(&TopologyParticleProperties::lambda_),
+                    &TopologyParticleProperties::setLambda)
+      .add_property("change_flag", make_getter(&TopologyParticleProperties::change_flag_))
+      .def("set_min_max_state", &TopologyParticleProperties::setMinMaxState)
+      ;
+}
+
+bool TopologyParticleProperties::updateParticleProperties(Particle *p) {
+  if (change_flag_ != 0 && (!condition_ || (p->state() >= min_state_ && p->state() < max_state_))) {
+    if (change_flag_ & CHANGE_TYPE)
+      p->setType(type_id_);
+    if (change_flag_ & CHANGE_MASS)
+      p->setMass(mass_);
+    if (change_flag_ & CHANGE_Q)
+      p->setQ(q_);
+    if (change_flag_ & CHANGE_STATE)
+      p->setState(state_);
+    if (change_flag_ & INCR_STATE)
+      p->setState(p->getState() + incr_state_);
+    if (change_flag_ & CHANGE_RESID)
+      p->setResId(res_id_);
+    if (change_flag_ & CHANGE_LAMBDA)
+      p->setLambda(lambda_);
+    return true;
+  }
+  return false;
+}
+
+
 TopologyManager::TopologyManager(shared_ptr<System> system) :
     Extension(system), system_(system) {
   LOG4ESPP_INFO(theLogger, "TopologyManager");
@@ -899,24 +940,12 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
-      longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level) {
+      longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level) {
   LOG4ESPP_DEBUG(theLogger, "register property change for type_id=" << type_id
       << " at level=" << nb_level);
   max_nb_distance_ = std::max(max_nb_distance_, nb_level);
   nb_distances_.insert(nb_level);
-  if (distance_type_pp_.count(nb_level) == 0) {
-    distance_type_pp_[nb_level][type_id] = pp;
-  } else {
-    if (distance_type_pp_[nb_level].count(type_id) == 0) {
-      distance_type_pp_[nb_level][type_id] = pp;
-    } else {
-      if (distance_type_pp_[nb_level][type_id] != pp) {
-        std::stringstream ss;
-        ss << "registerNeighbourPropertyChange, dist=" << nb_level << " type=" << type_id;;
-        throw std::runtime_error(ss.str());
-      }
-    }
-  }
+  distance_type_pp_[nb_level].insert(std::make_pair(type_id, pp));
   is_dirty_ = true;
 }
 
@@ -963,10 +992,15 @@ void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) 
   if (p) {  // particle exists here.
     longint p_type = p->type();
     if (distance_type_pp_.count(distance) > 0) {
-      if (distance_type_pp_[distance].count(p_type) > 0) {
-        shared_ptr<ParticleProperties> pp = distance_type_pp_[distance][p_type];
-        pp->updateParticleProperties(p);
+      std::pair<TypeId2PP::iterator, TypeId2PP::iterator> equalRange;
+      equalRange = distance_type_pp_[distance].equal_range(p_type);
+      int update_counter = 0;   // it has to be one, otherwise throw exception.
+      for (TypeId2PP::iterator it = equalRange.first; it != equalRange.second; ++it) {
+        if (it->second->updateParticleProperties(p))
+          update_counter++;
       }
+      if (update_counter > 1)
+        throw std::runtime_error("updateParticlePropertiesAtDistance, found multiple updates");
     }
   }
 }
@@ -989,8 +1023,8 @@ void TopologyManager::invokeParticlePropertiesChange(longint pid) {
   is_dirty_ = true;
 }
 
-void TopologyManager::registerLocalPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp) {
-  std::map<longint, shared_ptr<ParticleProperties> >::iterator it = new_type_pp_.find(type_id);
+void TopologyManager::registerLocalPropertyChange(longint type_id, shared_ptr<TopologyParticleProperties> pp) {
+  std::map<longint, shared_ptr<TopologyParticleProperties> >::iterator it = new_type_pp_.find(type_id);
   if (it == new_type_pp_.end()) {
     new_type_pp_.insert(std::make_pair(type_id, pp));
   } else {

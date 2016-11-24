@@ -46,12 +46,12 @@ void ChemicalReactionPostProcess::registerPython() {
  * */
 LOG4ESPP_LOGGER(PostProcessChangeProperty::theLogger, "PostProcessChangeProperty");
 void PostProcessChangeProperty::addChangeProperty(int type_id,
-                                                  boost::shared_ptr<ParticleProperties> new_property) {
+                                                  boost::shared_ptr<TopologyParticleProperties> new_property) {
   std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
 
 
   ret = type_properties_.insert(
-      std::pair<int, boost::shared_ptr<ParticleProperties> >(type_id, new_property));
+      std::pair<int, boost::shared_ptr<TopologyParticleProperties> >(type_id, new_property));
 
   if (ret.second == false)
     throw std::runtime_error("Requested type already exists. To replace please remove it firstly");
@@ -83,7 +83,7 @@ std::vector<Particle *> PostProcessChangeProperty::process(Particle &p1, Particl
 
   bool mod = false;
 
-  LOG4ESPP_DEBUG(theLogger, "type " << it->second->type);
+  LOG4ESPP_DEBUG(theLogger, "type " << it->second->type());
 
   if (it != type_properties_.end()) {
     mod = it->second->updateParticleProperties(&p1);
@@ -109,8 +109,8 @@ void PostProcessChangeProperty::registerPython() {
 
 /** PostProcessChangePropertyByTopologyManager **/
 LOG4ESPP_LOGGER(PostProcessChangePropertyByTopologyManager::theLogger, "PostProcessChangePropertyByTopologyManager");
-void PostProcessChangePropertyByTopologyManager::addChangeProperty(int type_id,
-                                                                   boost::shared_ptr<ParticleProperties> new_property) {
+void PostProcessChangePropertyByTopologyManager::addChangeProperty(
+    int type_id, boost::shared_ptr<TopologyParticleProperties> new_property) {
   tm_->registerLocalPropertyChange(type_id, new_property);
 }
 
@@ -197,13 +197,12 @@ LOG4ESPP_LOGGER(PostProcessChangePropertyOnState::theLogger, "PostProcessChangeP
 std::vector<Particle *> PostProcessChangePropertyOnState::process(Particle &p1, Particle &partner) {
   std::vector<Particle *> ret_val;
 
-  boost::unordered_map<std::pair<longint, longint>, shared_ptr<ParticleProperties> >::const_iterator pp_it =
+  boost::unordered_map<std::pair<longint, longint>, shared_ptr<TopologyParticleProperties> >::const_iterator pp_it =
       type_state_pp_.find(std::make_pair(p1.type(), p1.state()));
 
   bool mod = false;
   if (pp_it != type_state_pp_.end()) {
-    shared_ptr<ParticleProperties> pp = pp_it->second;
-    mod = pp->updateParticleProperties(&p1);
+    mod = pp_it->second->updateParticleProperties(&p1);
     LOG4ESPP_DEBUG(theLogger, "Modified particle id=" << p1.id());
   }
 

@@ -114,6 +114,7 @@ namespace espressopp {
       AssociationReaction::registerPython();
 
       TopologyManager::registerPython();
+      TopologyParticleProperties::registerPython();
 
       ReactionCutoff::registerPython();
       ReactionCutoffStatic::registerPython();

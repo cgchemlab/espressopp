@@ -45,7 +45,7 @@
 
 namespace espressopp {
 namespace integrator {
-typedef std::map<int, boost::shared_ptr<ParticleProperties> > TypeParticlePropertiesMap;
+typedef std::map<int, boost::shared_ptr<TopologyParticleProperties> > TypeParticlePropertiesMap;
 
 /** Post process methods to the ChemicalReaction exteions.
  *
@@ -104,7 +104,7 @@ class PostProcessChangeProperty : public ChemicalReactionPostProcess {
 public:
   std::vector<Particle *> process(Particle &p, Particle &partner);
 
-  void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
+  void addChangeProperty(int type_id, boost::shared_ptr<TopologyParticleProperties> new_property);
   void removeChangeProperty(int type_id);
   longint getOrder() { return 9; }
   std::string getName() { return "PostProcessChangeProperty"; }
@@ -123,7 +123,7 @@ class PostProcessChangePropertyByTopologyManager : public ChemicalReactionPostPr
   PostProcessChangePropertyByTopologyManager(shared_ptr<TopologyManager> tm) : tm_(tm) { }
   std::vector<Particle *> process(Particle &p, Particle &partner);
 
-  void addChangeProperty(int type_id, boost::shared_ptr<ParticleProperties> new_property);
+  void addChangeProperty(int type_id, boost::shared_ptr<TopologyParticleProperties> new_property);
   longint getOrder() { return 9; }
   std::string getName() { return "PostProcessChangePropertyByTopologyManager"; }
 
@@ -191,7 +191,7 @@ public:
    * @param pp new ParticleProperties
    * @param nb_level The number of edges that separates.
    */
-  void registerNeighbourPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level) {
+  void registerNeighbourPropertyChange(longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level) {
     topology_manager_->registerNeighbourPropertyChange(type_id, pp, nb_level);
   }
 
@@ -243,7 +243,7 @@ class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
    * @param pp new ParticleProperties
    * @param state The number of edges that separates.
    */
-  void addChangeProperty(longint type_id, shared_ptr<ParticleProperties> pp, longint state) {
+  void addChangeProperty(longint type_id, shared_ptr<TopologyParticleProperties> pp, longint state) {
     type_state_pp_.insert(std::make_pair(std::make_pair(type_id, state), pp));
   }
 
@@ -253,7 +253,7 @@ class PostProcessChangePropertyOnState : public ChemicalReactionPostProcess {
   static void registerPython();
 
  private:
-  boost::unordered_map<std::pair<longint, longint>, shared_ptr<ParticleProperties> > type_state_pp_;
+  boost::unordered_map<std::pair<longint, longint>, shared_ptr<TopologyParticleProperties> > type_state_pp_;
 
   static LOG4ESPP_DECL_LOGGER(theLogger);
 };

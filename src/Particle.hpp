@@ -128,9 +128,9 @@ namespace espressopp {
               l.change_flag == r.change_flag);
     }
 
-  private:
     int change_flag;
 
+  private:
     friend class boost::serialization::access;
     template< class Archive >
     void serialize(Archive &ar, const unsigned int version)

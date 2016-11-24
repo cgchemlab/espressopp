@@ -35,6 +35,28 @@ from espressopp.esutil import cxxinit
 from espressopp import pmi
 
 from _espressopp import integrator_TopologyManager
+from _espressopp import integrator_TopologyParticleProperties
+
+
+class TopologyParticlePropertiesLocal(integrator_TopologyParticleProperties):
+    def __init__(self, type=None, mass=None, q=None, lambda_adr=None, incr_state=None, state=None):
+        if pmi.workerIsActive():
+            cxxinit(self, integrator_TopologyParticleProperties)
+            if incr_state is not None and state is not None:
+                raise RuntimeError('Ambiguity, cannot set incr_state and state at the same time')
+            if type is not None:
+                self.type_id = int(type)
+            if mass is not None:
+                self.mass = mass
+            if q is not None:
+                self.q = q
+            if lambda_adr is not None:
+                self.lambda_adr = lambda_adr
+            if incr_state is not None:
+                self.incr_state = incr_state
+            if state is not None:
+                self.state = state
+
 
 class TopologyManagerLocal(integrator_TopologyManager):
 
@@ -82,7 +104,21 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             return self.cxxclass.is_particle_connected(self, pid1, pid2)
 
+
 if pmi.isController :
+    class TopologyParticleProperties(object):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.integrator.TopologyParticlePropertiesLocal',
+            pmiproperty=['type_id', 'mass', 'q', 'state', 'lambda_adr', 'incr_state'],
+            pmicall=('set_min_max_state',)
+        )
+
+        def __str__(self):
+            obj = self.pmiobject
+            return 'ParticleProperties(type={}, mass={}, q={}, lambda={}, incr_state={})'.format(
+                obj.type_id, obj.mass, obj.q, obj.lambda_adr, obj.incr_state)
+
     class TopologyManager(object):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(

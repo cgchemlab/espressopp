@@ -41,6 +41,116 @@
 namespace espressopp {
 namespace integrator {
 
+class TopologyParticleProperties {
+ public:
+  TopologyParticleProperties() {
+    type_id_ = 0;
+    mass_ = 0.0;
+    q_ = 0.0;
+    lambda_ = 0.0;
+    state_ = 0;
+    res_id_ = 0;
+    incr_state_ = 0;
+    change_flag_ = 0;
+    condition_ = false;
+  }
+
+  TopologyParticleProperties(const ParticleProperties &p) {
+    type_id_ = p.type;
+    mass_ = p.mass;
+    q_ = p.q;
+    lambda_ = p.lambda;
+    res_id_ = p.res_id;
+    incr_state_ = p.incr_state;
+    change_flag_ = p.change_flag;
+    condition_ = false;
+  }
+
+  void setMinMaxState(longint min_state, longint max_state) {
+    min_state_ = min_state;
+    max_state_ = max_state;
+    condition_ = true;
+  }
+
+  longint type() { return type_id_; }
+  void setType(size_t t) {
+    type_id_ = t;
+    change_flag_ |= CHANGE_TYPE;
+  }
+
+  real mass() { return mass_; }
+  void setMass(real m) {
+    mass_ = m;
+    change_flag_ |= CHANGE_MASS;
+  }
+
+  real q() { return q_; }
+  void setQ(real q_) {
+    q_ = q_;
+    change_flag_ |= CHANGE_Q;
+  }
+
+  longint state() { return state_; }
+  void setState(int s) {
+    state_ = s;
+    change_flag_ |= CHANGE_STATE;
+  }
+
+  longint incr_state() { return incr_state_; }
+  void setIncrState(longint s) {
+    incr_state_ = s;
+    change_flag_ |= INCR_STATE;
+  }
+
+  longint res_id() { return res_id_; }
+  void setResId(int rs) {
+    res_id_ = rs;
+    change_flag_ |= CHANGE_RESID;
+  }
+
+  real lambda() { return lambda_; }
+  void setLambda(real l) {
+    lambda_ = l;
+    change_flag_ |= CHANGE_LAMBDA;
+  }
+  bool updateParticleProperties(Particle *p);
+  
+  bool operator==(const TopologyParticleProperties &r) {
+    return (type_id_ == r.type_id_ &&
+        mass_ == r.mass_ &&
+        q_ == r.q_ &&
+        state_ == r.state_ &&
+        res_id_ == r.res_id_ &&
+        lambda_ == r.lambda_ &&
+        incr_state_ == r.incr_state_ &&
+        change_flag_ == r.change_flag_);
+  }
+  static void registerPython();
+ private:
+  enum ChangeFlags {
+    CHANGE_TYPE = 1,  // 0
+    CHANGE_MASS = 2,  // 1
+    CHANGE_Q = 4,  // 2
+    CHANGE_STATE = 8,  // 3
+    CHANGE_RESID = 16,  // 4
+    CHANGE_LAMBDA = 32,  // 5
+    INCR_STATE = 64  // 6
+  };
+
+  size_t type_id_;
+  real mass_;
+  real q_;
+  real lambda_;
+  longint state_;
+  longint res_id_;
+  longint incr_state_;
+  longint change_flag_;
+  bool condition_;
+  longint min_state_;
+  longint max_state_;
+};
+
+
 class TopologyManager: public Extension {
  public:
   TopologyManager(shared_ptr<System> system);
@@ -91,7 +201,7 @@ class TopologyManager: public Extension {
    * @param type_id The type of particle that is neighbour of root separated by nb_level edges.
    * @param pp The new particle properties
    */
-  void registerNeighbourPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp, longint nb_level);
+  void registerNeighbourPropertyChange(longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level);
 
   /**
    * Register the action to remove bond that is `nb_level` bonds from the root particle
@@ -115,7 +225,7 @@ class TopologyManager: public Extension {
    * @param pid particle to change
    */
   void invokeParticlePropertiesChange(longint pid);
-  void registerLocalPropertyChange(longint type_id, shared_ptr<ParticleProperties> pp);
+  void registerLocalPropertyChange(longint type_id, shared_ptr<TopologyParticleProperties> pp);
 
   /**
    * Interface for checking if two residues are connected.
@@ -163,13 +273,11 @@ class TopologyManager: public Extension {
 
   /// Defines map that stores res_id -> particle_id
   typedef std::set<longint> PSet;
-  typedef std::map<longint, shared_ptr<PSet> > ResParticleIds;
 
  private:
   typedef std::pair<longint, std::pair<longint, longint> > Triplets;
   typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
-  typedef std::vector<std::pair<Particle*, shared_ptr<ParticleProperties> > > NewLocalParticleProperties;
   typedef std::set<std::pair<longint, longint> > SetPairs;
   typedef std::map<longint, longint> MapPairs;
   typedef std::set<longint> SetPids;
@@ -248,7 +356,7 @@ class TopologyManager: public Extension {
 
   // Mapping for tuples, triplets and quadruplets.
   typedef boost::unordered_map<longint,
-      boost::unordered_map<longint, shared_ptr<FixedPairList> > > TupleMap;
+                               boost::unordered_map<longint, shared_ptr<FixedPairList> > > TupleMap;
   typedef boost::unordered_map<
       longint,
       boost::unordered_map<
@@ -265,7 +373,7 @@ class TopologyManager: public Extension {
               boost::unordered_map<
                   longint,
                   shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
-  typedef std::map<longint, std::set<int>* > GraphMap;
+  typedef std::map<longint, std::set<int> *> GraphMap;
 
   bool update_angles_dihedrals;
 
@@ -292,9 +400,11 @@ class TopologyManager: public Extension {
   GraphMap *res_graph_;
 
   /** Data for DFS */
+  typedef boost::unordered_multimap<longint, shared_ptr<TopologyParticleProperties> > TypeId2PP;
+  typedef std::map<longint, TypeId2PP> DistanceTypePP;
   longint max_nb_distance_;
   std::set<longint> nb_distances_;
-  std::map<longint, std::map<longint, shared_ptr<ParticleProperties> > > distance_type_pp_;
+  DistanceTypePP distance_type_pp_;
   std::vector<longint> nb_distance_particles_;  //<! Stores the pairs distance; particle_id
 
   /** Data for bond remove. */
@@ -311,7 +421,7 @@ class TopologyManager: public Extension {
   std::vector<longint> nb_edges_root_to_remove_;  //<! Stores the pairs: distance; particle_id1, particle_id2
   boost::unordered_map<longint, DistanceEdges> edges_type_distance_pair_types_;
 
-  std::map<longint, shared_ptr<ParticleProperties> > new_type_pp_;
+  std::map<longint, shared_ptr<TopologyParticleProperties> > new_type_pp_;
   std::vector<longint> new_local_particle_properties_;
   bool updateParticleProperties(longint pid);
 
