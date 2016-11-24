@@ -255,6 +255,7 @@ void Reaction::registerPython() {
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
       .add_property("is_virtual", &Reaction::virtual_reaction, &Reaction::set_virtual_reaction)
       .def("add_postprocess", &Reaction::addPostProcess)
+      .def("add_constraint", &Reaction::addConstraint)
       .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
       .def("get_reaction_cutoff", &Reaction::reaction_cutoff);
 }
@@ -313,6 +314,7 @@ void RestrictReaction::registerPython() {
           .add_property("rate", &RestrictReaction::rate, &RestrictReaction::set_rate)
           .add_property("revert", make_getter(&RestrictReaction::revert_), make_setter(&RestrictReaction::revert_))
           .def("add_postprocess", &RestrictReaction::addPostProcess)
+          .def("add_constraint", &RestrictReaction::addConstraint)
           .def("set_reaction_cutoff", &RestrictReaction::set_reaction_cutoff)
           .def("get_reaction_cutoff", &Reaction::reaction_cutoff)
           .def("define_connection", &RestrictReaction::defineConnection);
@@ -409,7 +411,8 @@ void DissociationReaction::registerPython() {
       .add_property("diss_rate", &DissociationReaction::diss_rate, &DissociationReaction::set_diss_rate)
       .add_property("cutoff", &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
       .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
-      .def("add_postprocess", &DissociationReaction::addPostProcess);
+      .def("add_postprocess", &DissociationReaction::addPostProcess)
+      .def("add_constraint", &DissociationReaction::addConstraint);
 }
 }  // namespace integrator
 }  // namespace espressopp
