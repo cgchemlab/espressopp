@@ -204,6 +204,10 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
         if pmi.workerIsActive():
             self.cxxclass.add_reaction(self, reaction)
 
+    def get_reaction(self, reaction_idx):
+        if pmi.workerIsActive():
+            return self.cxxclass.get_reaction(self, reaction_idx)
+
 
 class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
                                      integrator_ChemicalReactionPostProcess):
@@ -439,7 +443,8 @@ if pmi.isController:
             cls='espressopp.integrator.ChemicalReactionLocal',
             pmiproperty=('interval','nearest_mode', 'pair_distances_filename'),
             pmicall=(
-                'add_reaction', 'clear_pair_distances', 'save_pair_distances'
+                'add_reaction', 'clear_pair_distances', 'save_pair_distances',
+                'get_reaction'
                 ),
             pmiinvoke=('get_pair_distances', 'get_timers', )
             )
@@ -512,7 +517,6 @@ if pmi.isController:
                 'set_reaction_cutoff',
                 'get_reaction_cutoff',
                 'add_constraint',
-                'get_reaction'
             ),
             pmiproperty=(
                 'type_1',
