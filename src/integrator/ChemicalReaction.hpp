@@ -367,6 +367,15 @@ public:
 
   void setTopologyManager(shared_ptr<TopologyManager> tm) {
     topology_manager_ = tm;
+    // Inject topology manager to ReactionConstraint whenever TopologyManager is set.
+    for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
+         it != reaction_constraint_T1.end(); ++it) {
+      (*it)->setTopologyManager(tm);
+    }
+    for (ReactionConstraintList::iterator it = reaction_constraint_T2.begin();
+         it != reaction_constraint_T2.end(); ++it) {
+      (*it)->setTopologyManager(tm);
+    }
   }
 
   void set_rng(const shared_ptr<esutil::RNG> rng) {rng_ = rng; }
