@@ -47,6 +47,7 @@ void TopologyParticleProperties::registerPython() {
       .add_property("type_id", make_getter(&TopologyParticleProperties::type_id_), &TopologyParticleProperties::setType)
       .add_property("mass", make_getter(&TopologyParticleProperties::mass_), &TopologyParticleProperties::setMass)
       .add_property("state", make_getter(&TopologyParticleProperties::state_), &TopologyParticleProperties::setState)
+      .add_property("q", make_getter(&TopologyParticleProperties::q_), &TopologyParticleProperties::setQ)
       .add_property("incr_state", make_getter(&TopologyParticleProperties::incr_state_),
                     &TopologyParticleProperties::setIncrState)
       .add_property("res_id", make_getter(&TopologyParticleProperties::res_id_),
