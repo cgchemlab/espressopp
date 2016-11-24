@@ -126,6 +126,16 @@ class TopologyParticleProperties {
         change_flag_ == r.change_flag_);
   }
   static void registerPython();
+
+  friend std::ostream& operator<<(std::ostream &output, const TopologyParticleProperties &tpp) {
+    output << "TopologyParticleProperties(type_id=" << tpp.type_id_ << " ,mass=" << tpp.mass_;
+    output << " ,q=" << tpp.q_ << " ,state=" << tpp.state_ << " ,res_id=" << tpp.res_id_;
+    output << " ,lambda_adr=" << tpp.lambda_ << " ,incr_state=" << tpp.incr_state_;
+    output << " ,change_flag=" << tpp.change_flag_ << " ,min_state=" << tpp.min_state_;
+    output << " ,max_state=" << tpp.max_state_ << " ,condition=" << tpp.condition_;
+    return output;
+  }
+
  private:
   enum ChangeFlags {
     CHANGE_TYPE = 1,  // 0
