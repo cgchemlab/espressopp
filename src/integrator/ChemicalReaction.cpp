@@ -117,8 +117,17 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_ord
     particle_order.r_sqr = 0.0;
 
     if ((W < p) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+      bool valid = true;
+      for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
+           it != reaction_constraint_T1.end(); ++it) {
+        valid = valid && (*it)->checkPair(particle_order.first, particle_order.second);
+      }
+      for (ReactionConstraintList::iterator it = reaction_constraint_T2.begin();
+           it != reaction_constraint_T2.end(); ++it) {
+        valid = valid && (*it)->checkPair(particle_order.second, particle_order.first);
+      }
       LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
-      return true;
+      return valid;
     }
   }
 
@@ -269,8 +278,17 @@ bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &part
   }
 
   if (reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+    bool valid = true;
+    for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
+         it != reaction_constraint_T1.end(); ++it) {
+      valid = valid && (*it)->checkPair(particle_order.first, particle_order.second);
+    }
+    for (ReactionConstraintList::iterator it = reaction_constraint_T2.begin();
+         it != reaction_constraint_T2.end(); ++it) {
+      valid = valid && (*it)->checkPair(particle_order.second, particle_order.first);
+    }
     LOG4ESPP_DEBUG(theLogger, "valid pair to bond " << p1.id() << "-" << p2.id());
-    return true;
+    return valid;
   }
   return false;
 }
@@ -326,10 +344,20 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &
 
       // Break the bond when the distance exceed the cut_off with some probability.
       if ((distance_2 > break_cutoff_sqr_) && (W < p)) {
-        LOG4ESPP_DEBUG(theLogger,
-            "Break the bond, " << p1.id() << "-" << p2.id()
-                               << " d_2=" << distance_2 << " cutoff_sqr=" << break_cutoff_sqr_);
-        return true;
+        bool valid = true;
+        for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
+             it != reaction_constraint_T1.end(); ++it) {
+          valid = valid && (*it)->checkPair(particle_order.first, particle_order.second);
+        }
+        for (ReactionConstraintList::iterator it = reaction_constraint_T2.begin();
+             it != reaction_constraint_T2.end(); ++it) {
+          valid = valid && (*it)->checkPair(particle_order.second, particle_order.first);
+        }
+        if (valid)
+          LOG4ESPP_DEBUG(theLogger,
+                       "Break the bond, " << p1.id() << "-" << p2.id()
+                                          << " d_2=" << distance_2 << " cutoff_sqr=" << break_cutoff_sqr_);
+        return valid;
       }
     }
 
