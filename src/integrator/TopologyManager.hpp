@@ -114,6 +114,8 @@ class TopologyParticleProperties {
     change_flag_ |= CHANGE_LAMBDA;
   }
   bool updateParticleProperties(Particle *p);
+
+  bool isValid(Particle *p);
   
   bool operator==(const TopologyParticleProperties &r) {
     return (type_id_ == r.type_id_ &&
