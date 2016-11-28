@@ -446,7 +446,7 @@ void TopologyManager::exchangeData() {
   // Pack data
   std::vector<longint> output;
   output.push_back(nb_edges_root_to_remove_.size());
-  output.push_back(nb_distance_particles_.size() / 2);  // vector of particles to updates.
+  output.push_back(nb_distance_particles_.size() / 3);  // vector of particles to updates.
   output.push_back(newEdges_.size());  // vector of new edges.
   output.push_back(removedEdges_.size());  // vector of edges to remove.
   output.push_back(new_local_particle_properties_.size());
@@ -476,7 +476,7 @@ void TopologyManager::exchangeData() {
   // Merged data from all nodes.
 
   SetPids global_nb_edges_root_to_remove;
-  ListPairs global_nb_distance_particles;
+  MapPairsDist global_nb_distance_particles;
   SetPairs global_new_edge;
   SetPairs global_remove_edge;
   SetPids global_new_local_particle_properties;
@@ -495,19 +495,18 @@ void TopologyManager::exchangeData() {
       }
 
       for (int i = 0; i < nb_distance_particles_size; i++) {
-        int distance = *(itm++);
-        int particle_id = *(itm++);
-        global_nb_distance_particles.push_back(std::make_pair(particle_id, distance));
-//        if (global_nb_distance_particles.count(particle_id) == 0) {
-//          global_nb_distance_particles.insert(std::make_pair(particle_id, distance));
-//        } else {
-//          if (global_nb_distance_particles[particle_id] != distance) {
-//            std::cout << "Ambiguity, existing pair: " << particle_id << ":"
-//                      << global_nb_distance_particles[particle_id] << std::endl;
-//            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
-//            throw std::runtime_error("Problem with merging incoming data");
-//          }
-//        }
+        longint root_id = *(itm++);
+        longint distance = *(itm++);
+        longint particle_id = *(itm++);
+        std::pair<longint, longint> key = std::make_pair(root_id, particle_id);
+        if (global_nb_distance_particles.count(key) == 0) {
+          global_nb_distance_particles.insert(std::make_pair(key, distance));
+        } else if (global_nb_distance_particles[key] != distance) {
+          std::cout << "Ambiguity, existing pair: " << root_id << "-" << particle_id << ":"
+                      << global_nb_distance_particles[key] << std::endl;
+            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
+            throw std::runtime_error("Problem with merging incoming data");
+        }
       }
 
       for (int i = 0; i < new_edge_size; i++) {
@@ -543,8 +542,8 @@ void TopologyManager::exchangeData() {
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
   }
-  for (ListPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
-    updateParticlePropertiesAtDistance(it->first, it->second);
+  for (MapPairsDist::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
+    updateParticlePropertiesAtDistance(it->first.second, it->second);
   }
   for (SetPids::iterator it = global_new_local_particle_properties.begin();
        it != global_new_local_particle_properties.end(); ++it) {
@@ -864,6 +863,7 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
         node = *ia;
         if (visitedDistance.count(node) == 0) {
           if (nb_distances_.count(new_distance) == 1) {
+            nb_at_distance.push_back(root);
             nb_at_distance.push_back(new_distance);
             nb_at_distance.push_back(node);
           }
@@ -972,7 +972,8 @@ void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
   real time0 = wallTimer.getElapsedTime();
   std::vector<longint> nb = getNodesAtDistances(root.id());
   LOG4ESPP_DEBUG(theLogger, "inovokeNeighbourPropertyChange from root=" << root.id()
-      << " generates=" << nb.size() << " of neighbour particles");
+                                                                        << " generates=" << nb.size()
+                                                                        << " of neighbour particles");
   nb_distance_particles_.insert(nb_distance_particles_.end(), nb.begin(), nb.end());
   timeUpdateNeighbourProperty += wallTimer.getElapsedTime() - time0;
 
@@ -988,9 +989,7 @@ void TopologyManager::invokeNeighbourBondRemove(Particle &root) {
   }
 }
 
-
-
-void TopologyManager::updateParticlePropertiesAtDistance(int pid, int distance) {
+void TopologyManager::updateParticlePropertiesAtDistance(longint pid, longint distance) {
   LOG4ESPP_DEBUG(theLogger, "update particle properties id=" << pid << " at distance=" << distance);
   // We will update both ghost and normal particles as ghost can also take part in reactions.
   Particle *p = system_->storage->lookupLocalParticle(pid);

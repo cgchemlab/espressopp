@@ -298,6 +298,7 @@ class TopologyManager: public Extension {
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
   typedef std::set<std::pair<longint, longint> > SetPairs;
   typedef std::vector<std::pair<longint, longint> > ListPairs;
+  typedef boost::unordered_map<std::pair<longint, longint>, longint> MapPairsDist;
   typedef std::map<longint, longint> MapPairs;
   typedef std::set<longint> SetPids;
 
@@ -361,7 +362,12 @@ class TopologyManager: public Extension {
    */
   std::vector<longint> getNodesAtDistances(longint root);
 
-  void updateParticlePropertiesAtDistance(int id, int distance);
+  /**
+   * Update particle properties at certain distance.
+   * @param id Particle to change
+   * @param distance Distance of the particle from the root.
+   */
+  void updateParticlePropertiesAtDistance(longint id, longint distance);
 
   /**
    * Connecting/Disconnecting to signals.
@@ -424,10 +430,10 @@ class TopologyManager: public Extension {
   longint max_nb_distance_;
   std::set<longint> nb_distances_;
   DistanceTypePP distance_type_pp_;
-  std::vector<longint> nb_distance_particles_;  //<! Stores the pairs distance; particle_id
-
   /** Data for bond remove. */
   typedef boost::unordered_map<longint, boost::unordered_set<std::pair<longint, longint> > > DistanceEdges;
+
+  std::vector<longint> nb_distance_particles_;  //<! Stores the triplets root; distance; particle_id
   /**
    * Remove edges at distance from the pid (root node).
    *

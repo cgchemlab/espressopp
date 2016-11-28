@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2014-2016
+   Copyright (C) 2014,2015,2016
        Jakub Krajniak (jkrajniak at gmail.com)
 
    This file is part of ESPResSo++.
@@ -22,17 +22,18 @@
 #ifndef _INTEGRATOR_CHEMICALREACTION_HPP
 #define _INTEGRATOR_CHEMICALREACTION_HPP
 
-#include <boost/unordered_map.hpp>
-#include <boost/signals2.hpp>
-#include <boost/random/normal_distribution.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/variate_generator.hpp>
+#include "boost/unordered_map.hpp"
+#include "boost/signals2.hpp"
+#include "boost/random/normal_distribution.hpp"
+#include "boost/random/mersenne_twister.hpp"
+#include "boost/random/variate_generator.hpp"
 
 #include <utility>
 #include <map>
 #include <set>
 #include <vector>
-#include <FixedPairListLambda.hpp>
+#include "FixedPairListLambda.hpp"
+#include "boost/format.hpp"
 
 #include "types.hpp"
 #include "logging.hpp"
@@ -232,7 +233,11 @@ class ReactionConstraint {
 class ReactionConstraintNeighbourState : public ReactionConstraint {
  public:
   ReactionConstraintNeighbourState(longint nb_type_id, longint min_state, longint max_state)
-      : nb_type_id_(nb_type_id), min_state_(min_state), max_state_(max_state) { }
+      : nb_type_id_(nb_type_id), min_state_(min_state), max_state_(max_state) {
+    if (nb_type_id_ < 0 || min_state_ < 0 || max_state_ < 0)
+      throw std::runtime_error((const std::string &)
+           (boost::format("wrong nb_type_id %d or min_state %d or max_state %d") % nb_type_id_ % min_state_ % max_state_));
+  }
 
   bool checkPair(Particle *p1, Particle *p2) {
     return topology_manager_->isNeighbourParticleInState(p1->id(), nb_type_id_, min_state_, max_state_);
