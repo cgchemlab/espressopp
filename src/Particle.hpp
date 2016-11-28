@@ -297,8 +297,6 @@ namespace espressopp {
     const size_t& type() const { return p.type; }
     int getType() const { return p.type; }
     void setType(int type) {
-      if (p.id == 68)
-        std::cout << "setType." << 68 << " "<< p.type << "->" << type << std::endl;
       p.type = type;
     }
 
@@ -393,9 +391,7 @@ namespace espressopp {
     const int& state() const { return p.state; }
     int getState() const { return p.state; }
     void setState(const int& _state) { 
-      if (p.id == 68)
-        std::cout << "setState." << 68 << " was " << p.state << "->" << _state << std::endl;
-      p.state = _state; 
+      p.state = _state;
     }
 
     // res_id (eg. define the id of the polymer chain)
