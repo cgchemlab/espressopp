@@ -33,7 +33,6 @@
 #include "Real3D.hpp"
 #include "Particle.hpp"
 #include "ChemicalReactionPostProcess.hpp"
-#include "analysis/Observable.hpp"
 
 namespace espressopp {
 namespace integrator {

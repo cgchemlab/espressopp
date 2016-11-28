@@ -26,7 +26,6 @@
 from espressopp.esutil import cxxinit
 from espressopp import pmi
 from espressopp.integrator.Extension import *
-from espressopp.analysis.Observable import *
 from _espressopp import integrator_FixDistances
 from _espressopp import integrator_ChemicalReactionPostProcess
 from _espressopp import integrator_PostProcessReleaseParticles
