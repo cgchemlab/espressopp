@@ -476,7 +476,7 @@ void TopologyManager::exchangeData() {
   // Merged data from all nodes.
 
   SetPids global_nb_edges_root_to_remove;
-  MapPairs global_nb_distance_particles;
+  ListPairs global_nb_distance_particles;
   SetPairs global_new_edge;
   SetPairs global_remove_edge;
   SetPids global_new_local_particle_properties;
@@ -497,16 +497,17 @@ void TopologyManager::exchangeData() {
       for (int i = 0; i < nb_distance_particles_size; i++) {
         int distance = *(itm++);
         int particle_id = *(itm++);
-        if (global_nb_distance_particles.count(particle_id) == 0) {
-          global_nb_distance_particles.insert(std::make_pair(particle_id, distance));
-        } else {
-          if (global_nb_distance_particles[particle_id] != distance) {
-            std::cout << "Ambiguity, existing pair: " << particle_id << ":"
-                      << global_nb_distance_particles[particle_id] << std::endl;
-            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
-            throw std::runtime_error("Problem with merging incoming data");
-          }
-        }
+        global_nb_distance_particles.push_back(std::make_pair(particle_id, distance));
+//        if (global_nb_distance_particles.count(particle_id) == 0) {
+//          global_nb_distance_particles.insert(std::make_pair(particle_id, distance));
+//        } else {
+//          if (global_nb_distance_particles[particle_id] != distance) {
+//            std::cout << "Ambiguity, existing pair: " << particle_id << ":"
+//                      << global_nb_distance_particles[particle_id] << std::endl;
+//            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
+//            throw std::runtime_error("Problem with merging incoming data");
+//          }
+//        }
       }
 
       for (int i = 0; i < new_edge_size; i++) {
@@ -542,7 +543,7 @@ void TopologyManager::exchangeData() {
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
   }
-  for (MapPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
+  for (ListPairs::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
     updateParticlePropertiesAtDistance(it->first, it->second);
   }
   for (SetPids::iterator it = global_new_local_particle_properties.begin();
@@ -954,7 +955,6 @@ void TopologyManager::registerNeighbourPropertyChange(
   max_nb_distance_ = std::max(max_nb_distance_, nb_level);
   nb_distances_.insert(nb_level);
   distance_type_pp_[nb_level].insert(std::make_pair(type_id, pp));
-  is_dirty_ = true;
 }
 
 void TopologyManager::registerNeighbourBondToRemove(longint type_id,
@@ -965,8 +965,6 @@ void TopologyManager::registerNeighbourBondToRemove(longint type_id,
 
   edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid1, type_pid2));
   edges_type_distance_pair_types_[type_id][nb_level].insert(std::make_pair(type_pid2, type_pid1));
-
-  is_dirty_ = true;
 }
 
 

@@ -297,6 +297,7 @@ class TopologyManager: public Extension {
   typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
   typedef std::set<std::pair<longint, longint> > SetPairs;
+  typedef std::vector<std::pair<longint, longint> > ListPairs;
   typedef std::map<longint, longint> MapPairs;
   typedef std::set<longint> SetPids;
 
