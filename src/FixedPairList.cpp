@@ -184,6 +184,8 @@ namespace espressopp {
         globalPairs.insert(equalRange.first, std::make_pair(pid1, pid2));
         // Throw signal onTupleAdded.
         onTupleAdded(pid1, pid2);
+        if (pid1 == 68 || pid2 == 68 || pid1 == 1349 || pid1 == 3580 || pid2 == 1349 || pid2 == 3580)
+          std::cout << "add " << pid1 << "-" << pid2 << std::endl;
         LOG4ESPP_INFO(theLogger, "added fixed pair " << pid1 << "-" << pid2 << " to global pair list");
       }
     }
@@ -202,6 +204,8 @@ namespace espressopp {
           if (!no_signal)
             onTupleRemoved(pid1, pid2);
           it = globalPairs.erase(it);
+          if (pid1 == 68 || pid2 == 68 || pid1 == 1349 || pid1 == 3580 || pid2 == 1349 || pid2 == 3580)
+            std::cout << "remove " << pid1 << "-" << pid2 << std::endl;
           returnValue = true;
         } else {
           it++;
@@ -218,6 +222,8 @@ namespace espressopp {
               onTupleRemoved(pid1, pid2);
             it = globalPairs.erase(it);
             returnValue = true;
+            if (pid1 == 68 || pid2 == 68 || pid1 == 1349 || pid1 == 3580 || pid2 == 1349 || pid2 == 3580)
+              std::cout << "remove " << pid1 << "-" << pid2 << std::endl;
           } else {
             it++;
           }

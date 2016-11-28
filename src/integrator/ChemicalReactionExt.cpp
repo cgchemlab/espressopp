@@ -860,17 +860,23 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
     if (p1 && p2 ) {
       valid_state = (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1));
       valid_state &= (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2));
-//      std::cout << *reaction;
-//      std::cout << " p1.type=" << p1->type() << " p1.state=" << p1->state();
-//      std::cout << " p2.type=" << p2->type() << " p2.state=" << p2->state() << std::endl;
       // Whole pair has to be valid before the state can be changed.
       if (valid_state) {
+        if (p1->id() == 68 || p2->id() == 68 || p1->id() == 1349 || p1->id() == 3580 || p2->id() == 1349 || p2->id() == 3580) {
+          std::cout << *reaction;
+          std::cout << " p1.id=" << p1->id();
+          std::cout << " p1.type=" << p1->type() << " p1.state=" << p1->state();
+          std::cout << " p2.id=" << p2->id();
+          std::cout << " p2.type=" << p2->type() << " p2.state=" << p2->state() << std::endl;
+        }
         p1->setState(p1->getState() + reaction->delta_1());
         tmp = reaction->postProcess_T1(*p1, *p2);
         modified_particles.insert(tmp.begin(), tmp.end());
         p2->setState(p2->getState() + reaction->delta_2());
         tmp = reaction->postProcess_T2(*p2, *p1);
         modified_particles.insert(tmp.begin(), tmp.end());
+        modified_particles.insert(p1);
+        modified_particles.insert(p2);
       }
     }
 //    } else {
