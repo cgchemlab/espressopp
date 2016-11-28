@@ -111,7 +111,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             if 'connectivity' not in self.h5md_file.file:
                 self.h5md_file.file.create_group('connectivity')
             self.connectivity = self.h5md_file.file['connectivity']
-            self.chunk_size = 128
+            self.chunk_size = h5md_file.chunk_size
             self.dt = integrator.dt
 
     def dump(self):
@@ -199,7 +199,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                     ds = self.tuple_data[fpl_idx]
                     if total_size > ds.value.shape[1]:
                         ds.value.resize(total_size, axis=1)
-                    ds.append(data, step, step*self.dt, region=(idx_0, idx_1))
+                    ds.append(data, step, step*self.dt, region=(idx_0, idx_1), collective=True)
             self.cxxclass.clear_buffer(self)
 
 if pmi.isController:

@@ -126,7 +126,7 @@ class DumpH5MDLocal(io_DumpH5MD):
                  is_adress=False,
                  author='xxx',
                  email='xxx',
-                 chunk_size=128,
+                 chunk_size=256,
                  is_single_prec=False,
                  do_sort=True):
         """
@@ -370,26 +370,26 @@ class DumpH5MDLocal(io_DumpH5MD):
         if total_size > self.id_e.value.shape[1]:
             isResized = True
             self.id_e.value.resize(total_size, axis=1)
-        self.id_e.append(id_ar, step, time, region=(idx_0, idx_1))
+        self.id_e.append(id_ar, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store box values at every time step
         if not self.static_box:
             self.box.edges.append(
                 np.array([edge_i for edge_i in self.system.bc.boxL], dtype=self.float_type),
                 step,
-                time)
+                time, collective=True)
 
         if self.store_position:
             pos = np.asarray(self.getPosition(), dtype=self.float_type)
             if total_size > self.position.value.shape[1]:
                 isResized = True
                 self.position.value.resize(total_size, axis=1)
-            self.position.append(pos, step, time, region=(idx_0, idx_1))
+            self.position.append(pos, step, time, region=(idx_0, idx_1), collective=True)
             # Store image.
             image = np.asarray(self.getImage(), dtype=self.int_type)
             if total_size > self.image.value.shape[1]:
                 self.image.value.resize(total_size, axis=1)
-            self.image.append(image, step, time, region=(idx_0, idx_1))
+            self.image.append(image, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store velocity.
         if self.store_velocity:
@@ -397,21 +397,21 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.velocity.value.shape[1]:
                 isResized = True
                 self.velocity.value.resize(total_size, axis=1)
-            self.velocity.append(vel, step, time, region=(idx_0, idx_1))
+            self.velocity.append(vel, step, time, region=(idx_0, idx_1), collective=True)
 
         if self.store_force:
             force = np.asarray(self.getForce(), dtype=self.float_type)
             if total_size > self.force.value.shape[1]:
                 isResized = True
                 self.force.value.resize(total_size, axis=1)
-            self.force.append(force, step, time, region=(idx_0, idx_1))
+            self.force.append(force, step, time, region=(idx_0, idx_1), collective=True)
 
         if self.store_charge:
             charge = np.asarray(self.getCharge(), dtype=self.float_type)
             if total_size > self.charge.value.shape[1]:
                 isResized = True
                 self.charge.value.resize(total_size, axis=1)
-            self.charge.append(charge, step, time, region=(idx_0, idx_1))
+            self.charge.append(charge, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store mass.
         if self.store_mass:
@@ -419,7 +419,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.mass.value.shape[1]:
                 isResized = True
                 self.mass.value.resize(total_size, axis=1)
-            self.mass.append(mass, step, time, region=(idx_0, idx_1))
+            self.mass.append(mass, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store species.
         if self.store_species:
@@ -427,7 +427,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.species.value.shape[1]:
                 isResized = True
                 self.species.value.resize(total_size, axis=1)
-            self.species.append(species, step, time, region=(idx_0, idx_1))
+            self.species.append(species, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store state.
         if self.store_state:
@@ -435,7 +435,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.state.value.shape[1]:
                 isResized = True
                 self.state.value.resize(total_size, axis=1)
-            self.state.append(state, step, time, region=(idx_0, idx_1))
+            self.state.append(state, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store lambda_adr
         if self.store_lambda:
@@ -443,7 +443,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.lambda_adr.value.shape[1]:
                 isResized = True
                 self.lambda_adr.value.resize(total_size, axis=1)
-            self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1))
+            self.lambda_adr.append(lambda_adr, step, time, region=(idx_0, idx_1), collective=True)
 
         # Store res_id
         if self.store_res_id:
@@ -451,7 +451,7 @@ class DumpH5MDLocal(io_DumpH5MD):
             if total_size > self.res_id.value.shape[1]:
                 isResized = True
                 self.res_id.value.resize(total_size, axis=1)
-            self.res_id.append(res_id, step, time, region=(idx_0, idx_1))
+            self.res_id.append(res_id, step, time, region=(idx_0, idx_1), collective=True)
         self.writeTimer += (py_time.time() - time0)
         if isResized:
             self.resizeCounter += 1
