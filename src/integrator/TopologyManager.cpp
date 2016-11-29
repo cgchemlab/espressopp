@@ -436,6 +436,7 @@ void TopologyManager::exchangeData() {
 
   if (!global_is_dirty) {
     timeExchangeData += wallTimer.getElapsedTime() - time0;
+    LOG4ESPP_DEBUG(theLogger, "step: " << integrator->getStep() << " leaving exchangeData, no need to update: " << global_is_dirty);
     return;
   }
 
@@ -471,6 +472,8 @@ void TopologyManager::exchangeData() {
   // Send and gather data from all nodes.
   mpi::all_gather(*(system_->comm), output, global_merge_sets);
 
+  LOG4ESPP_DEBUG(theLogger, "send and gather data from all " << global_merge_sets.size() << " nodes");
+
   // Merge data from other nodes and perform local actions if particle is present.
 
   // Merged data from all nodes.
@@ -480,6 +483,8 @@ void TopologyManager::exchangeData() {
   SetPairs global_new_edge;
   SetPairs global_remove_edge;
   SetPids global_new_local_particle_properties;
+
+  LOG4ESPP_DEBUG(theLogger, "begin merge data from all nodes");
 
   for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
     for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
@@ -531,24 +536,35 @@ void TopologyManager::exchangeData() {
     }
   }
 
+  LOG4ESPP_DEBUG(theLogger, "end merging data from other nodes, apply it");
+
   // End merging data from other nodes. Now apply it.
   for (SetPids::iterator it = global_nb_edges_root_to_remove.begin();
        it != global_nb_edges_root_to_remove.end(); ++it) {
     removeNeighbourEdges(*it, global_remove_edge);
   }
+  LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
+
   for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); ++it) {
     newEdge(it->first, it->second);
   }
+  LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
+
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
   }
+  LOG4ESPP_DEBUG(theLogger, "finish apply deleteEdge: " << global_remove_edge.size());
+
   for (MapPairsDist::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
     updateParticlePropertiesAtDistance(it->first.second, it->second);
   }
+  LOG4ESPP_DEBUG(theLogger, "finish apply updateParticlePropertiesAtDistance: " << global_nb_distance_particles.size());
+
   for (SetPids::iterator it = global_new_local_particle_properties.begin();
        it != global_new_local_particle_properties.end(); ++it) {
     updateParticleProperties(*it);
   }
+  LOG4ESPP_DEBUG(theLogger, "finish apply updateParticleProperties: " << global_new_local_particle_properties.size());
 
   /** Check if every information where redistributed and applied correctly. */
 //  std::vector<longint> nums;
