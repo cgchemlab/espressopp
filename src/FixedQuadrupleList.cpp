@@ -290,6 +290,38 @@ namespace espressopp {
 	return quadruples;
   }
 
+  python::list FixedQuadrupleList::getAllQuadruples() {
+    std::vector<longint> local_quadruples;
+    std::vector<std::vector<longint> > global_quadruples;
+    python::list quadruples;
+
+    for (GlobalQuadruples::const_iterator it=globalQuadruples.begin(); it != globalQuadruples.end(); it++) {
+      local_quadruples.push_back(it->first);
+      local_quadruples.push_back(it->second.first);
+      local_quadruples.push_back(it->second.second);
+      local_quadruples.push_back(it->second.third);
+    }
+
+    System& system = storage->getSystemRef();
+    if (system.comm->rank() == 0) {
+      mpi::gather(*system.comm, local_quadruples, global_quadruples, 0);
+
+      for (std::vector<std::vector<longint> >::iterator it = global_quadruples.begin();
+           it != global_quadruples.end(); ++it) {
+        for (std::vector<longint>::iterator iit = it->begin(); iit != it->end();) {
+          longint pid1 = *(iit++);
+          longint pid2 = *(iit++);
+          longint pid3 = *(iit++);
+          longint pid4 = *(iit++);
+          quadruples.append(python::make_tuple(pid1, pid2, pid3, pid4));
+        }
+      }
+    } else {
+      mpi::gather(*system.comm, local_quadruples, global_quadruples, 0);
+    }
+    return quadruples;
+  }
+
   void FixedQuadrupleList::
   beforeSendParticles(ParticleList& pl, OutBuffer& buf) {
     
@@ -482,6 +514,7 @@ namespace espressopp {
       .def("size", &FixedQuadrupleList::size)
       .def("totalSize", &FixedQuadrupleList::totalSize)
       .def("getQuadruples",  &FixedQuadrupleList::getQuadruples)
+      .def("getAllQuadruples", &FixedQuadrupleList::getAllQuadruples)
      ;
   }
 }

@@ -83,6 +83,7 @@ namespace espressopp {
 
   private:
     static LOG4ESPP_DECL_LOGGER(theLogger);
+    python::list getAllQuadruples();
   };
 }
 

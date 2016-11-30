@@ -23,11 +23,8 @@
 
 #include <Python.h>
 #include <iostream>
-#include <object.h>
 #include <vector>
 #include "DumpH5MD.hpp"
-#include "types.hpp"
-#include "SystemAccess.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 
