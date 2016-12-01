@@ -544,7 +544,7 @@ void TopologyManager::exchangeData() {
 
   for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end();) {
     SetPairs::iterator found_it = global_remove_edge.find(*it);
-    if (found_it != global_remove_edge.end()) {
+    if (found_it == global_remove_edge.end()) {
       newEdge(it->first, it->second);
       ++it;
     } else {
