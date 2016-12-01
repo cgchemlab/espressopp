@@ -97,14 +97,14 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
 
   residues_ = new GraphMap();
 
-  update_angles_dihedrals = false;
+  update_angles_ = update_dihedrals_ = update_14pairs_ = false;
+  generate_new_angles_dihedrals_ = false;
   wallTimer.reset();
 
   resetTimers();
 
   extensionOrder = Extension::afterReaction;
 
-  update_angles_dihedrals = false;
   max_nb_distance_ = 0;
   max_bond_nb_distance_ = 0;
 
@@ -161,6 +161,8 @@ void TopologyManager::register14Tuple(shared_ptr<FixedPairList> fpl, longint typ
   tuples14_.push_back(fpl);
   tuple14Map_[type1][type2] = fpl;
   tuple14Map_[type2][type1] = fpl;
+  update_14pairs_ = true;
+  generate_new_angles_dihedrals_ = true;
 }
 
 void TopologyManager::registerTriple(shared_ptr<FixedTripleList> ftl,
@@ -168,7 +170,8 @@ void TopologyManager::registerTriple(shared_ptr<FixedTripleList> ftl,
   tripleMap_[type1][type2][type3] = ftl;
   tripleMap_[type3][type2][type1] = ftl;
   triples_.push_back(ftl);
-  update_angles_dihedrals = true;
+  update_angles_ = true;
+  generate_new_angles_dihedrals_ = true;
 }
 
 void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
@@ -176,7 +179,9 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
   quadrupleMap_[type1][type2][type3][type4] = fql;
   quadrupleMap_[type4][type3][type2][type1] = fql;
   quadruples_.push_back(fql);
-  update_angles_dihedrals = true;
+
+  update_dihedrals_ = true;
+  generate_new_angles_dihedrals_ = true;
 }
 
 void TopologyManager::InitializeTopology() {
@@ -303,15 +308,22 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
 
   // Generate angles, dihedrals, based on updated graph.
   real time0 = wallTimer.getElapsedTime();
-  if (update_angles_dihedrals) {
-    std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
-    std::set<Triplets> *triplets = new std::set<Triplets>();
-    generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
+  std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
+  std::set<Triplets> *triplets = new std::set<Triplets>();
 
-    defineAngles(*triplets);
-    defineDihedrals(*quadruplets);
-    define14tuples(*quadruplets);
+  if (generate_new_angles_dihedrals_) {
+    generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
   }
+
+  if (update_angles_)
+    defineAngles(*triplets);
+  if (update_dihedrals_)
+    defineDihedrals(*quadruplets);
+  if (update_14pairs_)
+    define14tuples(*quadruplets);
+
+  delete quadruplets;
+  delete triplets;
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
@@ -401,23 +413,28 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
 
   // Generate list of angles/dihedrals to remove, based on the graph.
   real time0 = wallTimer.getElapsedTime();
-  if (update_angles_dihedrals) {
-    std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
-    std::set <Triplets> *triplets = new std::set<Triplets>();
+  std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
+  std::set <Triplets> *triplets = new std::set<Triplets>();
+  if (generate_new_angles_dihedrals_) {
     generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
+  }
 
-    // Update angles.
+  if (update_angles_) {
     undefineAngles(*triplets);
-    undefineDihedrals(*quadruplets);
-    undefine14tuples(*quadruplets);
     for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
       (*it)->updateParticlesStorage();
     }
+  }
+  if (update_dihedrals_) {
+    undefineDihedrals(*quadruplets);
     for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
          it != quadruples_.end(); ++it) {
       (*it)->updateParticlesStorage();
     }
   }
+  if (update_14pairs_)
+    undefine14tuples(*quadruplets);
+
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
   return removed;
 }
@@ -610,7 +627,7 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
   shared_ptr<FixedTripleList> ftl;
   for (std::set<Triplets>::iterator it = triplets.begin(); it != triplets.end(); ++it) {
     Particle *p1 = system_->storage->lookupLocalParticle(it->first);
-    Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
+    Particle *p2 = system_->storage->lookupRealParticle(it->second.first);
     Particle *p3 = system_->storage->lookupLocalParticle(it->second.second);
     if (p1 && p2 && p3) {
       t1 = p1->type();
@@ -623,11 +640,14 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
       if (ftl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
         bool ret = ftl->iadd(p1->id(), p2->id(), p3->id());
-        if (!ret)
-          ret = ftl->iadd(p3->id(), p2->id(), p1->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new angle: " << it->first << "-" << it->second.first << "-"
                                     << it->second.second);
+      } else {
+        LOG4ESPP_WARN(theLogger,"add angle: fixed list for triplet: " << it->first << "-" << it->second.first
+            << "-" << it->second.second
+            << " not found of types: " << t1 << "-" << t2 << "-" << t3
+            << " check you topology file and define angletypes for missing triplet");
       }
     }
   }
@@ -648,19 +668,35 @@ void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
       t2 = p2->type();
       t3 = p3->type();
       t4 = p4->type();
-      // Look for fixed triple list which should be updated.
+      // Look for fixed quadruple list which should be updated.
       fql = quadrupleMap_[t1][t2][t3][t4];
-      if (!fql)
+      bool reverse_order = false;
+      if (!fql) {
         fql = quadrupleMap_[t4][t3][t2][t1];
+        reverse_order = true;
+      }
+
+      if ((reverse_order && p4->ghost()) || (!reverse_order && p1->ghost()))
+        continue;
+
       if (fql) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3 << "-" << t4);
-        bool ret = fql->iadd(p1->id(), p2->id(), p3->id(), p4->id());
-        if (!ret)
+        bool ret = false;
+        if (!reverse_order) {
+          ret = fql->iadd(p1->id(), p2->id(), p3->id(), p4->id());
+        } else {
           ret = fql->iadd(p4->id(), p3->id(), p2->id(), p1->id());
+        }
+
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new dihedral: " << it->first << "-" << it->second.first
                                     << "-" << it->second.second.first << "-"
                                     << it->second.second.second);
+      } else {
+        LOG4ESPP_WARN(theLogger,"add dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
+            << "-" << it->second.second.first << "-" << it->second.second.second
+            << " not found of types: " << t1 << "-" << t2 << "-" << t3 << "-" << t4
+            << " check you topology file and define dihedraltypes for missing quadruplet");
       }
     }
   }
@@ -689,6 +725,10 @@ void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new 1-4 pair: " << it->first << "-"
                                     << it->second.second.second);
+      } else {
+        LOG4ESPP_WARN(theLogger, "add 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
+            << " not found of types: " << t1 << "-" << t4
+            << " check your topology file and define pairstypes for missing pair");
       }
     }
   }
@@ -719,6 +759,11 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
           LOG4ESPP_DEBUG(theLogger,
                          "Remove angle: " << it->first << "-" << it->second.first << "-"
                              << it->second.second);
+        } else {
+          LOG4ESPP_WARN(theLogger,"removeAngle: fixed list for triplet: " << it->first << "-" << it->second.first
+              << "-" << it->second.second
+              << " not found of types: " << t1 << "-" << t2 << "-" << t3
+              << " check you topology file and define angletypes for missing triplet");
         }
       }
     }
@@ -754,6 +799,11 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
                          "Remove dihedral: " << it->first << "-" << it->second.first
                              << "-" << it->second.second.first << "-"
                              << it->second.second.second);
+        } else {
+          LOG4ESPP_WARN(theLogger,"remove dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
+              << "-" << it->second.second.first << "-" << it->second.second.second
+              << " not found of types: " << t1 << "-" << t2 << "-" << t3 << "-" << t4
+              << " check you topology file and define dihedraltypes for missing quadruplet");
         }
       }
     }
@@ -780,6 +830,10 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
           ret = fpl->remove(p4->id(), p1->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
+      } else {
+        LOG4ESPP_WARN(theLogger, "remove 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
+            << " not found of types: " << t1 << "-" << t4
+            << " check your topology file and define pairstypes for missing pair");
       }
     }
   }
