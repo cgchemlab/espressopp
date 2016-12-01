@@ -220,6 +220,38 @@ python::list FixedQuadrupleListLambda::getQuadruples() {
   return quadruples;
 }
 
+python::list FixedQuadrupleListLambda::getAllQuadruples() {
+  std::vector<longint> local_quadruples;
+  std::vector<std::vector<longint> > global_quadruples;
+  python::list quadruples;
+
+  for (QuadruplesLambda::const_iterator it=quadruplesLambda_.begin(); it != quadruplesLambda_.end(); it++) {
+    local_quadruples.push_back(it->first);
+    local_quadruples.push_back(it->second.first.first);
+    local_quadruples.push_back(it->second.first.second);
+    local_quadruples.push_back(it->second.first.third);
+  }
+
+  System& system = storage->getSystemRef();
+  if (system.comm->rank() == 0) {
+    mpi::gather(*system.comm, local_quadruples, global_quadruples, 0);
+
+    for (std::vector<std::vector<longint> >::iterator it = global_quadruples.begin();
+         it != global_quadruples.end(); ++it) {
+      for (std::vector<longint>::iterator iit = it->begin(); iit != it->end();) {
+        longint pid1 = *(iit++);
+        longint pid2 = *(iit++);
+        longint pid3 = *(iit++);
+        longint pid4 = *(iit++);
+        quadruples.append(python::make_tuple(pid1, pid2, pid3, pid4));
+      }
+    }
+  } else {
+    mpi::gather(*system.comm, local_quadruples, global_quadruples, 0);
+  }
+  return quadruples;
+}
+
 void FixedQuadrupleListLambda::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
   std::vector<longint> toSend;
   std::vector<real> toSendLambda;
@@ -385,7 +417,6 @@ python::list FixedQuadrupleListLambda::getQuadruplesLambda() {
 real FixedQuadrupleListLambda::getLambda(longint pid1, longint pid2, longint pid3, longint pid4) {
   real returnVal = -3;
 
-  bool found = false;
   std::pair<QuadruplesLambda::const_iterator,
             QuadruplesLambda::const_iterator> equalRange = quadruplesLambda_.equal_range(pid1);
   if (equalRange.first != quadruplesLambda_.end()) {
@@ -462,6 +493,7 @@ void FixedQuadrupleListLambda::registerPython() {
       .def("size", &FixedQuadrupleListLambda::size)
       .def("totalSize", &FixedQuadrupleListLambda::totalSize)
       .def("getQuadruples", &FixedQuadrupleListLambda::getQuadruples)
+      .def("getAllQuadruples", &FixedQuadrupleListLambda::getAllQuadruples)
       .def("getQuadruplesLambda", &FixedQuadrupleListLambda::getQuadruplesLambda)
       .def("getLambda", &FixedQuadrupleListLambda::getLambda)
       .def("setLambda", &FixedQuadrupleListLambda::setLambda)

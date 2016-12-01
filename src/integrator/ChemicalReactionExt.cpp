@@ -376,6 +376,8 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
   real reaction_rate, reaction_r_sqr;
   int p_order;
 
+  boost::unordered_set<longint> particle_idx;
+
   for (ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
     idx_a = it->first;  // particle id
     idx_b = it->second.first;  // particle id
@@ -383,6 +385,12 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     reaction_rate = it->second.second.reaction_rate;   // reaction rate for this pair.
     reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
     p_order = it->second.second.order;
+
+    // skip particle pairs that are already in the list.
+    if (particle_idx.count(idx_a) != 0 || particle_idx.count(idx_b) != 0) {
+      LOG4ESPP_DEBUG(theLogger, "skip pair " << idx_a << "-" << idx_b);
+      continue;
+    }
 
     if (idx_a > idx_b) {
       std::swap(idx_a, idx_b);
@@ -395,6 +403,9 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     out.insert(
         std::make_pair(
             idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order))));
+    // insert used particle idx to the set.
+    particle_idx.insert(idx_a);
+    particle_idx.insert(idx_b);
   }
   mm = out;
 

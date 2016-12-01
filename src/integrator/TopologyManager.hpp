@@ -345,6 +345,8 @@ class TopologyManager: public Extension {
                                std::set<Quadruplets> &quadruplets,
                                std::set<Triplets> &triplets);
 
+  void generateNewAnglesDihedrals();
+
   /**
    * Exchange new topology and res_id data among cpus.
    */
@@ -400,11 +402,15 @@ class TopologyManager: public Extension {
                   shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
   typedef std::map<longint, std::set<int> *> GraphMap;
 
+  // response for updating dihedrals, angles, pairs 14
   bool update_angles_;
   bool update_dihedrals_;
   bool update_14pairs_;
   bool generate_new_angles_dihedrals_;
+  std::set<Quadruplets> new_quadruplets_;
+  std::set<Triplets> new_triplets_;
 
+  // Stores reference to Fixed Lists
   std::vector<shared_ptr<FixedPairList> > tuples_;
   std::vector<shared_ptr<FixedPairList> > tuples14_;
   std::vector<shared_ptr<FixedTripleList> > triples_;
@@ -474,6 +480,7 @@ class TopologyManager: public Extension {
   }
 
   python::list getTimers();
+
 };
 
 }  // end namespace integrator

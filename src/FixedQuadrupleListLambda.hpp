@@ -91,6 +91,7 @@ class FixedQuadrupleListLambda : public FixedQuadrupleList {
   QuadruplesLambda quadruplesLambda_;
   ParticleQuadruplesLambda particleQuadruplesLambda_;
   static LOG4ESPP_DECL_LOGGER(theLogger);
+  python::list getAllQuadruples();
 };
 }
 
