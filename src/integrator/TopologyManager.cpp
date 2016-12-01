@@ -305,15 +305,6 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
 
   // newResidueEdge
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
-
-  // Generate angles, dihedrals, based on updated graph.
-  real time0 = wallTimer.getElapsedTime();
-
-  if (generate_new_angles_dihedrals_) {
-    generateAnglesDihedrals(pid1, pid2, new_quadruplets_, new_triplets_);
-  }
-
-  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
@@ -551,8 +542,14 @@ void TopologyManager::exchangeData() {
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
 
-  for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); ++it) {
-    newEdge(it->first, it->second);
+  for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end();) {
+    SetPairs::iterator found_it = global_remove_edge.find(*it);
+    if (found_it != global_remove_edge.end()) {
+      newEdge(it->first, it->second);
+      ++it;
+    } else {
+      global_new_edge.erase(it++);
+    }
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
 
@@ -572,7 +569,7 @@ void TopologyManager::exchangeData() {
   }
 
   // Generate missing angles, dihedrals, 1-4 pairs
-  generateNewAnglesDihedrals();
+  generateNewAnglesDihedrals(global_new_edge);
 
   LOG4ESPP_DEBUG(theLogger, "finish apply updateParticleProperties: " << global_new_local_particle_properties.size());
 
@@ -908,7 +905,14 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
   }
 }
 
-void TopologyManager::generateNewAnglesDihedrals() {
+void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_edges) {
+  // Generate angles, dihedrals, based on updated graph.
+  real time0 = wallTimer.getElapsedTime();
+
+  for (SetPairs::iterator it = new_edges.begin(); it != new_edges.end(); ++it) {
+    generateAnglesDihedrals(it->first, it->second, new_quadruplets_, new_triplets_);
+  }
+
   if (update_angles_)
     defineAngles(new_triplets_);
   if (update_dihedrals_)
@@ -919,6 +923,8 @@ void TopologyManager::generateNewAnglesDihedrals() {
   // Clean data structure.
   new_triplets_.clear();
   new_quadruplets_.clear();
+
+  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
