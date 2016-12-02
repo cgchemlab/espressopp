@@ -61,7 +61,7 @@ void ATRPActivator::connect() {
 void ATRPActivator::addReactiveCenter(longint type_id,
                                       longint state,
                                       bool is_activator,
-                                      shared_ptr<ParticleProperties> pp,
+                                      shared_ptr<TopologyParticleProperties> pp,
                                       longint delta_state) {
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::addReactiveCenter type_id: " << type_id << " state:" << state
                             << " is_activator:" << is_activator << " delta_state:" << delta_state);

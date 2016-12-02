@@ -32,6 +32,7 @@
 #include "iterator/CellListIterator.hpp"
 #include "storage/NodeGrid.hpp"
 #include "storage/DomainDecomposition.hpp"
+#include "TopologyManager.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -40,7 +41,7 @@ struct ReactiveCenter {
   longint state;  ///<! minimal chemical state
   bool is_activator;
   longint delta_state;  ///<! update of chemical potential
-  shared_ptr<ParticleProperties> new_property;  ///<! new property
+  shared_ptr<TopologyParticleProperties> new_property;  ///<! new property
 
   ReactiveCenter() {
     state = -1;
@@ -48,7 +49,7 @@ struct ReactiveCenter {
   }
 
   ReactiveCenter(longint state_, bool is_activator_, longint delta_state_,
-                 shared_ptr<ParticleProperties> new_property_) {
+                 shared_ptr<TopologyParticleProperties> new_property_) {
     state = state_;
     is_activator = is_activator_;
     delta_state = delta_state_;
@@ -66,7 +67,7 @@ class ATRPActivator: public Extension {
   void addReactiveCenter(longint type_id,
                          longint state,
                          bool is_activator,
-                         shared_ptr<ParticleProperties> pp,
+                         shared_ptr<TopologyParticleProperties> pp,
                          longint delta_state);
 
   /** Register this class so it can be used from Python. */
