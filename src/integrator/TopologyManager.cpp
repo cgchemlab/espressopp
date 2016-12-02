@@ -630,11 +630,19 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
       if (ftl) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3);
         bool ret = ftl->iadd(p1->id(), p2->id(), p3->id());
-        if (ret) LOG4ESPP_DEBUG(theLogger,
-                                "Defined new angle: " << it->first << "-" << it->second.first << "-"
-                                    << it->second.second);
+        if (ret) {
+          LOG4ESPP_DEBUG(theLogger,
+                         "Defined new angle: " << it->first << "-" << it->second.first << "-"
+                                               << it->second.second);
+        } else {
+          LOG4ESPP_DEBUG(theLogger,
+                         "Angle not defined: " << it->first << "-" << it->second.first << "-"
+                                               << it->second.second
+                                               << " type: " << t1 << "-" << t2 << "-" << t3);
+        }
       } else {
-        LOG4ESPP_WARN(theLogger,"add angle: fixed list for triplet: " << it->first << "-" << it->second.first
+        LOG4ESPP_WARN(theLogger, "add angle: fixed list for triplet: "
+            << it->first << "-" << it->second.first
             << "-" << it->second.second
             << " not found of types: " << t1 << "-" << t2 << "-" << t3
             << " check you topology file and define angletypes for missing triplet");
@@ -678,15 +686,28 @@ void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
           ret = fql->iadd(p4->id(), p3->id(), p2->id(), p1->id());
         }
 
-        if (ret) LOG4ESPP_DEBUG(theLogger,
-                                "Defined new dihedral: " << it->first << "-" << it->second.first
-                                    << "-" << it->second.second.first << "-"
-                                    << it->second.second.second);
+        if (ret) {
+          LOG4ESPP_DEBUG(theLogger,
+                         "Defined new dihedral: " << it->first << "-" << it->second.first
+                                                  << "-" << it->second.second.first << "-"
+                                                  << it->second.second.second);
+        } else {
+          LOG4ESPP_DEBUG(theLogger,
+                         "Dihedral not defined: " << it->first << "-" << it->second.first
+                                                  << "-" << it->second.second.first << "-"
+                                                  << it->second.second.second
+                                                  << " type: " << t1 << "-" << t2
+                                                  << "-" << t3 << "-" << t4);
+        }
       } else {
-        LOG4ESPP_WARN(theLogger,"add dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
-            << "-" << it->second.second.first << "-" << it->second.second.second
-            << " not found of types: " << t1 << "-" << t2 << "-" << t3 << "-" << t4
-            << " check you topology file and define dihedraltypes for missing quadruplet");
+        LOG4ESPP_WARN(theLogger,
+                      "add dihedral: fixed list for quadruplet: "
+                          << it->first << "-" << it->second.first
+                          << "-" << it->second.second.first << "-"
+                          << it->second.second.second
+                          << " not found of types: " << t1 << "-"
+                          << t2 << "-" << t3 << "-" << t4
+                          << " check you topology file and define dihedraltypes for missing quadruplet");
       }
     }
   }
@@ -712,11 +733,21 @@ void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
         bool ret = fpl->iadd(p1->id(), p4->id());
         if (!ret)
           ret = fpl->iadd(p4->id(), p1->id());
-        if (ret) LOG4ESPP_DEBUG(theLogger,
-                                "Defined new 1-4 pair: " << it->first << "-"
-                                    << it->second.second.second);
+        if (ret) {
+          LOG4ESPP_DEBUG(theLogger,
+                         "Defined new 1-4 pair: "
+                             << it->first << "-"
+                             << it->second.second.second);
+        } else {
+          LOG4ESPP_DEBUG(theLogger,
+                         "1-4 pair not defined: "
+                             << it->first << "-"
+                             << it->second.second.second
+                             << " type: " << t1 << "-" << t4);
+        }
       } else {
-        LOG4ESPP_WARN(theLogger, "add 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
+        LOG4ESPP_WARN(theLogger, "add 1-4: fixed list 1-4 for 1-4 pair: "
+            << it->first << "-" << it->second.second.second
             << " not found of types: " << t1 << "-" << t4
             << " check your topology file and define pairstypes for missing pair");
       }
@@ -730,7 +761,7 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
   shared_ptr<FixedTripleList> ftl;
   for (std::set<Triplets>::iterator it = triplets.begin(); it != triplets.end(); ++it) {
     Particle *p1 = system_->storage->lookupLocalParticle(it->first);
-    Particle *p2 = system_->storage->lookupLocalParticle(it->second.first);
+    Particle *p2 = system_->storage->lookupRealParticle(it->second.first);
     Particle *p3 = system_->storage->lookupLocalParticle(it->second.second);
     if (p1 && p2 && p3) {
       t1 = p1->type();
@@ -747,14 +778,24 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
           ret = ftl->remove(p3->id(), p2->id(), p1->id());
         if (ret) {
           LOG4ESPP_DEBUG(theLogger,
-                         "Remove angle: " << it->first << "-" << it->second.first << "-"
+                         "Remove angle: "
+                             << it->first << "-" << it->second.first << "-"
                              << it->second.second);
         } else {
-          LOG4ESPP_WARN(theLogger,"removeAngle: fixed list for triplet: " << it->first << "-" << it->second.first
-              << "-" << it->second.second
-              << " not found of types: " << t1 << "-" << t2 << "-" << t3
-              << " check you topology file and define angletypes for missing triplet");
+          LOG4ESPP_DEBUG(theLogger,
+                         "Angle not removed: "
+                             << it->first << "-" << it->second.first << "-"
+                             << it->second.second
+                             << " type: " << t1 << "-" << t2 << "-" << t3);
         }
+      } else {
+        LOG4ESPP_WARN(theLogger,
+                      "removeAngle: fixed list for triplet: "
+                          << it->first << "-" << it->second.first
+                          << "-" << it->second.second
+                          << " not found of types: " << t1 << "-" << t2
+                          << "-" << t3
+                          << " check you topology file and define angletypes for missing triplet");
       }
     }
   }
@@ -776,25 +817,50 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
       t4 = p4->type();
       // Look for fixed triple list which should be updated.
       fql = quadrupleMap_[t1][t2][t3][t4];
-      if (!fql)
+      bool reverse_order = false;
+      if (!fql) {
         fql = quadrupleMap_[t4][t3][t2][t1];
+        reverse_order = true;
+      }
+
+      if ((reverse_order && p4->ghost()) || (!reverse_order && p1->ghost()))
+        continue;
+
       if (fql) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3 << "-" << t4);
-        bool ret = fql->remove(p1->id(), p2->id(), p3->id(), p4->id());
-
-        if (!ret)
+        bool ret = false;
+        if (!reverse_order) {
+          ret = fql->remove(p1->id(), p2->id(), p3->id(), p4->id());
+        } else {
           ret = fql->remove(p4->id(), p3->id(), p2->id(), p1->id());
+        }
+
         if (ret) {
           LOG4ESPP_DEBUG(theLogger,
-                         "Remove dihedral: " << it->first << "-" << it->second.first
-                             << "-" << it->second.second.first << "-"
-                             << it->second.second.second);
+                         "Dihedral removed: "
+                             << it->first << "-" << it->second.first
+                                              << "-" << it->second.second.first << "-"
+                                              << it->second.second.second
+                                              << " types: " << t1 << "-" << t2
+                                              << "-" << t3 << "-" << t4);
         } else {
-          LOG4ESPP_WARN(theLogger,"remove dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
-              << "-" << it->second.second.first << "-" << it->second.second.second
-              << " not found of types: " << t1 << "-" << t2 << "-" << t3 << "-" << t4
-              << " check you topology file and define dihedraltypes for missing quadruplet");
+          LOG4ESPP_WARN(theLogger,
+                        "Dihedral not removed: "
+                            << it->first << "-" << it->second.first
+                                             << "-" << it->second.second.first << "-"
+                                             << it->second.second.second
+                                             << " types: " << t1 << "-" << t2
+                                             << "-" << t3 << "-" << t4);
         }
+      } else {
+        LOG4ESPP_WARN(theLogger,
+                      "remove dihedral: fixed list for quadruplet: "
+                          << it->first << "-" << it->second.first
+                          << "-" << it->second.second.first << "-"
+                          << it->second.second.second
+                          << " not found of types: " << t1 << "-"
+                          << t2 << "-" << t3 << "-" << t4
+                          << " check you topology file and define dihedraltypes for missing quadruplet");
       }
     }
   }
@@ -818,12 +884,20 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
         bool ret = fpl->remove(p1->id(), p4->id());
         if (!ret)
           ret = fpl->remove(p4->id(), p1->id());
-        if (ret) LOG4ESPP_DEBUG(theLogger,
-                                "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
+        if (ret) {
+          LOG4ESPP_DEBUG(theLogger,
+                         "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
+        } else {
+          LOG4ESPP_DEBUG(theLogger,
+                         "1-4 pair not removed: " << it->first << "-" << it->second.second.second
+                                                  << " type: " << t1 << "-" << t4);
+        }
       } else {
-        LOG4ESPP_WARN(theLogger, "remove 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
-            << " not found of types: " << t1 << "-" << t4
-            << " check your topology file and define pairstypes for missing pair");
+        LOG4ESPP_WARN(theLogger,
+                      "remove 1-4: fixed list 1-4 for 1-4 pair: "
+                          << it->first << "-" << it->second.second.second
+                          << " not found of types: " << t1 << "-" << t4
+                          << " check your topology file and define pairstypes for missing pair");
       }
     }
   }
