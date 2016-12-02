@@ -59,7 +59,7 @@ state.
         :param is_activator:
         :type is_activator: bool
         :param new_property: The new property of particle.
-        :type new_property: espressopp.ParticleProperties
+        :type new_property: espressopp.integrator.TopologyParticleProperties
         :param delta_state: The change of chemical state.
         :type delta_state: int
 
