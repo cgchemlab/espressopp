@@ -635,10 +635,10 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
                          "Defined new angle: " << it->first << "-" << it->second.first << "-"
                                                << it->second.second);
         } else {
-          LOG4ESPP_DEBUG(theLogger,
-                         "Angle not defined: " << it->first << "-" << it->second.first << "-"
-                                               << it->second.second
-                                               << " type: " << t1 << "-" << t2 << "-" << t3);
+          LOG4ESPP_WARN(theLogger,
+                        "Angle not defined: " << it->first << "-" << it->second.first << "-"
+                                              << it->second.second
+                                              << " type: " << t1 << "-" << t2 << "-" << t3);
         }
       } else {
         LOG4ESPP_WARN(theLogger, "add angle: fixed list for triplet: "
@@ -692,12 +692,12 @@ void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
                                                   << "-" << it->second.second.first << "-"
                                                   << it->second.second.second);
         } else {
-          LOG4ESPP_DEBUG(theLogger,
-                         "Dihedral not defined: " << it->first << "-" << it->second.first
-                                                  << "-" << it->second.second.first << "-"
-                                                  << it->second.second.second
-                                                  << " type: " << t1 << "-" << t2
-                                                  << "-" << t3 << "-" << t4);
+          LOG4ESPP_WARN(theLogger,
+                        "Dihedral not defined: " << it->first << "-" << it->second.first
+                                                 << "-" << it->second.second.first << "-"
+                                                 << it->second.second.second
+                                                 << " type: " << t1 << "-" << t2
+                                                 << "-" << t3 << "-" << t4);
         }
       } else {
         LOG4ESPP_WARN(theLogger,
@@ -739,11 +739,11 @@ void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
                              << it->first << "-"
                              << it->second.second.second);
         } else {
-          LOG4ESPP_DEBUG(theLogger,
-                         "1-4 pair not defined: "
-                             << it->first << "-"
-                             << it->second.second.second
-                             << " type: " << t1 << "-" << t4);
+          LOG4ESPP_WARN(theLogger,
+                        "1-4 pair not defined: "
+                            << it->first << "-"
+                            << it->second.second.second
+                            << " type: " << t1 << "-" << t4);
         }
       } else {
         LOG4ESPP_WARN(theLogger, "add 1-4: fixed list 1-4 for 1-4 pair: "
@@ -782,11 +782,11 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
                              << it->first << "-" << it->second.first << "-"
                              << it->second.second);
         } else {
-          LOG4ESPP_DEBUG(theLogger,
-                         "Angle not removed: "
-                             << it->first << "-" << it->second.first << "-"
-                             << it->second.second
-                             << " type: " << t1 << "-" << t2 << "-" << t3);
+          LOG4ESPP_WARN(theLogger,
+                        "Angle not removed: "
+                            << it->first << "-" << it->second.first << "-"
+                            << it->second.second
+                            << " type: " << t1 << "-" << t2 << "-" << t3);
         }
       } else {
         LOG4ESPP_WARN(theLogger,
@@ -850,7 +850,7 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
                                              << "-" << it->second.second.first << "-"
                                              << it->second.second.second
                                              << " types: " << t1 << "-" << t2
-                                             << "-" << t3 << "-" << t4);
+                                             << "-" << t3 << "-" << t4 << " reverse_order=" << reverse_order);
         }
       } else {
         LOG4ESPP_WARN(theLogger,
@@ -888,9 +888,9 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
           LOG4ESPP_DEBUG(theLogger,
                          "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
         } else {
-          LOG4ESPP_DEBUG(theLogger,
-                         "1-4 pair not removed: " << it->first << "-" << it->second.second.second
-                                                  << " type: " << t1 << "-" << t4);
+          LOG4ESPP_WARN(theLogger,
+                        "1-4 pair not removed: " << it->first << "-" << it->second.second.second
+                                                 << " type: " << t1 << "-" << t4);
         }
       } else {
         LOG4ESPP_WARN(theLogger,
