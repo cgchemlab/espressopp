@@ -141,7 +141,11 @@ namespace espressopp {
         globalQuadruples.insert(equalRange.first,
                                 std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
         onTupleAdded(pid1, pid2, pid3, pid4);
-        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
+        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list: " << pid1 << "-" << pid2
+            << "-" << pid3 << "-" << pid4);
+      } else {
+        LOG4ESPP_DEBUG(theLogger, "quadruple " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4
+            << " already exists");
       }
     }
     return returnVal;
@@ -214,7 +218,9 @@ namespace espressopp {
         globalQuadruples.insert(equalRange.first,
           std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
         onTupleAdded(pid1, pid2, pid3, pid4);
-        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
+        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list: " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4);
+      } else {
+        LOG4ESPP_DEBUG(theLogger, "quadruple " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4 << " already exists");
       }
     }
     return returnVal;
@@ -260,6 +266,7 @@ namespace espressopp {
             onTupleRemoved(pid1, pid2, pid3, pid4);
             returnVal = true;
             it = globalQuadruples.erase(it);
+            LOG4ESPP_DEBUG(theLogger, "dihedral " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4 << " removed");
           } else {
             ++it;
           }
@@ -272,6 +279,7 @@ namespace espressopp {
             onTupleRemoved(pid4, pid3, pid2, pid1);
             returnVal = true;
             it = globalQuadruples.erase(it);
+            LOG4ESPP_DEBUG(theLogger, "dihedral " << pid4 << pid3 << pid2 << pid1 << " removed");
           } else {
             ++it;
           }
