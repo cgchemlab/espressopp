@@ -328,10 +328,17 @@ void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
 bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   bool removed = removeBond(pid1, pid2);  // remove bond from fpl
 
-  if (graph_->count(pid1) > 0)
+  if (graph_->count(pid1) > 0) {
     graph_->at(pid1)->erase(pid2);
-  if (graph_->count(pid2) > 0)
+  } else {
+    LOG4ESPP_ERROR(theLogger, "deleteEdge " << pid1 << "-" << pid2 << " ->count(pid1) == 0");
+  }
+
+  if (graph_->count(pid2) > 0) {
     graph_->at(pid2)->erase(pid1);
+  } else {
+    LOG4ESPP_ERROR(theLogger, "deleteEdge " << pid1 << "-" << pid2 << " ->count(pid2) == 0");
+  }
 
   // If edge removed, check if there is still edge between residues.
   longint rid1 = pid_rid[pid1];
@@ -573,32 +580,6 @@ void TopologyManager::exchangeData() {
 
   LOG4ESPP_DEBUG(theLogger, "finish apply updateParticleProperties: " << global_new_local_particle_properties.size());
 
-  /** Check if every information where redistributed and applied correctly. */
-//  std::vector<longint> nums;
-//  nums.push_back(num_remove_nb_edges);
-//  nums.push_back(num_update_particle_properties);
-//
-//  if (system_->comm->rank() == 0) {
-//    std::vector<longint> total_nums;
-//    mpi::reduce(*(system_->comm), nums, total_nums, std::plus<longint>(), 0);
-//    bool wrong_number = false;
-//    if (total_nums[0] != global_nb_edges_root_to_remove.size()) {
-//      wrong_number = true;
-//      std::cout << "removed edges: expected=" << global_nb_edges_root_to_remove.size()
-//                << " is=" << total_nums[0] << std::endl;
-//    }
-//    if (total_nums[1] != global_new_local_particle_properties.size()) {
-//      wrong_number = true;
-//      std::cout << "update type: expected=" << global_new_local_particle_properties.size()
-//                << " is=" << total_nums[1] << std::endl;
-//    }
-//    if (wrong_number)
-//      throw std::runtime_error("TopologyManager.exchangeData: problems with exchange data.");
-//
-//  } else {
-//    mpi::reduce(*(system_->comm), nums, std::plus<longint>(), 0);
-//  }
-
   newEdges_.clear();
   removedEdges_.clear();
   nb_distance_particles_.clear();
@@ -828,7 +809,7 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
 
       if (fql) {
         LOG4ESPP_DEBUG(theLogger, "Found tuple for: " << t1 << "-" << t2 << "-" << t3 << "-" << t4);
-        bool ret = false;
+        bool ret;
         if (!reverse_order) {
           ret = fql->remove(p1->id(), p2->id(), p3->id(), p4->id());
         } else {
