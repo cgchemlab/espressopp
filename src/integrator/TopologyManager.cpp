@@ -397,32 +397,6 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
         (const std::string &)
             (boost::format("Tuple for pair %d-%d of types %d,%d not found") % pid1 % pid2 % t1 % t2));
   }
-
-  // Generate list of angles/dihedrals to remove, based on the graph.
-  real time0 = wallTimer.getElapsedTime();
-  std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
-  std::set <Triplets> *triplets = new std::set<Triplets>();
-  if (generate_new_angles_dihedrals_) {
-    generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
-  }
-
-  if (update_angles_) {
-    undefineAngles(*triplets);
-    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
-      (*it)->updateParticlesStorage();
-    }
-  }
-  if (update_dihedrals_) {
-    undefineDihedrals(*quadruplets);
-    for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
-         it != quadruples_.end(); ++it) {
-      (*it)->updateParticlesStorage();
-    }
-  }
-  if (update_14pairs_)
-    undefine14tuples(*quadruplets);
-
-  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
   return removed;
 }
 
@@ -560,6 +534,7 @@ void TopologyManager::exchangeData() {
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
 
+  removeAnglesDihedrals(global_remove_edge);
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
   }
@@ -964,6 +939,9 @@ void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_e
   // Generate angles, dihedrals, based on updated graph.
   real time0 = wallTimer.getElapsedTime();
 
+  std::set<Quadruplets> new_quadruplets_;
+  std::set<Triplets> new_triplets_;
+
   for (SetPairs::iterator it = new_edges.begin(); it != new_edges.end(); ++it) {
     generateAnglesDihedrals(it->first, it->second, new_quadruplets_, new_triplets_);
   }
@@ -975,9 +953,35 @@ void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_e
   if (update_14pairs_)
     define14tuples(new_quadruplets_);
 
-  // Clean data structure.
-  new_triplets_.clear();
-  new_quadruplets_.clear();
+  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
+}
+
+void TopologyManager::removeAnglesDihedrals(TopologyManager::SetPairs removed_edges) {
+  // Generate angles, dihedrals, based on updated graph.
+  real time0 = wallTimer.getElapsedTime();
+
+  std::set<Quadruplets> generated_quadruplets;
+  std::set<Triplets> generated_triplets;
+
+  for (SetPairs::iterator it = removed_edges.begin(); it != removed_edges.end(); ++it) {
+    generateAnglesDihedrals(it->first, it->second, generated_quadruplets, generated_triplets);
+  }
+
+  if (update_angles_) {
+    undefineAngles(generated_triplets);
+    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
+      (*it)->updateParticlesStorage();
+    }
+  }
+  if (update_dihedrals_) {
+    undefineDihedrals(generated_quadruplets);
+    for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
+         it != quadruples_.end(); ++it) {
+      (*it)->updateParticlesStorage();
+    }
+  }
+  if (update_14pairs_)
+    undefine14tuples(generated_quadruplets);
 
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }

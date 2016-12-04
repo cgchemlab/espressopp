@@ -346,6 +346,7 @@ class TopologyManager: public Extension {
                                std::set<Triplets> &triplets);
 
   void generateNewAnglesDihedrals(TopologyManager::SetPairs set);
+  void removeAnglesDihedrals(TopologyManager::SetPairs removed_edges)
 
   /**
    * Exchange new topology and res_id data among cpus.
@@ -407,8 +408,6 @@ class TopologyManager: public Extension {
   bool update_dihedrals_;
   bool update_14pairs_;
   bool generate_new_angles_dihedrals_;
-  std::set<Quadruplets> new_quadruplets_;
-  std::set<Triplets> new_triplets_;
 
   // Stores reference to Fixed Lists
   std::vector<shared_ptr<FixedPairList> > tuples_;
