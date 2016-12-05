@@ -523,22 +523,16 @@ void TopologyManager::exchangeData() {
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
 
-  for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end();) {
-    SetPairs::iterator found_it = global_remove_edge.find(*it);
-    if (found_it == global_remove_edge.end()) {
-      newEdge(it->first, it->second);
-      ++it;
-    } else {
-      global_new_edge.erase(it++);
-    }
-  }
-  LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
-
-  removeAnglesDihedrals(global_remove_edge);
+  removeAnglesDihedrals(global_remove_edge, global_new_edge);
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply deleteEdge: " << global_remove_edge.size());
+
+  for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); it++) {
+    newEdge(it->first, it->second);
+  }
+  LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
 
   for (MapPairsDist::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
     updateParticlePropertiesAtDistance(it->first.second, it->second);
@@ -956,7 +950,7 @@ void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_e
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
-void TopologyManager::removeAnglesDihedrals(TopologyManager::SetPairs removed_edges) {
+void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
   // Generate angles, dihedrals, based on updated graph.
   real time0 = wallTimer.getElapsedTime();
 

@@ -345,8 +345,8 @@ class TopologyManager: public Extension {
                                std::set<Quadruplets> &quadruplets,
                                std::set<Triplets> &triplets);
 
-  void generateNewAnglesDihedrals(TopologyManager::SetPairs set);
-  void removeAnglesDihedrals(TopologyManager::SetPairs removed_edges);
+  void generateNewAnglesDihedrals(SetPairs set);
+  void removeAnglesDihedrals(SetPairs removed_edges);
 
   /**
    * Exchange new topology and res_id data among cpus.
