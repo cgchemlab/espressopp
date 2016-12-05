@@ -523,7 +523,7 @@ void TopologyManager::exchangeData() {
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
 
-  removeAnglesDihedrals(global_remove_edge, global_new_edge);
+  removeAnglesDihedrals(global_remove_edge);
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
   }
