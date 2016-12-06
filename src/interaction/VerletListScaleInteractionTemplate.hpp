@@ -124,7 +124,8 @@ addForces() {
     Real3D dist;
     bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
     if(potential._computeForce(force, p1, p2, dist)) {
-      if (has_max_force_) {
+      real pair_scaling = pair_scaling_->getPairScaling(p1.id(), p2.id());
+      if (has_max_force_ && pair_scaling < 1.0) {
         if (force.isNaNInf()) {
           force = (dist / dist.abs()) * max_force_;
         } else {
@@ -134,7 +135,6 @@ addForces() {
           }
         }
       }
-      real pair_scaling = pair_scaling_->getPairScaling(p1.id(), p2.id());
       p1.force() += pair_scaling*force;
       p2.force() -= pair_scaling*force;
     }
@@ -215,7 +215,8 @@ computeVirial() {
     Real3D dist;
     bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
     if (potential._computeForce(force, p1, p2, dist)) {
-      if (has_max_force_) {
+      real pair_scaling = pair_scaling_->getPairScaling(p1.id(), p2.id());
+      if (has_max_force_ && pair_scaling < 1.0) {
         if (force.isNaNInf()) {
           force = (dist/dist.abs()) * max_force_;
         } else {
@@ -225,7 +226,6 @@ computeVirial() {
           }
         }
       }
-      real pair_scaling = pair_scaling_->getPairScaling(p1.id(), p2.id());
       Real3D r21 = p1.position() - p2.position();
       w = w + pair_scaling * r21 * force;
     }
@@ -253,7 +253,8 @@ computeVirialTensor(Tensor& w) {
     Real3D dist;
     bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
     if (potential._computeForce(force, p1, p2, dist)) {
-      if (has_max_force_) {
+      real pair_scaling = pair_scaling_->getPairScaling(p1.id(), p2.id());
+      if (has_max_force_ && pair_scaling < 1.0) {
         if (force.isNaNInf()) {
           force = (dist/dist.abs()) * max_force_;
         } else {
@@ -263,7 +264,6 @@ computeVirialTensor(Tensor& w) {
           }
         }
       }
-      real pair_scaling = pair_scaling_->getPairScaling(p1.id(), p2.id());
       wlocal += Tensor(dist, pair_scaling*force);
     }
   }
