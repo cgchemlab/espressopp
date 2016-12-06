@@ -70,7 +70,7 @@ class NParticlePairScalingEntriesLocal(ObservableLocal, analysis_NParticlePairSc
     """The (local) compute number of exclude list entries."""
     def __init__(self, system, particle_pair_scaling):
         if pmi.workerIsActive():
-            cxxinit(self, analysis_NExcludeListEntries, system, particle_pair_scaling)
+            cxxinit(self, analysis_NParticlePairScalingEntries, system, particle_pair_scaling)
 
 
 if pmi.isController:
