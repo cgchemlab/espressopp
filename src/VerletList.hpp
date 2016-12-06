@@ -51,7 +51,7 @@ class DynamicExcludeList {
   void disconnect();
   shared_ptr<ExcludeList> getExList() { return exList; };
   python::list getList();
-  int getSize() { return exList->size(); }
+  int getSize() const { return exList->size(); }
 
   void observe_tuple(shared_ptr<FixedPairList> fpl);
   void observe_triple(shared_ptr<FixedTripleList> ftl);
@@ -69,6 +69,10 @@ class DynamicExcludeList {
   // Helper lists.
   std::vector<longint> exList_add;
   std::vector<longint> exList_remove;
+
+  /**
+   * Update list among all CPUs.
+   */
   void updateList();
 
   boost::signals2::connection befIntP, runInit;
@@ -120,6 +124,8 @@ class DynamicExcludeList {
 
     /** Remove pairs from exclusion list. */
     bool unexclude(longint pid1, longint pid2);
+
+    longint excludeListSize() const;
 
     /** Get the number of times the Verlet list has been rebuilt */
     int getBuilds() const { return builds; }

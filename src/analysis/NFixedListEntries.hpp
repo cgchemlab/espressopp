@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015
+  Copyright (C) 2015-2016
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -22,14 +22,19 @@
 #ifndef _ANALYSIS_NFIXEDLISTENTRIES_HPP
 #define _ANALYSIS_NFIXEDLISTENTRIES_HPP
 
+#include <esutil/ParticlePairScaling.hpp>
 #include "types.hpp"
 #include "Observable.hpp"
 #include "FixedPairList.hpp"
 #include "FixedTripleList.hpp"
 #include "FixedQuadrupleList.hpp"
+#include "VerletList.hpp"
 
 namespace espressopp {
 namespace analysis {
+namespace NFixedListEntries {
+void registerPython();
+}
 
 class NFixedPairListEntries : public Observable {
  public:
@@ -43,7 +48,6 @@ class NFixedPairListEntries : public Observable {
     return fpl_->totalSize();
   }
 
-  static void registerPython();
  private:
   shared_ptr<FixedPairList> fpl_;
 };
@@ -60,7 +64,6 @@ class NFixedTripleListEntries : public Observable {
     return fpl_->totalSize();
   }
 
-  static void registerPython();
  private:
   shared_ptr<FixedTripleList> fpl_;
 };
@@ -77,9 +80,37 @@ class NFixedQuadrupleListEntries : public Observable {
     return fpl_->totalSize();
   }
 
-  static void registerPython();
  private:
   shared_ptr<FixedQuadrupleList> fpl_;
+};
+
+class NExcludeListEntries : public Observable {
+ public:
+  NExcludeListEntries(shared_ptr<System> system, shared_ptr<VerletList> vl) : Observable(system), verlet_list_(vl) {
+    result_type = real_scalar;
+  }
+  ~NExcludeListEntries() {}
+  real compute_real() const {
+    return verlet_list_->excludeListSize();
+  }
+
+ private:
+  shared_ptr<VerletList> verlet_list_;
+};
+
+class NParticlePairScalingEntries : public Observable {
+ public:
+  NParticlePairScalingEntries(shared_ptr<System> system, shared_ptr<esutil::ParticlePairScaling> pps)
+    : Observable(system), pps_(pps) {
+    result_type = real_scalar;
+  }
+  ~NParticlePairScalingEntries() { }
+  real compute_real() const {
+    return pps_->getSize();
+  }
+
+ private:
+  shared_ptr<esutil::ParticlePairScaling> pps_;
 };
 
 }  // end namespace analysis

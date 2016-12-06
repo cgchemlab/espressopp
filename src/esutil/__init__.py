@@ -63,7 +63,6 @@ from espressopp.esutil.NormalVariate import *
 from espressopp.esutil.GammaVariate import *
 
 from espressopp.esutil.Grid import *
-from espressopp.esutil.ParticlePairScaling import *
 
 
 class ExtendBaseClass (type) :
@@ -95,3 +94,5 @@ def cxxinit(obj, cls, *args, **kwds):
 #     if not hasattr(obj, 'pmiobject'):
 #         obj.pmiobject = pmi.create(cls, *args, **kwds)
 
+# It has to be after cxxinit method is defined.
+from espressopp.esutil.ParticlePairScaling import *

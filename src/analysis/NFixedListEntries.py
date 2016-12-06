@@ -1,4 +1,4 @@
-#  Copyright (C) 2015
+#  Copyright (C) 2015,2016
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
@@ -38,6 +38,8 @@ from espressopp.analysis.Observable import *  # NOQA
 from _espressopp import analysis_NFixedPairListEntries
 from _espressopp import analysis_NFixedTripleListEntries
 from _espressopp import analysis_NFixedQuadrupleListEntries
+from _espressopp import analysis_NExcludeListEntries
+from _espressopp import analysis_NParticlePairScalingEntries
 
 
 class NFixedPairListEntriesLocal(ObservableLocal, analysis_NFixedPairListEntries):
@@ -58,6 +60,19 @@ class NFixedQuadrupleListEntriesLocal(ObservableLocal, analysis_NFixedQuadrupleL
         if pmi.workerIsActive():
             cxxinit(self, analysis_NFixedQuadrupleListEntries, system, fl)
 
+class NExcludeListEntriesLocal(ObservableLocal, analysis_NExcludeListEntries):
+    """The (local) compute number of exclude list entries."""
+    def __init__(self, system, vl):
+        if pmi.workerIsActive():
+            cxxinit(self, analysis_NExcludeListEntries, system, vl)
+
+class NParticlePairScalingEntriesLocal(ObservableLocal, analysis_NParticlePairScalingEntries):
+    """The (local) compute number of exclude list entries."""
+    def __init__(self, system, particle_pair_scaling):
+        if pmi.workerIsActive():
+            cxxinit(self, analysis_NExcludeListEntries, system, particle_pair_scaling)
+
+
 if pmi.isController:
     class NFixedPairListEntries(Observable):
         __metaclass__ = pmi.Proxy
@@ -77,5 +92,19 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.NFixedQuadrupleListEntriesLocal',
+            pmiproperty=['value']
+        )
+
+    class NExcludeListEntries(Observable):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.analysis.NExcludeListEntriesLocal',
+            pmiproperty=['value']
+        )
+
+    class NParticlePairScalingEntries(Observable):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls='espressopp.analysis.NParticlePairScalingEntriesLocal',
             pmiproperty=['value']
         )

@@ -49,6 +49,8 @@ class ParticlePairScaling {
     sigOnAftIntV.disconnect();
   }
 
+  longint getSize() const { return particle_pair_scale_.size(); }
+
   real getPairScaling(longint pid1, longint pid2);
 
   static void registerPython();

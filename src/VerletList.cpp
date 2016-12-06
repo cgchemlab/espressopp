@@ -124,16 +124,16 @@ void DynamicExcludeList::updateList() {
         longint f2 = *(itm++);
         exList->erase(std::make_pair(f1, f2));
         exList->erase(std::make_pair(f2, f1));
+        onPairUnexclude(f1, f2);
         is_dirty = true;
-        //LOG4ESPP_DEBUG(theLogger, "removed pair: " << f1 << "-" << f2);
       }
       for (int i = 0; i < add_size; i++) {
         longint f1 = *(itm++);
         longint f2 = *(itm++);
         exList->insert(std::make_pair(f1, f2));
         exList->insert(std::make_pair(f2, f1));
+        onPairExclude(f1, f2);
         is_dirty = true;
-        //LOG4ESPP_DEBUG(theLogger, "add pair: " << f1 << "-" << f2);
       }
     }
   }
@@ -360,6 +360,10 @@ void DynamicExcludeList::registerPython() {
       onPairUnexclude(pid1, pid2);
     }
   }
+
+  longint VerletList::excludeListSize() const {
+    return exList->size();
+  }
   
 
   /*-------------------------------------------------------------*/
@@ -401,5 +405,6 @@ void DynamicExcludeList::registerPython() {
       .def("get_timers", &VerletList::getTimers)
       ;
   }
+
 
 }
