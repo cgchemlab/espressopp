@@ -63,6 +63,7 @@ from espressopp.esutil.NormalVariate import *
 from espressopp.esutil.GammaVariate import *
 
 from espressopp.esutil.Grid import *
+from espressopp.esutil.ParticlePairScaling import *
 
 
 class ExtendBaseClass (type) :

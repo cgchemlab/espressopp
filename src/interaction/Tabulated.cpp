@@ -31,6 +31,7 @@
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
 #include "VerletListDynamicResolutionInteractionTemplate.hpp"
+#include "VerletListScaleInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
@@ -65,6 +66,7 @@ namespace espressopp {
     typedef class VerletListAdressInteractionTemplate <Tabulated, Tabulated> VerletListAdressTabulated;
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
     typedef class VerletListDynamicResolutionInteractionTemplate<Tabulated> VerletListDynamicResolutionTabulated;
+    typedef class VerletListScaleInteractionTemplate<Tabulated> VerletListScaleTabulated;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
     typedef class FixedPairListTypesInteractionTemplate <Tabulated> FixedPairListTypesTabulated;
@@ -114,7 +116,16 @@ namespace espressopp {
           .def("getPotential", &VerletListDynamicResolutionTabulated::getPotentialPtr)
           .def("setMaxForce", &VerletListDynamicResolutionTabulated::setMaxForce)
           ;
-     
+
+      class_<VerletListScaleTabulated, bases<Interaction> >
+          ("interaction_VerletListScaleTabulated", init<shared_ptr<VerletList>,
+                                                        shared_ptr<esutil::ParticlePairScaling> >())
+          .def("getVerletList", &VerletListScaleTabulated::getVerletList)
+          .def("setPotential", &VerletListScaleTabulated::setPotential)
+          .def("getPotential", &VerletListScaleTabulated::getPotentialPtr)
+          .def("setMaxForce", &VerletListScaleTabulated::setMaxForce)
+          ;
+
       class_ <CellListTabulated, bases <Interaction> > 
         ("interaction_CellListTabulated", init <shared_ptr <storage::Storage> >())
             .def("setPotential", &CellListTabulated::setPotential);

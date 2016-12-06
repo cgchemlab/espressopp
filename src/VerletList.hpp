@@ -56,6 +56,10 @@ class DynamicExcludeList {
   void observe_tuple(shared_ptr<FixedPairList> fpl);
   void observe_triple(shared_ptr<FixedTripleList> ftl);
   void observe_quadruple(shared_ptr<FixedQuadrupleList> fql);
+
+  boost::signals2::signal0 <void> onListUpdated;
+  boost::signals2::signal2 <void, longint, longint> onPairExclude;
+  boost::signals2::signal2 <void, longint, longint> onPairUnexclude;
   
   static void registerPython();
 
@@ -85,12 +89,13 @@ class DynamicExcludeList {
     */
 
     VerletList(shared_ptr< System >, real cut, bool rebuildVL);
-    VerletList(shared_ptr< System >, real cut,
-        shared_ptr<DynamicExcludeList> dynamicExList, bool rebuildVL);
+    VerletList(shared_ptr< System >, real cut, shared_ptr<DynamicExcludeList> dynamicExList, bool rebuildVL);
 
     ~VerletList();
 
-    PairList& getPairs() { return vlPairs; }
+    PairList& getPairs() {
+      return vlPairs;
+    }
 
     python::tuple getPair(int i);
     
@@ -124,6 +129,9 @@ class DynamicExcludeList {
 
     /** Register this class so it can be used from Python. */
     static void registerPython();
+
+    boost::signals2::signal2 <void, longint, longint> onPairExclude;
+    boost::signals2::signal2 <void, longint, longint> onPairUnexclude;
 
   protected:
 

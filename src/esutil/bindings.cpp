@@ -28,6 +28,7 @@
 #include "GammaVariate.hpp"
 
 #include "Grid.hpp"
+#include "ParticlePairScaling.hpp"
 
 namespace espressopp {
   namespace esutil {
@@ -38,6 +39,7 @@ namespace espressopp {
       NormalVariate::registerPython();
       GammaVariate::registerPython();
       Grid::registerPython();
+      ParticlePairScaling::registerPython();
     }
   }
 }
