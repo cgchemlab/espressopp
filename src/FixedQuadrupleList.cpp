@@ -227,9 +227,6 @@ namespace espressopp {
   }
 
   bool FixedQuadrupleList::remove(longint pid1, longint pid2, longint pid3, longint pid4) {
-    // here we assume pid1 < pid2 < pid3 < pid4
-    System& system = storage->getSystemRef();
-
     bool returnVal = false;
     std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange, equalRange_rev;
     equalRange = globalQuadruples.equal_range(pid1);
@@ -259,6 +256,27 @@ namespace espressopp {
         }
     }
     return returnVal;
+  }
+
+  bool FixedQuadrupleList::removeByBond(longint pid1, longint pid2) {
+    bool return_val = false;
+    // TODO(jakub): this has to be changed in more efficient way.
+    for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end();) {
+      longint q1 = it->first;
+      longint q2 = it->second.first;
+      longint q3 = it->second.second;
+      longint q4 = it->second.third;
+      if ((q1 == pid1 && q2 == pid2) || (q2 == pid1 && q3 == pid2) || (q3 == pid1 && q4 == pid2) ||
+          (q1 == pid2 && q2 == pid1) || (q2 == pid2 && q3 == pid1) || (q3 == pid2 && q4 == pid1)) {
+        onTupleRemoved(q1, q2, q3, q4);
+        LOG4ESPP_DEBUG(theLogger, "dihedral " << q1 << q2 << q3 << q4 << " removed");
+        it = globalQuadruples.erase(it);
+        return_val = true;
+      } else {
+        ++it;
+      }
+    }
+    return return_val;
   }
 
   python::list FixedQuadrupleList::getQuadruples()
@@ -511,4 +529,5 @@ namespace espressopp {
       .def("getAllQuadruples", &FixedQuadrupleList::getAllQuadruples)
      ;
   }
+
 }
