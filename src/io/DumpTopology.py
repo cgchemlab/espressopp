@@ -149,7 +149,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
 
     def observe_quadruple(self, fql, name, particle_group='atoms'):
         if pmi.workerIsActive():
-            self.cxxclass.observe_triple(self, fql)
+            self.cxxclass.observe_quadruple(self, fql)
             g = pyh5md.element(
                 self.connectivity,
                 name,
