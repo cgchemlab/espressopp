@@ -283,7 +283,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                                 linear_data = data
                             data = np.pad(linear_data, (0, fpl_type*NMaxLocal[fpl_type-2]-linear_data.shape[0]),
                                           'constant', constant_values=-1)
-                            data = data.reshape((NMaxLocal, fpl_type))
+                            data = data.reshape((NMaxLocal[fpl_type-2], fpl_type))
                         if fpl_type == 2:
                             ds = self.tuple_data[fpl_idx]
                         elif fpl_type == 3:
