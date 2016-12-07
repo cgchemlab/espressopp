@@ -253,6 +253,8 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                         b3 = raw_data.pop()
                         b4 = raw_data.pop()
                         data.append((b1, b2, b3, b4))
+                    else:
+                        raise RuntimeError('Wrong fpl_type: {}'.format(fpl_type))
                 max_sizes[fpl_type-2] = max(len(data), max_sizes[fpl_type-2])
                 if step not in step_data:
                     step_data[step] = {}
@@ -288,9 +290,11 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
                             ds = self.triple_data[fpl_idx]
                         elif fpl_type == 4:
                             ds = self.quadruple_data[fpl_idx]
+                        else:
+                            raise RuntimeError('Wrong fpl_type: {}'.format(fpl_type))
                         if total_size[fpl_type-2] > ds.value.shape[1]:
-                            ds.value.resize(total_size, axis=1)
-                        ds.append(data, step, step*self.dt, region=(idx_0, idx_1))
+                            ds.value.resize(total_size[fpl_type-2], axis=1)
+                        ds.append(data, step, step*self.dt, region=(idx_0[fpl_type-2], idx_1[fpl_type-2]))
             self.cxxclass.clear_buffer(self)
 
 if pmi.isController:

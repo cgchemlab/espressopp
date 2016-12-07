@@ -45,7 +45,7 @@ void DumpTopology::saveDataToBuffer() {
     std::vector<longint> pairs = (*it)->getPairList();
     fpl_buffer_.push_front(integrator_->getStep());
     fpl_buffer_.push_front(idx);
-    fpl_buffer_.push_back(2);
+    fpl_buffer_.push_front(2);
     fpl_buffer_.push_front(pairs.size()/2);
     for (std::vector<longint>::iterator itt = pairs.begin(); itt != pairs.end();) {
       fpl_buffer_.push_front(*(itt++));
@@ -60,7 +60,7 @@ void DumpTopology::saveDataToBuffer() {
     std::vector<longint> triples = (*it)->getTripleList();
     fpl_buffer_.push_front(integrator_->getStep());
     fpl_buffer_.push_front(idx);
-    fpl_buffer_.push_back(3);
+    fpl_buffer_.push_front(3);
     fpl_buffer_.push_front(triples.size()/3);
     for (std::vector<longint>::iterator itt = triples.begin(); itt != triples.end();) {
       fpl_buffer_.push_front(*(itt++));
@@ -76,7 +76,7 @@ void DumpTopology::saveDataToBuffer() {
     std::vector<longint> quadruples = (*it)->getQuadrupleList();
     fpl_buffer_.push_front(integrator_->getStep());
     fpl_buffer_.push_front(idx);
-    fpl_buffer_.push_back(4);
+    fpl_buffer_.push_front(4);
     fpl_buffer_.push_front(quadruples.size()/4);
     for (std::vector<longint>::iterator itt = quadruples.begin(); itt != quadruples.end();) {
       fpl_buffer_.push_front(*(itt++));
