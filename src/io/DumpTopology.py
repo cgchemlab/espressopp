@@ -138,7 +138,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             self.tuple_data[self.tuple_index] = g
             self.tuple_index += 1
 
-    def observe_triplet(self, ftl, name, particle_group='atoms'):
+    def observe_triple(self, ftl, name, particle_group='atoms'):
         if pmi.workerIsActive():
             self.cxxclass.observe_triple(self, ftl)
             g = pyh5md.element(self.connectivity, name, store='time', maxshape=(None, 3), shape=(self.chunk_size, 3),
@@ -298,7 +298,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.io.DumpTopologyLocal',
-            pmicall=['dump', 'clear_buffer', 'observe_tuple', 'update',
+            pmicall=['dump', 'clear_buffer', 'observe_tuple', 'observe_triple', 'observe_quadruple', 'update',
                      'add_static_tuple', 'add_static_triplet', 'add_static_quadruplet'],
             pmiproperty=[],
             pmiinvoke=['get_data']
