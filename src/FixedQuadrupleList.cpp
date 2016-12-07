@@ -273,6 +273,17 @@ namespace espressopp {
 	return quadruples;
   }
 
+  std::vector<longint> FixedQuadrupleList::getQuadrupleList() {
+    std::vector<longint> ret;
+    for (GlobalQuadruples::const_iterator it=globalQuadruples.begin(); it != globalQuadruples.end(); it++) {
+      ret.push_back(it->first);
+      ret.push_back(it->second.first);
+      ret.push_back(it->second.second);
+      ret.push_back(it->second.third);
+    }
+    return ret;
+  }
+
   python::list FixedQuadrupleList::getAllQuadruples() {
     std::vector<longint> local_quadruples;
     std::vector<std::vector<longint> > global_quadruples;

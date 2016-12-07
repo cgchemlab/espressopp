@@ -69,6 +69,7 @@ namespace espressopp {
     virtual void onParticlesChanged();
     virtual void updateParticlesStorage();
 
+    virtual std::vector<longint> getQuadrupleList();
     virtual python::list getQuadruples();
 
     /** Get the number of quadruples in the GlobalQuadruples list */

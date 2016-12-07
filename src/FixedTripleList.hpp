@@ -66,6 +66,7 @@ namespace espressopp {
 		virtual void onParticlesChanged();
 		virtual void updateParticlesStorage();
 
+		virtual std::vector<longint> getTripleList();
 		virtual python::list getTriples();
 		virtual python::list getAllTriples();
 	    /** Get the number of triples in the GlobalTriples list */

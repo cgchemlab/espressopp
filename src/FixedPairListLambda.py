@@ -88,6 +88,15 @@ class FixedPairListLambdaLocal(_espressopp.FixedPairListLambda):
                 pid1, pid2 = bond
                 self.cxxclass.add(self, pid1, pid2)
 
+    def getBonds(self):
+        if pmi.workerIsActive():
+            bonds=self.cxxclass.getBonds(self)
+            return bonds
+
+    def getAllBonds(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getAllBonds(self)
+
     def getPairs(self):
         if pmi.workerIsActive():
           return self.cxxclass.getPairs(self)
@@ -102,7 +111,6 @@ if pmi.isController:
       __metaclass__ = pmi.Proxy
       pmiproxydefs = dict(
           cls = 'espressopp.FixedPairListLambdaLocal',
-          localcall = [ "add" ],
-          pmicall = [ "addBonds", "setLambda", "setAllLambda"],
+          pmicall = [ 'add', "addBonds", "setLambda", "setAllLambda", 'getAllBonds'],
           pmiinvoke = ['getBonds', 'getPairsLambda', 'size', 'getLambda']
       )

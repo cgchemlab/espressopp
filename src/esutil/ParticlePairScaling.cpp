@@ -27,7 +27,7 @@ namespace esutil {
 LOG4ESPP_LOGGER(ParticlePairScaling::theLogger, "ParticlePairScaling");
 
 void ParticlePairScaling::addParticlePair(longint pid1, longint pid2) {
-  LOG4ESPP_DEBUG(theLogger, "new pair " << pid1 << "-" << pid2);
+  LOG4ESPP_DEBUG(theLogger, "new pair " << pid1 << "-" << pid2 << " scale: " << default_scale_);
   particle_pair_scale_.insert(std::make_pair(std::make_pair(pid1, pid2), default_scale_));
   particle_pair_scale_.insert(std::make_pair(std::make_pair(pid2, pid1), default_scale_));
 }

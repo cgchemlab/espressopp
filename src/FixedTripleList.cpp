@@ -270,6 +270,16 @@ namespace espressopp {
 	return triples;
   }
 
+  std::vector<longint> FixedTripleList::getTripleList() {
+    std::vector<longint> ret;
+    for (GlobalTriples::const_iterator it=globalTriples.begin(); it != globalTriples.end(); it++) {
+      ret.push_back(it->second.first);
+      ret.push_back(it->first);
+      ret.push_back(it->second.second);
+    }
+    return ret;
+  }
+
   python::list FixedTripleList::getAllTriples() {
     std::vector<longint> local_triplets;
     std::vector<std::vector<longint> > global_triplets;
@@ -483,4 +493,5 @@ namespace espressopp {
       .def("getAllTriples", &FixedTripleList::getAllTriples)
      ;
   }
+
 }
