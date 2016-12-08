@@ -22,6 +22,7 @@
 
 #include <queue>
 #include <resolv.h>
+#include <fstream>
 
 #include "boost/format.hpp"
 #include "storage/Storage.hpp"
@@ -198,21 +199,7 @@ void TopologyManager::InitializeTopology() {
       Particle &p2 = *pit->second;
       edges.push_back(std::make_pair(p1.id(), p2.id()));
       // Manage bond between residues.
-      bool foundResBond = false;
-      if (tmp_resGraph.count(p1.res_id()) > 0)
-        if (tmp_resGraph.at(p1.res_id()).count(p2.res_id()) > 0)
-          foundResBond = true;
-      else if (tmp_resGraph.count(p2.res_id()) > 0)
-          if (tmp_resGraph.at(p2.res_id()).count(p1.res_id()) > 0)
-            foundResBond = true;
-
-      if (!foundResBond) {
-        res_ids.push_back(std::make_pair(p1.res_id(), p2.res_id()));
-        tmp_resGraph[p1.res_id()].insert(p2.res_id());
-        tmp_resGraph[p2.res_id()].insert(p1.res_id());
-      }
-      //local_resid.push_back(std::make_pair(p1.id(), p1.res_id()));
-      //local_resid.push_back(std::make_pair(p2.id(), p2.res_id()));
+      res_ids.push_back(std::make_pair(p1.res_id(), p2.res_id()));
     }
   }
   // Make global map of pid->res_id
@@ -1211,7 +1198,62 @@ void TopologyManager::PrintResidues() {
   for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
     std::cout << it->first << ": " << it->second << std::endl;
   }
+}
 
+void TopologyManager::SaveTopologyToFile(std::string filename) {
+  if (system_->comm->rank() == 0) {
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ios::out);
+    for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+      if (it->second != NULL) {
+        output_file << it->first << ": ";
+        for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+          output_file << *itv << " ";
+        }
+        output_file << std::endl;
+      }
+    }
+    output_file.close();
+  }
+}
+
+void TopologyManager::SaveResTopologyToFile(std::string filename) {
+  if (system_->comm->rank() == 0) {
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ios::out);
+    for (GraphMap::iterator it = res_graph_->begin(); it != res_graph_->end(); ++it) {
+      if (it->second != NULL) {
+        output_file << it->first << ": ";
+        for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+          output_file << *itv << " ";
+        }
+        output_file << std::endl;
+      }
+    }
+    output_file.close();
+  }
+}
+
+void TopologyManager::SaveResiduesListToFile(std::string filename) {
+  if (system_->comm->rank() == 0) {
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ios::out);
+    for (GraphMap::iterator it = residues_->begin(); it != residues_->end(); ++it) {
+      if (it->second != NULL) {
+        output_file << it->first << ": ";
+        for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+          output_file << *itv << " ";
+        }
+        output_file << std::endl;
+      }
+    }
+    output_file << std::endl;
+    output_file << "Map PID->RID" << std::endl;
+    for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
+      output_file << it->first << ": " << it->second << std::endl;
+    }
+    output_file.close();
+  }
 }
 
 python::list TopologyManager::getTimers() {
@@ -1248,6 +1290,9 @@ void TopologyManager::registerPython() {
       .def("print_topology", &TopologyManager::PrintTopology)
       .def("print_res_topology", &TopologyManager::PrintResTopology)
       .def("print_residues", &TopologyManager::PrintResidues)
+      .def("save_topology", &TopologyManager::SaveTopologyToFile)
+      .def("save_res_topology", &TopologyManager::SaveResTopologyToFile)
+      .def("save_residues", &TopologyManager::SaveResiduesListToFile)
       .def("get_neighbour_lists", &TopologyManager::getNeighbourLists)
       .def("get_timers", &TopologyManager::getTimers)
       .def("is_residue_connected", &TopologyManager::isResiduesConnected)

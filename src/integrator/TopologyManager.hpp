@@ -281,6 +281,10 @@ class TopologyManager: public Extension {
   void PrintTopology();
   void PrintResTopology();
   void PrintResidues();
+  void SaveTopologyToFile(std::string filename);
+  void SaveResTopologyToFile(std::string filename);
+  void SaveResiduesListToFile(std::string filename);
+
 
   /**
    * Get neighbour list.
