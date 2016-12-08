@@ -22,10 +22,8 @@
 #ifndef _INTEGRATOR_CHEMICALREACTIONEXT_HPP
 #define _INTEGRATOR_CHEMICALREACTIONEXT_HPP
 
-#include "boost/unordered_map.hpp"
-#include "boost/signals2.hpp"
-#include "boost/container/map.hpp"
-#include "boost/serialization/map.hpp"
+#include <boost/unordered_map.hpp>
+#include <boost/signals2.hpp>
 
 #include <fstream>
 #include <utility>
@@ -65,16 +63,6 @@ struct ReactionDef {
     reaction_rate = rr;
     reaction_r_sqr = r_sqr;
     order = order_;
-  }
-
-  ReactionDef() {}
-
-  template<typename Archive>
-  void serialize(Archive &ar, const unsigned int version) {
-    ar & reaction_id;
-    ar & reaction_rate;
-    ar & reaction_r_sqr;
-    ar & order;
   }
 };
 
