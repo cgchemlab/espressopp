@@ -376,7 +376,6 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
   real reaction_rate, reaction_r_sqr;
   int p_order;
 
-  boost::unordered_set<longint> particle_idx;
 
   for (ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
     idx_a = it->first;  // particle id
@@ -385,12 +384,6 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     reaction_rate = it->second.second.reaction_rate;   // reaction rate for this pair.
     reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
     p_order = it->second.second.order;
-
-    // skip particle pairs that are already in the list.
-    if (particle_idx.count(idx_a) != 0 || particle_idx.count(idx_b) != 0) {
-      LOG4ESPP_DEBUG(theLogger, "skip pair " << idx_a << "-" << idx_b);
-      continue;
-    }
 
     if (idx_a > idx_b) {
       std::swap(idx_a, idx_b);
@@ -403,12 +396,37 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     out.insert(
         std::make_pair(
             idx_a, std::make_pair(idx_b, ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order))));
-    // insert used particle idx to the set.
-    particle_idx.insert(idx_a);
-    particle_idx.insert(idx_b);
   }
-  mm = out;
 
+  // Make pairs unique among cpus
+  std::vector<ReactionMap> global_maps;
+  if (getSystem()->comm->rank() == 0) {
+    // Collect maps from all cpus.
+    mpi::gather(*(getSystem()->comm), out, global_maps, 0);
+    std::set<longint> particle_pairs;  // global set of already used particle pairs.
+    // iterate over CPUs maps and check the particle lists. First In First Served idea;
+    for (std::vector<ReactionMap>::iterator it_rms = global_maps.begin(); it_rms != global_maps.end(); it_rms++) {
+      for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end();) {
+        longint idx_a = it->first;
+        longint idx_b = it->second.first;
+        if (particle_pairs.find(idx_a) != particle_pairs.end() || particle_pairs.find(idx_b) != particle_pairs.end()) {
+          // Pair already exists. Remove if from the map it_rms.
+          it_rms->erase(it++);
+        } else {
+          particle_pairs.insert(idx_a);
+          particle_pairs.insert(idx_b);
+          it++;
+        }
+      }
+    }
+    mm.clear();
+    mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
+  } else {
+    // send local reaction map to root cpu.
+    mpi::gather(*(getSystem()->comm), out, global_maps, 0);
+    mm.clear();
+    mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
+  }
   LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
 }
 
