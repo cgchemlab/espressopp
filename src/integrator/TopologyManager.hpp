@@ -282,7 +282,7 @@ class TopologyManager: public Extension {
    * build adjacent list. Then this list is distributed among cpus so
    * everyone has the same adjacent list.
    */
-  void InitializeTopology();
+  void initializeTopology();
   /**
    * Print adjacent list.
    */

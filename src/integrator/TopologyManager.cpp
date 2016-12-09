@@ -56,8 +56,7 @@ void TopologyParticleProperties::registerPython() {
       .add_property("lambda_adr", make_getter(&TopologyParticleProperties::lambda_),
                     &TopologyParticleProperties::setLambda)
       .add_property("change_flag", make_getter(&TopologyParticleProperties::change_flag_))
-      .def("set_min_max_state", &TopologyParticleProperties::setMinMaxState)
-      ;
+      .def("set_min_max_state", &TopologyParticleProperties::setMinMaxState);
 }
 
 bool TopologyParticleProperties::updateParticleProperties(Particle *p) {
@@ -185,7 +184,7 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
   generate_new_angles_dihedrals_ = true;
 }
 
-void TopologyManager::InitializeTopology() {
+void TopologyManager::initializeTopology() {
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
   EdgesVector res_ids;
@@ -193,7 +192,7 @@ void TopologyManager::InitializeTopology() {
   std::map<longint, std::set<int> > tmp_resGraph;
   std::vector<std::pair<longint, longint> > local_resid;
 
-  for (std::vector< shared_ptr<FixedPairList> >::iterator it = tuples_.begin(); it != tuples_.end(); ++it) {
+  for (std::vector<shared_ptr<FixedPairList> >::iterator it = tuples_.begin(); it != tuples_.end(); ++it) {
     for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
@@ -204,7 +203,7 @@ void TopologyManager::InitializeTopology() {
   }
   // Make global map of pid->res_id
   CellList cells = system_->storage->getRealCells();
-  for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
+  for (CellListIterator cit(cells); !cit.isDone(); ++cit) {
     local_resid.push_back(std::make_pair(cit->id(), cit->res_id()));
   }
 
@@ -220,6 +219,34 @@ void TopologyManager::InitializeTopology() {
   std::vector<EdgesVector> global_output;
   mpi::all_gather(*(system_->comm), output, global_output);
 
+  // First build a residue map.
+  for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
+    EdgesVector::iterator it = itv->begin();
+    // collects the size of data structures.
+    longint local_resid_size = it->first;
+    it++;  // single value of local_resid_size
+    it++;  // skip next element
+    // Create the mapping particle_id->residue_id and residue_id->particle_list
+    for (longint i = 0; i < local_resid_size; ++it, i++) {
+      longint pid = it->first;
+      longint rid = it->second;
+      if (rid == 0)
+        throw std::runtime_error(
+            (const std::string &) (boost::format("ResID is 0 for particle %d") % pid));
+      if (pid_rid.find(pid) != pid_rid.end())
+        throw std::runtime_error(
+            (const std::string &) (boost::format("ResID for particle: %d already set to: %d") % pid % pid_rid[pid]));
+
+      pid_rid[pid] = rid;
+
+      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
+      if (residues_->count(rid) == 0)
+        residues_->insert(std::make_pair(rid, new std::set<longint>()));
+      residues_->at(rid)->insert(pid);
+    }
+    // End this part
+  }
+
   // Build a graph. The same on every CPU.
   for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
     EdgesVector::iterator it = itv->begin();
@@ -231,23 +258,8 @@ void TopologyManager::InitializeTopology() {
     it++;
 
     // Create the mapping particle_id->residue_id and residue_id->particle_list
-    for (longint i = 0; i < local_resid_size; ++it, i++) {
-      longint pid = it->first;
-      longint rid = it->second;
-      if (rid == 0)
-        throw std::runtime_error(
-            (const std::string&) (boost::format("ResID is 0 for particle %d") % pid));
-      if (pid_rid.find(pid) != pid_rid.end())
-        throw std::runtime_error(
-            (const std::string&) (boost::format("ResID for particle: %d already set to: %d") % pid % pid_rid[pid]));
-
-      pid_rid[pid] = rid;
-
-      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
-      if (residues_->count(rid) == 0)
-        residues_->insert(std::make_pair(rid, new std::set<longint>()));
-      residues_->at(rid)->insert(pid);
-    }
+    // Silly but, we have to skip this part that contains resid map as this is already set.
+    it += local_resid_size;
 
     // Create the edge list between atoms.
     for (longint i = 0; i < edges_size; ++it, i++) {
@@ -259,10 +271,8 @@ void TopologyManager::InitializeTopology() {
       newResEdge(it->first, it->second);
     }
   }
-
-  is_dirty_ = true;
+  is_dirty_ = false;
 }
-
 
 
 python::list TopologyManager::getNeighbourLists() {
@@ -397,8 +407,8 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
 
   // Generate list of angles/dihedrals to remove, based on the graph.
   real time0 = wallTimer.getElapsedTime();
-  std::set <Quadruplets> *quadruplets = new std::set<Quadruplets>();
-  std::set <Triplets> *triplets = new std::set<Triplets>();
+  std::set<Quadruplets> *quadruplets = new std::set<Quadruplets>();
+  std::set<Triplets> *triplets = new std::set<Triplets>();
   if (generate_new_angles_dihedrals_) {
     generateAnglesDihedrals(pid1, pid2, *quadruplets, *triplets);
   }
@@ -437,7 +447,9 @@ void TopologyManager::exchangeData() {
 
   if (!global_is_dirty) {
     timeExchangeData += wallTimer.getElapsedTime() - time0;
-    LOG4ESPP_DEBUG(theLogger, "step: " << integrator->getStep() << " leaving exchangeData, no need to update: " << global_is_dirty);
+    LOG4ESPP_DEBUG(theLogger,
+                   "step: " << integrator->getStep() << " leaving exchangeData, no need to update: "
+                            << global_is_dirty);
     return;
   }
 
@@ -509,9 +521,9 @@ void TopologyManager::exchangeData() {
           global_nb_distance_particles.insert(std::make_pair(key, distance));
         } else if (global_nb_distance_particles[key] != distance) {
           std::cout << "Ambiguity, existing pair: " << root_id << "-" << particle_id << ":"
-                      << global_nb_distance_particles[key] << std::endl;
-            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
-            throw std::runtime_error("Problem with merging incoming data");
+                    << global_nb_distance_particles[key] << std::endl;
+          std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
+          throw std::runtime_error("Problem with merging incoming data");
         }
       }
 
@@ -562,7 +574,8 @@ void TopologyManager::exchangeData() {
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply deleteEdge: " << global_remove_edge.size());
 
-  for (MapPairsDist::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
+  for (MapPairsDist::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end();
+       ++it) {
     updateParticlePropertiesAtDistance(it->first.second, it->second);
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply updateParticlePropertiesAtDistance: " << global_nb_distance_particles.size());
@@ -636,12 +649,13 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
         bool ret = ftl->iadd(p1->id(), p2->id(), p3->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new angle: " << it->first << "-" << it->second.first << "-"
-                                    << it->second.second);
+                                                      << it->second.second);
       } else {
-        LOG4ESPP_WARN(theLogger,"add angle: fixed list for triplet: " << it->first << "-" << it->second.first
-            << "-" << it->second.second
-            << " not found of types: " << t1 << "-" << t2 << "-" << t3
-            << " check you topology file and define angletypes for missing triplet");
+        LOG4ESPP_WARN(theLogger, "add angle: fixed list for triplet: " << it->first << "-" << it->second.first
+                                                                       << "-" << it->second.second
+                                                                       << " not found of types: " << t1 << "-" << t2
+                                                                       << "-" << t3
+                                                                       << " check you topology file and define angletypes for missing triplet");
       }
     }
   }
@@ -684,13 +698,15 @@ void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
 
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new dihedral: " << it->first << "-" << it->second.first
-                                    << "-" << it->second.second.first << "-"
-                                    << it->second.second.second);
+                                                         << "-" << it->second.second.first << "-"
+                                                         << it->second.second.second);
       } else {
-        LOG4ESPP_WARN(theLogger,"add dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
-            << "-" << it->second.second.first << "-" << it->second.second.second
-            << " not found of types: " << t1 << "-" << t2 << "-" << t3 << "-" << t4
-            << " check you topology file and define dihedraltypes for missing quadruplet");
+        LOG4ESPP_WARN(theLogger, "add dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
+                                                                             << "-" << it->second.second.first << "-"
+                                                                             << it->second.second.second
+                                                                             << " not found of types: " << t1 << "-"
+                                                                             << t2 << "-" << t3 << "-" << t4
+                                                                             << " check you topology file and define dihedraltypes for missing quadruplet");
       }
     }
   }
@@ -718,11 +734,12 @@ void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
           ret = fpl->iadd(p4->id(), p1->id());
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Defined new 1-4 pair: " << it->first << "-"
-                                    << it->second.second.second);
+                                                         << it->second.second.second);
       } else {
-        LOG4ESPP_WARN(theLogger, "add 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
-            << " not found of types: " << t1 << "-" << t4
-            << " check your topology file and define pairstypes for missing pair");
+        LOG4ESPP_WARN(theLogger,
+                      "add 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
+                                                               << " not found of types: " << t1 << "-" << t4
+                                                               << " check your topology file and define pairstypes for missing pair");
       }
     }
   }
@@ -752,12 +769,13 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
         if (ret) {
           LOG4ESPP_DEBUG(theLogger,
                          "Remove angle: " << it->first << "-" << it->second.first << "-"
-                             << it->second.second);
+                                          << it->second.second);
         } else {
-          LOG4ESPP_WARN(theLogger,"removeAngle: fixed list for triplet: " << it->first << "-" << it->second.first
-              << "-" << it->second.second
-              << " not found of types: " << t1 << "-" << t2 << "-" << t3
-              << " check you topology file and define angletypes for missing triplet");
+          LOG4ESPP_WARN(theLogger, "removeAngle: fixed list for triplet: " << it->first << "-" << it->second.first
+                                                                           << "-" << it->second.second
+                                                                           << " not found of types: " << t1 << "-" << t2
+                                                                           << "-" << t3
+                                                                           << " check you topology file and define angletypes for missing triplet");
         }
       }
     }
@@ -791,13 +809,16 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
         if (ret) {
           LOG4ESPP_DEBUG(theLogger,
                          "Remove dihedral: " << it->first << "-" << it->second.first
-                             << "-" << it->second.second.first << "-"
-                             << it->second.second.second);
+                                             << "-" << it->second.second.first << "-"
+                                             << it->second.second.second);
         } else {
-          LOG4ESPP_WARN(theLogger,"remove dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
-              << "-" << it->second.second.first << "-" << it->second.second.second
-              << " not found of types: " << t1 << "-" << t2 << "-" << t3 << "-" << t4
-              << " check you topology file and define dihedraltypes for missing quadruplet");
+          LOG4ESPP_WARN(theLogger,
+                        "remove dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
+                                                                       << "-" << it->second.second.first << "-"
+                                                                       << it->second.second.second
+                                                                       << " not found of types: " << t1 << "-" << t2
+                                                                       << "-" << t3 << "-" << t4
+                                                                       << " check you topology file and define dihedraltypes for missing quadruplet");
         }
       }
     }
@@ -825,9 +846,10 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
       } else {
-        LOG4ESPP_WARN(theLogger, "remove 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
-            << " not found of types: " << t1 << "-" << t4
-            << " check your topology file and define pairstypes for missing pair");
+        LOG4ESPP_WARN(theLogger,
+                      "remove 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
+                                                                  << " not found of types: " << t1 << "-" << t4
+                                                                  << " check your topology file and define pairstypes for missing pair");
       }
     }
   }
@@ -1035,9 +1057,9 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
-      longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level) {
+    longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level) {
   LOG4ESPP_DEBUG(theLogger, "register property change for type_id=" << type_id
-      << " at level=" << nb_level);
+                                                                    << " at level=" << nb_level);
   max_nb_distance_ = std::max(max_nb_distance_, nb_level);
   nb_distances_.insert(nb_level);
   distance_type_pp_[nb_level].insert(std::make_pair(type_id, pp));
@@ -1173,7 +1195,8 @@ bool TopologyManager::isNeighbourParticleInState(
     }
     if (num_type > 1)
       throw std::runtime_error((const std::string &)
-          (boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id % num_type % nb_type_id));
+                                   (boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id
+                                       % num_type % nb_type_id));
 
     longint p_state = p->state();
     valid = (p_state >= min_state && p_state < max_state);
@@ -1286,7 +1309,8 @@ python::list TopologyManager::getTimers() {
   ret.append(python::make_tuple("timeUpdateNeighbourProperty", timeUpdateNeighbourProperty));
   ret.append(python::make_tuple("timeIsResidueConnected", timeIsResidueConnected));
   ret.append(python::make_tuple(
-      "timeAll", timeExchangeData+timeGenerateAnglesDihedrals+timeUpdateNeighbourProperty+timeIsResidueConnected));
+      "timeAll",
+      timeExchangeData + timeGenerateAnglesDihedrals + timeUpdateNeighbourProperty + timeIsResidueConnected));
 
   return ret;
 }
@@ -1308,7 +1332,7 @@ void TopologyManager::registerPython() {
       .def("register_14tuple", &TopologyManager::register14Tuple)
       .def("register_triple", &TopologyManager::registerTriple)
       .def("register_quadruple", &TopologyManager::registerQuadruple)
-      .def("initialize", &TopologyManager::InitializeTopology)
+      .def("initialize", &TopologyManager::initializeTopology)
       .def("exchange_data", &TopologyManager::exchangeData)
       .def("print_topology", &TopologyManager::PrintTopology)
       .def("print_res_topology", &TopologyManager::PrintResTopology)
@@ -1319,8 +1343,7 @@ void TopologyManager::registerPython() {
       .def("get_neighbour_lists", &TopologyManager::getNeighbourLists)
       .def("get_timers", &TopologyManager::getTimers)
       .def("is_residue_connected", &TopologyManager::isResiduesConnected)
-      .def("is_particle_connected", &TopologyManager::isParticleConnected)
-      ;
+      .def("is_particle_connected", &TopologyManager::isParticleConnected);
 }
 
 }  // end namespace integrator
