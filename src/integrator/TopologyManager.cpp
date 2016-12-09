@@ -208,11 +208,11 @@ void TopologyManager::InitializeTopology() {
     local_resid.push_back(std::make_pair(cit->id(), cit->res_id()));
   }
 
-  output.push_back(std::make_pair(edges.size(), res_ids.size()));
   output.push_back(std::make_pair(local_resid.size(), 0));
+  output.push_back(std::make_pair(edges.size(), res_ids.size()));
+  output.insert(output.end(), local_resid.begin(), local_resid.end());
   output.insert(output.end(), edges.begin(), edges.end());
   output.insert(output.end(), res_ids.begin(), res_ids.end());
-  output.insert(output.end(), local_resid.begin(), local_resid.end());
 
   LOG4ESPP_DEBUG(theLogger, "Scatter " << output.size());
   // Scatter edges lists all over all nodes. This is costful operation but
@@ -221,15 +221,33 @@ void TopologyManager::InitializeTopology() {
   mpi::all_gather(*(system_->comm), output, global_output);
 
   // Build a graph. The same on every CPU.
-  for (std::vector<EdgesVector>::iterator itv = global_output.begin();
-       itv != global_output.end(); ++itv) {
+  for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
     EdgesVector::iterator it = itv->begin();
     // collects the size of data structures.
+    longint local_resid_size = it->first;
+    it++;  // single value of local_resid_size
     longint edges_size = it->first;
     longint resid_size = it->second;
     it++;
-    longint local_resid_size = it->first;
-    it++;
+
+    // Create the mapping particle_id->residue_id and residue_id->particle_list
+    for (longint i = 0; i < local_resid_size; ++it, i++) {
+      longint pid = it->first;
+      longint rid = it->second;
+      if (rid == 0)
+        throw std::runtime_error(
+            (const std::string&) (boost::format("ResID is 0 for particle %d") % pid));
+      if (pid_rid.find(pid) != pid_rid.end())
+        throw std::runtime_error(
+            (const std::string&) (boost::format("ResID for particle: %d already set to: %d") % pid % pid_rid[pid]));
+
+      pid_rid[pid] = rid;
+
+      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
+      if (residues_->count(rid) == 0)
+        residues_->insert(std::make_pair(rid, new std::set<longint>()));
+      residues_->at(rid)->insert(pid);
+    }
 
     // Create the edge list between atoms.
     for (longint i = 0; i < edges_size; ++it, i++) {
@@ -239,17 +257,6 @@ void TopologyManager::InitializeTopology() {
     // Create the edge list between residues.
     for (longint i = 0; i < resid_size; ++it, i++) {
       newResEdge(it->first, it->second);
-    }
-
-    // Create the mapping particle_id->residue_id and residue_id->particle_list
-    for (longint i = 0; i < local_resid_size; ++it, i++) {
-      longint pid = it->first;
-      longint rid = it->second;
-      pid_rid[pid] = rid;
-      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
-      if (residues_->count(rid) == 0)
-        residues_->insert(std::make_pair(rid, new std::set<longint>()));
-      residues_->at(rid)->insert(pid);
     }
   }
 
@@ -291,6 +298,16 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   graph_->at(pid2)->insert(pid1);
 
   // newResidueEdge
+  if (pid_rid.find(pid1) == pid_rid.end()) {
+    std::cout << "ResID for pid1=" << pid1 << " not found" << std::endl;
+    std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
+    throw std::runtime_error("ResID not found");
+  }
+  if (pid_rid.find(pid2) == pid_rid.end()) {
+    std::cout << "ResID for pid2=" << pid2 << " not found" << std::endl;
+    std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
+    throw std::runtime_error("ResID not found");
+  }
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
 }
 
@@ -1118,11 +1135,17 @@ void TopologyManager::registerLocalPropertyChange(longint type_id, shared_ptr<To
   }
 }
 
-bool TopologyManager::isResiduesConnected(longint rid1, longint rid2) {
+bool TopologyManager::isResiduesConnected(longint pid1, longint pid2) {
   real time0 = wallTimer.getElapsedTime();
+  longint rid1 = pid_rid[pid1];
+  longint rid2 = pid_rid[pid2];
   bool ret = (res_graph_->count(rid1) == 1 && res_graph_->at(rid1)->count(rid2) == 1);
   timeIsResidueConnected += wallTimer.getElapsedTime() - time0;
   return ret;
+}
+
+bool TopologyManager::isSameResidues(longint pid1, longint pid2) {
+  return pid_rid[pid1] == pid_rid[pid2];
 }
 
 bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {

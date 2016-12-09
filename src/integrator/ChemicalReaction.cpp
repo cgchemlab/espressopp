@@ -138,18 +138,13 @@ LOG4ESPP_LOGGER(Reaction::theLogger, "Reaction");
 
 /** Checks if the particles has correct state. */
 bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_order) {
-  if (p1.res_id() == p2.res_id())
+  if (topology_manager_->isSameResidues(p1.id(), p2.id()))
     return false;
 
   if (!intraresidual_) {  // do not allow to intraresidual bonds (bonds between already bonded residuals)
-    if (!topology_manager_)
-      throw std::runtime_error("TopologyManager not set but check for intraresidual bond enabled.");
-    if (topology_manager_->isResiduesConnected(p1.res_id(), p2.res_id()))
+    if (topology_manager_->isResiduesConnected(p1.id(), p2.id()))
       return false;
   }
-
-  if (!topology_manager_)
-    throw std::runtime_error("TopologyManager not set!");
 
   if (topology_manager_->isParticleConnected(p1.id(), p2.id()))
     return false;
