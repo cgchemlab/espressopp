@@ -271,7 +271,7 @@ void TopologyManager::initializeTopology() {
       newResEdge(it->first, it->second);
     }
   }
-  is_dirty_ = false;
+
 }
 
 
