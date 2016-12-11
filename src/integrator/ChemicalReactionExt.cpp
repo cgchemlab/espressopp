@@ -407,6 +407,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     particle_idx.insert(idx_a);
     particle_idx.insert(idx_b);
   }
+  /*
   // Make pairs unique among cpus
   std::vector<ReactionMap> global_maps;
   if (getSystem()->comm->rank() == 0) {
@@ -435,7 +436,8 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     mpi::gather(*(getSystem()->comm), out, global_maps, 0);
     mm.clear();
     mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
-  }
+  }*/
+  mm = out;
 
   LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
 }
