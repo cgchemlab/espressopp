@@ -407,7 +407,35 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     particle_idx.insert(idx_a);
     particle_idx.insert(idx_b);
   }
-  mm = out;
+  // Make pairs unique among cpus
+  std::vector<ReactionMap> global_maps;
+  if (getSystem()->comm->rank() == 0) {
+    // Collect maps from all cpus.
+    mpi::gather(*(getSystem()->comm), out, global_maps, 0);
+    std::set<longint> particle_pairs;  // global set of already used particle pairs.
+    // iterate over CPUs maps and check the particle lists. First In First Served idea;
+    for (std::vector<ReactionMap>::iterator it_rms = global_maps.begin(); it_rms != global_maps.end(); it_rms++) {
+      for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end();) {
+        longint idx_a = it->first;
+        longint idx_b = it->second.first;
+        if (particle_pairs.find(idx_a) != particle_pairs.end() || particle_pairs.find(idx_b) != particle_pairs.end()) {
+          // Pair already exists. Remove if from the map it_rms.
+          it_rms->erase(it++);
+        } else {
+          particle_pairs.insert(idx_a);
+          particle_pairs.insert(idx_b);
+          it++;
+        }
+      }
+    }
+    mm.clear();
+    mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
+  } else {
+    // send local reaction map to root cpu.
+    mpi::gather(*(getSystem()->comm), out, global_maps, 0);
+    mm.clear();
+    mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
+  }
 
   LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
 }
