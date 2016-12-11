@@ -246,12 +246,12 @@ class TopologyManager: public Extension {
   void registerLocalPropertyChange(longint type_id, shared_ptr<TopologyParticleProperties> pp);
 
   /**
-   * Interface for checking if two residues are connected.
-   * @param rid1 residue id
-   * @param rid2 residue id
+   * Interface for checking if two particles belongs to residues that are already connect.
+   * @param pid1 particle id
+   * @param pid2 particle id
    * @return true if connected otherwise false
    */
-  bool isResiduesConnected(longint rid1, longint rid2);
+  bool isResiduesConnected(longint pid1, longint pid2);
 
   /**
    * Check if two particles are connected.
@@ -260,6 +260,14 @@ class TopologyManager: public Extension {
    * @return true if connected otherwise false
    */
   bool isParticleConnected(longint pid1, longint pid2);
+
+  /**
+   * Check if two particles belongs to the same residue
+   * @param pid1 particle id
+   * @param pid2 particle id
+   * @return true if it is the same residue.
+   */
+  bool isSameResidues(longint pid1, longint pid2);
 
   bool isNeighbourParticleInState(longint root_id, longint nb_type_id, longint min_state, longint max_state);
 
@@ -274,13 +282,17 @@ class TopologyManager: public Extension {
    * build adjacent list. Then this list is distributed among cpus so
    * everyone has the same adjacent list.
    */
-  void InitializeTopology();
+  void initializeTopology();
   /**
    * Print adjacent list.
    */
   void PrintTopology();
   void PrintResTopology();
   void PrintResidues();
+  void SaveTopologyToFile(std::string filename);
+  void SaveResTopologyToFile(std::string filename);
+  void SaveResiduesListToFile(std::string filename);
+
 
   /**
    * Get neighbour list.

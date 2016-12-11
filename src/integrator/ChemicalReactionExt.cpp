@@ -873,13 +873,6 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
       valid_state &= (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2));
       // Whole pair has to be valid before the state can be changed.
       if (valid_state) {
-//        if (p1->id() == 68 || p2->id() == 68 || p1->id() == 1349 || p1->id() == 3580 || p2->id() == 1349 || p2->id() == 3580) {
-//          std::cout << *reaction;
-//          std::cout << " p1.id=" << p1->id();
-//          std::cout << " p1.type=" << p1->type() << " p1.state=" << p1->state();
-//          std::cout << " p2.id=" << p2->id();
-//          std::cout << " p2.type=" << p2->type() << " p2.state=" << p2->state() << std::endl;
-//        }
         p1->setState(p1->getState() + reaction->delta_1());
         tmp = reaction->postProcess_T1(*p1, *p2);
         modified_particles.insert(tmp.begin(), tmp.end());
@@ -890,33 +883,6 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
         modified_particles.insert(p2);
       }
     }
-//    } else {
-//      if (p1 != NULL) {
-//        std::cout << "updating p1-" << p1->id() << " p1-state=" << p1->state() << " p1-type=" << p1->type() << std::endl;
-//        if (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1)) {
-//          p1->setState(p1->getState() + reaction->delta_1());
-//          tmp = reaction->postProcess_T1(*p1, *p2);
-//
-//          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-//            modified_particles.insert(*pit);
-//        } else {
-//          valid_state = false;
-//        }
-//      }
-//
-//      if (p2 != NULL) {
-//        std::cout << "updating p2-" << p2->id() << " p2-state=" << p2->state() << " p2-type=" << p2->type() << std::endl;
-//        if (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2)) {
-//          p2->setState(p2->getState() + reaction->delta_2());
-//          tmp = reaction->postProcess_T2(*p2, *p1);
-//
-//          for (std::set<Particle *>::iterator pit = tmp.begin(); pit != tmp.end(); ++pit)
-//            modified_particles.insert(*pit);
-//        } else {
-//          valid_state = false;
-//        }
-//      }
-//    }
 
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if ((p1 != NULL) && (p2 != NULL) && valid_state && !reaction->virtual_reaction()) {

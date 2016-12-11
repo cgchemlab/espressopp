@@ -142,6 +142,7 @@ void TopologyManager::disconnect() {
 }
 
 void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
+  LOG4ESPP_DEBUG(theLogger, "observeTuple: " << fpl);
   fpl->onTupleAdded.connect(
       boost::bind(&TopologyManager::onTupleAdded, this, _1, _2));
   fpl->onTupleRemoved.connect(
@@ -184,48 +185,32 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
   generate_new_angles_dihedrals_ = true;
 }
 
-void TopologyManager::InitializeTopology() {
+void TopologyManager::initializeTopology() {
+  LOG4ESPP_DEBUG(theLogger, "initializeTopology ");
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
-  EdgesVector res_ids;
   EdgesVector output;
-  std::map<longint, std::set<int> > tmp_resGraph;
   std::vector<std::pair<longint, longint> > local_resid;
 
-  for (std::vector< shared_ptr<FixedPairList> >::iterator it = tuples_.begin(); it != tuples_.end(); ++it) {
+  for (std::vector<shared_ptr<FixedPairList> >::iterator it = tuples_.begin(); it != tuples_.end(); ++it) {
     for (FixedPairList::PairList::Iterator pit(**it); pit.isValid(); ++pit) {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
       edges.push_back(std::make_pair(p1.id(), p2.id()));
-      // Manage bond between residues.
-      bool foundResBond = false;
-      if (tmp_resGraph.count(p1.res_id()) > 0)
-        if (tmp_resGraph.at(p1.res_id()).count(p2.res_id()) > 0)
-          foundResBond = true;
-      else if (tmp_resGraph.count(p2.res_id()) > 0)
-          if (tmp_resGraph.at(p2.res_id()).count(p1.res_id()) > 0)
-            foundResBond = true;
-
-      if (!foundResBond) {
-        res_ids.push_back(std::make_pair(p1.res_id(), p2.res_id()));
-        tmp_resGraph[p1.res_id()].insert(p2.res_id());
-        tmp_resGraph[p2.res_id()].insert(p1.res_id());
-      }
-      //local_resid.push_back(std::make_pair(p1.id(), p1.res_id()));
-      //local_resid.push_back(std::make_pair(p2.id(), p2.res_id()));
     }
   }
   // Make global map of pid->res_id
   CellList cells = system_->storage->getRealCells();
-  for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
+  longint num_particles = 0;
+  for (CellListIterator cit(cells); !cit.isDone(); ++cit) {
     local_resid.push_back(std::make_pair(cit->id(), cit->res_id()));
+    num_particles++;
   }
 
-  output.push_back(std::make_pair(edges.size(), res_ids.size()));
-  output.push_back(std::make_pair(local_resid.size(), 0));
-  output.insert(output.end(), edges.begin(), edges.end());
-  output.insert(output.end(), res_ids.begin(), res_ids.end());
+  output.push_back(std::make_pair(local_resid.size(), edges.size()));
+  output.push_back(std::make_pair(num_particles, 0));  // only for check.
   output.insert(output.end(), local_resid.begin(), local_resid.end());
+  output.insert(output.end(), edges.begin(), edges.end());
 
   LOG4ESPP_DEBUG(theLogger, "Scatter " << output.size());
   // Scatter edges lists all over all nodes. This is costful operation but
@@ -233,42 +218,63 @@ void TopologyManager::InitializeTopology() {
   std::vector<EdgesVector> global_output;
   mpi::all_gather(*(system_->comm), output, global_output);
 
-  // Build a graph. The same on every CPU.
-  for (std::vector<EdgesVector>::iterator itv = global_output.begin();
-       itv != global_output.end(); ++itv) {
+  LOG4ESPP_DEBUG(theLogger, "Gather from " << global_output.size() << " CPUs");
+
+  // First build a residue map. Iterate over data from every CPUs.
+  longint total_num_particles = 0;
+  longint receive_num_particles = 0;
+  for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
     EdgesVector::iterator it = itv->begin();
     // collects the size of data structures.
-    longint edges_size = it->first;
-    longint resid_size = it->second;
-    it++;
     longint local_resid_size = it->first;
     it++;
+    total_num_particles += it->first;
+    it++;
+    // Create the mapping particle_id->residue_id and residue_id->particle_list
+    for (longint i = 0; i < local_resid_size; ++it, i++) {
+      longint pid = it->first;
+      longint rid = it->second;
+      if (rid == 0)
+        throw std::runtime_error(
+            (const std::string &) (boost::format("ResID is 0 for particle %d") % pid));
+      if (pid_rid.find(pid) != pid_rid.end())
+        throw std::runtime_error(
+            (const std::string &) (boost::format("ResID for particle: %d already set to: %d") % pid % pid_rid[pid]));
+
+      pid_rid[pid] = rid;
+
+      if (residues_->count(rid) == 0)
+        residues_->insert(std::make_pair(rid, new std::set<longint>()));
+      residues_->at(rid)->insert(pid);
+      receive_num_particles++;
+    }
+  }
+  if (total_num_particles != receive_num_particles) {
+    std::cout << "receive " << receive_num_particles << " expected " << total_num_particles << std::endl;
+    throw std::runtime_error("wrong initialization");
+  }
+  // End this part
+
+  // Build a graph. The same on every CPU.
+  for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
+    EdgesVector::iterator it = itv->begin();
+    // collects the size of data structures.
+    longint local_resid_size = it->first;
+    longint edges_size = it->second;
+    it++;  // single value of local_resid_size
+    it++;
+
+    // Create the mapping particle_id->residue_id and residue_id->particle_list
+    // Silly but, we have to skip this part that contains resid map as this is already set.
+    it += local_resid_size;
 
     // Create the edge list between atoms.
     for (longint i = 0; i < edges_size; ++it, i++) {
       newEdge(it->first, it->second);
     }
-
-    // Create the edge list between residues.
-    for (longint i = 0; i < resid_size; ++it, i++) {
-      newResEdge(it->first, it->second);
-    }
-
-    // Create the mapping particle_id->residue_id and residue_id->particle_list
-    for (longint i = 0; i < local_resid_size; ++it, i++) {
-      longint pid = it->first;
-      longint rid = it->second;
-      pid_rid[pid] = rid;
-      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
-      if (residues_->count(rid) == 0)
-        residues_->insert(std::make_pair(rid, new std::set<longint>()));
-      residues_->at(rid)->insert(pid);
-    }
   }
-
   is_dirty_ = true;
 }
-
 
 
 python::list TopologyManager::getNeighbourLists() {
@@ -304,6 +310,21 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   graph_->at(pid2)->insert(pid1);
 
   // newResidueEdge
+  if (pid_rid.find(pid1) == pid_rid.end()) {
+    std::cout << "ResID for pid1=" << pid1 << " not found" << std::endl;
+    std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
+    throw std::runtime_error("ResID not found");
+  }
+  if (pid_rid.find(pid2) == pid_rid.end()) {
+    std::cout << "ResID for pid2=" << pid2 << " not found" << std::endl;
+    std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
+    throw std::runtime_error("ResID not found");
+  }
+  if (pid_rid[pid1] != pid_rid[pid2] && isResiduesConnected(pid1, pid2)) {
+    std::cout << "Residues " << pid_rid[pid1] << "-" << pid_rid[pid2] << " already connected" << std::endl;
+    std::cout << "New bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
+    throw std::runtime_error("Residues already connected");
+  }
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
 }
 
@@ -414,7 +435,9 @@ void TopologyManager::exchangeData() {
 
   if (!global_is_dirty) {
     timeExchangeData += wallTimer.getElapsedTime() - time0;
-    LOG4ESPP_DEBUG(theLogger, "step: " << integrator->getStep() << " leaving exchangeData, no need to update: " << global_is_dirty);
+    LOG4ESPP_DEBUG(theLogger,
+                   "step: " << integrator->getStep() << " leaving exchangeData, no need to update: "
+                            << global_is_dirty);
     return;
   }
 
@@ -486,9 +509,9 @@ void TopologyManager::exchangeData() {
           global_nb_distance_particles.insert(std::make_pair(key, distance));
         } else if (global_nb_distance_particles[key] != distance) {
           std::cout << "Ambiguity, existing pair: " << root_id << "-" << particle_id << ":"
-                      << global_nb_distance_particles[key] << std::endl;
-            std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
-            throw std::runtime_error("Problem with merging incoming data");
+                    << global_nb_distance_particles[key] << std::endl;
+          std::cout << " but try to insert: " << particle_id << ":" << distance << std::endl;
+          throw std::runtime_error("Problem with merging incoming data");
         }
       }
 
@@ -1090,21 +1113,12 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
     }
     Q.pop();
   }
-
-//  if (edges_to_remove.size() > 0) {
-//    LOG4ESPP_DEBUG(theLogger, "edges to remove: " << edges_to_remove.size());
-//    for (boost::unordered_set<std::pair<longint, longint> >::iterator it = edges_to_remove.begin();
-//         it != edges_to_remove.end(); ++it) {
-//      if (deleteEdge(it->first, it->second))
-//        removed_bonds++;
-//    }
-//  }
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
-      longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level) {
+    longint type_id, shared_ptr<TopologyParticleProperties> pp, longint nb_level) {
   LOG4ESPP_DEBUG(theLogger, "register property change for type_id=" << type_id
-      << " at level=" << nb_level);
+                                                                    << " at level=" << nb_level);
   max_nb_distance_ = std::max(max_nb_distance_, nb_level);
   nb_distances_.insert(nb_level);
   distance_type_pp_[nb_level].insert(std::make_pair(type_id, pp));
@@ -1202,11 +1216,17 @@ void TopologyManager::registerLocalPropertyChange(longint type_id, shared_ptr<To
   }
 }
 
-bool TopologyManager::isResiduesConnected(longint rid1, longint rid2) {
+bool TopologyManager::isResiduesConnected(longint pid1, longint pid2) {
   real time0 = wallTimer.getElapsedTime();
+  longint rid1 = pid_rid[pid1];
+  longint rid2 = pid_rid[pid2];
   bool ret = (res_graph_->count(rid1) == 1 && res_graph_->at(rid1)->count(rid2) == 1);
   timeIsResidueConnected += wallTimer.getElapsedTime() - time0;
   return ret;
+}
+
+bool TopologyManager::isSameResidues(longint pid1, longint pid2) {
+  return pid_rid[pid1] == pid_rid[pid2];
 }
 
 bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {
@@ -1234,7 +1254,8 @@ bool TopologyManager::isNeighbourParticleInState(
     }
     if (num_type > 1)
       throw std::runtime_error((const std::string &)
-          (boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id % num_type % nb_type_id));
+                                   (boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id
+                                       % num_type % nb_type_id));
 
     longint p_state = p->state();
     valid = (p_state >= min_state && p_state < max_state);
@@ -1282,7 +1303,62 @@ void TopologyManager::PrintResidues() {
   for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
     std::cout << it->first << ": " << it->second << std::endl;
   }
+}
 
+void TopologyManager::SaveTopologyToFile(std::string filename) {
+  if (system_->comm->rank() == 0) {
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ios::out);
+    for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+      if (it->second != NULL) {
+        output_file << it->first << ": ";
+        for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+          output_file << *itv << " ";
+        }
+        output_file << std::endl;
+      }
+    }
+    output_file.close();
+  }
+}
+
+void TopologyManager::SaveResTopologyToFile(std::string filename) {
+  if (system_->comm->rank() == 0) {
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ios::out);
+    for (GraphMap::iterator it = res_graph_->begin(); it != res_graph_->end(); ++it) {
+      if (it->second != NULL) {
+        output_file << it->first << ": ";
+        for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+          output_file << *itv << " ";
+        }
+        output_file << std::endl;
+      }
+    }
+    output_file.close();
+  }
+}
+
+void TopologyManager::SaveResiduesListToFile(std::string filename) {
+  if (system_->comm->rank() == 0) {
+    std::ofstream output_file;
+    output_file.open(filename.c_str(), std::ios::out);
+    for (GraphMap::iterator it = residues_->begin(); it != residues_->end(); ++it) {
+      if (it->second != NULL) {
+        output_file << it->first << ": ";
+        for (std::set<int>::iterator itv = it->second->begin(); itv != it->second->end(); ++itv) {
+          output_file << *itv << " ";
+        }
+        output_file << std::endl;
+      }
+    }
+    output_file << std::endl;
+    output_file << "Map PID->RID" << std::endl;
+    for (std::map<longint, longint>::iterator it = pid_rid.begin(); it != pid_rid.end(); ++it) {
+      output_file << it->first << ": " << it->second << std::endl;
+    }
+    output_file.close();
+  }
 }
 
 python::list TopologyManager::getTimers() {
@@ -1292,7 +1368,8 @@ python::list TopologyManager::getTimers() {
   ret.append(python::make_tuple("timeUpdateNeighbourProperty", timeUpdateNeighbourProperty));
   ret.append(python::make_tuple("timeIsResidueConnected", timeIsResidueConnected));
   ret.append(python::make_tuple(
-      "timeAll", timeExchangeData+timeGenerateAnglesDihedrals+timeUpdateNeighbourProperty+timeIsResidueConnected));
+      "timeAll",
+      timeExchangeData + timeGenerateAnglesDihedrals + timeUpdateNeighbourProperty + timeIsResidueConnected));
 
   return ret;
 }
@@ -1314,16 +1391,18 @@ void TopologyManager::registerPython() {
       .def("register_14tuple", &TopologyManager::register14Tuple)
       .def("register_triple", &TopologyManager::registerTriple)
       .def("register_quadruple", &TopologyManager::registerQuadruple)
-      .def("initialize", &TopologyManager::InitializeTopology)
+      .def("initialize", &TopologyManager::initializeTopology)
       .def("exchange_data", &TopologyManager::exchangeData)
       .def("print_topology", &TopologyManager::PrintTopology)
       .def("print_res_topology", &TopologyManager::PrintResTopology)
       .def("print_residues", &TopologyManager::PrintResidues)
+      .def("save_topology", &TopologyManager::SaveTopologyToFile)
+      .def("save_res_topology", &TopologyManager::SaveResTopologyToFile)
+      .def("save_residues", &TopologyManager::SaveResiduesListToFile)
       .def("get_neighbour_lists", &TopologyManager::getNeighbourLists)
       .def("get_timers", &TopologyManager::getTimers)
       .def("is_residue_connected", &TopologyManager::isResiduesConnected)
-      .def("is_particle_connected", &TopologyManager::isParticleConnected)
-      ;
+      .def("is_particle_connected", &TopologyManager::isParticleConnected);
 }
 
 }  // end namespace integrator
