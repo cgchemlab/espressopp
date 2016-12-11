@@ -142,6 +142,7 @@ void TopologyManager::disconnect() {
 }
 
 void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
+  LOG4ESPP_DEBUG(theLogger, "observeTuple: " << fpl);
   fpl->onTupleAdded.connect(
       boost::bind(&TopologyManager::onTupleAdded, this, _1, _2));
   fpl->onTupleRemoved.connect(
@@ -185,6 +186,7 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
 }
 
 void TopologyManager::initializeTopology() {
+  LOG4ESPP_DEBUG(theLogger, "initializeTopology ");
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
   EdgesVector output;
@@ -215,6 +217,8 @@ void TopologyManager::initializeTopology() {
   // it is simpler than moving part of graphs all around.
   std::vector<EdgesVector> global_output;
   mpi::all_gather(*(system_->comm), output, global_output);
+
+  LOG4ESPP_DEBUG(theLogger, "Gather from " << global_output.size() << " CPUs");
 
   // First build a residue map. Iterate over data from every CPUs.
   longint total_num_particles = 0;
@@ -249,7 +253,6 @@ void TopologyManager::initializeTopology() {
     std::cout << "receive " << receive_num_particles << " expected " << total_num_particles << std::endl;
     throw std::runtime_error("wrong initialization");
   }
-  std::cout << total_num_particles << ":" << receive_num_particles << std::endl;
   // End this part
 
   // Build a graph. The same on every CPU.
@@ -270,6 +273,7 @@ void TopologyManager::initializeTopology() {
       newEdge(it->first, it->second);
     }
   }
+  is_dirty_ = true;
 }
 
 
@@ -592,32 +596,6 @@ void TopologyManager::exchangeData() {
   generateNewAnglesDihedrals(global_new_edge);
 
   LOG4ESPP_DEBUG(theLogger, "finish apply updateParticleProperties: " << global_new_local_particle_properties.size());
-
-  /** Check if every information where redistributed and applied correctly. */
-//  std::vector<longint> nums;
-//  nums.push_back(num_remove_nb_edges);
-//  nums.push_back(num_update_particle_properties);
-//
-//  if (system_->comm->rank() == 0) {
-//    std::vector<longint> total_nums;
-//    mpi::reduce(*(system_->comm), nums, total_nums, std::plus<longint>(), 0);
-//    bool wrong_number = false;
-//    if (total_nums[0] != global_nb_edges_root_to_remove.size()) {
-//      wrong_number = true;
-//      std::cout << "removed edges: expected=" << global_nb_edges_root_to_remove.size()
-//                << " is=" << total_nums[0] << std::endl;
-//    }
-//    if (total_nums[1] != global_new_local_particle_properties.size()) {
-//      wrong_number = true;
-//      std::cout << "update type: expected=" << global_new_local_particle_properties.size()
-//                << " is=" << total_nums[1] << std::endl;
-//    }
-//    if (wrong_number)
-//      throw std::runtime_error("TopologyManager.exchangeData: problems with exchange data.");
-//
-//  } else {
-//    mpi::reduce(*(system_->comm), nums, std::plus<longint>(), 0);
-//  }
 
   newEdges_.clear();
   removedEdges_.clear();
@@ -1048,15 +1026,6 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
     }
     Q.pop();
   }
-
-//  if (edges_to_remove.size() > 0) {
-//    LOG4ESPP_DEBUG(theLogger, "edges to remove: " << edges_to_remove.size());
-//    for (boost::unordered_set<std::pair<longint, longint> >::iterator it = edges_to_remove.begin();
-//         it != edges_to_remove.end(); ++it) {
-//      if (deleteEdge(it->first, it->second))
-//        removed_bonds++;
-//    }
-//  }
 }
 
 void TopologyManager::registerNeighbourPropertyChange(
