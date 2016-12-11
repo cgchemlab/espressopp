@@ -187,9 +187,7 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
 void TopologyManager::initializeTopology() {
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
-  EdgesVector res_ids;
   EdgesVector output;
-  std::map<longint, std::set<int> > tmp_resGraph;
   std::vector<std::pair<longint, longint> > local_resid;
 
   for (std::vector<shared_ptr<FixedPairList> >::iterator it = tuples_.begin(); it != tuples_.end(); ++it) {
@@ -197,21 +195,20 @@ void TopologyManager::initializeTopology() {
       Particle &p1 = *pit->first;
       Particle &p2 = *pit->second;
       edges.push_back(std::make_pair(p1.id(), p2.id()));
-      // Manage bond between residues.
-      res_ids.push_back(std::make_pair(p1.res_id(), p2.res_id()));
     }
   }
   // Make global map of pid->res_id
   CellList cells = system_->storage->getRealCells();
+  longint num_particles = 0;
   for (CellListIterator cit(cells); !cit.isDone(); ++cit) {
     local_resid.push_back(std::make_pair(cit->id(), cit->res_id()));
+    num_particles++;
   }
 
-  output.push_back(std::make_pair(local_resid.size(), 0));
-  output.push_back(std::make_pair(edges.size(), res_ids.size()));
+  output.push_back(std::make_pair(local_resid.size(), edges.size()));
+  output.push_back(std::make_pair(num_particles, 0));  // only for check.
   output.insert(output.end(), local_resid.begin(), local_resid.end());
   output.insert(output.end(), edges.begin(), edges.end());
-  output.insert(output.end(), res_ids.begin(), res_ids.end());
 
   LOG4ESPP_DEBUG(theLogger, "Scatter " << output.size());
   // Scatter edges lists all over all nodes. This is costful operation but
@@ -219,13 +216,16 @@ void TopologyManager::initializeTopology() {
   std::vector<EdgesVector> global_output;
   mpi::all_gather(*(system_->comm), output, global_output);
 
-  // First build a residue map.
+  // First build a residue map. Iterate over data from every CPUs.
+  longint total_num_particles = 0;
+  longint receive_num_particles = 0;
   for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
     EdgesVector::iterator it = itv->begin();
     // collects the size of data structures.
     longint local_resid_size = it->first;
-    it++;  // single value of local_resid_size
-    it++;  // skip next element
+    it++;
+    total_num_particles += it->first;
+    it++;
     // Create the mapping particle_id->residue_id and residue_id->particle_list
     for (longint i = 0; i < local_resid_size; ++it, i++) {
       longint pid = it->first;
@@ -239,22 +239,26 @@ void TopologyManager::initializeTopology() {
 
       pid_rid[pid] = rid;
 
-      //pid_rid.insert(std::make_pair(pid, rid));  // particle_id -> residue_id;
       if (residues_->count(rid) == 0)
         residues_->insert(std::make_pair(rid, new std::set<longint>()));
       residues_->at(rid)->insert(pid);
+      receive_num_particles++;
     }
-    // End this part
   }
+  if (total_num_particles != receive_num_particles) {
+    std::cout << "receive " << receive_num_particles << " expected " << total_num_particles << std::endl;
+    throw std::runtime_error("wrong initialization");
+  }
+  std::cout << total_num_particles << ":" << receive_num_particles << std::endl;
+  // End this part
 
   // Build a graph. The same on every CPU.
   for (std::vector<EdgesVector>::iterator itv = global_output.begin(); itv != global_output.end(); ++itv) {
     EdgesVector::iterator it = itv->begin();
     // collects the size of data structures.
     longint local_resid_size = it->first;
+    longint edges_size = it->second;
     it++;  // single value of local_resid_size
-    longint edges_size = it->first;
-    longint resid_size = it->second;
     it++;
 
     // Create the mapping particle_id->residue_id and residue_id->particle_list
@@ -265,13 +269,7 @@ void TopologyManager::initializeTopology() {
     for (longint i = 0; i < edges_size; ++it, i++) {
       newEdge(it->first, it->second);
     }
-
-    // Create the edge list between residues.
-    for (longint i = 0; i < resid_size; ++it, i++) {
-      newResEdge(it->first, it->second);
-    }
   }
-
 }
 
 
@@ -317,6 +315,11 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     std::cout << "ResID for pid2=" << pid2 << " not found" << std::endl;
     std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
     throw std::runtime_error("ResID not found");
+  }
+  if (pid_rid[pid1] != pid_rid[pid2] && isResiduesConnected(pid1, pid2)) {
+    std::cout << "Residues " << pid_rid[pid1] << "-" << pid_rid[pid2] << " already connected" << std::endl;
+    std::cout << "New bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
+    throw std::runtime_error("Residues already connected");
   }
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
 }
