@@ -437,6 +437,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     mm.clear();
     mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
   }*/
+
   mm = out;
 
   LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
