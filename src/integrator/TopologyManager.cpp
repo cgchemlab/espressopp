@@ -20,6 +20,7 @@
 
 #include "TopologyManager.hpp"
 
+#include <fstream>
 #include <queue>
 #include <resolv.h>
 
