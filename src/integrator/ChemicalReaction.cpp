@@ -111,7 +111,7 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_ord
     real W = (*rng_)();
     real p = rate_;
     // Multiply by time step and interval.
-    p *= (*dt_) * (*interval_);
+    // p *= (*dt_) * (*interval_);
 
     particle_order.reaction_rate = p;
     particle_order.r_sqr = 0.0;
@@ -328,7 +328,7 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &
     // Gets state dependent reaction rate.
     real p = rate_;
     // Multiply by time step and interval.
-    p *= (*dt_) * (*interval_);
+    // p *= (*dt_) * (*interval_);
     // Set the reaction rate.
     particle_order.reaction_rate = p;
 
@@ -362,7 +362,7 @@ bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &
 
     // real p_diss_rate = diss_rate_T1[particle_order.first->state()] * diss_rate_T2[particle_order.second->state()];
     real p_diss_rate = diss_rate_;
-    p_diss_rate *= (*dt_) * (*interval_);
+    // p_diss_rate *= (*dt_) * (*interval_);
 
     if (W < p_diss_rate) {
       LOG4ESPP_DEBUG(theLogger, "Break the bond randomly " << p1.id() << "-" << p2.id());
