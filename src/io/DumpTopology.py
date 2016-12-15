@@ -185,7 +185,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             # Writes data.
             g[idx_0:idx_1] = bonds
 
-    def add_static_triplet(self, ftl, name, particle_group='atoms'):
+    def add_static_triple(self, ftl, name, particle_group='atoms'):
         if pmi.workerIsActive():
             triplets = ftl.getTriples()
             NMaxLocal = np.array(len(triplets), 'i')
@@ -205,7 +205,7 @@ class DumpTopologyLocal(ParticleAccessLocal, io_DumpTopology):
             idx_1 = idx_0 + NMaxLocal
             g[idx_0:idx_1] = triplets
 
-    def add_static_quadruplet(self, fql, name, particle_group='atoms'):
+    def add_static_quadruple(self, fql, name, particle_group='atoms'):
         if pmi.workerIsActive():
             quadruplets = fql.getQuadruples()
             NMaxLocal = np.array(len(quadruplets), 'i')
@@ -303,7 +303,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls='espressopp.io.DumpTopologyLocal',
             pmicall=['dump', 'clear_buffer', 'observe_tuple', 'observe_triple', 'observe_quadruple', 'update',
-                     'add_static_tuple', 'add_static_triplet', 'add_static_quadruplet'],
+                     'add_static_tuple', 'add_static_triple', 'add_static_quadruple'],
             pmiproperty=[],
             pmiinvoke=['get_data']
         )
