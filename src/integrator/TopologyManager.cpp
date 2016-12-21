@@ -20,9 +20,9 @@
 
 #include "TopologyManager.hpp"
 
+#include <resolv.h>
 #include <fstream>
 #include <queue>
-#include <resolv.h>
 
 #include "boost/format.hpp"
 #include "storage/Storage.hpp"
@@ -31,17 +31,16 @@
 #include "boost/serialization/set.hpp"
 #include "boost/serialization/shared_ptr.hpp"
 
-
 namespace espressopp {
 namespace integrator {
 
 
 LOG4ESPP_LOGGER(TopologyManager::theLogger, "TopologyManager");
 
-using namespace espressopp::iterator;
+using namespace espressopp::iterator;  // NOLINT
 
 void TopologyParticleProperties::registerPython() {
-  using namespace espressopp::python;
+  using namespace espressopp::python;  // NOLINT
 
   class_<TopologyParticleProperties, shared_ptr<TopologyParticleProperties> >
       ("integrator_TopologyParticleProperties", init<>())
@@ -56,8 +55,7 @@ void TopologyParticleProperties::registerPython() {
       .add_property("lambda_adr", make_getter(&TopologyParticleProperties::lambda_),
                     &TopologyParticleProperties::setLambda)
       .add_property("change_flag", make_getter(&TopologyParticleProperties::change_flag_))
-      .def("set_min_max_state", &TopologyParticleProperties::setMinMaxState)
-      ;
+      .def("set_min_max_state", &TopologyParticleProperties::setMinMaxState);
 }
 
 bool TopologyParticleProperties::updateParticleProperties(Particle *p) {
@@ -415,9 +413,9 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
   if (fpl) {
     removed = fpl->remove(pid1, pid2);
   } else {
-    throw std::runtime_error(
-        (const std::string &)
-            (boost::format("Tuple for pair %d-%d of types %d,%d not found") % pid1 % pid2 % t1 % t2));
+    std::stringstream ss;
+    ss << "Tuple for pair " << pid1 << "-" << pid2 << " of types " << t1 << "-" << t2 << " not found";
+    throw std::runtime_error(ss.str());
   }
   return removed;
 }
@@ -558,7 +556,8 @@ void TopologyManager::exchangeData() {
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
 
-  for (MapPairsDist::iterator it = global_nb_distance_particles.begin(); it != global_nb_distance_particles.end(); ++it) {
+  for (MapPairsDist::iterator it = global_nb_distance_particles.begin();
+      it != global_nb_distance_particles.end(); ++it) {
     updateParticlePropertiesAtDistance(it->first.second, it->second);
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply updateParticlePropertiesAtDistance: " << global_nb_distance_particles.size());
@@ -892,7 +891,7 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
     throw std::runtime_error((const std::string &) (boost::format("Node pid2 %d not found") % pid1));
   // Case pid2 pid1 <> <>
   if (nb1) {
-    //Iterates over p1 neighbours
+    // Iterates over p1 neighbours
     for (std::set<longint>::iterator it = nb1->begin(); it != nb1->end(); ++it) {
       if (*it == pid1 || *it == pid2)
         continue;
@@ -968,21 +967,16 @@ void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_e
     defineAngles(new_triplets_);
   if (update_dihedrals_)
     defineDihedrals(new_quadruplets_);
-  //if (update_14pairs_)
+  // if (update_14pairs_)
   //  define14tuples(new_quadruplets_);
 
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
-  // Generate angles, dihedrals, based on updated graph.
   real time0 = wallTimer.getElapsedTime();
 
-  // std::set<Quadruplets> generated_quadruplets;
-  // std::set<Triplets> generated_triplets;
-
   for (SetPairs::iterator it = removed_edges.begin(); it != removed_edges.end(); ++it) {
-    // generateAnglesDihedrals(it->first, it->second, generated_quadruplets, generated_triplets);
     for (std::vector<shared_ptr<FixedTripleList> >::iterator ftl = triples_.begin(); ftl != triples_.end(); ++ftl) {
       (*ftl)->removeByBond(it->first, it->second);
     }
@@ -991,34 +985,17 @@ void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
       (*fql)->removeByBond(it->first, it->second);
     }
   }
-  if (update_angles_)
+  if (update_angles_) {
     for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
       (*it)->updateParticlesStorage();
     }
-  if (update_dihedrals_)
+  }
+  if (update_dihedrals_) {
     for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator fql = quadruples_.begin();
          fql != quadruples_.end(); ++fql) {
       (*fql)->updateParticlesStorage();
     }
-
-
-
-//  if (update_angles_) {
-//    undefineAngles(generated_triplets);
-//    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
-//      (*it)->updateParticlesStorage();
-//    }
-//  }
-//  if (update_dihedrals_) {
-//    undefineDihedrals(generated_quadruplets);
-//    for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator it = quadruples_.begin();
-//         it != quadruples_.end(); ++it) {
-//      (*it)->updateParticlesStorage();
-//    }
-//  }
-//  if (update_14pairs_)
-//    undefine14tuples(generated_quadruplets);
-
+  }
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
@@ -1377,7 +1354,7 @@ python::list TopologyManager::getTimers() {
 
 
 void TopologyManager::registerPython() {
-  using namespace espressopp::python;
+  using namespace espressopp::python;  // NOLINT
 
   boost::python::implicitly_convertible<shared_ptr<FixedPairListLambda>, shared_ptr<FixedPairList> >();
   boost::python::implicitly_convertible<shared_ptr<FixedTripleListLambda>, shared_ptr<FixedTripleList> >();
@@ -1407,4 +1384,4 @@ void TopologyManager::registerPython() {
 }
 
 }  // end namespace integrator
-}  // end namespace espressoppp
+}  // end namespace espressopp
