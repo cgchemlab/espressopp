@@ -821,8 +821,8 @@ void ChemicalReaction::applyDR(std::set<Particle *> &modified_particles) {
   // decide to remove or keep bond.
   std::set<Particle *> tmp;
 
-  for (ReactionList::iterator it = reverse_reaction_list_.begin();
-      it != reverse_reaction_list_.end(); ++it) {
+  longint reaction_idx = 0;
+  for (ReactionList::iterator it = reverse_reaction_list_.begin(); it != reverse_reaction_list_.end(); ++it) {
     integrator::Reaction &r = **it;
 
     if (!r.active())
@@ -855,6 +855,7 @@ void ChemicalReaction::applyDR(std::set<Particle *> &modified_particles) {
         updated_fpl = true;
       }
     }
+    reaction_idx++;
 
     // Trigger update of FixedPairList.
     if (updated_fpl)
@@ -870,6 +871,9 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
   std::set<Particle *> tmp;
 
   LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
+
+  std::vector<longint> tmp_reaction_counters;
+  tmp_reaction_counters.resize(reaction_list_.size());
 
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin(); it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
@@ -920,12 +924,16 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
       if (!(p1->ghost() && p2->ghost())) {
         LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
         bool retval = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-        if (retval && save_pd_) {
-          pair_distances_.push_back(it->second.second.reaction_r_sqr);
+        if (retval) {
+          tmp_reaction_counters[it->second.second.reaction_id]++;
+          if (save_pd_)
+            pair_distances_.push_back(it->second.second.reaction_r_sqr);
         }
       }
     }
   }
+
+  time_reaction_counter_.insert(std::make_pair(integrator->getStep(), tmp_reaction_counters));
 
   LOG4ESPP_DEBUG(theLogger, "Leaving applyAR");
   LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
@@ -982,6 +990,44 @@ python::list ChemicalReaction::getPairDistances() {
   return ret_list;
 }
 
+python::list ChemicalReaction::getReactionCounters() {
+  python::list ret_list;
+  typedef std::map<longint, std::vector<longint> > ARC;
+  std::vector<ARC> all_data;
+  longint reaction_num = reaction_list_.size();
+
+  System &system = getSystemRef();
+  // Collect data from all CPUs.
+  if (system.comm->rank() == 0) {
+    mpi::gather(*system.comm, time_reaction_counter_, all_data, 0);
+    ARC time_reaction_counters;
+
+    for (std::vector<ARC>::iterator it = all_data.begin(); it != all_data.end(); it++) {
+      for (ARC::iterator itt = it->begin(); itt != it->end(); ++itt) {
+        if (time_reaction_counters.find(itt->first) == time_reaction_counters.end()) {
+          time_reaction_counters[itt->first] = itt->second;
+        } else {
+          for (longint i = 0; i < itt->second.size(); i++) {
+            time_reaction_counters[itt->first][i] += itt->second[i];
+          }
+        }
+      }
+    }
+    // output data.
+    for (ARC::iterator it = time_reaction_counters.begin(); it != time_reaction_counters.end(); ++it) {
+      python::list tmp_list;
+      tmp_list.append(it->first);
+      for (std::vector<longint>::iterator itt = it->second.begin(); itt != it->second.end(); ++itt) {
+        tmp_list.append(*itt);
+      }
+      ret_list.append(tmp_list);
+    }
+  } else {
+    mpi::gather(*system.comm, time_reaction_counter_, all_data, 0);
+  }
+  return ret_list;
+}
+
 void ChemicalReaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >(
@@ -996,6 +1042,7 @@ void ChemicalReaction::registerPython() {
     .def("save_pair_distances", &ChemicalReaction::savePairDistances)
     .def("get_pair_distances", &ChemicalReaction::getPairDistances)
     .def("clear_pair_distances", &ChemicalReaction::clearPairDistances)
+    .def("get_reaction_counters", &ChemicalReaction::getReactionCounters)
     .add_property("pair_distances_filename", &ChemicalReaction::pd_filename_, &ChemicalReaction::set_pd_filename)
     .add_property("interval", &ChemicalReaction::interval, &ChemicalReaction::set_interval)
     .add_property("nearest_mode", &ChemicalReaction::is_nearest, &ChemicalReaction::set_is_nearest);

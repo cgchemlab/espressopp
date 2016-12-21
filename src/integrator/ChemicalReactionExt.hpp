@@ -170,6 +170,9 @@ private:
     }
   }
 
+  // Reaction counter
+  python::list getReactionCounters();
+
   real current_cutoff_;  //!< Maximal cutoff use for VerletList.
 
   shared_ptr<int> interval_;  //!< Number of steps between reaction loops.
@@ -190,6 +193,9 @@ private:
   shared_ptr<TopologyManager> tm_;  //<! TopologyManager object.
 
   bool is_nearest_;  //!< If set to True then nearest neighbour is taken instead of random particle.
+
+  // Reaction counters.
+  std::map<longint, std::vector<longint> > time_reaction_counter_;  //!< Count number of times given reaction is executed.
 
   ///Timers
   esutil::WallTimer wallTimer;  //!< used for timing

@@ -273,6 +273,7 @@ public:
             active_(true),
             virtual_(false),
             intraresidual_(true),
+            intramolecular_(true),
             rate_(0.0) { }
 
   /*** Constructor of Reaction object.
@@ -306,6 +307,7 @@ public:
             active_(true),
             virtual_(false),
             intraresidual_(true),
+            intramolecular_(true),
             rate_(rate) { }
 
   Reaction(int type_1, int type_2, int delta_1, int delta_2, int min_state_1, int max_state_1, int min_state_2,
@@ -323,6 +325,7 @@ public:
        active_(true),
        virtual_(false),
        intraresidual_(true),
+       intramolecular_(true),
        rate_(rate) { }
 
   virtual ~Reaction() { }
@@ -369,6 +372,9 @@ public:
   void set_interaresidual(bool i) { intraresidual_ = i; }
 
   bool intraresidual() { return intraresidual_; }
+
+  void set_intramolecular(bool i) { intramolecular_ = i; }
+  bool intramolecular() { return intramolecular_; }
 
   void setTopologyManager(shared_ptr<TopologyManager> tm) {
     topology_manager_ = tm;
@@ -516,6 +522,7 @@ protected:
   shared_ptr<ReactionCutoff> reaction_cutoff_;
 
   bool intraresidual_;  //!<Allows to intraresidual bonds if set to true;
+  bool intramolecular_;  //!<Allows to have intramolecular bonds if set to True.
 };
 
 inline std::ostream& operator<<(std::ostream &output, Reaction &r) {
