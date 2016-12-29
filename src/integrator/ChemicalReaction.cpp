@@ -149,6 +149,9 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_ord
   if (topology_manager_->isParticleConnected(p1.id(), p2.id()))
     return false;
 
+  if (!intramolecular_ && topology_manager_->isSameMolecule(p1.id(), p2.id()))
+    return false;
+
   int p1_state = p1.state();
   int p2_state = p2.state();
 
@@ -245,6 +248,7 @@ void Reaction::registerPython() {
       .add_property("min_state_2", &Reaction::min_state_2, &Reaction::set_min_state_2)
       .add_property("max_state_2", &Reaction::max_state_2, &Reaction::set_max_state_2)
       .add_property("intraresidual", &Reaction::intraresidual, &Reaction::set_interaresidual)
+      .add_property("intramolecular", &Reaction::intramolecular, &Reaction::set_intramolecular)
       .add_property("active", &Reaction::active, &Reaction::set_active)
       .add_property("cutoff", &Reaction::cutoff)
       .add_property("rate", &Reaction::rate, &Reaction::set_rate)
@@ -304,6 +308,7 @@ void RestrictReaction::registerPython() {
           .add_property("min_state_2", &RestrictReaction::min_state_2, &RestrictReaction::set_min_state_2)
           .add_property("max_state_2", &RestrictReaction::max_state_2, &RestrictReaction::set_max_state_2)
           .add_property("intraresidual", &RestrictReaction::intraresidual, &RestrictReaction::set_interaresidual)
+          .add_property("intramolecular", &RestrictReaction::intramolecular, &RestrictReaction::set_intramolecular)
           .add_property("active", &RestrictReaction::active, &RestrictReaction::set_active)
           .add_property("cutoff", &RestrictReaction::cutoff)
           .add_property("rate", &RestrictReaction::rate, &RestrictReaction::set_rate)
