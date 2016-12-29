@@ -208,6 +208,14 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
         if pmi.workerIsActive():
             return self.cxxclass.get_reaction(self, reaction_idx)
 
+    def save_reaction_counters(self, filename):
+        if pmi.workerIsActive():
+            data = self.cxxclass.get_reaction_counters(self)
+            with open(filename, 'w') as output_file:
+                output_file.write('# time reactions\n')
+                for l in data:
+                    output_file.write('{}\n'.format(' '.join(map(str, l))))
+
 
 class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
                                      integrator_ChemicalReactionPostProcess):
@@ -444,7 +452,7 @@ if pmi.isController:
             pmiproperty=('interval','nearest_mode', 'pair_distances_filename'),
             pmicall=(
                 'add_reaction', 'clear_pair_distances', 'save_pair_distances',
-                'get_reaction'
+                'get_reaction', 'save_reaction_counters'
                 ),
             pmiinvoke=('get_pair_distances', 'get_timers', )
             )
@@ -528,6 +536,7 @@ if pmi.isController:
                 'min_state_2',
                 'max_state_2',
                 'intraresidual',
+                'intramolecular',
                 'active',
                 'cutoff',
                 'rate',
@@ -556,6 +565,7 @@ if pmi.isController:
                 'min_state_2',
                 'max_state_2',
                 'intraresidual',
+                'intramoleculear',
                 'active',
                 'cutoff',
                 'rate',

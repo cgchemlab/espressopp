@@ -274,6 +274,8 @@ class TopologyManager: public Extension {
    */
   bool isSameResidues(longint pid1, longint pid2);
 
+  bool isSameMolecule(longint pid1, longint pid2);
+
   bool isNeighbourParticleInState(longint root_id, longint nb_type_id, longint min_state, longint max_state);
 
   /**
@@ -297,7 +299,6 @@ class TopologyManager: public Extension {
   void SaveTopologyToFile(std::string filename);
   void SaveResTopologyToFile(std::string filename);
   void SaveResiduesListToFile(std::string filename);
-
 
   /**
    * Get neighbour list.
@@ -420,6 +421,11 @@ class TopologyManager: public Extension {
                   shared_ptr<FixedQuadrupleList> > > > > QuadrupleMap;
   typedef std::map<longint, std::set<int> *> GraphMap;
 
+  GraphMap* plainBFS(GraphMap &g, longint root);
+  std::vector<GraphMap*> connectedComponents(GraphMap &g);
+  std::vector<GraphMap*> connectedComponents(GraphMap &g, longint root);
+  bool isPathExists(GraphMap &g, longint node1, longint node2);
+
   // response for updating dihedrals, angles, pairs 14
   bool update_angles_;
   bool update_dihedrals_;
@@ -442,12 +448,14 @@ class TopologyManager: public Extension {
 
   // Residues data.
   std::map<longint, longint> pid_rid;  // particle_id -> res_id;
-  GraphMap *residues_;
+  std::map<longint, longint> pid_mid;  // particle_id -> mol_id;
   void newResEdge(longint first, longint second);
 
-  /** Adjacent list. */
+  /** Adjacent lists. */
+  GraphMap *residues_;
   GraphMap *graph_;
   GraphMap *res_graph_;
+  GraphMap *molecules_;
 
   /** Data for DFS */
   typedef boost::unordered_multimap<longint, shared_ptr<TopologyParticleProperties> > TypeId2PP;
@@ -458,7 +466,7 @@ class TopologyManager: public Extension {
   /** Data for bond remove. */
   typedef boost::unordered_map<longint, boost::unordered_set<std::pair<longint, longint> > > DistanceEdges;
 
-  std::vector<longint> nb_distance_particles_;  //<! Stores the triplets root; distance; particle_id
+  std::vector<longint> nb_distance_particles_;  ///<! Stores the triplets root; distance; particle_id
   /**
    * Remove edges at distance from the pid (root node).
    *

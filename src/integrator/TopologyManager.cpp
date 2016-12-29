@@ -95,6 +95,7 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
   res_graph_ = new GraphMap();
 
   residues_ = new GraphMap();
+  molecules_ = new GraphMap();
 
   update_angles_ = update_dihedrals_ = update_14pairs_ = false;
   generate_new_angles_dihedrals_ = false;
@@ -241,10 +242,14 @@ void TopologyManager::initializeTopology() {
             (const std::string &) (boost::format("ResID for particle: %d already set to: %d") % pid % pid_rid[pid]));
 
       pid_rid[pid] = rid;
+      pid_mid[pid] = rid;
 
-      if (residues_->count(rid) == 0)
+      if (residues_->count(rid) == 0) {
         residues_->insert(std::make_pair(rid, new std::set<longint>()));
+        molecules_->insert(std::make_pair(rid, new std::set<longint>()));
+      }
       residues_->at(rid)->insert(pid);
+      molecules_->at(rid)->insert(pid);
       receive_num_particles++;
     }
   }
@@ -298,7 +303,6 @@ void TopologyManager::onTupleAdded(longint pid1, longint pid2) {
   }
 }
 
-
 void TopologyManager::newEdge(longint pid1, longint pid2) {
   /// Updates graph.
   if (graph_->count(pid1) == 0)
@@ -325,6 +329,18 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     throw std::runtime_error("Residues already connected");
   }
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
+
+  // Merge two molecules.
+  longint mid1 = pid_mid[pid1];
+  longint mid2 = pid_mid[pid2];
+  if (mid1 != mid2) {  // merge two sets mid1 <- mid2
+    std::set<longint> *pset = molecules_->at(mid2);
+    molecules_->at(mid1)->insert(pset->begin(), pset->end());
+    for (std::set<longint>::iterator itt = pset->begin(); itt != pset->end(); ++itt) {
+      pid_mid[*itt] = mid1;
+    }
+    molecules_->erase(mid2);
+  }
 }
 
 void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
@@ -363,6 +379,11 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   // If edge removed, check if there is still edge between residues.
   longint rid1 = pid_rid[pid1];
   longint rid2 = pid_rid[pid2];
+  longint mid1 = pid_mid[pid1];
+  longint mid2 = pid_mid[pid2];
+  if (mid1 != mid2)
+    throw std::runtime_error("Something wrong, edge between bonds of two different molecules.");
+
   // Get list of particles in given residues.
   std::set<longint> *Pset1;
   if (residues_->find(rid1) != residues_->end())
@@ -375,7 +396,7 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   else
     throw std::runtime_error((const std::string &) (boost::format("Pset2 residue id %d not found") % rid2));
 
-  // Scan through the bonds that can be created between two residues and check if bond exitst.
+  // Scan through the bonds that can be created between two residues and check if bond exists.
   // if not then remove bond between residues.
   bool hasBond = false;
   for (std::set<longint>::iterator it1 = Pset1->begin(); !hasBond && it1 != Pset1->end(); ++it1) {
@@ -389,6 +410,22 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   if (!hasBond) {
     res_graph_->at(rid1)->erase(rid2);
     res_graph_->at(rid2)->erase(rid1);
+
+    // Gets residues of the molecule and scan if still those residues are connected, if not then split into
+    // two molecules.
+    GraphMap *graph_2 = plainBFS(*res_graph_, rid2);
+    // Get Max Mol idx.
+    longint max_mol_id = 0;
+    for (std::map<longint, longint>::iterator mit = pid_mid.begin(); mit != pid_mid.end(); ++mit) {
+      max_mol_id = std::max(mit->second, max_mol_id);
+    }
+    max_mol_id++;
+    std::set<longint> *s = new std::set<longint>();
+    molecules_->insert(std::make_pair(max_mol_id, s));
+    for (GraphMap::iterator itg = graph_2->begin(); itg != graph_2->end(); ++itg) {
+      pid_mid[itg->first] = max_mol_id;
+      s->insert(itg->first);
+    }
   }
   return removed;
 }
@@ -1033,6 +1070,77 @@ std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
   return nb_at_distance;
 }
 
+TopologyManager::GraphMap* TopologyManager::plainBFS(TopologyManager::GraphMap &g, longint root) {
+  boost::unordered_set<longint> visited;
+  std::queue<longint> Q;
+  Q.push(root);
+  visited.insert(root);
+
+  GraphMap *ret_subgraph = new GraphMap();
+
+  while (!Q.empty()) {
+    longint current_node = Q.front();
+    ret_subgraph->insert(std::make_pair(current_node, new std::set<longint>()));
+    if (g.count(current_node) == 1) {
+      std::set<longint> *adj = g.at(current_node);
+      for (std::set<longint>::iterator ita = adj->begin(); ita != adj->end(); ++ita) {
+        if (visited.find(*ita) == visited.end()) {
+          visited.insert(*ita);
+          Q.push(*ita);
+        }
+        ret_subgraph->at(current_node)->insert(*ita);
+        if (ret_subgraph->count(*ita) == 0)
+          ret_subgraph->insert(std::make_pair(*ita, new std::set<longint>()));
+        ret_subgraph->at(*ita)->insert(current_node);
+      }
+    }
+    Q.pop();
+  }
+  return ret_subgraph;
+}
+
+std::vector<TopologyManager::GraphMap*> TopologyManager::connectedComponents(TopologyManager::GraphMap &g) {
+  std::vector<GraphMap*> ret;
+
+  boost::unordered_set<longint> seen;
+
+  for (GraphMap::iterator it = g.begin(); it != g.end(); ++it) {
+    if (seen.find(it->first) == seen.end()) {
+      GraphMap *sub_g = plainBFS(g, it->first);
+      ret.push_back(sub_g);
+      for (GraphMap::iterator itk = sub_g->begin(); itk != sub_g->end(); ++itk) {
+        seen.insert(itk->first);
+      }
+    }
+  }
+  return ret;
+}
+
+bool TopologyManager::isPathExists(GraphMap &g, longint node1, longint node2) {
+  boost::unordered_set<longint> visited;
+  std::queue<longint> Q;
+  Q.push(node1);
+  visited.insert(node1);
+
+  bool found_path = false;
+
+  while (!Q.empty() && !found_path) {
+    longint current_node = Q.front();
+    if (g.count(current_node) == 1) {
+      std::set<longint> *adj = g.at(current_node);
+      for (std::set<longint>::iterator ita = adj->begin(); ita != adj->end() && !found_path; ++ita) {
+        if (visited.find(*ita) == visited.end()) {
+          visited.insert(*ita);
+          Q.push(*ita);
+        }
+        found_path = (*ita == node2);
+      }
+    }
+    Q.pop();
+  }
+  return found_path;
+}
+
 void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove) {
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
@@ -1206,6 +1314,11 @@ bool TopologyManager::isResiduesConnected(longint pid1, longint pid2) {
 bool TopologyManager::isSameResidues(longint pid1, longint pid2) {
   return pid_rid[pid1] == pid_rid[pid2];
 }
+
+bool TopologyManager::isSameMolecule(longint pid1, longint pid2) {
+  return pid_mid[pid1] == pid_mid[pid2];
+}
+
 
 bool TopologyManager::isParticleConnected(longint pid1, longint pid2) {
   if (graph_->count(pid1) == 1)
