@@ -333,7 +333,7 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   newResEdge(pid_rid[pid1], pid_rid[pid2]);
 
   // Merge two molecules.
-  longint mid1 = pid_mid[pid1];
+  /*longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
   if (mid1 != mid2) {  // merge two sets mid1 <- mid2
     std::set<longint> *pset = molecules_->at(mid2);
@@ -342,7 +342,7 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
       pid_mid[*itt] = mid1;
     }
     molecules_->erase(mid2);
-  }
+  }*/
 }
 
 void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
@@ -381,10 +381,11 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   // If edge removed, check if there is still edge between residues.
   longint rid1 = pid_rid[pid1];
   longint rid2 = pid_rid[pid2];
-  longint mid1 = pid_mid[pid1];
+  /*longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
   if (mid1 != mid2)
     throw std::runtime_error("Something wrong, edge between bonds of two different molecules.");
+  */
 
   // Get list of particles in given residues.
   std::set<longint> *Pset1;
@@ -415,6 +416,7 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
 
     // Gets residues of the molecule and scan if still those residues are connected, if not then split into
     // two molecules.
+    /*
     GraphMap *graph_2 = plainBFS(*res_graph_, rid2);
     // Get Max Mol idx.
     longint max_mol_id = 0;
@@ -428,6 +430,7 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
       pid_mid[itg->first] = max_mol_id;
       s->insert(itg->first);
     }
+     */
   }
   return removed;
 }
