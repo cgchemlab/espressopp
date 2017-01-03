@@ -29,6 +29,7 @@
 #include "boost/signals2.hpp"
 #include "Real3D.hpp"
 #include "Particle.hpp"
+#include "TopologyManager.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -39,7 +40,7 @@ class ChangeInRegion: public Extension {
 
   virtual ~ChangeInRegion() {};
 
-  void setParticleProperties(longint type_id, shared_ptr<ParticleProperties> pp) {
+  void setParticleProperties(longint type_id, shared_ptr<TopologyParticleProperties> pp) {
     type_particleProperties.insert(std::make_pair(type_id, pp));
   }
 
@@ -68,7 +69,7 @@ class ChangeInRegion: public Extension {
   boost::signals2::connection sig_aftIntV;
   shared_ptr<ParticleRegion> particleRegion;
 
-  std::map<longint, shared_ptr<ParticleProperties> > type_particleProperties;
+  std::map<longint, shared_ptr<TopologyParticleProperties> > type_particleProperties;
   std::map<longint, int> type_flags;
 
   void updateParticles();
