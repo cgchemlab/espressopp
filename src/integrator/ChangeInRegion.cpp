@@ -22,6 +22,7 @@
 #include "ChangeInRegion.hpp"
 
 #include "types.hpp"
+#include "esutil/RNG.hpp"
 #include "System.hpp"
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -36,6 +37,7 @@ LOG4ESPP_LOGGER(ChangeInRegion::theLogger, "ChangeInRegion");
 ChangeInRegion::ChangeInRegion(shared_ptr<System> system, shared_ptr<ParticleRegion> particle_region)
     : Extension(system), particleRegion(particle_region) {
   LOG4ESPP_INFO(theLogger, "ChangeInRegion constructed");
+  p_ = 1.0;
 }
 
 void ChangeInRegion::disconnect() {
@@ -48,27 +50,32 @@ void ChangeInRegion::connect() {
 
 void ChangeInRegion::updateParticles() {
   System& system = getSystemRef();
+  real W = 0.0;
+  shared_ptr< esutil::RNG > rng = system.rng;
   for (ParticleRegion::iterator it=particleRegion->begin(); it != particleRegion->end(); it++) {
-    Particle *p = *it;
-    longint p_type = p->type();
-    if (type_particleProperties.count(p_type) == 1) {
-      type_particleProperties[p_type]->updateParticleProperties(p);
-      LOG4ESPP_DEBUG(theLogger, "change property of particle " << p->id());
-    }
-    if (type_flags.count(p_type) == 1) {
-      int flag = type_flags[p_type];
-      LOG4ESPP_DEBUG(theLogger, "type_flags " << flag);
-      if (flag & R_PARTICLE) {  // remove particle ;-)
-        if (!p->ghost())
-          system.storage->removeParticle(p->id());
-      } else {
-        if (flag & R_VELOCITY) {  // reset velocity
-          p->setV(0.0);
-          LOG4ESPP_DEBUG(theLogger, "reset velocity of particle " << p->id());
-        }
-        if (flag & R_FORCE) {  // reset force
-          p->setF(0.0);
-          LOG4ESPP_DEBUG(theLogger, "reset force of particle " << p->id());
+    W = (*rng)();
+    if (W < p_) {
+      Particle *p = *it;
+      longint p_type = p->type();
+      if (type_particleProperties.count(p_type) == 1) {
+        type_particleProperties[p_type]->updateParticleProperties(p);
+        LOG4ESPP_DEBUG(theLogger, "change property of particle " << p->id());
+      }
+      if (type_flags.find(p_type) != type_flags.end()) {
+        int flag = type_flags[p_type];
+        LOG4ESPP_DEBUG(theLogger, "type_flags " << flag);
+        if (flag & R_PARTICLE) {  // remove particle ;-)
+          if (!p->ghost())
+            system.storage->removeParticle(p->id());
+        } else {
+          if (flag & R_VELOCITY) {  // reset velocity
+            p->setV(0.0);
+            LOG4ESPP_DEBUG(theLogger, "reset velocity of particle " << p->id());
+          }
+          if (flag & R_FORCE) {  // reset force
+            p->setF(0.0);
+            LOG4ESPP_DEBUG(theLogger, "reset force of particle " << p->id());
+          }
         }
       }
     }
@@ -83,6 +90,7 @@ void ChangeInRegion::registerPython() {
 
   class_<ChangeInRegion, shared_ptr<ChangeInRegion>, bases<Extension> >
   ("integrator_ChangeInRegion", init<shared_ptr<System>, shared_ptr<ParticleRegion> >())
+      .add_property("p", make_getter(&ChangeInRegion::p_), make_setter(&ChangeInRegion::p_))
       .def("set_particle_properties", &ChangeInRegion::setParticleProperties)
       .def("set_flags", &ChangeInRegion::setFlags)
       .def("update_particles", &ChangeInRegion::updateParticles)
