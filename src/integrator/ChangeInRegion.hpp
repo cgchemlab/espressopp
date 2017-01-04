@@ -68,6 +68,7 @@ class ChangeInRegion: public Extension {
   enum FLAGS {R_VELOCITY = 1, R_FORCE = 2, R_PARTICLE = 4};
   boost::signals2::connection sig_aftIntV;
   shared_ptr<ParticleRegion> particleRegion;
+  real p_;  ///!< Probability of changing the values.
 
   std::map<longint, shared_ptr<TopologyParticleProperties> > type_particleProperties;
   std::map<longint, int> type_flags;
