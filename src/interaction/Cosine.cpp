@@ -23,6 +23,7 @@
 #include "python.hpp"
 #include "Cosine.hpp"
 #include "FixedTripleListInteractionTemplate.hpp"
+#include "FixedTripleListTypesInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -41,6 +42,10 @@ namespace espressopp {
 
       typedef class FixedTripleListInteractionTemplate< Cosine >
         FixedTripleListCosine;
+
+      typedef class FixedTripleListTypesInteractionTemplate<Cosine>
+          FixedTripleListTypesCosine;
+      
       class_< FixedTripleListCosine, bases< Interaction > >
         ("interaction_FixedTripleListCosine",
            init<shared_ptr<System>,
@@ -49,6 +54,14 @@ namespace espressopp {
         .def("setPotential", &FixedTripleListCosine::setPotential)
         .def("getFixedTripleList", &FixedTripleListCosine::getFixedTripleList);
       ;
+
+      class_< FixedTripleListTypesCosine, bases< Interaction > >
+          ("interaction_FixedTripleListTypesCosine",
+           init< shared_ptr<System>, shared_ptr<FixedTripleList> >())
+          .def("setPotential", &FixedTripleListTypesCosine::setPotential)
+          .def("getPotential", &FixedTripleListTypesCosine::getPotentialPtr)
+          .def("setFixedTripleList", &FixedTripleListTypesCosine::setFixedTripleList)
+          .def("getFixedTripleList", &FixedTripleListTypesCosine::getFixedTripleList);
     }
   }
 }
