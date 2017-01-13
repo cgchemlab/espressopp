@@ -21,7 +21,12 @@
 #ifndef _INTEGRATOR_TOPOLOGYMANAGER_H
 #define _INTEGRATOR_TOPOLOGYMANAGER_H
 
+#include <algorithm>
+#include <functional>
+#include <set>
+#include <string>
 #include <vector>
+#include <utility>
 #include <map>
 
 #include "types.hpp"
