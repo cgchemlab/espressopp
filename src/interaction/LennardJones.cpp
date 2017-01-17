@@ -52,6 +52,7 @@ namespace espressopp {
         FixedPairListLennardJones;
     typedef class FixedPairListTypesInteractionTemplate <LennardJones> 
         FixedPairListTypesLennardJones;
+
     LOG4ESPP_LOGGER(LennardJones::theLogger, "LennardJones");
 
     //////////////////////////////////////////////////
