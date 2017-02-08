@@ -1068,8 +1068,8 @@ python::list ChemicalReaction::getReactionNumIntraInterCounters() {
     for (ARC::iterator it = time_reaction_num_intra_inter.begin(); it != time_reaction_num_intra_inter.end(); ++it) {
       python::list tmp_list;
       tmp_list.append(it->first);
-      tmp_list.append(it->second[0]);
-      tmp_list.append(it->second[1]);
+      tmp_list.append(it->second[0]);  // intra mol1==mol2
+      tmp_list.append(it->second[1]);  // inter mol1 != mol2
       ret_list.append(tmp_list);
     }
   } else {

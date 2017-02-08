@@ -216,6 +216,14 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
                 for l in data:
                     output_file.write('{}\n'.format(' '.join(map(str, l))))
 
+    def save_intra_inter_counter(self, filename):
+        if pmi.workerIsActive():
+            data = self.cxxclass.get_reaction_num_intra_inter_counters(self)
+            with open(filename, 'w') as output_file:
+                output_file.write('# time same_mol notsame_mol')
+                for l in data:
+                    output_file.write('{}\n'.format(' '.join(map(str, l))))
+
 
 class PostProcessChangePropertyLocal(integrator_PostProcessChangeProperty,
                                      integrator_ChemicalReactionPostProcess):
