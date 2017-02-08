@@ -170,8 +170,9 @@ private:
     }
   }
 
-  // Reaction counter
+  // Reaction counters
   python::list getReactionCounters();
+  python::list getReactionNumIntraInterCounters();
 
   real current_cutoff_;  //!< Maximal cutoff use for VerletList.
 
@@ -196,6 +197,7 @@ private:
 
   // Reaction counters.
   std::map<longint, std::vector<longint> > time_reaction_counter_;  //!< Count number of times given reaction is executed.
+  std::map<longint, std::vector<longint> > intra_inter_reaction_counter_;
 
   ///Timers
   esutil::WallTimer wallTimer;  //!< used for timing

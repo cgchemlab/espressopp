@@ -107,7 +107,7 @@ namespace espressopp {
 			    real distSqr) const {
 
         real ffactor;
-        
+
         if(r0 > ROUND_ERROR_PREC) {
           real r = sqrt(distSqr);
           ffactor = -K * (r - r0) / (r * (1 - ((r - r0)*(r - r0) / rMaxSqr)));

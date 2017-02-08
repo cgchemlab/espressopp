@@ -454,7 +454,7 @@ if pmi.isController:
                 'add_reaction', 'clear_pair_distances', 'save_pair_distances',
                 'get_reaction', 'save_reaction_counters'
                 ),
-            pmiinvoke=('get_pair_distances', 'get_timers', )
+            pmiinvoke=('get_pair_distances', 'get_timers', 'get_reaction_num_intra_inter_counters')
             )
 
     class PostProcessChangeProperty:

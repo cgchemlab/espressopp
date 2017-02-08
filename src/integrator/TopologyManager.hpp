@@ -273,6 +273,8 @@ class TopologyManager: public Extension {
 
   bool isNeighbourParticleInState(longint root_id, longint nb_type_id, longint min_state, longint max_state);
 
+  longint getMoleculeId(longint pid) { return pid_mid[pid]; }
+
   /**
    * Handle signal from FixedPairList that new bond was created.
    */
@@ -302,18 +304,15 @@ class TopologyManager: public Extension {
 
   static void registerPython();
 
-  /// Defines map that stores res_id -> particle_id
-  typedef std::set<longint> PSet;
-
  private:
   typedef std::pair<longint, std::pair<longint, longint> > Triplets;
   typedef std::pair<longint, std::pair<longint, std::pair<longint, longint> > > Quadruplets;
   typedef std::vector<std::pair<longint, longint> > EdgesVector;
   typedef std::set<std::pair<longint, longint> > SetPairs;
-  typedef std::vector<std::pair<longint, longint> > ListPairs;
   typedef boost::unordered_map<std::pair<longint, longint>, longint> MapPairsDist;
-  typedef std::map<longint, longint> MapPairs;
   typedef std::set<longint> SetPids;
+
+  void reset();
 
   /**
    * Process removing of the bond.

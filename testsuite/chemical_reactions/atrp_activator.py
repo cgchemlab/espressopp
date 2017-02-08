@@ -53,35 +53,14 @@ class ESPPTestCase(unittest.TestCase):
 
 class TestATRPActivator(ESPPTestCase):
     """Compare the result of previous implementation with current"""
-    def test_wrong_state(self):
-        atrp_activator = espressopp.integrator.ATRPActivator(self.system, 1, 100, 0.2, 0.8, 0.04, 0.01, 0.9)
-        with self.assertRaises(Exception) as cm:
-            atrp_activator.add_reactive_center(
-                type_id=3,
-                min_state=2,
-                max_state=0,
-                new_property=espressopp.ParticleProperties(type=3),
-                delta_state=1)
-        self.assertEqual(cm.exception.message, 'Min_state > max_state')
-
-    def test_overlap_states(self):
-        atrp_activator = espressopp.integrator.ATRPActivator(self.system, 1, 100, 0.2, 0.8, 0.04, 0.01, 0.9)
-        atrp_activator.add_reactive_center(type_id=3, min_state=0, max_state=2,
-                                           new_property=espressopp.ParticleProperties(type=3),
-                                           delta_state=1)
-        with self.assertRaises(Exception) as cm:
-            atrp_activator.add_reactive_center(type_id=3, min_state=1, max_state=3,
-                                               new_property=espressopp.ParticleProperties(type=3),
-                                               delta_state=1)
-        self.assertEqual(cm.exception.message, 'Min/max state overlaps')
 
     def test_non_reactive_centers(self):
         atrp_activator = espressopp.integrator.ATRPActivator(self.system, 1, 100, 0.2, 0.8, 0.04, 0.01, 0.9)
         atrp_activator.add_reactive_center(
             type_id=3,
-            min_state=0,
-            max_state=2,
-            new_property=espressopp.ParticleProperties(type=3),
+            state=0,
+            is_activator=True,
+            new_property=espressopp.integrator.TopologyParticleProperties(type=3),
             delta_state=1)
         self.integrator.addExtension(atrp_activator)
         self.integrator.run(1000)
@@ -92,11 +71,12 @@ class TestATRPActivator(ESPPTestCase):
     def test_deactivate_particle(self):
         atrp_activator = espressopp.integrator.ATRPActivator(self.system, 1, 100, 0.2, 0.8, 0.04, 0.01, 0.9)
         # Define particles of type 3 that will be deactivate if it is in state \in [0,2)
+        # (self, type_id, state, is_activator, new_property, delta_state):
         atrp_activator.add_reactive_center(
             type_id=2,
-            min_state=0,
-            max_state=2,
-            new_property=espressopp.ParticleProperties(type=3),
+            state=1,
+            is_activator=True,
+            new_property=espressopp.integrator.TopologyParticleProperties(type=3),
             delta_state=1)
         self.integrator.addExtension(atrp_activator)
         self.integrator.run(1000)
