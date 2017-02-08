@@ -1055,6 +1055,7 @@ python::list ChemicalReaction::getReactionNumIntraInterCounters() {
       for (ARC::iterator itt = it->begin(); itt != it->end(); ++itt) {
         // Check if timestep exists in result map, if not then set it.
         if (time_reaction_num_intra_inter.find(itt->first) == time_reaction_num_intra_inter.end()) {
+          time_reaction_num_intra_inter.insert(std::make_pair(itt->first, std::vector<longint>(2)));
           time_reaction_num_intra_inter[itt->first][0] = itt->second[0];
           time_reaction_num_intra_inter[itt->first][1] = itt->second[1];
         } else {
