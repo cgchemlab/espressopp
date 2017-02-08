@@ -220,7 +220,7 @@ class ChemicalReactionLocal(ExtensionLocal, integrator_ChemicalReaction):
         if pmi.workerIsActive():
             data = self.cxxclass.get_reaction_num_intra_inter_counters(self)
             with open(filename, 'w') as output_file:
-                output_file.write('# time same_mol notsame_mol')
+                output_file.write('# time same_mol notsame_mol\n')
                 for l in data:
                     output_file.write('{}\n'.format(' '.join(map(str, l))))
 
