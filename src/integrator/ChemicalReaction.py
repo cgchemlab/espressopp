@@ -460,7 +460,7 @@ if pmi.isController:
             pmiproperty=('interval','nearest_mode', 'pair_distances_filename'),
             pmicall=(
                 'add_reaction', 'clear_pair_distances', 'save_pair_distances',
-                'get_reaction', 'save_reaction_counters'
+                'get_reaction', 'save_reaction_counters', 'save_intra_inter_counter'
                 ),
             pmiinvoke=('get_pair_distances', 'get_timers', 'get_reaction_num_intra_inter_counters')
             )
