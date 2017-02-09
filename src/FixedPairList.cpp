@@ -451,6 +451,14 @@ namespace espressopp {
     return global_size;
   }
 
+  void FixedPairList::clearAndRemove() {
+      this->clear();
+      globalPairs.clear();
+      sigBeforeSend.disconnect();
+      sigAfterRecv.disconnect();
+      sigOnParticlesChanged.disconnect();
+  }
+
   /****************************************************
   ** REGISTRATION WITH PYTHON
   ****************************************************/
@@ -471,6 +479,7 @@ namespace espressopp {
       .def("totalSize", &FixedPairList::totalSize)
       .def("getBonds",  &FixedPairList::getBonds)
       .def("getAllBonds", &FixedPairList::getAllBonds)
+      .def("clear_and_remove",  &FixedPairList::clearAndRemove)
       .def("resetLongtimeMaxBondSqr", &FixedPairList::resetLongtimeMaxBondSqr)
       .def("getLongtimeMaxBondSqr", &FixedPairList::getLongtimeMaxBondSqr)
       ;

@@ -99,6 +99,7 @@ namespace espressopp {
 
         //System& getSystem();
 
+
         /** Register this class so it can be used from Python. */
         static void registerPython();
 
