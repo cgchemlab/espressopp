@@ -84,6 +84,7 @@ class FixedTripleListTypesInteractionTemplate : public Interaction, SystemAccess
 
   virtual void addForces();
   virtual real computeEnergy();
+  virtual real computeEnergyDeriv();
   virtual real computeEnergyAA();
   virtual real computeEnergyCG();
   virtual void computeVirialX(std::vector<real> &p_xx_total, int bins);
@@ -160,16 +161,27 @@ computeEnergy() {
   return esum;
 }
 
+template < typename _AngularPotential > inline real
+FixedTripleListTypesInteractionTemplate < _AngularPotential >::
+computeEnergyDeriv() {
+  std::cout << "Warning! At the moment computeEnergyDeriv() in FixedTripleListTypesInteractionTemplate does not work." << std::endl;
+  return 0.0;
+}
+
 template<typename _Potential>
 inline real
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeEnergyAA() {
+  std::cout << "Warning! At the moment computeEnergyAA() in FixedTripleListTypesInteractionTemplate does not work." << std::endl;
+  return 0.0;
 }
 
 template<typename _Potential>
 inline real
 FixedTripleListTypesInteractionTemplate<_Potential>::
 computeEnergyCG() {
+  std::cout << "Warning! At the moment computeEnergyCG() in FixedTripleListTypesInteractionTemplate does not work." << std::endl;
+  return 0.0;
 }
 
 template<typename _Potential>

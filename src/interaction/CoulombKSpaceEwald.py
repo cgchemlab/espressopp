@@ -20,11 +20,14 @@
 
 
 r"""
-*********************************************************************************************
-**CoulombKSpaceEwald** - Coulomb potential and interaction Objects (`K` space part)
-*********************************************************************************************
+*****************************************
+espressopp.interaction.CoulombKSpaceEwald
+*****************************************
 
+Coulomb potential and interaction Objects (`K` space part)
+ 
 .. math::
+
 	\frac{1}{2\pi V} 
 	\sum_{m\in \mathbb{Z}^3 \atop 0<|m|<k_{max}} 
 	\frac{exp(-\frac{\pi^2}{\alpha^2}m^{\prime 2})}{m^{\prime 2}}

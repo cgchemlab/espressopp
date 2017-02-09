@@ -19,11 +19,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
 r"""
-*******************************************
-**espressopp.interaction.CoulombTruncated**
-*******************************************
+***************************************
+espressopp.interaction.CoulombTruncated
+***************************************
 
 .. math::
+
 	U = k\frac{q_iq_j}{d_{ij}}
 
 where :math:`k` is the user-supplied prefactor, :math:`q_i` is the charge of particle `i`, and :math:`d_{ij}` is interparticle distance
@@ -39,8 +40,7 @@ In this interaction potential, a different charge can be associated with each pa
 
 .. function:: espressopppp.interaction.VerletListCoulombTruncated(vl)
 
-		:param vl: verlet list object defined earlier in python script
-		:type vl: VerletList
+		:param espressopp.VerletList vl: verlet list object defined earlier in python script
 
 .. function:: espressopppp.interaction.VerletListCoulombTruncated.getPotential(type1, type2)
 
@@ -60,10 +60,8 @@ In this interaction potential, a different charge can be associated with each pa
 
 .. function:: espressopppp.interaction.FixedPairListTypesCoulombTruncated(system, vl)
 
-		:param system: system object defined earlier in the python script
-		:param vl: fixedpairlist object defined earlier in the python script
-		:type system: System
-		:type vl: FixedPairList
+		:param espressopp.System system: system object defined earlier in the python script
+		:param espressopp.FixedPairList vl: fixedpairlist object defined earlier in the python script
 
 .. function:: espressopppp.interaction.FixedPairListTypesCoulombTruncated.setPotential(potential)
 
@@ -141,6 +139,3 @@ if pmi.isController:
             cls =  'espressopp.interaction.FixedPairListTypesCoulombTruncatedLocal',
             pmicall = ['setPotential']
             )
-
-
-

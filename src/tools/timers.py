@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -18,8 +18,6 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
-
-"""Python functions to print timings from C++."""
 
 import sys
 

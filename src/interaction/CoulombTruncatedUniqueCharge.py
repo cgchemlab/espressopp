@@ -20,10 +20,12 @@
 
 
 r"""
-*******************************************************
-**espressopp.interaction.CoulombTruncatedUniqueCharge**
-*******************************************************
+***************************************************
+espressopp.interaction.CoulombTruncatedUniqueCharge
+***************************************************
+
 .. math::
+
 	U = \frac{Q}{d}
 
 where :math:`Q` is the product of the charges of the two particles and :math:`d` is their distance from each other.

@@ -20,13 +20,15 @@
 
 
 r"""
-*************************************************************
-**espressopp.interaction.ReactionFieldGeneralized**
-*************************************************************
+***********************************************
+espressopp.interaction.ReactionFieldGeneralized
+***********************************************
+
 This class provides methods to compute forces and energies of
 the generalized reaction field.
 
 .. math::
+
 	U = PQ\left(
 	\frac{1}{d} 
 	- \frac{\left(1 + \frac{(\varepsilon_1 - 4 \varepsilon_2)(1 + \kappa r_c) - 2 \varepsilon_2  \kappa {r_c}^2}

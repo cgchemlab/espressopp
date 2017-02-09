@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012,2013,2016
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -64,8 +64,8 @@ namespace espressopp {
 		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
 		void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
 		virtual void onParticlesChanged();
-
-	    std::vector<longint> getPairList();
+		void remove();
+      std::vector<longint> getPairList();
 	    python::list getBonds();
 	    python::list getAllBonds();
 	    GlobalPairs* getGlobalPairs() {return &globalPairs;};

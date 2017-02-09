@@ -20,9 +20,9 @@
 
 
 r"""
-****************************************
-**DomainDecompositionAdress** - Object
-****************************************
+********************************************
+espressopp.storage.DomainDecompositionAdress
+********************************************
 
 The DomainDecompositionAdress is the Domain Decomposition for AdResS and H-
 AdResS simulations. It makes sure that tuples (i.e. a coarse-grained particle
@@ -83,7 +83,7 @@ if pmi.isController:
                     else:
                         cellGrid = toInt3DFromVector(cellGrid)
 
-                    for k in range(3):
+                    for k in xrange(3):
                         if nodeGrid[k]*cellGrid[k] == 1:
                             print(("Warning! cellGrid[{}] has been "
                                    "adjusted to 2 (was={})".format(k, cellGrid[k])))

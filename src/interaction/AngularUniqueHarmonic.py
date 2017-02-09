@@ -20,13 +20,14 @@
 
 
 r"""
-**********************************************************
-**espressopp.interaction.AngularUniqueHarmonic**
-**********************************************************
+********************************************
+espressopp.interaction.AngularUniqueHarmonic
+********************************************
 
 Calculates the Angular Unique Harmonic interaction
 
 .. math::
+
 	U = K (\theta - \theta_0)^2
 
 

@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -20,9 +20,9 @@
 
 
 r"""
-*********************************************
-**RealND** - 
-*********************************************
+*****************
+espressopp.RealND
+*****************
 
 This is the object which represents N-dimensional vector. It is an extended Real3D,
 basicly, it hase the same functionallity but in N-dimetions.
@@ -88,7 +88,7 @@ class __RealND(RealND) :
     # string conversion
     def __str__(self) :
       arr = []
-      for i in range(self.dimension):
+      for i in xrange(self.dimension):
         arr.append(self[i])
       return str(arr)
 

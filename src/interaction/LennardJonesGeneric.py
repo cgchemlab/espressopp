@@ -20,13 +20,15 @@
 
 
 r"""
-********************************************************
-**espressopp.interaction.LennardJonesGeneric**
-********************************************************
+******************************************
+espressopp.interaction.LennardJonesGeneric
+******************************************
+
 This class provides methods to compute forces and energies of
 a generic Lennard Jones potential with arbitrary integers a and b.
 
 .. math::
+
 	V(r) = 4 \varepsilon \left[ \left( \frac{\sigma}{r} \right)^{a} -
 	\left( \frac{\sigma}{r} \right)^{b} \right]
 

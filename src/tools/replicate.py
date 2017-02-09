@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -19,15 +19,15 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
 
-def replicate(bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
+def replicate (bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
   """
+  Replicates configuration in each dimension. 
+  
+  This may be used to increase the size of an equilibrated melt by a factor of 8 or more.
+
   Presently this routine works only for semiflexible polymers. A general
   class should be written to deal with files containing coordinates
   and topology data.
-
-  This method takes the current configuration and replicates
-  it by some number of boxes in each dimension. This may be used to
-  increase the size of an equilibrated melt by a factor of 8 or more.
 
   xdim = ydim = zdim = 1 returns the original system not replicated.
   xdim = ydim = zdim = 2 returns the original system replicated to 8x.
@@ -39,9 +39,9 @@ def replicate(bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
   x_replicated = x[:]
   y_replicated = y[:]
   z_replicated = z[:]
-  for i in range(xdim):
-    for j in range(ydim):
-      for k in range(zdim):
+  for i in xrange(xdim):
+    for j in xrange(ydim):
+      for k in xrange(zdim):
         if(i + j + k != 0):
           for x_, y_, z_ in zip(x, y, z):
             x_replicated.append(x_ + i * Lx)
@@ -53,9 +53,9 @@ def replicate(bonds, angles, x, y, z, Lx, Ly, Lz, xdim=1, ydim=1, zdim=1):
   num_particles_original = len(x)
   bonds_replicated = bonds[:]
   angles_replicated = angles[:]
-  for i in range(xdim):
-    for j in range(ydim):
-      for k in range(zdim):
+  for i in xrange(xdim):
+    for j in xrange(ydim):
+      for k in xrange(zdim):
         if(i + j + k != 0):
           ct = ct + 1
           for p1, p2 in bonds:

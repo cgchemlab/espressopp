@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012,2013,2016
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -302,6 +302,14 @@ namespace espressopp {
     return global_size;
   }
 
+  void FixedPairList::remove() {
+      this->clear();
+      globalPairs.clear();
+      sigBeforeSend.disconnect();
+      sigAfterRecv.disconnect();
+      sigOnParticlesChanged.disconnect();
+  }
+
   /****************************************************
   ** REGISTRATION WITH PYTHON
   ****************************************************/
@@ -321,6 +329,7 @@ namespace espressopp {
       .def("totalSize", &FixedPairList::totalSize)
       .def("getBonds",  &FixedPairList::getBonds)
       .def("getAllBonds", &FixedPairList::getAllBonds)
+      .def("remove",  &FixedPairList::remove)
       .def("resetLongtimeMaxBondSqr", &FixedPairList::resetLongtimeMaxBondSqr)
       .def("getLongtimeMaxBondSqr", &FixedPairList::getLongtimeMaxBondSqr)
       ;

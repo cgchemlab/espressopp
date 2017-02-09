@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -19,28 +19,26 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 
 
-"""
-***************************************
-**warmup** - method to warm up a system
-***************************************
-
-This method does a warm up for a system with a density of 0.85.
-
-The method needs the following parameters:
-
-* system, integrator
-    ESPResSo system which schoul be warmed up and the correspondig integrator e.g.:
-    >>>system, integrator = espressopp.standard_system.LennardJones(100,(10,10,10))
-*number
-    number of steps of the warm up
-  =80
-    for a system with a desnsity of 0.85, if it explodes try a higher number
-"""
 import espressopp
 from espressopp import Real3D
 
-def warmup(system, integrator, number=80):
+def warmup(system, integrator, number = 80):
+  """
+  Warm up for a system with a density of 0.85.
 
+  The method needs the following parameters:
+
+  * system, integrator
+    ESPResSo system which schoul be warmed up and the correspondig integrator e.g.:
+    
+    >>> system, integrator = espressopp.standard_system.LennardJones(100,(10,10,10))
+    
+  * number
+    number of steps of the warm up 
+    
+    for a system with a density of 0.85, if it explodes try a higher number
+    
+  """
   print "starting warmup"
 
   org_dt = integrator.dt
@@ -53,7 +51,7 @@ def warmup(system, integrator, number=80):
   force_capping = espressopp.integrator.CapForce(system, 0.0)
   integrator.addExtension(force_capping)
 
-  for k in range(11,number):
+  for k in xrange(11,number):
     force_capping.setAbsCapForce(1000000.0/number*k)
     pot.sigma = final_sigma/number*k
     pot.epsilon = final_epsilon/number*k
@@ -66,7 +64,7 @@ def warmup(system, integrator, number=80):
   pot.epsilon = final_epsilon
   force_capping.disconnect()
   
-  for k in range(11):
+  for k in xrange(11):
     integrator.run(70)
     espressopp.tools.analyse.info(system, integrator)
 

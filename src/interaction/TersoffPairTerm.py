@@ -20,9 +20,10 @@
 
 
 r"""
-****************************************************
-**espressopp.interaction.TersoffPairTerm**
-****************************************************
+**************************************
+espressopp.interaction.TersoffPairTerm
+**************************************
+
 This class provides methods to compute forces and energies of
 2 body term of Tersoff potential.
 
@@ -30,16 +31,19 @@ This class provides methods to compute forces and energies of
 if :math:`d_{12} > R + D` 
 
 .. math::
+
 	U = 0
 
 if :math:`d_{12} < R - D`
 
 .. math::
+
 	U = A e^{-\lambda1 d_{12}}
 
 else
 
 .. math::
+
 	U = \frac{1}{2}\left(1 - sin\left(\frac{\pi}{4D}\left(d_{12}-R\right)\right)\right) A e^{-\lambda_1 d_{12}}
 
 

@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013,2015
+#  Copyright (C) 2012,2013,2015,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -20,9 +20,9 @@
 
 
 r"""
-*************************
-**espressopp.VerletList**
-*************************
+*********************
+espressopp.VerletList
+*********************
 
 
 .. function:: espressopp.VerletList(system, cutoff, exclusionlist)
@@ -122,7 +122,7 @@ class VerletListLocal(_espressopp.VerletList):
         if pmi.workerIsActive():
             pairs=[]
             npairs=self.localSize()
-            for i in range(npairs):
+            for i in xrange(npairs):
               pair=self.cxxclass.getPair(self, i+1)
               pairs.append(pair)
             return pairs 

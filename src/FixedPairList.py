@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013,2015
+#  Copyright (C) 2012,2013,2015,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -20,10 +20,9 @@
 
 
 r"""
-****************************
-**espressopp.FixedPairList**
-****************************
-
+************************
+espressopp.FixedPairList
+************************
 
 .. function:: espressopp.FixedPairList(storage)
 
@@ -47,6 +46,10 @@ r"""
 .. function:: espressopp.FixedPairList.getBonds()
 
 		:rtype: 
+
+.. function:: espressopp.FixedPairList.remove()
+
+    'remove the FixedPairList and disconnect'
 
 .. function:: espressopp.FixedPairList.getLongtimeMaxBond()
 
@@ -113,7 +116,11 @@ class FixedPairListLocal(_espressopp.FixedPairList):
     def getAllBonds(self):
         if pmi.workerIsActive():
             return self.cxxclass.getAllBonds(self)
-      
+
+    def remove(self):
+        if pmi.workerIsActive():
+          self.cxxclass.remove(self)
+
     def resetLongtimeMaxBond(self):
 
         if pmi.workerIsActive():
@@ -131,7 +138,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedPairListLocal',
             #localcall = [ 'add' ],
-            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', 'totalSize' ],
+            pmicall = [ 'add', 'addBonds', 'remove', 'resetLongtimeMaxBond', 'totalSize' ],
             pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal', 'getAllBonds' ]
         )
         

@@ -20,15 +20,17 @@
 
 
 r"""
-******************************************************************
-**espressopp.interaction.StillingerWeberPairTermCapped**
-******************************************************************
+****************************************************
+espressopp.interaction.StillingerWeberPairTermCapped
+****************************************************
+
 This class provides methods to compute forces and energies of
 2 body term of Stillinger-Weber potential.
 
 If the distance is smaller than the cap-radius:
 	
 .. math::
+
 	U = A  [ d_{12}^{-p} (B - 1) ]  e^{ \frac{1}{d_{12}-r_c}}
 	
 where :math:`r_c` is the cutoff-radius.
