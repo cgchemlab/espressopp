@@ -114,6 +114,12 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
 TopologyManager::~TopologyManager() {
   disconnect();
   // Clean graph data structure
+  reset();
+}
+
+
+void TopologyManager::reset() {
+  // Clean graph data structure
   for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
     if (it->second)
       delete it->second;
@@ -131,6 +137,15 @@ TopologyManager::~TopologyManager() {
       delete it->second;
   }
   delete residues_;
+
+  for (GraphMap::iterator it = molecules_->begin(); it != molecules_->end(); ++it) {
+    if (it->second)
+      delete it->second;
+  }
+  delete molecules_;
+
+  pid_mid.clear();
+  pid_rid.clear();
 }
 
 void TopologyManager::connect() {
@@ -187,6 +202,14 @@ void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, long
 
 void TopologyManager::initializeTopology() {
   LOG4ESPP_DEBUG(theLogger, "initializeTopology ");
+  // Clean global structures.
+  reset();
+  graph_ = new GraphMap();
+  res_graph_ = new GraphMap();
+  residues_ = new GraphMap();
+  molecules_ = new GraphMap();
+
+
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
   EdgesVector output;
@@ -235,14 +258,14 @@ void TopologyManager::initializeTopology() {
       longint pid = it->first;
       longint rid = it->second;
       if (rid == 0)
-        throw std::runtime_error(
-            (const std::string &) (boost::format("ResID is 0 for particle %d") % pid));
+        throw std::runtime_error("ResID is 0");
       if (pid_rid.find(pid) != pid_rid.end())
-        throw std::runtime_error(
-            (const std::string &) (boost::format("ResID for particle: %d already set to: %d") % pid % pid_rid[pid]));
+        throw std::runtime_error("ResID already set");
 
-      pid_rid[pid] = rid;
-      pid_mid[pid] = rid;
+      if (pid_rid.find(pid) == pid_rid.end())
+        pid_rid[pid] = rid;
+      if (pid_mid.find(pid) == pid_mid.end())
+        pid_mid[pid] = rid;
 
       if (residues_->count(rid) == 0) {
         residues_->insert(std::make_pair(rid, new std::set<longint>()));

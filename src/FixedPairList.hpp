@@ -29,8 +29,9 @@
 #include "types.hpp"
 #include "Particle.hpp"
 #include "esutil/ESPPIterator.hpp"
-#include "boost/unordered_map.hpp"
-#include "boost/signals2.hpp"
+#include <boost/unordered_map.hpp>
+#include <boost/signals2.hpp>
+
 //#include "FixedListComm.hpp"
 
 namespace espressopp {
@@ -68,6 +69,7 @@ namespace espressopp {
 	    virtual void beforeSendParticles(ParticleList& pl, class OutBuffer& buf);
 		virtual void afterRecvParticles(ParticleList& pl, class InBuffer& buf);
 		virtual void onParticlesChanged();
+    void clearAndRemove();
 	    virtual void updateParticlesStorage();
 
 	    virtual std::vector<longint> getPairList();

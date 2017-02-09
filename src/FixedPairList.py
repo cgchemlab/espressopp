@@ -20,10 +20,9 @@
 
 
 r"""
-****************************
-**espressopp.FixedPairList**
-****************************
-
+************************
+espressopp.FixedPairList
+************************
 
 .. function:: espressopp.FixedPairList(storage)
 
@@ -47,6 +46,10 @@ r"""
 .. function:: espressopp.FixedPairList.getBonds()
 
 		:rtype: 
+
+.. function:: espressopp.FixedPairList.remove()
+
+    'remove the FixedPairList and disconnect'
 
 .. function:: espressopp.FixedPairList.getLongtimeMaxBond()
 
@@ -123,7 +126,11 @@ class FixedPairListLocal(_espressopp.FixedPairList):
     def getAllBonds(self):
         if pmi.workerIsActive():
             return self.cxxclass.getAllBonds(self)
-      
+
+    def clear_and_remove(self):
+        if pmi.workerIsActive():
+          self.cxxclass.clear_and_remove(self)      
+
     def resetLongtimeMaxBond(self):
 
         if pmi.workerIsActive():
@@ -141,7 +148,7 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls = 'espressopp.FixedPairListLocal',
             pmiproperty = ('interaction', ),
-            pmicall = [ 'add', 'addBonds', 'resetLongtimeMaxBond', "totalSize", "remove", 'getAllBonds' ],
+            pmicall = [ 'add', 'addBonds', 'clear_and_remove', 'resetLongtimeMaxBond', "totalSize", "remove", 'getAllBonds' ],
             pmiinvoke = ['getBonds', 'size', 'getLongtimeMaxBondLocal']
         )
         

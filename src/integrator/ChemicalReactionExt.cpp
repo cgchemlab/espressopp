@@ -874,6 +874,9 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
 
   std::vector<longint> tmp_reaction_counters;
   tmp_reaction_counters.resize(reaction_list_.size());
+  std::vector<longint> tmp_num_intra_inter(2);
+  tmp_num_intra_inter[0] = 0;
+  tmp_num_intra_inter[1] = 0;
 
   for (integrator::ReactionMap::iterator it = effective_pairs_.begin(); it != effective_pairs_.end(); it++) {
     boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(it->second.second.reaction_id);
@@ -928,12 +931,22 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
           tmp_reaction_counters[it->second.second.reaction_id]++;
           if (save_pd_)
             pair_distances_.push_back(it->second.second.reaction_r_sqr);
+          // Count intra and intermolecular reactions.
+          longint mol_id1 = tm_->getMoleculeId(it->first);
+          longint mol_id2 = tm_->getMoleculeId(it->second.first);
+          if (mol_id1 == mol_id2)
+            tmp_num_intra_inter[0]++;
+          else
+            tmp_num_intra_inter[1]++;
         }
       }
     }
   }
 
-  time_reaction_counter_.insert(std::make_pair(integrator->getStep(), tmp_reaction_counters));
+  // Saves some statistics.
+  longint current_step = integrator->getStep();
+  time_reaction_counter_.insert(std::make_pair(current_step, tmp_reaction_counters));
+  intra_inter_reaction_counter_.insert(std::make_pair(current_step, tmp_num_intra_inter));
 
   LOG4ESPP_DEBUG(theLogger, "Leaving applyAR");
   LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
@@ -994,7 +1007,6 @@ python::list ChemicalReaction::getReactionCounters() {
   python::list ret_list;
   typedef std::map<longint, std::vector<longint> > ARC;
   std::vector<ARC> all_data;
-  longint reaction_num = reaction_list_.size();
 
   System &system = getSystemRef();
   // Collect data from all CPUs.
@@ -1028,6 +1040,46 @@ python::list ChemicalReaction::getReactionCounters() {
   return ret_list;
 }
 
+python::list ChemicalReaction::getReactionNumIntraInterCounters() {
+  python::list ret_list;
+  typedef std::map<longint, std::vector<longint> > ARC;
+  std::vector<ARC> all_data;
+
+  System &system = getSystemRef();
+  if (system.comm->rank() == 0) {
+    mpi::gather(*system.comm, intra_inter_reaction_counter_, all_data, 0);
+    ARC time_reaction_num_intra_inter;
+
+    // Collect data from other cpus.
+    for (std::vector<ARC>::iterator it = all_data.begin(); it != all_data.end(); it++) {
+      for (ARC::iterator itt = it->begin(); itt != it->end(); ++itt) {
+        // Check if timestep exists in result map, if not then set it.
+        if (time_reaction_num_intra_inter.find(itt->first) == time_reaction_num_intra_inter.end()) {
+          time_reaction_num_intra_inter.insert(std::make_pair(itt->first, std::vector<longint>(2)));
+          time_reaction_num_intra_inter[itt->first][0] = itt->second[0];
+          time_reaction_num_intra_inter[itt->first][1] = itt->second[1];
+        } else {
+          time_reaction_num_intra_inter[itt->first][0] += itt->second[0];
+          time_reaction_num_intra_inter[itt->first][1] += itt->second[1];
+        }
+      }
+    }
+
+    // Output data.
+    for (ARC::iterator it = time_reaction_num_intra_inter.begin(); it != time_reaction_num_intra_inter.end(); ++it) {
+      python::list tmp_list;
+      tmp_list.append(it->first);
+      tmp_list.append(it->second[0]);  // intra mol1==mol2
+      tmp_list.append(it->second[1]);  // inter mol1 != mol2
+      ret_list.append(tmp_list);
+    }
+  } else {
+    mpi::gather(*system.comm, intra_inter_reaction_counter_, all_data, 0);
+  }
+
+  return ret_list;
+}
+
 void ChemicalReaction::registerPython() {
   using namespace espressopp::python;// NOLINT
   class_<ChemicalReaction, shared_ptr<ChemicalReaction>, bases<Extension> >(
@@ -1043,6 +1095,7 @@ void ChemicalReaction::registerPython() {
     .def("get_pair_distances", &ChemicalReaction::getPairDistances)
     .def("clear_pair_distances", &ChemicalReaction::clearPairDistances)
     .def("get_reaction_counters", &ChemicalReaction::getReactionCounters)
+    .def("get_reaction_num_intra_inter_counters", &ChemicalReaction::getReactionNumIntraInterCounters)
     .add_property("pair_distances_filename", &ChemicalReaction::pd_filename_, &ChemicalReaction::set_pd_filename)
     .add_property("interval", &ChemicalReaction::interval, &ChemicalReaction::set_interval)
     .add_property("nearest_mode", &ChemicalReaction::is_nearest, &ChemicalReaction::set_is_nearest);

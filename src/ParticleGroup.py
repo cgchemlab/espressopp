@@ -20,9 +20,9 @@
 
 
 r"""
-****************************
-**espressopp.ParticleGroup**
-****************************
+************************
+espressopp.ParticleGroup
+************************
 
 
 .. function:: espressopp.ParticleGroup(storage)
