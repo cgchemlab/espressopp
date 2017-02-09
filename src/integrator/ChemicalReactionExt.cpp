@@ -932,11 +932,11 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
           if (save_pd_)
             pair_distances_.push_back(it->second.second.reaction_r_sqr);
           // Count intra and intermolecular reactions.
-          longint mol_id1 = tm_->getMoleculeId(it->first);
-          longint mol_id2 = tm_->getMoleculeId(it->second.first);
-          if (mol_id1 == mol_id2)
-            tmp_num_intra_inter[0]++;
-          else
+//          longint mol_id1 = tm_->getMoleculeId(it->first);
+//          longint mol_id2 = tm_->getMoleculeId(it->second.first);
+//          if (mol_id1 == mol_id2)
+//            tmp_num_intra_inter[0]++;
+//          else
             tmp_num_intra_inter[1]++;
         }
       }
