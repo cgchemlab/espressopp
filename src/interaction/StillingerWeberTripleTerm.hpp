@@ -65,7 +65,7 @@ namespace espressopp {
             epsilon(_epsilon), sigma1(_sigma1), sigma2(_sigma2),
             rc1(_cutoff1), rc2(_cutoff2) {
         preset();
-        initialized = true;
+
       }
 
       virtual ~StillingerWeberTripleTerm() {};

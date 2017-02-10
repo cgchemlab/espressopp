@@ -53,7 +53,7 @@ namespace espressopp {
 	setShift(_shift);
 	setCutoff(_cutoff);
         preset();
-        initialized = true;
+
       }
 
       SoftCosine(real _A, real _cutoff) : A(_A) {	
@@ -61,7 +61,7 @@ namespace espressopp {
 	setCutoff(_cutoff);
 	setAutoShift(); 
         preset();
-        initialized = true;
+
       }
 
       void preset() { }

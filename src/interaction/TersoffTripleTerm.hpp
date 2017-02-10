@@ -76,7 +76,7 @@ namespace espressopp {
             gamma(_gamma), c(_c), d(_d), theta0(_theta0),
             rc1(_cutoff1), rc2(_cutoff2) {
         preset();
-        initialized = true;
+
       }
 
       virtual ~TersoffTripleTerm() {};

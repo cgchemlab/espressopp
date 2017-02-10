@@ -63,7 +63,7 @@ void MultiTabulated::registerTableOnRange(
 
   if (default_table) {
     current_table = table;
-    initialized = true;
+
   }
   chm->onValue.connect(
       boost::bind(&MultiTabulated::onValue, this, min_value, max_value, table, _1)
@@ -73,7 +73,7 @@ void MultiTabulated::registerTableOnRange(
 void MultiTabulated::onValue(real min_value, real max_value, shared_ptr<Interpolation> table, real value) {
   if (value >= min_value && value < max_value) {
     current_table = table;
-    initialized = true;
+
   }
 }
 

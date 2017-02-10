@@ -58,7 +58,7 @@ namespace espressopp {
         : K(_K), r0(_r0), rMax(_rMax), caprad(_caprad) {
         setShift(_shift);
         setCutoff(_cutoff);
-        initialized = true;
+
       }
 
       FENECapped(real _K, real _r0, real _rMax,
@@ -67,7 +67,7 @@ namespace espressopp {
         autoShift = false;
         setCutoff(_cutoff);
         setAutoShift();
-        initialized = true;
+
       }
 
       // Setter and getter

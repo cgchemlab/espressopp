@@ -53,7 +53,7 @@ namespace espressopp {
 	: epsilon(_epsilon), alpha(_alpha), rMin(_rMin) {
 	setShift(_shift);
 	setCutoff(_cutoff);
-        initialized = true;
+
       }
 
       Morse(real _epsilon, real _alpha, real _rMin, real _cutoff)
@@ -61,7 +61,7 @@ namespace espressopp {
 	autoShift = false;
 	setCutoff(_cutoff);
 	setAutoShift();
-        initialized = true;
+
       }
 
       // Setter and getter

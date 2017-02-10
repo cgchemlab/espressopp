@@ -45,20 +45,19 @@ namespace espressopp {
       Harmonic(): K(0.0), r0(0.0) {
         setShift(0.0);
         setCutoff(infinity);
-        initialized = false;
       }
 
       Harmonic(real _K, real _r0, real _cutoff, real _shift) : K(_K), r0(_r0) {
         setShift(_shift);
         setCutoff(_cutoff);
-        initialized = true;
+
       }
 
       Harmonic(real _K, real _r0,  real _cutoff) : K(_K), r0(_r0) {
         autoShift = false;
         setCutoff(_cutoff);
         setAutoShift();
-        initialized = true;
+
       }
 
       // Setter and getter

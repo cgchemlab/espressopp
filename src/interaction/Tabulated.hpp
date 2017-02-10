@@ -63,7 +63,7 @@ namespace espressopp {
                 setFilename(itype, filename);
                 setShift(0.0);
                 setCutoff(infinity);
-              initialized = true;
+
             }
          
             Tabulated(int itype, const char* filename, real cutoff) {
@@ -71,7 +71,7 @@ namespace espressopp {
                 setFilename(itype, filename);
                 setShift(0.0);
                 setCutoff(cutoff);
-              initialized = true;
+
             }
          
             /** Setter for the interpolation type */

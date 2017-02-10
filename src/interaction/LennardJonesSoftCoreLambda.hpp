@@ -54,7 +54,6 @@ class LennardJonesSoftCoreLambda: public PotentialTemplate<LennardJonesSoftCoreL
   LennardJonesSoftCoreLambda() : epsilon(0.0), sigma(0.0), alpha_(0.0) {
     setShift(0.0);
     setCutoff(infinity);
-    initialized = false;
     preset();
   }
 
