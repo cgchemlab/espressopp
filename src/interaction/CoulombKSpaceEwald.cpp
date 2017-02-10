@@ -36,6 +36,7 @@ namespace espressopp {
       alpha = _alpha;
       kmax  = _kmax;
 
+      
       I = Tensor(1.0, 1.0, 1.0, 0.0, 0.0, 0.0);
       sum = NULL;
       totsum = NULL;

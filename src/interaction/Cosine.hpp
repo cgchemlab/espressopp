@@ -49,6 +49,7 @@ namespace espressopp {
       }
       Cosine(real _K, real _theta0) : K(_K), theta0(_theta0) {
           preset();
+
  }
       void preset() {
           Kcos_theta0 = K*cos(theta0);

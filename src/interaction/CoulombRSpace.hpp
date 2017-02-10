@@ -61,6 +61,7 @@ namespace espressopp {
         autoShift = false;
         setCutoff(_rspacecutoff);
         preset();
+
       }
 
       void preset() {

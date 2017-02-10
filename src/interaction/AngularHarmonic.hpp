@@ -44,6 +44,7 @@ namespace espressopp {
 
       AngularHarmonic() : K(0.0), theta0(0.0) { }
       AngularHarmonic(real _K, real _theta0) : K(_K), theta0(_theta0) {
+
       }
 
       void setK(real _K) { K = _K; }

@@ -49,12 +49,14 @@ namespace espressopp {
       Quartic(real _K, real _r0, real _cutoff, real _shift) : K(_K), r0(_r0) {
         setShift(_shift);
         setCutoff(_cutoff);
+
       }
 
       Quartic(real _K, real _r0,  real _cutoff) : K(_K), r0(_r0) {
         autoShift = false;
         setCutoff(_cutoff);
         setAutoShift();
+
       }
 
       // Setter and getter
