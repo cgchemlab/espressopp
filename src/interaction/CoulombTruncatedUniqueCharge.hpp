@@ -50,7 +50,6 @@ namespace espressopp {
 	: qq(_qq) {
 	setShift(_shift);
 	setCutoff(_cutoff);
-        initialized = true;
       }
 
       CoulombTruncatedUniqueCharge(real _qq,
@@ -60,7 +59,6 @@ namespace espressopp {
 	autoShift = false;
 	setCutoff(_cutoff);
 	setAutoShift();
-        initialized = true;
       }
 
       // Setter and getter

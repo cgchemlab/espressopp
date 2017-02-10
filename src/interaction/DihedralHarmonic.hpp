@@ -54,7 +54,6 @@ namespace espressopp {
       DihedralHarmonic(): K(0.0), phi0(0.0) { }
       DihedralHarmonic(real _K, real _phi0):
         K(_K), phi0(_phi0){
-        initialized = true;
       }
       
 

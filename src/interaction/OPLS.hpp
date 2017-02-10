@@ -45,7 +45,7 @@ namespace espressopp {
 
       OPLS() : K1(0.0), K2(0.0), K3(0.0), K4(0.0) { }
       OPLS(real _K1, real _K2, real _K3, real _K4) : K1(_K1), K2(_K2), K3(_K3), K4(_K4) {
-        initialized = true;
+
       }
 
       void setK1(real _K1) { K1 = _K1; }

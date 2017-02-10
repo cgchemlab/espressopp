@@ -59,7 +59,6 @@ class TabulatedCapped: public PotentialTemplate<TabulatedCapped> {
     interpolationType = 0;
     caprad_ = 0.0;
     capradSqr_ = 0.0;
-    initialized = false;
   }
 
   // used for fixedpairlist (2-body bonded interaction)
@@ -70,7 +69,7 @@ class TabulatedCapped: public PotentialTemplate<TabulatedCapped> {
     setCutoff(infinity);
     caprad_ = 0.0;
     capradSqr_ = 0.0;
-    initialized = true;
+
 
     preset();
   }
@@ -82,7 +81,7 @@ class TabulatedCapped: public PotentialTemplate<TabulatedCapped> {
     setCutoff(cutoff);
     caprad_ = 0.0;
     capradSqr_ = 0.0;
-    initialized = true;
+
 
     preset();
   }
@@ -94,7 +93,7 @@ class TabulatedCapped: public PotentialTemplate<TabulatedCapped> {
     setCutoff(cutoff);
     caprad_ = caprad;
     capradSqr_ = caprad * caprad;
-    initialized = true;
+
 
     preset();
   }

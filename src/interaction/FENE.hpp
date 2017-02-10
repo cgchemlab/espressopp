@@ -59,7 +59,7 @@ namespace espressopp {
         setShift(_shift);
         setCutoff(_cutoff);
         preset();
-        initialized = true;
+
       }
 
       FENE(real _K, real _r0, real _rMax, 
@@ -69,7 +69,7 @@ namespace espressopp {
         setCutoff(_cutoff);
         setAutoShift();
         preset();
-        initialized = true;
+
       }
 
       void preset() {

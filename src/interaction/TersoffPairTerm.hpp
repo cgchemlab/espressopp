@@ -61,7 +61,7 @@ namespace espressopp {
         setShift(0.0);
         setCutoff(_cutoff);
         preset();
-        initialized = true;
+
       }
 
       virtual ~TersoffPairTerm() {};

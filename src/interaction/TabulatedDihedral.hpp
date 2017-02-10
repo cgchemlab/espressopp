@@ -49,14 +49,14 @@ namespace espressopp {
                 TabulatedDihedral(int itype, const char* filename) {
                     setFilename(itype, filename);
                     setInterpolationType(itype);
-                    initialized = true;
+
                 }
              
                 TabulatedDihedral(int itype, const char* filename, real cutoff) {
                     setFilename(itype, filename);
                     setInterpolationType(itype);
                     setCutoff(cutoff);
-                    initialized = true;
+
                 }
                 /** Setter for the interpolation type */
                 void setInterpolationType(int itype) { interpolationType = itype; }

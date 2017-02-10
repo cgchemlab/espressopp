@@ -54,7 +54,6 @@ namespace espressopp {
         autoShift = false;
         setCutoff(_cutoff);
         setShift(0.0);
-        initialized = true;
       }
 
       void setPrefactor(real _prefactor) {

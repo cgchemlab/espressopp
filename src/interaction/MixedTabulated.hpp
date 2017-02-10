@@ -40,7 +40,6 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
   MixedTabulated() {
     setShift(0.0);
     setCutoff(infinity);
-    initialized = false;
     interpolationType = 0;
   }
 
@@ -80,7 +79,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
     mix_value_ = _mix_value;
     // Connect onValue signal.
     chm->onValue.connect(boost::bind(&MixedTabulated::onValue, this, _1));
-    initialized = true;
+
   }
 
   MixedTabulated(longint itype,
@@ -116,7 +115,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
         throw std::runtime_error("wrong itype");
     }
     mix_value_ = _mix_value;
-    initialized = true;
+
   }
 
   /** Returns energy value for given distance square. */

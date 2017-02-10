@@ -65,7 +65,7 @@ namespace espressopp {
         setShift(_shift);
         setCutoff(_cutoff);
         preset();
-        initialized = true;
+
       }
 
       VSphereSelf(real _e1, real _a1, real _a2, int _Nb,
@@ -75,7 +75,7 @@ namespace espressopp {
         setCutoff(_cutoff);
         setAutoShift();
         preset();
-        initialized = true;
+
       }
 
       void preset() {

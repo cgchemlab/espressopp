@@ -103,7 +103,6 @@ namespace espressopp {
     protected:
       real cutoff;
       real cutoffSqr;
-      bool initialized;
 
       Derived* derived_this() {
 	return static_cast< Derived* >(this);
@@ -121,7 +120,7 @@ namespace espressopp {
     inline
     DihedralPotentialTemplate< Derived >::
     DihedralPotentialTemplate() 
-      : cutoff(infinity), cutoffSqr(infinity), initialized(false)
+      : cutoff(infinity), cutoffSqr(infinity)
     {}
 
     // Shift/cutoff handling
@@ -146,8 +145,6 @@ namespace espressopp {
     computeEnergy(const Real3D& dist21,
                   const Real3D& dist32,
                   const Real3D& dist43) const {
-      if (!initialized)
-        return 0.0;
       return _computeEnergy(dist21, dist32, dist43);
     }
 
@@ -155,8 +152,6 @@ namespace espressopp {
     inline real
     DihedralPotentialTemplate< Derived >::
     computeEnergy(real phi) const {
-      if (!initialized)
-        return 0.0;
       return _computeEnergy(phi);
     }
     
@@ -166,9 +161,7 @@ namespace espressopp {
     _computeEnergy(const Real3D& r21,
                    const Real3D& r32,
                    const Real3D& r43) const {
-        if (!initialized)
-          return 0.0;
-      
+
         Real3D rijjk = r21.cross(r32); // [r21 x r32]
         Real3D rjkkn = r32.cross(r43); // [r32 x r43]
         
@@ -194,16 +187,12 @@ namespace espressopp {
         if (signcheck < 0.0) phi *= -1.0;
         
         return _computeEnergy(phi);
-      
-      
     }
 
     template < class Derived > 
     inline real
     DihedralPotentialTemplate< Derived >::
     _computeEnergy(real phi) const {
-      if (!initialized)
-        return 0.0;
       return derived_this()->_computeEnergyRaw(phi);
     }
     
@@ -218,7 +207,6 @@ namespace espressopp {
                  const Real3D& dist21,
                  const Real3D& dist32,
                  const Real3D& dist43) const {
-        if (initialized)
           _computeForce(force1, force2, force3, force4, dist21, dist32, dist43);
     }
 
@@ -232,7 +220,6 @@ namespace espressopp {
                   const Real3D& dist21,
                   const Real3D& dist32,
                   const Real3D& dist43) const {
-      if (initialized)
         derived_this()->_computeForceRaw(force1, force2, force3, force4, dist21, dist32, dist43);
     }
     
@@ -241,8 +228,6 @@ namespace espressopp {
     inline real
     DihedralPotentialTemplate< Derived >::
     computeForce(real phi) const {
-      if (!initialized)
-        return 0.0;
       return derived_this()->_computeForceRaw(phi);
     }
   }

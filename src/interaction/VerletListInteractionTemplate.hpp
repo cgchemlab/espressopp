@@ -129,11 +129,7 @@ namespace espressopp {
         //if(potential->_computeForce(force, p1, p2)) {
           p1.force() += force;
           p2.force() -= force;
-          LOG4ESPP_DEBUG(_Potential::theLogger, 
-              "id1=" << p1.id() << " id2=" << p2.id() << 
-              " type1=" << p1.type() << " type2=" << p2.type() <<
-              " force=" << force
-          );
+          LOG4ESPP_TRACE(_Potential::theLogger, "id1=" << p1.id() << " id2=" << p2.id() << " force=" << force);
         }
       }
     }
