@@ -43,6 +43,7 @@ namespace espressopp {
                 static void registerPython();
              
                 TabulatedAngular() {
+                    interpolationType = 0;
                     //setCutoff(infinity);
                     //std::cout << "using default tabulated potential ...\n";
                 }
@@ -72,7 +73,7 @@ namespace espressopp {
                 }
              
                 real _computeEnergyRaw(real theta) const {
-                    if (table) {
+                    if (interpolationType != 0) {
                       return table->getEnergy(theta);
                     } else {
                       LOG4ESPP_DEBUG(
@@ -84,7 +85,7 @@ namespace espressopp {
              
                 bool _computeForceRaw(Real3D& force12, Real3D& force32,
                                       const Real3D& dist12, const Real3D& dist32) const {
-                    if (table) {
+                    if (interpolationType != 0) {
                         real dist12_sqr = dist12 * dist12;
                         real dist32_sqr = dist32 * dist32;
                         real dist1232 = sqrt(dist12_sqr) * sqrt(dist32_sqr);
@@ -109,7 +110,10 @@ namespace espressopp {
                 }
              
                 real _computeForceRaw(real theta) const {
+                  if (interpolationType != 0)
                     return table->getForce(theta);
+                  else
+                    return 0.0;
                 }
              
         }; // class
