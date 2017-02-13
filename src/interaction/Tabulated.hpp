@@ -89,13 +89,7 @@ namespace espressopp {
             real _computeEnergySqrRaw(real distSqr) const {
                 // make an interpolation
                 if (interpolationType!=0) {
-                  try {
-                    return table->getEnergy(sqrt(distSqr));
-                  } catch (std::exception &e) {
-                    std::cout << "Error in Tabulated.hpp computeEnergy, filename=" << filename << std::endl;
-                    std::cout << e.what() << std::endl;
-                    throw e;
-                  }
+                  return table->getEnergy(sqrt(distSqr));
                 } else {
                   return 0;
                 }
@@ -105,16 +99,9 @@ namespace espressopp {
                 real ffactor = 0.0;
                 if (interpolationType!=0){ 
                    real distrt = sqrt(distSqr);
-                   try {
-                     ffactor = table->getForce(distrt);
-                     ffactor /= distrt;
-                   } catch (std::exception &e) {
-                     std::cout << "Error in Tabulated.hpp computeForce, filename=" << filename << std::endl;
-                     std::cout << e.what() << std::endl;
-                     throw e;
-                   }
+                   ffactor = table->getForce(distrt);
+                   ffactor /= distrt;
                 } else {
-                    //throw std::runtime_error("Tabulated potential table not available.");
                     return false;
                 }
                 force = dist * ffactor;

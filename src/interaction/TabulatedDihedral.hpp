@@ -44,6 +44,7 @@ namespace espressopp {
              
                 TabulatedDihedral() {
                     //setCutoff(infinity);
+                    interpolationType = 0;
                 }
              
                 TabulatedDihedral(int itype, const char* filename) {
@@ -71,10 +72,10 @@ namespace espressopp {
                 }
              
                 real _computeEnergyRaw(real phi) const {
-                    if (table)
+                    if (interpolationType != 0)
                         return table->getEnergy(phi);
                     else
-                        throw std::runtime_error("Tabulated dihedral potential table not available.");
+                      return 0.0;
                 }
 
                 // Kroneker delta function
@@ -100,7 +101,7 @@ namespace espressopp {
                                       const Real3D& r21,
                                       const Real3D& r32,
                                       const Real3D& r43) const {
-                    if (table) {
+                    if (interpolationType != 0) {
                         Real3D retF[4];
 
                         Real3D rijjk = r21.cross(r32);  // [r21 x r32]
@@ -167,16 +168,16 @@ namespace espressopp {
                         force3 = retF[2];
                         force4 = retF[3];
                     } else {
-                        throw std::runtime_error("Tabulated dihedral potential table not available.");
+                      return;
                     }
                     
                 }
              
                 real _computeForceRaw(real phi) const {
-                    if (table)
+                    if (interpolationType != 0)
                         return table->getForce(phi);
                     else
-                        throw std::runtime_error("Tabulated dihedral potential table not available.");
+                      return 0.0;
                 }
              
         }; // class
