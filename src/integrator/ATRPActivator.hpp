@@ -70,6 +70,8 @@ class ATRPActivator: public Extension {
                          shared_ptr<TopologyParticleProperties> pp,
                          longint delta_state);
 
+  std::vector<real> getStats();
+
   /** Register this class so it can be used from Python. */
   static void registerPython();
 
