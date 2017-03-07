@@ -97,6 +97,7 @@ void ATRPActivator::updateParticles() {
   std::vector<longint> local_type_pids_state;
   CellList cl = system.storage->getRealCells();
 
+  // TODO(jakub): this is expensive part
   for (espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
     Particle &p = *cit;
     bool found = false;
@@ -165,8 +166,8 @@ void ATRPActivator::updateParticles() {
   // Broadcast selected particles id to all CPUs.
   // TODO(jakub): instead of broadcast all selected pids, send only to CPUs that posses those particles.
   mpi::broadcast(*(system.comm), selected_pids_state, 0);
-  mpi::broadcast(*(system.comm), ratio_activator_, 0);
-  mpi::broadcast(*(system.comm), ratio_deactivator_, 0);
+  //mpi::broadcast(*(system.comm), ratio_activator_, 0);
+  //mpi::broadcast(*(system.comm), ratio_deactivator_, 0);
 
   // On every CPU, iterate over list of pids. If particle is on this CPU then process it.
   std::vector<Particle *> modified_particles;
@@ -180,8 +181,12 @@ void ATRPActivator::updateParticles() {
         if (p->state() == it->second.state) {
           found = true;
           p->state() += it->second.delta_state;
-          it->second.new_property->updateParticleProperties(p);
-          modified_particles.push_back(p);
+          if (it->second.new_property->updateParticleProperties(p)) {
+            LOG4ESPP_DEBUG(theLogger, "update property of particle " << p->id());
+            modified_particles.push_back(p);
+          } else {
+            throw std::runtime_error("Could not update properties of particle. Strange!");
+          }
         }
       }
     }
@@ -206,7 +211,7 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
   real time0 = wallTimer.getElapsedTime();
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost begin");
 
-  int kCrCommTag = 0x6b;
+  int kCrCommTag = 0x69;
 
   System &system = getSystemRef();
 
@@ -333,7 +338,7 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
         // Update the ghost particle data on neighbour CPUs.
         particle = system.storage->lookupLocalParticle(p_id);
 
-        if (particle) {
+        if (particle && particle->ghost()) {
           LOG4ESPP_DEBUG(theLogger, "Update particle data");
           particle->setType(p_type);
           particle->setState(p_state);
@@ -342,7 +347,6 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
         }
       }
     }
-
     LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
   }
 
@@ -364,6 +368,12 @@ void ATRPActivator::saveStatistics(std::string filename) {
     }
     fs.close();
   }
+}
+
+std::vector<real> ATRPActivator::getStats() {
+  std::vector<real> ret;
+  ret.push_back(ratio_activator_);
+  ret.push_back(ratio_deactivator_);
 }
 
 python::list ATRPActivator::getTimers() {

@@ -71,5 +71,5 @@ from espressopp.analysis.ChemicalConversion import *
 from espressopp.analysis.NumFixDistances import *
 
 from espressopp.analysis.Resolution import *
-
 from espressopp.analysis.MaxAvgMinForce import *
+from espressopp.analysis.ATRPActivatorStats import *

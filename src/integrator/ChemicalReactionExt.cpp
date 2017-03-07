@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2014-2016
+   Copyright (C) 2014-2017
        Jakub Krajniak (jkrajniak at gmail.com)
 
    This file is part of ESPResSo++.
@@ -121,7 +121,7 @@ void ChemicalReaction::React() {
 
   System &system = getSystemRef();
 
-  LOG4ESPP_DEBUG(theLogger, "Perform ChemicalReaction");
+  LOG4ESPP_TRACE(theLogger, "Perform ChemicalReaction");
 
   *dt_ = integrator->getTimeStep();
 
@@ -203,8 +203,7 @@ void ChemicalReaction::React() {
     savePairDistances(pd_filename_);
   }
 
-  LOG4ESPP_DEBUG(theLogger, "Finished react()");
-  LOG4ESPP_DEBUG(theLogger, "Leaving react()");
+  LOG4ESPP_TRACE(theLogger, "Leaving react()");
 }
 
 void ChemicalReaction::printMultiMap(ReactionMap &rmap, std::string comment) {
@@ -222,7 +221,7 @@ void ChemicalReaction::printMultiMap(ReactionMap &rmap, std::string comment) {
    storage::DomainDecomposition::doGhostCommunication
  */
 void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "Entering sendMultiMap");
+  LOG4ESPP_TRACE(theLogger, "Entering sendMultiMap");
 
   System &system = getSystemRef();
 
@@ -323,7 +322,7 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
       }
     }
 
-    LOG4ESPP_DEBUG(theLogger, "Entering unpack");
+    LOG4ESPP_TRACE(theLogger, "Entering unpack");
 
     // Unpacking phase. Get the content from buffers and put in output multimap.
     for (int left_right_dir = 0; left_right_dir < 2; ++left_right_dir) {
@@ -361,14 +360,14 @@ void ChemicalReaction::sendMultiMap(integrator::ReactionMap &mm) {// NOLINT
                     ReactionDef(reaction_idx, reaction_rate, reaction_r_sqr, p_order_))));
       }
     }
-    LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
+    LOG4ESPP_TRACE(theLogger, "Leaving unpack");
   }
 
-  LOG4ESPP_DEBUG(theLogger, "Leaving sendMultiMap");
+  LOG4ESPP_TRACE(theLogger, "Leaving sendMultiMap");
 }
 
 void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
-  LOG4ESPP_DEBUG(theLogger, "Entering sortParticleReactionList");
+  LOG4ESPP_TRACE(theLogger, "Entering sortParticleReactionList");
 
   ReactionMap out;
   out.clear();
@@ -407,7 +406,6 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     particle_idx.insert(idx_a);
     particle_idx.insert(idx_b);
   }
-  /*
   // Make pairs unique among cpus
   std::vector<ReactionMap> global_maps;
   if (getSystem()->comm->rank() == 0) {
@@ -436,11 +434,11 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     mpi::gather(*(getSystem()->comm), out, global_maps, 0);
     mm.clear();
     mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
-  }*/
+  }
 
   mm = out;
 
-  LOG4ESPP_DEBUG(theLogger, "Leaving sortParticleReactionList");
+  LOG4ESPP_TRACE(theLogger, "Leaving sortParticleReactionList");
 }
 
 /** Performs two-way parallel communication to update the ghost particles.
@@ -448,7 +446,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
  * storage::DomainDecomposition::doGhostCommunication
  */
 void ChemicalReaction::updateGhost(const std::set<Particle *> &modified_particles) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "Entering updateGhost");
+  LOG4ESPP_TRACE(theLogger, "Entering updateGhost");
 
   System &system = getSystemRef();
 
@@ -583,7 +581,7 @@ void ChemicalReaction::updateGhost(const std::set<Particle *> &modified_particle
         // Update the ghost particle data on neighbour CPUs.
         particle = system.storage->lookupLocalParticle(p_id);
 
-        if (particle != NULL) {
+        if (particle != NULL && particle->ghost()) {
           LOG4ESPP_DEBUG(theLogger, "Update particle data");
           particle->setType(p_type);
           particle->setMass(p_mass);
@@ -595,10 +593,10 @@ void ChemicalReaction::updateGhost(const std::set<Particle *> &modified_particle
       }
     }
 
-    LOG4ESPP_DEBUG(theLogger, "Leaving unpack");
+    LOG4ESPP_TRACE(theLogger, "Leaving unpack");
   }
 
-  LOG4ESPP_DEBUG(theLogger, "Leaving updateGhost");
+  LOG4ESPP_TRACE(theLogger, "Leaving updateGhost");
 }
 
 /** Given a multimap mm with several pairs (id1,id2), keep only one pair for
@@ -606,7 +604,7 @@ void ChemicalReaction::updateGhost(const std::set<Particle *> &modified_particle
    id1 is local are kept.
  */
 void ChemicalReaction::uniqueA(integrator::ReactionMap &potential_candidates) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "uniqueA");
+  LOG4ESPP_TRACE(theLogger, "uniqueA");
 
   System &system = getSystemRef();
   integrator::ReactionMap unique_list_of_candidates;
@@ -715,7 +713,7 @@ void ChemicalReaction::uniqueA(integrator::ReactionMap &potential_candidates) {/
  */
 void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// NOLINT
                                integrator::ReactionMap &effective_candidates) {// NOLINT
-  LOG4ESPP_DEBUG(theLogger, "uniqueB");
+  LOG4ESPP_TRACE(theLogger, "uniqueB");
 
   typedef boost::unordered_set<longint> Indexes;
   typedef std::multimap<real, std::pair<longint, ReactionDef> > RateParticleIdx;
@@ -815,7 +813,7 @@ void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// 
  * accordingly
  */
 void ChemicalReaction::applyDR(std::set<Particle *> &modified_particles) {
-  LOG4ESPP_DEBUG(theLogger, "Entering applyDR");
+  LOG4ESPP_TRACE(theLogger, "Entering applyDR");
 
   // Iterate over reverse reaction. For every reaction, iterate overy particles pairs and
   // decide to remove or keep bond.
@@ -861,6 +859,7 @@ void ChemicalReaction::applyDR(std::set<Particle *> &modified_particles) {
     if (updated_fpl)
       (*it)->fixed_pair_list_->updateParticlesStorage();
   }
+  LOG4ESPP_TRACE(theLogger, "Leaving applyDR");
 }
 
 /** Use the (A,B) list "partners" to add bonds and change the state of the
@@ -870,7 +869,7 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
   System &system = getSystemRef();
   std::set<Particle *> tmp;
 
-  LOG4ESPP_DEBUG(theLogger, "Entering applyAR");
+  LOG4ESPP_TRACE(theLogger, "Entering applyAR");
 
   std::vector<longint> tmp_reaction_counters;
   tmp_reaction_counters.resize(reaction_list_.size());
@@ -898,9 +897,9 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
     if (p1 && p2) {
       LOG4ESPP_DEBUG(
           theLogger,
-          "Checking pair: " << p1->id() << "(" << p1->state() << "-"
-              << p2->id() << "(" << p2->state() << ") A.type="
-              << p2->type() << " B.type=" << p2->type());
+          "Checking pair: " << p1->id() << "(st=" << p1->state() << ")-"
+              << p2->id() << "(st=" << p2->state() << ") A.type="
+              << p1->type() << " B.type=" << p2->type());
     }
 #endif
 
@@ -911,12 +910,22 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
       valid_state &= (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2));
       // Whole pair has to be valid before the state can be changed.
       if (valid_state) {
+        longint old_state = p1->getState();
         p1->setState(p1->getState() + reaction->delta_1());
         tmp = reaction->postProcess_T1(*p1, *p2);
         modified_particles.insert(tmp.begin(), tmp.end());
+        LOG4ESPP_DEBUG(
+            theLogger,
+            "postProcess_T1: " << p1->id() << " st=" << old_state << "->" << p1->getState());
+
+        old_state = p2->getState();
         p2->setState(p2->getState() + reaction->delta_2());
         tmp = reaction->postProcess_T2(*p2, *p1);
         modified_particles.insert(tmp.begin(), tmp.end());
+        LOG4ESPP_DEBUG(
+            theLogger,
+            "postProcess_T2: " << p2->id() << " st=" << old_state << "->" << p2->getState());
+
         modified_particles.insert(p1);
         modified_particles.insert(p2);
       }
@@ -925,9 +934,9 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
     /** Make sense only if both particles exists here, otherwise waste of CPU time. */
     if ((p1 != NULL) && (p2 != NULL) && valid_state && !reaction->virtual_reaction()) {
       if (!(p1->ghost() && p2->ghost())) {
-        LOG4ESPP_DEBUG(theLogger, "adding pair " << it->first << "-" << it->second.first);
         bool retval = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
         if (retval) {
+          LOG4ESPP_DEBUG(theLogger, "added pair " << it->first << "-" << it->second.first);
           tmp_reaction_counters[it->second.second.reaction_id]++;
           if (save_pd_)
             pair_distances_.push_back(it->second.second.reaction_r_sqr);
