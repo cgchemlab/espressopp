@@ -45,7 +45,13 @@ void SystemMonitor::computeObservables() {
   total_energy_ = 0.0;
   potential_energy_ = 0.0;
   for (ObservableList::iterator it = observables_.begin(); it != observables_.end(); ++it) {
-    real val = it->second->compute_real();
+    int result_type = it->second->getResultType();
+    if (result_type == Observable::real_vector) {
+      it->second->compute_real_vector();
+      for (std::vector<real>::const_iterator it = it->second->)
+    } else if (result_type == Observable::real_scalar)
+      real val = it->second->compute_real();
+    }
     Observable::ObservableTypes obs_type = it->second->getObservableType();
     if (obs_type == Observable::POTENTIAL_ENERGY) {
       potential_energy_ += val;

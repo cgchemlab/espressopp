@@ -1,4 +1,4 @@
-#  Copyright (c) 2015-2016
+#  Copyright (c) 2015-2017
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #
 #  This file is part of ESPResSo++.
