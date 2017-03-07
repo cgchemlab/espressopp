@@ -44,7 +44,7 @@ class ATRPActivatorStats : public Observable {
 
   ~ATRPActivatorStats() {}
   real compute_real() const;
-  void compute_real_vector();
+  std::vector<real> compute_real_vector();
 
   boost::signals2::signal1<void, real> onValue;
 

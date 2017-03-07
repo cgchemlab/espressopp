@@ -77,6 +77,7 @@
 #include "Resolution.hpp"
 
 #include "MaxAvgMinForce.hpp"
+#include "ATRPActivatorStats.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -142,6 +143,7 @@ namespace espressopp {
       ResolutionFixedPairList::registerPython();
 
       MaxForce::registerPython();
+      ATRPActivatorStats::registerPython();
     }
   }
 }

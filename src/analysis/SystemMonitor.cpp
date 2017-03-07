@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016
+  Copyright (c) 2015-2017
     Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -25,6 +25,7 @@
 #include "SystemMonitor.hpp"
 #include "integrator/MDIntegrator.hpp"
 #include <iomanip>
+#include <boost/format.hpp>
 
 namespace espressopp {
 namespace analysis {
@@ -47,18 +48,20 @@ void SystemMonitor::computeObservables() {
   for (ObservableList::iterator it = observables_.begin(); it != observables_.end(); ++it) {
     int result_type = it->second->getResultType();
     if (result_type == Observable::real_vector) {
-      it->second->compute_real_vector();
-      for (std::vector<real>::const_iterator it = it->second->)
-    } else if (result_type == Observable::real_scalar)
+      std::vector<real> obs = it->second->compute_real_vector();
+      for (int n = 0; n < it->second->getResultVectorSize(); n++) {
+        values_->push_back(obs[n]);
+      }
+    } else if (result_type == Observable::real_scalar) {
       real val = it->second->compute_real();
+      Observable::ObservableTypes obs_type = it->second->getObservableType();
+      if (obs_type == Observable::POTENTIAL_ENERGY) {
+        potential_energy_ += val;
+      } else if (obs_type == Observable::KINETIC_ENERGY) {
+        total_energy_ += val;
+      }
+      values_->push_back(val);
     }
-    Observable::ObservableTypes obs_type = it->second->getObservableType();
-    if (obs_type == Observable::POTENTIAL_ENERGY) {
-      potential_energy_ += val;
-    } else if (obs_type == Observable::KINETIC_ENERGY) {
-      total_energy_ += val;
-    }
-    values_->push_back(val);
   }
   total_energy_ += potential_energy_;
 }
@@ -101,11 +104,25 @@ void SystemMonitor::info() {
 
 void SystemMonitor::addObservable(std::string name, shared_ptr<Observable> obs, bool is_visible) {
   observables_.push_back(std::make_pair(name, obs));
-  header_->push_back(name);
-  if (is_visible) {
-    visible_observables_.push_back(1);
-  } else {
-    visible_observables_.push_back(0);
+  if (obs->getResultType() == Observable::real_scalar || obs->getResultType() == Observable::old_format) {
+    header_->push_back(name);
+    if (is_visible) {
+      visible_observables_.push_back(1);
+    } else {
+      visible_observables_.push_back(0);
+    }
+  } else if (obs->getResultType() == Observable::real_vector || obs->getResultType() == Observable::int_vector) {
+    boost::format frmt("%s[%d]");
+    for (longint n = 0; n < obs->getResultVectorSize(); n++) {
+      frmt.clear();
+      frmt % name % n;
+      header_->push_back(frmt.str());
+      if (is_visible) {
+        visible_observables_.push_back(1);
+      } else {
+        visible_observables_.push_back(0);
+      }
+    }
   }
 }
 
