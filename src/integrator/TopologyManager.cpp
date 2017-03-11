@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015-2016
+  Copyright (C) 2015-2017
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -20,9 +20,9 @@
 
 #include "TopologyManager.hpp"
 
+#include <queue>
 #include <resolv.h>
 #include <fstream>
-#include <queue>
 
 #include "boost/format.hpp"
 #include "storage/Storage.hpp"
@@ -30,6 +30,7 @@
 #include "boost/serialization/map.hpp"
 #include "boost/serialization/set.hpp"
 #include "boost/serialization/shared_ptr.hpp"
+
 
 namespace espressopp {
 namespace integrator {
@@ -346,15 +347,29 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
     throw std::runtime_error("ResID not found");
   }
-  if (pid_rid[pid1] != pid_rid[pid2] && isResiduesConnected(pid1, pid2)) {
-    std::cout << "Residues " << pid_rid[pid1] << "-" << pid_rid[pid2] << " already connected" << std::endl;
-    std::cout << "New bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
+
+  longint rpid1 = pid_rid[pid1];
+  longint rpid2 = pid_rid[pid2];
+
+  /* let's temporary switch it of and delegate the check only to ChemistryExt
+  if (rpid1 != rpid2 && isResiduesConnected(pid1, pid2)) {
+    std::cout << system_->comm->rank() << ": residues " << rpid1 << "-" << rpid2 << " already connected" << std::endl;
+    std::cout << system_->comm->rank() << ": new bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
     throw std::runtime_error("Residues already connected");
   }
-  newResEdge(pid_rid[pid1], pid_rid[pid2]);
+  LOG4ESPP_DEBUG(theLogger, "newEdge: " << pid1 << "-" << pid2);
+  if ((pid1 == 3056 && pid2 == 3737) || (pid1 == 3737 && pid2 == 3056)) {
+    Particle *p1 = system_->storage->lookupLocalParticle(pid1);
+    Particle *p2 = system_->storage->lookupLocalParticle(pid2);
+    std::cout << "Connecting " << pid1 << " t:" << p1->type() << "-" << pid2 << " t:" << p2->type() << std::endl;
+  }
+  if ((rpid1 == 764 && rpid2 == 935) || (rpid1 == 935 && rpid2 == 764)) {
+    std::cout << "Connecting residue " << rpid1 << "-" << rpid2 << " bond: " << pid1 << "-" << pid2 << std::endl;
+  }*/
+  newResEdge(rpid1, rpid2);
 
   // Merge two molecules.
-  /*longint mid1 = pid_mid[pid1];
+  longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
   if (mid1 != mid2) {  // merge two sets mid1 <- mid2
     std::set<longint> *pset = molecules_->at(mid2);
@@ -363,7 +378,7 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
       pid_mid[*itt] = mid1;
     }
     molecules_->erase(mid2);
-  }*/
+  }
 }
 
 void TopologyManager::newResEdge(longint rpid1, longint rpid2) {
@@ -402,11 +417,10 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   // If edge removed, check if there is still edge between residues.
   longint rid1 = pid_rid[pid1];
   longint rid2 = pid_rid[pid2];
-  /*longint mid1 = pid_mid[pid1];
+  longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
   if (mid1 != mid2)
     throw std::runtime_error("Something wrong, edge between bonds of two different molecules.");
-  */
 
   // Get list of particles in given residues.
   std::set<longint> *Pset1;
@@ -437,7 +451,6 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
 
     // Gets residues of the molecule and scan if still those residues are connected, if not then split into
     // two molecules.
-    /*
     GraphMap *graph_2 = plainBFS(*res_graph_, rid2);
     // Get Max Mol idx.
     longint max_mol_id = 0;
@@ -451,7 +464,6 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
       pid_mid[itg->first] = max_mol_id;
       s->insert(itg->first);
     }
-     */
   }
   return removed;
 }
@@ -871,6 +883,8 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
           ret = fql->remove(p4->id(), p3->id(), p2->id(), p1->id());
         }
 
+        if (!ret)
+          ret = fql->remove(p4->id(), p3->id(), p2->id(), p1->id());
         if (ret) {
           LOG4ESPP_DEBUG(theLogger,
                          "Dihedral removed: "

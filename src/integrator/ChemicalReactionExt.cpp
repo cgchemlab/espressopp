@@ -409,34 +409,54 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
   // Make pairs unique among cpus
   std::vector<ReactionMap> global_maps;
   if (getSystem()->comm->rank() == 0) {
+
+    std::map<longint, std::set<longint> > residue_map;
+    std::map<longint, std::set<longint> > molecule_map;
+    std::set<longint> particle_pairs;  // global set of already used particle pairs.
+
     // Collect maps from all cpus.
     mpi::gather(*(getSystem()->comm), out, global_maps, 0);
-    std::set<longint> particle_pairs;  // global set of already used particle pairs.
+
+    mm.clear();  // clearn mm, it's already in global_maps
     // iterate over CPUs maps and check the particle lists. First In First Served idea;
     for (std::vector<ReactionMap>::iterator it_rms = global_maps.begin(); it_rms != global_maps.end(); it_rms++) {
-      for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end();) {
+      for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end(); it++) {
         longint idx_a = it->first;
         longint idx_b = it->second.first;
-        if (particle_pairs.find(idx_a) != particle_pairs.end() || particle_pairs.find(idx_b) != particle_pairs.end()) {
+        shared_ptr<integrator::Reaction> reaction = reaction_list_[it->second.second.reaction_id];
+        longint rid1 = tm_->getResId(idx_a);
+        longint rid2 = tm_->getResId(idx_b);
+        longint mid1 = tm_->getMoleculeId(idx_a);
+        longint mid2 = tm_->getMoleculeId(idx_b);
+
+        bool valid = true;
+        if (!reaction->intraresidual()) {
+          valid = !(residue_map.count(rid1) == 1 && residue_map.at(rid1).count(rid2) == 1);
+        }
+        if (valid && !reaction->intramolecular()) {
+          valid &= !(molecule_map.count(mid1) == 1 && molecule_map.at(mid1).count(mid2) == 1);
+        }
+
+        if (!valid || particle_pairs.find(idx_a) != particle_pairs.end() || particle_pairs.find(idx_b) != particle_pairs.end()) {
           // Pair already exists. Remove if from the map it_rms.
-          it_rms->erase(it++);
         } else {
           particle_pairs.insert(idx_a);
           particle_pairs.insert(idx_b);
-          it++;
+          residue_map[rid1].insert(rid2);
+          residue_map[rid2].insert(rid1);
+          molecule_map[mid1].insert(mid2);
+          molecule_map[mid2].insert(mid1);
+          mm.insert(std::make_pair(idx_a, std::make_pair(idx_b, it->second.second)));
         }
       }
     }
-    mm.clear();
-    mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
+    mpi::broadcast(*(getSystem()->comm), mm, 0);
   } else {
     // send local reaction map to root cpu.
     mpi::gather(*(getSystem()->comm), out, global_maps, 0);
     mm.clear();
-    mpi::scatter(*(getSystem()->comm), global_maps, mm, 0);
+    mpi::broadcast(*(getSystem()->comm), mm, 0);
   }
-
-  mm = out;
 
   LOG4ESPP_TRACE(theLogger, "Leaving sortParticleReactionList");
 }
@@ -928,25 +948,22 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
 
         modified_particles.insert(p1);
         modified_particles.insert(p2);
-      }
-    }
-
-    /** Make sense only if both particles exists here, otherwise waste of CPU time. */
-    if ((p1 != NULL) && (p2 != NULL) && valid_state && !reaction->virtual_reaction()) {
-      if (!(p1->ghost() && p2->ghost())) {
-        bool retval = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
-        if (retval) {
-          LOG4ESPP_DEBUG(theLogger, "added pair " << it->first << "-" << it->second.first);
-          tmp_reaction_counters[it->second.second.reaction_id]++;
-          if (save_pd_)
-            pair_distances_.push_back(it->second.second.reaction_r_sqr);
-          // Count intra and intermolecular reactions.
-//          longint mol_id1 = tm_->getMoleculeId(it->first);
-//          longint mol_id2 = tm_->getMoleculeId(it->second.first);
-//          if (mol_id1 == mol_id2)
-//            tmp_num_intra_inter[0]++;
-//          else
-            tmp_num_intra_inter[1]++;
+        /** Make sense only if both particles exists here, otherwise waste of CPU time. */
+        if (!reaction->virtual_reaction() && !(p1->ghost() && p2->ghost())) {  // if both ghost then skip it
+          bool retval = reaction->fixed_pair_list_->iadd(it->first, it->second.first);
+          if (retval) {
+            LOG4ESPP_DEBUG(theLogger, "added pair " << it->first << "-" << it->second.first);
+            tmp_reaction_counters[it->second.second.reaction_id]++;
+            if (save_pd_)
+              pair_distances_.push_back(it->second.second.reaction_r_sqr);
+            // Count intra and intermolecular reactions.
+            longint mol_id1 = tm_->getMoleculeId(it->first);
+            longint mol_id2 = tm_->getMoleculeId(it->second.first);
+            if (mol_id1 == mol_id2)
+              tmp_num_intra_inter[0]++;
+            else
+              tmp_num_intra_inter[1]++;
+          }
         }
       }
     }
@@ -957,8 +974,7 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
   time_reaction_counter_.insert(std::make_pair(current_step, tmp_reaction_counters));
   intra_inter_reaction_counter_.insert(std::make_pair(current_step, tmp_num_intra_inter));
 
-  LOG4ESPP_DEBUG(theLogger, "Leaving applyAR");
-  LOG4ESPP_DEBUG(theLogger, "applyAR, modified_particles: " << modified_particles.size());
+  LOG4ESPP_DEBUG(theLogger, "Leaving applyAR, modified_particles: " << modified_particles.size());
 }
 
 void ChemicalReaction::disconnect() {
