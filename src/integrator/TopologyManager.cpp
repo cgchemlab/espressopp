@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015-2016
+  Copyright (C) 2015-2017
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -347,12 +347,26 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
     throw std::runtime_error("ResID not found");
   }
-  if (pid_rid[pid1] != pid_rid[pid2] && isResiduesConnected(pid1, pid2)) {
-    std::cout << "Residues " << pid_rid[pid1] << "-" << pid_rid[pid2] << " already connected" << std::endl;
-    std::cout << "New bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
+
+  longint rpid1 = pid_rid[pid1];
+  longint rpid2 = pid_rid[pid2];
+
+  /* let's temporary switch it of and delegate the check only to ChemistryExt
+  if (rpid1 != rpid2 && isResiduesConnected(pid1, pid2)) {
+    std::cout << system_->comm->rank() << ": residues " << rpid1 << "-" << rpid2 << " already connected" << std::endl;
+    std::cout << system_->comm->rank() << ": new bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
     throw std::runtime_error("Residues already connected");
   }
-  newResEdge(pid_rid[pid1], pid_rid[pid2]);
+  LOG4ESPP_DEBUG(theLogger, "newEdge: " << pid1 << "-" << pid2);
+  if ((pid1 == 3056 && pid2 == 3737) || (pid1 == 3737 && pid2 == 3056)) {
+    Particle *p1 = system_->storage->lookupLocalParticle(pid1);
+    Particle *p2 = system_->storage->lookupLocalParticle(pid2);
+    std::cout << "Connecting " << pid1 << " t:" << p1->type() << "-" << pid2 << " t:" << p2->type() << std::endl;
+  }
+  if ((rpid1 == 764 && rpid2 == 935) || (rpid1 == 935 && rpid2 == 764)) {
+    std::cout << "Connecting residue " << rpid1 << "-" << rpid2 << " bond: " << pid1 << "-" << pid2 << std::endl;
+  }*/
+  newResEdge(rpid1, rpid2);
 
   // Merge two molecules.
   longint mid1 = pid_mid[pid1];
@@ -692,7 +706,7 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
                                 "Defined new angle: " << it->first << "-" << it->second.first << "-"
                                                       << it->second.second);
       } else {
-        LOG4ESPP_WARN(theLogger, "add angle: fixed list for triplet: " << it->first << "-" << it->second.first
+        LOG4ESPP_INFO(theLogger, "add angle: fixed list for triplet: " << it->first << "-" << it->second.first
                                                                        << "-" << it->second.second
                                                                        << " not found of types: " << t1 << "-" << t2
                                                                        << "-" << t3
@@ -742,7 +756,7 @@ void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
                                                          << "-" << it->second.second.first << "-"
                                                          << it->second.second.second);
       } else {
-        LOG4ESPP_WARN(theLogger, "add dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
+        LOG4ESPP_INFO(theLogger, "add dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
                                                                              << "-" << it->second.second.first << "-"
                                                                              << it->second.second.second
                                                                              << " not found of types: " << t1 << "-"
@@ -777,7 +791,7 @@ void TopologyManager::define14tuples(std::set<Quadruplets> &quadruplets) {
                                 "Defined new 1-4 pair: " << it->first << "-"
                                                          << it->second.second.second);
       } else {
-        LOG4ESPP_WARN(theLogger,
+        LOG4ESPP_INFO(theLogger,
                       "add 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
                                                                << " not found of types: " << t1 << "-" << t4
                                                                << " check your topology file and define pairstypes for missing pair");
@@ -812,7 +826,7 @@ void TopologyManager::undefineAngles(std::set<Triplets> &triplets) {
                          "Remove angle: " << it->first << "-" << it->second.first << "-"
                                           << it->second.second);
         } else {
-          LOG4ESPP_WARN(theLogger, "removeAngle: fixed list for triplet: " << it->first << "-" << it->second.first
+          LOG4ESPP_INFO(theLogger, "removeAngle: fixed list for triplet: " << it->first << "-" << it->second.first
                                                                            << "-" << it->second.second
                                                                            << " not found of types: " << t1 << "-" << t2
                                                                            << "-" << t3
@@ -853,7 +867,7 @@ void TopologyManager::undefineDihedrals(std::set<Quadruplets> &quadruplets) {
                                              << "-" << it->second.second.first << "-"
                                              << it->second.second.second);
         } else {
-          LOG4ESPP_WARN(theLogger,
+          LOG4ESPP_INFO(theLogger,
                         "remove dihedral: fixed list for quadruplet: " << it->first << "-" << it->second.first
                                                                        << "-" << it->second.second.first << "-"
                                                                        << it->second.second.second
@@ -887,7 +901,7 @@ void TopologyManager::undefine14tuples(std::set<Quadruplets> &quadruplets) {
         if (ret) LOG4ESPP_DEBUG(theLogger,
                                 "Remove 1-4 pair: " << it->first << "-" << it->second.second.second);
       } else {
-        LOG4ESPP_WARN(theLogger,
+        LOG4ESPP_INFO(theLogger,
                       "remove 1-4: fixed list 1-4 for 1-4 pair: " << it->first << "-" << it->second.second.second
                                                                   << " not found of types: " << t1 << "-" << t4
                                                                   << " check your topology file and define pairstypes for missing pair");

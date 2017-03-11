@@ -274,6 +274,7 @@ class TopologyManager: public Extension {
   bool isNeighbourParticleInState(longint root_id, longint nb_type_id, longint min_state, longint max_state);
 
   longint getMoleculeId(longint pid) { return pid_mid[pid]; }
+  longint getResId(longint pid) { return pid_rid[pid]; }
 
   /**
    * Handle signal from FixedPairList that new bond was created.
