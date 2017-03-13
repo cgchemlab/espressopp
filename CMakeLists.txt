@@ -50,8 +50,8 @@ else(COMPILER_SUPPORTS_CXX98)
 endif(COMPILER_SUPPORTS_CXX98)
 
 if (CMAKE_BUILD_TYPE MATCHES Release)
-    #message("set -DLOG4ESPP_LEVEL_WARN")
-    #add_definitions(-DLOG4ESPP_LEVEL_WARN)
+    message("set -DLOG4ESPP_LEVEL_WARN")
+    add_definitions(-DLOG4ESPP_LEVEL_WARN)
 endif(CMAKE_BUILD_TYPE MATCHES Release)
 
 ########################################################################
