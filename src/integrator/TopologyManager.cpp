@@ -271,6 +271,7 @@ void TopologyManager::initializeTopology() {
       if (residues_->count(rid) == 0) {
         residues_->insert(std::make_pair(rid, new std::set<longint>()));
         molecules_->insert(std::make_pair(rid, new std::set<longint>()));
+        max_mol_id_ = rid;
       }
       residues_->at(rid)->insert(pid);
       molecules_->at(rid)->insert(pid);
@@ -369,6 +370,14 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   newResEdge(rpid1, rpid2);
 
   // Merge two molecules.
+  if (pid_mid.find(pid1) == pid_mid.end()) {
+    std::cout << "MolID for pid1=" << pid1 << " not found" << std::endl;
+    throw std::runtime_error("MolID not found");
+  }
+  if (pid_mid.find(pid2) == pid_mid.end()) {
+    std::cout << "MolID for pid2=" << pid2 << " not found" << std::endl;
+    throw std::runtime_error("MolID nto found");
+  }
   longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
   if (mid1 != mid2) {  // merge two sets mid1 <- mid2
@@ -402,6 +411,11 @@ void TopologyManager::onTupleRemoved(longint pid1, longint pid2) {
 bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   bool removed = removeBond(pid1, pid2);  // remove bond from fpl
 
+  if (graph_->count(pid1) == 0 && graph_->count(pid2) == 0) {
+    std::cout << "Try to remove edge: " << pid1 << "-" << pid2 << std::endl;
+    throw std::runtime_error("Try to remove edge which does not exists");
+  }
+
   if (graph_->count(pid1) > 0) {
     graph_->at(pid1)->erase(pid2);
   } else {
@@ -415,12 +429,36 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   }
 
   // If edge removed, check if there is still edge between residues.
+  if (pid_rid.find(pid1) == pid_rid.end()) {
+    std::cout << "ResID for pid1=" << pid1 << " not found" << std::endl;
+    std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
+    throw std::runtime_error("ResID not found");
+  }
+  if (pid_rid.find(pid2) == pid_rid.end()) {
+    std::cout << "ResID for pid2=" << pid2 << " not found" << std::endl;
+    std::cout << "pid_rid.size=" << pid_rid.size() << std::endl;
+    throw std::runtime_error("ResID not found");
+  }
+
   longint rid1 = pid_rid[pid1];
   longint rid2 = pid_rid[pid2];
+  if (pid_mid.find(pid1) == pid_mid.end()) {
+    std::cout << "MolID for pid1=" << pid1 << " not found" << std::endl;
+    throw std::runtime_error("MolID not found");
+  }
+  if (pid_mid.find(pid2) == pid_mid.end()) {
+    std::cout << "MolID for pid2=" << pid2 << " not found" << std::endl;
+    throw std::runtime_error("MolID nto found");
+  }
   longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
-  if (mid1 != mid2)
+
+  if (mid1 != mid2) {
+    std::cout << "removeEdge: " << pid1 << "-" << pid2;
+    std::cout << " mid1: " << mid1 << " mid2: " << mid2 << std::endl;
+
     throw std::runtime_error("Something wrong, edge between bonds of two different molecules.");
+  }
 
   // Get list of particles in given residues.
   std::set<longint> *Pset1;
@@ -445,24 +483,34 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
         hasBond = true;
     }
   }
+  // There is no bond between two residues.
   if (!hasBond) {
     res_graph_->at(rid1)->erase(rid2);
     res_graph_->at(rid2)->erase(rid1);
 
     // Gets residues of the molecule and scan if still those residues are connected, if not then split into
     // two molecules.
-    GraphMap *graph_2 = plainBFS(*res_graph_, rid2);
-    // Get Max Mol idx.
-    longint max_mol_id = 0;
-    for (std::map<longint, longint>::iterator mit = pid_mid.begin(); mit != pid_mid.end(); ++mit) {
-      max_mol_id = std::max(mit->second, max_mol_id);
+    GraphMap *graph_r1 = plainBFS(*res_graph_, rid1);  // get residues, if it is
+    GraphMap *graph_r2 = plainBFS(*res_graph_, rid2);  // get residues, if it is
+    // Generate the difference between nodes graph_r1 - graph_r2
+    std::set<longint> unique_res_ids;
+    for (GraphMap::iterator itg = graph_r1->begin(); itg != graph_r1->end(); itg++) {
+      if (graph_r2->find(itg->first) == graph_r2->end())  {  // this element is not in second graph
+        unique_res_ids.insert(itg->first);
+      }
     }
-    max_mol_id++;
-    std::set<longint> *s = new std::set<longint>();
-    molecules_->insert(std::make_pair(max_mol_id, s));
-    for (GraphMap::iterator itg = graph_2->begin(); itg != graph_2->end(); ++itg) {
-      pid_mid[itg->first] = max_mol_id;
-      s->insert(itg->first);
+    if (unique_res_ids.size() != 0) {
+      // Increase max_mol_id;
+      max_mol_id_++;
+      std::set<longint> *s = new std::set<longint>();
+      molecules_->insert(std::make_pair(max_mol_id_, s));
+      for (std::set<longint>::const_iterator r1_it = unique_res_ids.begin(); r1_it != unique_res_ids.end(); ++r1_it) {
+        Pset1 = residues_->at(*r1_it);
+        for (std::set<longint>::iterator pid_r1 = Pset1->begin(); pid_r1 != Pset1->end(); ++pid_r1) {
+          pid_mid[*pid_r1] = max_mol_id_;
+          s->insert(*pid_r1);
+        }
+      }
     }
   }
   return removed;
@@ -1225,8 +1273,13 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
               type_p1 = p1_current->type();
               type_p2 = p1_node->type();
               if (pair_types_at_distance.count(std::make_pair(type_p1, type_p2)) != 0) {
-                if (edges_to_remove.count(std::make_pair(node, current_node)) == 0)
-                  edges_to_remove.insert(std::make_pair(node, current_node));
+                if (edges_to_remove.count(std::make_pair(node, current_node)) == 0) {
+                  longint f1 = node;
+                  longint f2 = current_node;
+                  if (f1 > f2)
+                    std::swap(f1, f2);
+                  edges_to_remove.insert(std::make_pair(f1, f2));
+                }
               }
             }
           }

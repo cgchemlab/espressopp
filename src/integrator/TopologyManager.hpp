@@ -505,6 +505,7 @@ class TopologyManager: public Extension {
 
   python::list getTimers();
 
+  longint max_mol_id_;
 };
 
 }  // end namespace integrator
