@@ -376,16 +376,21 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
   }
   if (pid_mid.find(pid2) == pid_mid.end()) {
     std::cout << "MolID for pid2=" << pid2 << " not found" << std::endl;
-    throw std::runtime_error("MolID nto found");
+    throw std::runtime_error("MolID not found");
   }
   longint mid1 = pid_mid[pid1];
   longint mid2 = pid_mid[pid2];
-  if (mid1 != mid2) {  // merge two sets mid1 <- mid2
+  if (mid1 != mid2) {  // merge two sets, copy mid2 to mid1
+    if (molecules_->find(mid2) == molecules_->end())
+      throw std::runtime_error((const std::string &) (boost::format("MolID2 %d not found of pid2 %d ") % mid2 % pid2));
     std::set<longint> *pset = molecules_->at(mid2);
+    if (molecules_->find(mid1) == molecules_->end())
+      throw std::runtime_error((const std::string &) (boost::format("MolID1 %d not found of pid1 %d ") % mid1 % pid1));
     molecules_->at(mid1)->insert(pset->begin(), pset->end());
     for (std::set<longint>::iterator itt = pset->begin(); itt != pset->end(); ++itt) {
       pid_mid[*itt] = mid1;
     }
+    delete pset;
     molecules_->erase(mid2);
   }
 }
@@ -485,7 +490,12 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
   }
   // There is no bond between two residues.
   if (!hasBond) {
+    if (res_graph_->find(rid1) == res_graph_->end())
+      throw std::runtime_error((const std::string &) (boost::format("RedID %d in res_graph not found") % rid1));
     res_graph_->at(rid1)->erase(rid2);
+
+    if (res_graph_->find(rid2) == res_graph_->end())
+      throw std::runtime_error((const std::string &) (boost::format("RedID %d in res_graph not found") % rid2));
     res_graph_->at(rid2)->erase(rid1);
 
     // Gets residues of the molecule and scan if still those residues are connected, if not then split into
@@ -499,19 +509,24 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
         unique_res_ids.insert(itg->first);
       }
     }
-    if (unique_res_ids.size() != 0) {
+    if (unique_res_ids.size() > 0) {
       // Increase max_mol_id;
       max_mol_id_++;
       std::set<longint> *s = new std::set<longint>();
       molecules_->insert(std::make_pair(max_mol_id_, s));
       for (std::set<longint>::const_iterator r1_it = unique_res_ids.begin(); r1_it != unique_res_ids.end(); ++r1_it) {
-        Pset1 = residues_->at(*r1_it);
+        longint resid = *r1_it;
+        if (residues_->find(resid) == residues_->end())
+          throw std::runtime_error((const std::string &) (boost::format("RedID %d in res_graph not found") % resid));
+        Pset1 = residues_->at(resid);
         for (std::set<longint>::iterator pid_r1 = Pset1->begin(); pid_r1 != Pset1->end(); ++pid_r1) {
           pid_mid[*pid_r1] = max_mol_id_;
           s->insert(*pid_r1);
         }
       }
     }
+    delete graph_r1;
+    delete graph_r2;
   }
   return removed;
 }
