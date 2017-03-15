@@ -55,6 +55,7 @@ class TestTopologyManager(unittest.TestCase):
         topology_manager.register_triplet(self.ftl, 0)
         topology_manager.register_quadruplet(self.fql, 0)
         topology_manager.register_quadruplet(self.fql2, 0, 0, 0, 1)
+        topology_manager.register_tuple(self.fpl3, 0, 0)
         topology_manager.initialize_topology()
         self.integrator.addExtension(topology_manager)
 
@@ -111,6 +112,15 @@ class TestTopologyManager(unittest.TestCase):
         self.fpl3.addBonds([(3, 5)])
         self.topology_manager.exchange_data()
         assert self.topology_manager.is_residue_connected(1,2)
+
+    def test_molecules_split(self):
+        self.assertEqual(len(self.topology_manager.get_molecule_ids()[0]), 2)
+        self.fpl3.addBonds([(3, 5)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(len(self.topology_manager.get_molecule_ids()[0]), 1)
+        self.fpl3.remove(3, 5, False)
+        self.topology_manager.exchange_data()
+        self.assertEqual(len(self.topology_manager.get_molecule_ids()[0]), 2)
 
 
 if __name__ == '__main__':

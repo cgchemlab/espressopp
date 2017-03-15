@@ -281,6 +281,9 @@ class TopologyManager: public Extension {
   longint getMoleculeId(longint pid) { return pid_mid[pid]; }
   longint getResId(longint pid) { return pid_rid[pid]; }
 
+  python::list getMoleculeIds();
+  python::list getMolecule(longint mol_id);
+
   /**
    * Handle signal from FixedPairList that new bond was created.
    */

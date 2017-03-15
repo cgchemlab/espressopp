@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2015
+#  Copyright (C) 2015-2017
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #  
 #  This file is part of ESPResSo++.
@@ -132,5 +132,14 @@ if pmi.isController :
                        'is_residue_connected', 'is_particle_connected',
                        'save_topology', 'save_res_topology', 'save_residues'
                       ],
-            pmiinvoke = ['print_topology', 'print_res_topology', 'print_residues', 'get_neighbour_lists', 'get_timers']
+            pmiinvoke = [
+                'print_topology',
+                'print_res_topology',
+                'print_residues',
+                'get_neighbour_lists',
+                'get_timers',
+                'get_molecule_ids',
+                'get_molecule',
+                'get_residue_id',
+                'get_molecule_id']
             )

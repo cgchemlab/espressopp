@@ -242,7 +242,7 @@ class TestCaseChangeNeighbourProperty(ESPPTestCase):
         particle_list = [
             (3, 3, espressopp.Real3D(3.0, 2.0, 2.0), 2, 1),
             (4, 4, espressopp.Real3D(3.5, 2.0, 2.0), 2, 1),
-            (5, 3, espressopp.Real3D(3.5, 2.0, 2.0), 1, 1),
+            (5, 3, espressopp.Real3D(3.5, 2.0, 2.0), 1, 7),
             (6, 4, espressopp.Real3D(3.5, 2.0, 2.0), 1, 1)
         ]
         self.system.storage.addParticles(particle_list, *self.part_prop)
@@ -273,7 +273,6 @@ class TestCaseChangeNeighbourProperty(ESPPTestCase):
 
         self.ar.add_reaction(r_type_1)
         self.integrator.run(10)
-        print [self.system.storage.getParticle(x).state for x in range(1, 7)]
 
         # Check the types of particles.
         self.assertItemsEqual([self.system.storage.getParticle(x).type for x in range(1, 7)], [1, 2, 5, 4, 5, 4])
@@ -294,19 +293,22 @@ class TestCaseChangeNeighbourProperty(ESPPTestCase):
 
         # Define post-process that will change a type of particle 4 from 3 to 5.
         # and change particle 3 from 3 to 7 (different separation = 1!)
-        pp_type_1 = espressopp.integrator.PostProcessChangeNeighboursProperty(
-            self.topology_manager)
-        pp_type_1.add_change_property(
-            3, espressopp.integrator.TopologyParticleProperties(5, 1.0, 0.0), 2)
-        pp_type_1.add_change_property(
-            3, espressopp.integrator.TopologyParticleProperties(7, 1.0, 0.0), 1)
-        r_type_1.add_postprocess(pp_type_1, 'type_2')
+        pp_type_1 = espressopp.integrator.PostProcessChangeNeighboursProperty(self.topology_manager)
+        tpp1 = espressopp.integrator.TopologyParticleProperties(9, 1.0, 0.0)
+        tpp1.set_min_max_state(7, 8)
+        pp_type_1.add_change_property(3, tpp1 , 1)
+        pp_type_2 = espressopp.integrator.PostProcessChangeNeighboursProperty(self.topology_manager)
+        tpp2 = espressopp.integrator.TopologyParticleProperties(7, 1.0, 0.0)
+        tpp2.set_min_max_state(1, 2)
+        pp_type_2.add_change_property(3, tpp2 , 1)
+        r_type_1.add_postprocess(pp_type_1, 'type_1')
+        r_type_1.add_postprocess(pp_type_2, 'type_2')
 
         self.ar.add_reaction(r_type_1)
-        self.integrator.run(10)
+        self.integrator.run(1)
 
         # Check the types of particles.
-        self.assertItemsEqual([self.system.storage.getParticle(x).type for x in range(1, 6)], [1, 2, 7, 5, 3])
+        self.assertItemsEqual([self.system.storage.getParticle(x).type for x in range(1, 7)], [1, 2, 7, 4, 9, 4])
 
 
 class TestCaseChangePropertyOnState(ESPPTestCase):
@@ -353,6 +355,9 @@ class TestCyclization(ESPPTestCase):
             (4, 1, espressopp.Real3D(2.5, 3.0, 2.0), 4, 1),
         ]
         self.system.storage.addParticles(particle_list, *self.part_prop)
+        self.system.storage.decompose()
+        self.topology_manager.initialize_topology()
+
         r_type_1 = espressopp.integrator.Reaction(
             type_1=1,
             type_2=2,
@@ -368,7 +373,7 @@ class TestCyclization(ESPPTestCase):
         self.ar.add_reaction(r_type_1)
         fpl1_before = self.fpl1.getBonds()
         self.assertEquals(fpl1_before, [[]])
-        self.integrator.run(2)
+        self.integrator.run(4)
         fpl1_after = self.fpl1.getBonds()
         # Full cycle.
         self.assertItemsEqual(fpl1_after[0], [(2, 4), (3, 4), (1, 2), (1, 3)])
