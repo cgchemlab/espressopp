@@ -210,6 +210,7 @@ void TopologyManager::initializeTopology() {
   residues_ = new GraphMap();
   molecules_ = new GraphMap();
 
+  max_mol_id_ = 0;
 
   // Collect locally the list of edges by iterating over registered tuple lists with bonds.
   EdgesVector edges;
@@ -270,8 +271,10 @@ void TopologyManager::initializeTopology() {
 
       if (residues_->count(rid) == 0) {
         residues_->insert(std::make_pair(rid, new std::set<longint>()));
+      }
+      if (molecules_->count(rid) == 0) {
         molecules_->insert(std::make_pair(rid, new std::set<longint>()));
-        max_mol_id_ = rid;
+        max_mol_id_ = std::max(max_mol_id_, rid);
       }
       residues_->at(rid)->insert(pid);
       molecules_->at(rid)->insert(pid);
@@ -513,7 +516,7 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
       if (unique_res_ids.size() > 0) {
         // Increase max_mol_id;
         max_mol_id_++;
-        std::set<longint> *Pset1, *s, *PsetMid1;
+        std::set<longint> *Pset3, *s, *PsetMid1;
 
         s = new std::set<longint>();
         molecules_->insert(std::make_pair(max_mol_id_, s));
@@ -522,8 +525,8 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
           longint resid = *r1_it;
           if (residues_->find(resid) == residues_->end())
             throw std::runtime_error((const std::string &) (boost::format("RedID %d in res_graph not found") % resid));
-          Pset1 = residues_->at(resid);
-          for (std::set<longint>::iterator pid_r1 = Pset1->begin(); pid_r1 != Pset1->end(); ++pid_r1) {
+          Pset3 = residues_->at(resid);
+          for (std::set<longint>::iterator pid_r1 = Pset3->begin(); pid_r1 != Pset3->end(); ++pid_r1) {
             PsetMid1->erase(*pid_r1);
             pid_mid[*pid_r1] = max_mol_id_;
             s->insert(*pid_r1);

@@ -123,5 +123,98 @@ class TestTopologyManager(unittest.TestCase):
         self.assertEqual(len(self.topology_manager.get_molecule_ids()[0]), 2)
 
 
+class TestTopologyCycle(unittest.TestCase):
+    def setUp(self):
+        # Initialize the espressopp system
+        box = (10, 10, 10)
+        system = espressopp.System()
+        self.system = system
+        system.kb = 1.0
+        system.rng = espressopp.esutil.RNG()
+        system.bc = espressopp.bc.OrthorhombicBC(system.rng, box)
+        system.skin = 0.3
+
+        nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
+        cellGrid = espressopp.tools.decomp.cellGrid(box, nodeGrid, 2.5, system.skin)
+        system.storage = espressopp.storage.DomainDecomposition(system, nodeGrid, cellGrid)
+
+        # Adding ten nodes
+        self.N = 8
+        particle_list = []
+        for pid in range(0, self.N):
+            pos = system.bc.getRandomPos()
+            particle_list.append((pid+1, pos, pid/2+1))
+        system.storage.addParticles(particle_list, 'id', 'pos', 'res_id')
+        system.storage.decompose()
+        self.integrator = espressopp.integrator.VelocityVerlet(system)
+        self.integrator.dt = 0.0025
+
+        self.fpl1 = espressopp.FixedPairList(system.storage)
+        self.fpl1.addBonds([(i, i+1) for i in range(1, self.N+1, 2)])
+
+        self.fpl3 = espressopp.FixedPairList(system.storage)
+
+        topology_manager = espressopp.integrator.TopologyManager(system)
+        self.topology_manager = topology_manager
+        topology_manager.observe_tuple(self.fpl1)
+        topology_manager.observe_tuple(self.fpl3)
+        topology_manager.register_tuple(self.fpl3, 0, 0)
+        topology_manager.initialize_topology()
+        self.integrator.addExtension(topology_manager)
+
+    def test_connect_two_molecules(self):
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 2, 3, 4])
+        self.fpl3.addBonds([(2, 3)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 3, 4])
+        self.assertEqual(self.topology_manager.get_molecule(1)[0], [1, 2, 3, 4])
+        self.assertTrue(self.topology_manager.is_particle_connected(2, 3))
+        self.assertTrue(self.topology_manager.is_particle_connected(3, 4))
+        self.assertFalse(self.topology_manager.is_particle_connected(4, 5))
+
+    def test_connect_into_ring(self):
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 2, 3, 4])
+        self.fpl3.addBonds([(2, 3)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 3, 4])
+        self.fpl3.addBonds([(4, 5)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 4])
+        self.assertEqual(self.topology_manager.get_molecule(1)[0], [1, 2, 3, 4, 5, 6])
+        self.fpl3.addBonds([(6, 7)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1])
+        self.assertEqual(self.topology_manager.get_molecule(1)[0], [1, 2, 3, 4, 5, 6, 7, 8])
+        self.topology_manager.exchange_data()
+        self.fpl3.addBonds([(1, 8)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1])
+        self.assertEqual(self.topology_manager.get_molecule(1)[0], [1, 2, 3, 4, 5, 6, 7, 8])
+        self.topology_manager.exchange_data()
+        self.assertTrue(self.topology_manager.is_particle_connected(1, 8))
+
+    def test_break_ring(self):
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 2, 3, 4])
+        self.fpl3.addBonds([(2, 3), (4, 5), (6, 7), (1, 8)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1])
+        self.assertEqual(self.topology_manager.get_molecule(1)[0], [1, 2, 3, 4, 5, 6, 7, 8])
+        # Break one bond, still one molecule
+        self.assertTrue(self.topology_manager.is_particle_connected(4, 5))
+        self.fpl3.remove(4, 5)
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1])
+        self.assertEqual(self.topology_manager.get_molecule(1)[0], [1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertFalse(self.topology_manager.is_particle_connected(4, 5))
+        # Break second bond, now two molecules
+        self.assertTrue(self.topology_manager.is_particle_connected(6, 7))
+        self.fpl3.remove(6, 7)
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [1, 5])
+        self.fpl3.addBonds([(6, 7)])
+        self.topology_manager.exchange_data()
+        self.assertEqual(self.topology_manager.get_molecule_ids()[0], [5])
+
+
 if __name__ == '__main__':
     unittest.main()
