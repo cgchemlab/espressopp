@@ -1460,13 +1460,19 @@ bool TopologyManager::isNeighbourParticleInState(
         }
       }
     }
-    if (num_type > 1)
-      throw std::runtime_error((const std::string &)
-                                   (boost::format("multiple neigbhours around root=%d num=%d type=%d") % root_id
-                                       % num_type % nb_type_id));
-
-    longint p_state = p->state();
-    valid = (p_state >= min_state && p_state < max_state);
+    if (num_type > 1) {
+      std::stringstream ss;
+      ss << "multiple neigbhours around root=" << root_id << " num=" << num_type << " type=" << nb_type_id << " [";
+      for (std::set<longint>::iterator it = adj->begin(); it != adj->end(); ++it) {
+        ss << *it << ",";
+      }
+      ss << "]";
+      return false;
+      //throw std::runtime_error(ss.str());
+    } else if (num_type == 1) {
+      longint p_state = p->state();
+      return (p_state >= min_state && p_state < max_state);
+    }
   }
   return valid;
 }
