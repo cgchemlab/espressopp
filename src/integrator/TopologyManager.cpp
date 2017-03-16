@@ -1467,6 +1467,7 @@ bool TopologyManager::isNeighbourParticleInState(
         ss << *it << ",";
       }
       ss << "]";
+      std::cout << ss.str() << std::endl;
       return false;
       //throw std::runtime_error(ss.str());
     } else if (num_type == 1) {
