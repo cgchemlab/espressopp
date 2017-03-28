@@ -1478,6 +1478,60 @@ bool TopologyManager::isNeighbourParticleInState(
   return valid;
 }
 
+bool TopologyManager::hasNeighbourParticleProperty(
+    longint root_id, shared_ptr<TopologyParticleProperties> properties, longint depth) {
+  bool valid = true;
+
+  std::map<longint, longint> visitedDistance;
+  std::queue<longint> Q;
+  Q.push(root_id);
+  visitedDistance.insert(std::make_pair(root_id, 0));
+
+  boost::unordered_set<longint> nb_at_distance;
+
+  longint current, node, new_distance;
+  new_distance = 0;
+  while (!Q.empty() && new_distance < depth) {
+    current = Q.front();
+    new_distance = visitedDistance[current] + 1;
+    if (graph_->count(current) == 1) {
+      std::set<longint> *adj = graph_->at(current);
+      for (std::set<longint>::iterator ia = adj->begin(); ia != adj->end(); ++ia) {
+        node = *ia;
+        if (visitedDistance.count(node) == 0) {
+          if (new_distance == depth) {
+            nb_at_distance.insert(node);
+          }
+          if (new_distance < depth) {
+            Q.push(node);
+          }
+          visitedDistance.insert(std::make_pair(node, new_distance));
+        }
+      }
+    }
+    Q.pop();
+  }
+
+  if (nb_at_distance.size() > 0) {
+    longint counter = 0;
+    for (boost::unordered_set<longint>::const_iterator it = nb_at_distance.begin(); it != nb_at_distance.end(); ++it) {
+      Particle *p = system_->storage->lookupRealParticle(*it);
+      if (p) {
+        if (p->type() == properties->type()) {
+          valid &= properties->isValid(p);
+          counter++;
+        }
+      }
+    }
+    if (counter == 0)
+      valid = false;
+  } else {
+    valid = false;
+  }
+
+  return valid;
+}
+
 
 void TopologyManager::PrintTopology() {
   for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
@@ -1618,6 +1672,7 @@ void TopologyManager::registerPython() {
       .def("get_timers", &TopologyManager::getTimers)
       .def("is_residue_connected", &TopologyManager::isResiduesConnected)
       .def("is_particle_connected", &TopologyManager::isParticleConnected)
+      .def("has_neighbour_particle_property", &TopologyManager::hasNeighbourParticleProperty)
       .def("get_molecule_ids", &TopologyManager::getMoleculeIds)
       .def("get_molecule", &TopologyManager::getMolecule)
       .def("get_molecule_id", &TopologyManager::getMoleculeId)

@@ -216,5 +216,59 @@ class TestTopologyCycle(unittest.TestCase):
         self.assertEqual(self.topology_manager.get_molecule_ids()[0], [5])
 
 
+class TestCheckPropertyAtDistance(unittest.TestCase):
+    def setUp(self):
+        # Initialize the espressopp system
+        box = (10, 10, 10)
+        system = espressopp.System()
+        self.system = system
+        system.kb = 1.0
+        system.rng = espressopp.esutil.RNG()
+        system.bc = espressopp.bc.OrthorhombicBC(system.rng, box)
+        system.skin = 0.3
+
+        nodeGrid = espressopp.tools.decomp.nodeGrid(MPI.COMM_WORLD.size)
+        cellGrid = espressopp.tools.decomp.cellGrid(box, nodeGrid, 2.5, system.skin)
+        system.storage = espressopp.storage.DomainDecomposition(system, nodeGrid, cellGrid)
+
+        # Adding ten nodes
+        self.N = 6
+        particle_prop = ['id', 'pos', 'type', 'res_id', 'mass', 'state']
+        particle_list = [
+            [1, None, 1, 1, 1.0, 2],
+            [2, None, 1, 1, 1.0, 2],
+            [3, None, 3, 1, 1.0, 3],
+            [4, None, 2, 1, 1.0, 9],
+            [5, None, 4, 1, 1.0, 8],
+            [6, None, 3, 1, 1.0, 7]
+        ]
+        for pid in range(0, self.N):
+            pos = system.bc.getRandomPos()
+            particle_list[pid][1] = pos
+        system.storage.addParticles(particle_list, *particle_prop)
+        system.storage.decompose()
+        self.integrator = espressopp.integrator.VelocityVerlet(system)
+        self.integrator.dt = 0.0025
+
+        bonds = [(1, 2), (1, 5), (1, 6), (2, 3), (2, 4)]
+
+        self.fpl1 = espressopp.FixedPairList(system.storage)
+        self.fpl1.addBonds(bonds)
+
+        self.fpl3 = espressopp.FixedPairList(system.storage)
+
+        topology_manager = espressopp.integrator.TopologyManager(system)
+        self.topology_manager = topology_manager
+        topology_manager.observe_tuple(self.fpl1)
+        topology_manager.observe_tuple(self.fpl3)
+        topology_manager.register_tuple(self.fpl3, 0, 0)
+        topology_manager.initialize_topology()
+        self.integrator.addExtension(topology_manager)
+
+    def test_has_property_neighbour(self):
+        pp = espressopp.integrator.TopologyParticleProperties(3)
+        pp.set_min_max_state(7, 8)
+        self.assertTrue(self.topology_manager.has_neighbour_particle_property(3, pp, 3))
+
 if __name__ == '__main__':
     unittest.main()

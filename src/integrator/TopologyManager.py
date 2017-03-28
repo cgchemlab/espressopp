@@ -130,7 +130,8 @@ if pmi.isController :
             pmicall = ['observe_tuple', 'register_tuple', 'register_14tuple', 'register_triplet',
                        'register_quadruplet', 'initialize_topology', 'exchange_data',
                        'is_residue_connected', 'is_particle_connected',
-                       'save_topology', 'save_res_topology', 'save_residues'
+                       'save_topology', 'save_res_topology', 'save_residues',
+                       'has_neighbour_particle_property'
                       ],
             pmiinvoke = [
                 'print_topology',
