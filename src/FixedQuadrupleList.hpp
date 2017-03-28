@@ -63,12 +63,15 @@ namespace espressopp {
     virtual bool iadd(longint pid1, longint pid2, longint pid3, longint pid4);
 
     virtual bool remove(longint pid1, longint pid2, longint pid3, longint pid4);
+    bool removeByBond(longint pid1, longint pid2);
+
 
     virtual void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
     virtual void afterRecvParticles(ParticleList& pl, class InBuffer &buf);
     virtual void onParticlesChanged();
     virtual void updateParticlesStorage();
 
+    virtual std::vector<longint> getQuadrupleList();
     virtual python::list getQuadruples();
 
     /** Get the number of quadruples in the GlobalQuadruples list */

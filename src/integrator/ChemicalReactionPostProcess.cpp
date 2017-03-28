@@ -47,14 +47,14 @@ void ChemicalReactionPostProcess::registerPython() {
 LOG4ESPP_LOGGER(PostProcessChangeProperty::theLogger, "PostProcessChangeProperty");
 void PostProcessChangeProperty::addChangeProperty(int type_id,
                                                   boost::shared_ptr<TopologyParticleProperties> new_property) {
-  std::pair<TypeParticlePropertiesMap::iterator, bool> ret;
 
-
-  ret = type_properties_.insert(
+  std::pair<TypeParticlePropertiesMap::iterator, bool> ret = type_properties_.insert(
       std::pair<int, boost::shared_ptr<TopologyParticleProperties> >(type_id, new_property));
 
-  if (ret.second == false)
-    throw std::runtime_error("Requested type already exists. To replace please remove it firstly");
+  if (!ret.second) {
+    if (!(*(ret.first->second) == *new_property))
+      throw std::runtime_error("Requested type already exists. To replace please remove it firstly");
+  }
 }
 
 /** Removes change property definition. */

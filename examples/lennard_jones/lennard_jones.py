@@ -43,7 +43,7 @@ Npart              = 32
 # density of particles
 rho                = 0.8442
 # length of simulation box
-L                  = 10.0 # pow(Npart/rho, 1.0/3.0)
+L                  = pow(Npart/rho, 1.0/3.0)
 # cubic simulation box of size L
 box                = (L, L, L)
 # cutoff of the short range potential
@@ -193,7 +193,7 @@ system.addInteraction(interaction)
 print "starting warm-up ..."
 # print some status information (time, measured temperature, pressure,
 # pressure tensor (xy only), kinetic energy, potential energy, total energy, boxsize)
-espressopp.tools.info(system, integrator)
+espressopp.tools.analyse.info(system, integrator)
 for step in range(warmup_nloops):
   # perform warmup_isteps integraton steps
   integrator.run(warmup_isteps)
@@ -202,7 +202,7 @@ for step in range(warmup_nloops):
   # update the type0-type0 interaction to use the new values of LJpot
   interaction.setPotential(type1=0, type2=0, potential=LJpot)
   # print status info
-  espressopp.tools.info(system, integrator)  
+  espressopp.tools.analyse.info(system, integrator)  
 print "warmup finished"
 # remove the force capping interaction from the system
 system.removeInteraction(0) 
@@ -226,9 +226,6 @@ potential   = interaction.setPotential(type1=0, type2=0,
                                        potential=espressopp.interaction.LennardJones(
                                        epsilon=epsilon, sigma=sigma, cutoff=r_cutoff, shift=0.0))
 
-topology_manager = espressopp.integrator.TopologyManager(system)
-topology_manager.rebuild()
-integrator.addExtension(topology_manager)
 
 ########################################################################
 # 8. running the equilibration loop                                    #
@@ -247,12 +244,12 @@ integrator.step = 0
 
 print "starting equilibration ..."
 # print inital status information
-espressopp.tools.info(system, integrator)
+espressopp.tools.analyse.info(system, integrator)
 for step in range(equil_nloops):
   # perform equilibration_isteps integration steps
   integrator.run(equil_isteps)
   # print status information
-  espressopp.tools.info(system, integrator)
+  espressopp.tools.analyse.info(system, integrator)
 print "equilibration finished"
 
 ########################################################################

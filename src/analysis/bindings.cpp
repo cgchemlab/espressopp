@@ -130,9 +130,7 @@ namespace espressopp {
       SystemMonitor::registerPython();
       PotentialEnergy::registerPython();
       KineticEnergy::registerPython();
-      NFixedPairListEntries::registerPython();
-      NFixedTripleListEntries::registerPython();
-      NFixedQuadrupleListEntries::registerPython();
+      NFixedListEntries::registerPython();
       ChemicalConversion::registerPython();
       ChemicalConversionTypeSequence::registerPython();
       ChemicalConversionTypeState::registerPython();

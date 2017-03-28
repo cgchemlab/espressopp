@@ -187,8 +187,6 @@ namespace espressopp {
         if (signcheck < 0.0) phi *= -1.0;
         
         return _computeEnergy(phi);
-      
-      
     }
 
     template < class Derived > 

@@ -113,6 +113,7 @@ void DynamicExcludeList::updateList() {
   //Update list.
   LOG4ESPP_DEBUG(theLogger, "update data from " << in_buffer.size());
 
+  bool is_dirty = false;
   for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin(); it != in_buffer.end(); it++) {
     for (std::vector<longint>::iterator itm = it->begin(); itm != it->end();) {
       longint remove_size = *(itm++);
@@ -123,19 +124,25 @@ void DynamicExcludeList::updateList() {
         longint f2 = *(itm++);
         exList->erase(std::make_pair(f1, f2));
         exList->erase(std::make_pair(f2, f1));
-        //LOG4ESPP_DEBUG(theLogger, "removed pair: " << f1 << "-" << f2);
+        onPairUnexclude(f1, f2);
+        is_dirty = true;
       }
       for (int i = 0; i < add_size; i++) {
         longint f1 = *(itm++);
         longint f2 = *(itm++);
         exList->insert(std::make_pair(f1, f2));
         exList->insert(std::make_pair(f2, f1));
-        //LOG4ESPP_DEBUG(theLogger, "add pair: " << f1 << "-" << f2);
+        onPairExclude(f1, f2);
+        is_dirty = true;
       }
     }
   }
   exList_remove.clear();
   exList_add.clear();
+
+  if (is_dirty)
+    onListUpdated();
+
   LOG4ESPP_DEBUG(theLogger, "leave DynamicExcludeList::updateList");
 }
 
@@ -149,27 +156,29 @@ python::list DynamicExcludeList::getList() {
 
 void DynamicExcludeList::exclude(longint pid1, longint pid2) {
   LOG4ESPP_INFO(theLogger, "new exclude pair " << pid1 << "-" << pid2);
-
   exList_add.push_back(pid1);
   exList_add.push_back(pid2);
+  onPairExclude(pid1, pid2);
 }
 
 void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
+  LOG4ESPP_INFO(theLogger, "removed exclude pair " << pid1 << "-" << pid2);
   exList_remove.push_back(pid1);
   exList_remove.push_back(pid2);
+  onPairUnexclude(pid1, pid2);
 }
 
 void DynamicExcludeList::registerPython() {
   using namespace espressopp::python;
 
-  class_<DynamicExcludeList, shared_ptr<DynamicExcludeList> >
+  class_<DynamicExcludeList, shared_ptr<DynamicExcludeList>, boost::noncopyable >
       ("DynamicExcludeList", init< shared_ptr<integrator::MDIntegrator> >())
        .add_property("size", &DynamicExcludeList::getSize)
        .def("exclude", &DynamicExcludeList::exclude)
+       .def("unexclude", &DynamicExcludeList::unexclude)
        .def("observe_tuple", &DynamicExcludeList::observe_tuple)
        .def("observe_triple", &DynamicExcludeList::observe_triple)
        .def("observe_quadruple", &DynamicExcludeList::observe_quadruple)
-       .def("unexclude", &DynamicExcludeList::unexclude)
        .def("get_list", &DynamicExcludeList::getList)
        .def("update", &DynamicExcludeList::updateList)
        .def("connect", &DynamicExcludeList::connect)
@@ -219,6 +228,12 @@ void DynamicExcludeList::registerPython() {
     exList = dynamicExList_->getExList();
 
     isDynamicExList = true;
+
+    //dynamicExList_->onListUpdated.connect()
+
+    // proxy signals from DynamicExclude list to signals of VerletList.
+    dynamicExcludeList->onPairExclude.connect(onPairExclude);
+    dynamicExcludeList->onPairUnexclude.connect(onPairUnexclude);
 
     if (rebuildVL) rebuild(); // not called if exclutions are provided
 
@@ -331,6 +346,7 @@ void DynamicExcludeList::registerPython() {
         dynamicExcludeList->exclude(pid1, pid2);
       } else {
         exList->insert(std::make_pair(pid1, pid2));
+        onPairExclude(pid1, pid2);
       }
       return true;
   }
@@ -341,7 +357,12 @@ void DynamicExcludeList::registerPython() {
     } else {
       exList->erase(std::make_pair(pid1, pid2));
       exList->erase(std::make_pair(pid2, pid1));
+      onPairUnexclude(pid1, pid2);
     }
+  }
+
+  longint VerletList::excludeListSize() const {
+    return exList->size();
   }
   
 
@@ -367,7 +388,7 @@ void DynamicExcludeList::registerPython() {
           = &VerletList::exclude;
 
 
-    class_<VerletList, shared_ptr<VerletList> >
+    class_<VerletList, shared_ptr<VerletList>, boost::noncopyable >
       ("VerletList", init< shared_ptr<System>, real, bool >())
       .def(init<shared_ptr<System>, real, shared_ptr<DynamicExcludeList>, bool>())
       .add_property("system", &SystemAccess::getSystem)
@@ -384,5 +405,6 @@ void DynamicExcludeList::registerPython() {
       .def("get_timers", &VerletList::getTimers)
       ;
   }
+
 
 }

@@ -66,10 +66,15 @@ class ChangeInRegionLocal(ExtensionLocal, integrator_ChangeInRegion):
         if pmi.workerIsActive():
             self.cxxclass.set_flags(self, type_id, reset_velocity, reset_force, remove_particle)
 
+    def set_particle_properties(self, type_id, particle_properties):
+        if pmi.workerIsActive():
+            self.cxxclass.set_particle_properties(self, type_id, particle_properties)
+
 if pmi.isController :
     class ChangeInRegion(Extension):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.ChangeInRegionLocal',
             pmicall = ['set_particle_properties', 'update_particles', 'set_flags'],
+            pmiproperty = ('p',)
             )

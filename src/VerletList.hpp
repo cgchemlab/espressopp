@@ -51,11 +51,15 @@ class DynamicExcludeList {
   void disconnect();
   shared_ptr<ExcludeList> getExList() { return exList; };
   python::list getList();
-  int getSize() { return exList->size(); }
+  int getSize() const { return exList->size(); }
 
   void observe_tuple(shared_ptr<FixedPairList> fpl);
   void observe_triple(shared_ptr<FixedTripleList> ftl);
   void observe_quadruple(shared_ptr<FixedQuadrupleList> fql);
+
+  boost::signals2::signal0 <void> onListUpdated;
+  boost::signals2::signal2 <void, longint, longint> onPairExclude;
+  boost::signals2::signal2 <void, longint, longint> onPairUnexclude;
   
   static void registerPython();
 
@@ -65,6 +69,10 @@ class DynamicExcludeList {
   // Helper lists.
   std::vector<longint> exList_add;
   std::vector<longint> exList_remove;
+
+  /**
+   * Update list among all CPUs.
+   */
   void updateList();
 
   boost::signals2::connection befIntP, runInit;
@@ -85,12 +93,13 @@ class DynamicExcludeList {
     */
 
     VerletList(shared_ptr< System >, real cut, bool rebuildVL);
-    VerletList(shared_ptr< System >, real cut,
-        shared_ptr<DynamicExcludeList> dynamicExList, bool rebuildVL);
+    VerletList(shared_ptr< System >, real cut, shared_ptr<DynamicExcludeList> dynamicExList, bool rebuildVL);
 
     ~VerletList();
 
-    PairList& getPairs() { return vlPairs; }
+    PairList& getPairs() {
+      return vlPairs;
+    }
 
     python::tuple getPair(int i);
     
@@ -116,6 +125,8 @@ class DynamicExcludeList {
     /** Remove pairs from exclusion list. */
     bool unexclude(longint pid1, longint pid2);
 
+    longint excludeListSize() const;
+
     /** Get the number of times the Verlet list has been rebuilt */
     int getBuilds() const { return builds; }
 
@@ -124,6 +135,9 @@ class DynamicExcludeList {
 
     /** Register this class so it can be used from Python. */
     static void registerPython();
+
+    boost::signals2::signal2 <void, longint, longint> onPairExclude;
+    boost::signals2::signal2 <void, longint, longint> onPairUnexclude;
 
   protected:
 

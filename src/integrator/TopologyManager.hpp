@@ -21,7 +21,12 @@
 #ifndef _INTEGRATOR_TOPOLOGYMANAGER_H
 #define _INTEGRATOR_TOPOLOGYMANAGER_H
 
+#include <algorithm>
+#include <functional>
+#include <set>
+#include <string>
 #include <vector>
+#include <utility>
 #include <map>
 
 #include "types.hpp"
@@ -271,10 +276,14 @@ class TopologyManager: public Extension {
 
   bool isSameMolecule(longint pid1, longint pid2);
 
+  bool hasNeighbourParticleProperty(longint root_id, shared_ptr<TopologyParticleProperties> properties, longint depth);
   bool isNeighbourParticleInState(longint root_id, longint nb_type_id, longint min_state, longint max_state);
 
   longint getMoleculeId(longint pid) { return pid_mid[pid]; }
   longint getResId(longint pid) { return pid_rid[pid]; }
+
+  python::list getMoleculeIds();
+  python::list getMolecule(longint mol_id);
 
   /**
    * Handle signal from FixedPairList that new bond was created.
@@ -358,7 +367,8 @@ class TopologyManager: public Extension {
                                std::set<Quadruplets> &quadruplets,
                                std::set<Triplets> &triplets);
 
-  void generateNewAnglesDihedrals(TopologyManager::SetPairs set);
+  void generateNewAnglesDihedrals(SetPairs set);
+  void removeAnglesDihedrals(SetPairs removed_edges);
 
   /**
    * Exchange new topology and res_id data among cpus.
@@ -425,8 +435,6 @@ class TopologyManager: public Extension {
   bool update_dihedrals_;
   bool update_14pairs_;
   bool generate_new_angles_dihedrals_;
-  std::set<Quadruplets> new_quadruplets_;
-  std::set<Triplets> new_triplets_;
 
   // Stores reference to Fixed Lists
   std::vector<shared_ptr<FixedPairList> > tuples_;
@@ -501,6 +509,7 @@ class TopologyManager: public Extension {
 
   python::list getTimers();
 
+  longint max_mol_id_;
 };
 
 }  // end namespace integrator

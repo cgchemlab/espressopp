@@ -20,8 +20,15 @@
 
 #include "ChemicalReactionExt.hpp"
 
+#include <algorithm>
 #include <fstream>
-#include <boost/range/algorithm/random_shuffle.hpp>
+#include <map>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "boost/range/algorithm/random_shuffle.hpp"
 
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
@@ -375,7 +382,8 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
   real reaction_rate, reaction_r_sqr;
   int p_order;
 
-  boost::unordered_set<longint> particle_idx;
+  boost::unordered_set<longint> particle_idx;  // stores particle indexes
+  boost::unordered_set<longint> residue_idx;  // stores residue indexes
 
   for (ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
     idx_a = it->first;  // particle id
@@ -385,9 +393,18 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
     p_order = it->second.second.order;
 
+    // residues
+    longint rid1 = tm_->getResId(idx_a);
+    longint rid2 = tm_->getResId(idx_b);
+
     // skip particle pairs that are already in the list.
     if (particle_idx.count(idx_a) != 0 || particle_idx.count(idx_b) != 0) {
       LOG4ESPP_DEBUG(theLogger, "skip pair " << idx_a << "-" << idx_b);
+      continue;
+    }
+
+    if (residue_idx.find(rid1) != residue_idx.end() || residue_idx.find(rid2) != residue_idx.end()) {
+      LOG4ESPP_DEBUG(theLogger, "skip pair " << idx_a << "-" << idx_b << " residues already in the reaction");
       continue;
     }
 
@@ -405,14 +422,17 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     // insert used particle idx to the set.
     particle_idx.insert(idx_a);
     particle_idx.insert(idx_b);
+    residue_idx.insert(rid1);
+    residue_idx.insert(rid2);
   }
   // Make pairs unique among cpus
   std::vector<ReactionMap> global_maps;
   if (getSystem()->comm->rank() == 0) {
+    particle_idx.clear();
+    residue_idx.clear();
 
     std::map<longint, std::set<longint> > residue_map;
     std::map<longint, std::set<longint> > molecule_map;
-    std::set<longint> particle_pairs;  // global set of already used particle pairs.
 
     // Collect maps from all cpus.
     mpi::gather(*(getSystem()->comm), out, global_maps, 0);
@@ -437,11 +457,16 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
           valid &= !(molecule_map.count(mid1) == 1 && molecule_map.at(mid1).count(mid2) == 1);
         }
 
-        if (!valid || particle_pairs.find(idx_a) != particle_pairs.end() || particle_pairs.find(idx_b) != particle_pairs.end()) {
-          // Pair already exists. Remove if from the map it_rms.
-        } else {
-          particle_pairs.insert(idx_a);
-          particle_pairs.insert(idx_b);
+        if (valid) {
+          valid &= (particle_idx.find(idx_a) == particle_idx.end() && particle_idx.find(idx_b) == particle_idx.end());
+          valid &= (residue_idx.find(rid1) == residue_idx.end() && residue_idx.find(rid2) == residue_idx.end());
+        }
+
+        if (valid) {
+          particle_idx.insert(idx_a);
+          particle_idx.insert(idx_b);
+          residue_idx.insert(rid1);
+          residue_idx.insert(rid2);
           residue_map[rid1].insert(rid2);
           residue_map[rid2].insert(rid1);
           molecule_map[mid1].insert(mid2);
@@ -718,7 +743,6 @@ void ChemicalReaction::uniqueA(integrator::ReactionMap &potential_candidates) {/
                          std::make_pair(
                              idx_b_reaction_id->second.first,
                              idx_b_reaction_id->second.second)));
-
     }
   }
 
@@ -925,7 +949,7 @@ void ChemicalReaction::applyAR(std::set<Particle *> &modified_particles) {
 
     bool valid_state = true;
 
-    if (p1 && p2 ) {
+    if (p1 && p2) {
       valid_state = (reaction->type_1() == p1->type() && reaction->isValidState_T1(*p1));
       valid_state &= (reaction->type_2() == p2->type() && reaction->isValidState_T2(*p2));
       // Whole pair has to be valid before the state can be changed.

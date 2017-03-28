@@ -141,7 +141,11 @@ namespace espressopp {
         globalQuadruples.insert(equalRange.first,
                                 std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
         onTupleAdded(pid1, pid2, pid3, pid4);
-        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
+        LOG4ESPP_DEBUG(theLogger, "added fixed quadruple to global quadruple list: " << pid1 << "-" << pid2
+            << "-" << pid3 << "-" << pid4);
+      } else {
+        LOG4ESPP_INFO(theLogger, "quadruple " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4
+            << " already exists");
       }
     }
     return returnVal;
@@ -214,70 +218,65 @@ namespace espressopp {
         globalQuadruples.insert(equalRange.first,
           std::make_pair(pid1, Triple<longint, longint, longint>(pid2, pid3, pid4)));
         onTupleAdded(pid1, pid2, pid3, pid4);
-        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list");
+        LOG4ESPP_INFO(theLogger, "added fixed quadruple to global quadruple list: " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4);
+      } else {
+        LOG4ESPP_DEBUG(theLogger, "quadruple " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4 << " already exists");
       }
     }
     return returnVal;
   }
 
   bool FixedQuadrupleList::remove(longint pid1, longint pid2, longint pid3, longint pid4) {
-    // here we assume pid1 < pid2 < pid3 < pid4
-    bool found = true;
-    System& system = storage->getSystemRef();
-
-    // ADD THE LOCAL QUADRUPLET
-    Particle *p1 = storage->lookupRealParticle(pid1);
-    Particle *p2 = storage->lookupLocalParticle(pid2);
-    Particle *p3 = storage->lookupLocalParticle(pid3);
-    Particle *p4 = storage->lookupLocalParticle(pid4);
-    if (!p1) {
-      // Particle does not exist here, return false
-      found = false;
-    } else {
-      std::stringstream msg;
-      if (!p2) {
-        msg << "quadruple particle p2 " << pid2 << " does not exists here and cannot be added";
-        throw std::runtime_error(msg.str());
-      }
-      if (!p3) {
-        msg << "quadruple particle p3 " << pid3 << " does not exists here and cannot be added";
-        throw std::runtime_error(msg.str());
-      }
-      if (!p4) {
-        msg << "quadruple particle p4 " << pid4 << " does not exists here and cannot be added";
-        throw std::runtime_error(msg.str());
-      }
-    }
-
     bool returnVal = false;
-    if (found) {
-      std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange, equalRange_rev;
-      equalRange = globalQuadruples.equal_range(pid1);
-      if (equalRange.first != globalQuadruples.end()) {
-        // otherwise test whether the quadruple already exists
-        for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
-          if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
-            onTupleRemoved(pid1, pid2, pid3, pid4);
-            returnVal = true;
-            it = globalQuadruples.erase(it);
-          } else {
-            ++it;
-          }
-      }
-      equalRange_rev = globalQuadruples.equal_range(pid4);
-      if (equalRange_rev.first != globalQuadruples.end()) {
-        // otherwise test whether the quadruple already exists
-        for (GlobalQuadruples::iterator it = equalRange_rev.first; it != equalRange_rev.second;)
-          if (it->second == Triple<longint, longint, longint>(pid3, pid2, pid1)) {
-            onTupleRemoved(pid4, pid3, pid2, pid1);
-            returnVal = true;
-            it = globalQuadruples.erase(it);
-          } else {
-            ++it;
-          }
-      }
+    std::pair<GlobalQuadruples::iterator, GlobalQuadruples::iterator> equalRange, equalRange_rev;
+    equalRange = globalQuadruples.equal_range(pid1);
+    if (equalRange.first != globalQuadruples.end()) {
+      // otherwise test whether the quadruple already exists
+      for (GlobalQuadruples::iterator it = equalRange.first; it != equalRange.second;)
+        if (it->second == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
+          onTupleRemoved(pid1, pid2, pid3, pid4);
+          returnVal = true;
+          it = globalQuadruples.erase(it);
+          LOG4ESPP_DEBUG(theLogger, "dihedral " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4 << " removed");
+        } else {
+          ++it;
+        }
+    }
+    equalRange_rev = globalQuadruples.equal_range(pid4);
+    if (equalRange_rev.first != globalQuadruples.end()) {
+      // otherwise test whether the quadruple already exists
+      for (GlobalQuadruples::iterator it = equalRange_rev.first; it != equalRange_rev.second;)
+        if (it->second == Triple<longint, longint, longint>(pid3, pid2, pid1)) {
+          onTupleRemoved(pid4, pid3, pid2, pid1);
+          returnVal = true;
+          it = globalQuadruples.erase(it);
+          LOG4ESPP_DEBUG(theLogger, "dihedral " << pid4 << pid3 << pid2 << pid1 << " removed");
+        } else {
+          ++it;
+        }
     }
     return returnVal;
+  }
+
+  bool FixedQuadrupleList::removeByBond(longint pid1, longint pid2) {
+    bool return_val = false;
+    // TODO(jakub): this has to be changed in more efficient way.
+    for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end();) {
+      longint q1 = it->first;
+      longint q2 = it->second.first;
+      longint q3 = it->second.second;
+      longint q4 = it->second.third;
+      if ((q1 == pid1 && q2 == pid2) || (q2 == pid1 && q3 == pid2) || (q3 == pid1 && q4 == pid2) ||
+          (q1 == pid2 && q2 == pid1) || (q2 == pid2 && q3 == pid1) || (q3 == pid2 && q4 == pid1)) {
+        onTupleRemoved(q1, q2, q3, q4);
+        LOG4ESPP_DEBUG(theLogger, "dihedral " << q1 << q2 << q3 << q4 << " removed");
+        it = globalQuadruples.erase(it);
+        return_val = true;
+      } else {
+        ++it;
+      }
+    }
+    return return_val;
   }
 
   python::list FixedQuadrupleList::getQuadruples()
@@ -290,6 +289,17 @@ namespace espressopp {
     }
 
 	return quadruples;
+  }
+
+  std::vector<longint> FixedQuadrupleList::getQuadrupleList() {
+    std::vector<longint> ret;
+    for (GlobalQuadruples::const_iterator it=globalQuadruples.begin(); it != globalQuadruples.end(); it++) {
+      ret.push_back(it->first);
+      ret.push_back(it->second.first);
+      ret.push_back(it->second.second);
+      ret.push_back(it->second.third);
+    }
+    return ret;
   }
 
   python::list FixedQuadrupleList::getAllQuadruples() {
@@ -519,4 +529,5 @@ namespace espressopp {
       .def("getAllQuadruples", &FixedQuadrupleList::getAllQuadruples)
      ;
   }
+
 }

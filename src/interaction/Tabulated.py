@@ -168,6 +168,7 @@ from _espressopp import interaction_Tabulated, \
                       interaction_CellListTabulated, \
                       interaction_FixedPairListTabulated, \
                       interaction_FixedPairListTypesTabulated
+from _espressopp import interaction_VerletListScaleTabulated
 from _espressopp import interaction_FixedPairListLambdaTabulated
 from _espressopp import interaction_FixedPairListTypesLambdaTabulated
 
@@ -224,6 +225,27 @@ class VerletListDynamicResolutionTabulatedLocal(InteractionLocal, interaction_Ve
     def __init__(self, vl, cg_form):
         if pmi.workerIsActive():
             cxxinit(self, interaction_VerletListDynamicResolutionTabulated, vl, cg_form)
+
+    def setPotential(self, type1, type2, potential):
+        if pmi.workerIsActive():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if pmi.workerIsActive():
+            return self.cxxclass.getPotential(self, type1, type2)
+
+    def getVerletListLocal(self):
+        if pmi.workerIsActive():
+            return self.cxxclass.getVerletList(self)
+
+    def setMaxForce(self, max_force):
+        if pmi.workerIsActive():
+            self.cxxclass.setMaxForce(self, max_force)
+
+class VerletListScaleTabulatedLocal(InteractionLocal, interaction_VerletListScaleTabulated):
+    def __init__(self, vl, particle_pair_scaling):
+        if pmi.workerIsActive():
+            cxxinit(self, interaction_VerletListScaleTabulated, vl, particle_pair_scaling)
 
     def setPotential(self, type1, type2, potential):
         if pmi.workerIsActive():
@@ -351,8 +373,13 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListDynamicResolutionTabulatedLocal',
-            pmicall = ['setPotential', 'getPotential', 'getVerletList', 'setMaxForce']
-        )
+            pmicall = ['setPotential', 'getPotential', 'getVerletList', 'setMaxForce'])
+
+    class VerletListScaleTabulated(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListScaleTabulatedLocal',
+            pmicall = ['setPotential', 'getPotential', 'getVerletList', 'setMaxForce'])
 
     class CellListTabulated(Interaction):
         __metaclass__ = pmi.Proxy
