@@ -87,7 +87,7 @@ include_directories(${FFTW3_INCLUDES})
 #Process Python settings
 ########################################################################
 
-find_package(PythonInterp 2 REQUIRED)
+find_package(PythonInterp 2.7 REQUIRED)
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE}
                 -c "import distutils.sysconfig as cg; print cg.get_python_inc()"
