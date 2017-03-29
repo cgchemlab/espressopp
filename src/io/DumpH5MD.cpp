@@ -69,7 +69,7 @@ namespace espressopp {
       pb->shape = NULL;
       free(pb->buf);
       pb->buf = NULL;
-      //pb->len = 0;
+      pb->len = 0;
     }
 
     DumpH5MD::DumpH5MD(shared_ptr<System> system, bool is_adress) :
@@ -228,13 +228,16 @@ namespace espressopp {
     }
 
     PyObject* DumpH5MD::getPosition() {
-      if (store_position && position.len) return PyMemoryView_FromBuffer(&position);
+      if (store_position && position.len) 
+        return PyMemoryView_FromBuffer(&position);
       Py_INCREF(Py_None);
       return Py_None;
     }
     PyObject* DumpH5MD::getImage() {
-      if (store_position && position.len)
+      if (store_position && image.len)
         return PyMemoryView_FromBuffer(&image);
+      std::cout << "store_position=" << store_position << " position.len=" << position.len << " image.len=" << image.len << std::endl;
+      std::cout << "WTF?" << std::endl;
       Py_INCREF(Py_None);
       return Py_None;
     }
