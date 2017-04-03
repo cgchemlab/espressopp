@@ -125,8 +125,11 @@ real ChemicalConversionTypeState::compute_real() const {
 
   longint local_count = 0;
   for (iterator::CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-    if (cit->type() == p_type_ && cit->state() == p_state_)
-      local_count++;
+    if (type_state_.count(cit->type()) == 1) {
+      longint expected_state = type_state_.at(cit->type());
+      if (expected_state == -1 || expected_state == cit->state())
+        local_count++;
+    }
   }
 
   longint global_count = 0;
@@ -146,7 +149,9 @@ void ChemicalConversionTypeState::registerPython() {
   class_<ChemicalConversionTypeState, bases<Observable>, boost::noncopyable>
       ("analysis_ChemicalConversionTypeState",
        init< shared_ptr<System>, longint, longint, longint >())
-      .def(init<shared_ptr<System>, longint, longint>());
+      .def(init<shared_ptr<System>, longint, longint>())
+      .def(init<shared_ptr<System>, longint >())
+      .def("count_type", &ChemicalConversionTypeState::count_type);
 }
 
 }  // end namespace analysis
