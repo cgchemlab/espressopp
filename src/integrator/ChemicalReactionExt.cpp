@@ -677,72 +677,68 @@ void ChemicalReaction::uniqueA(integrator::ReactionMap &potential_candidates) {/
     real max_rc;
 
     // reaction_coordinate => idx_b, ReactionDef(reaction_id, reaction_rate) or r_sqr distance
-    typedef std::multimap<real, std::pair<longint, ReactionDef > > LocalRateIdx;
-    LocalRateIdx rc_idx_b;
-    LocalRateIdx::iterator idx_b_reaction_id;
+    typedef std::multimap<real, std::pair<longint, ReactionDef > > LocalDistanceIdx;
+    LocalDistanceIdx rc_idx_b;
+    LocalDistanceIdx::iterator idx_b_reaction_id;
+
+    typedef std::vector<std::pair<longint, ReactionDef> > LocalCandidateIdx;
+    LocalCandidateIdx candidates_idx_b;
 
     // Iterators for the equal_range.
-    std::pair<integrator::ReactionMap::iterator,
-              integrator::ReactionMap::iterator> candidates_b;
+    std::pair<integrator::ReactionMap::iterator, integrator::ReactionMap::iterator> candidates_b;
 
     // Iterate over the ids of particle A, looking for the particle B
-    for (boost::unordered_set<longint>::iterator it = a_indexes.begin();
-        it != a_indexes.end(); ++it) {
+    for (boost::unordered_set<longint>::iterator it = a_indexes.begin(); it != a_indexes.end(); ++it) {
       idx_a = *it;
 
       // Group the candidates by the reaction coordinate, rate or distance.
-      if (is_nearest_)  // silly
+      if (is_nearest_) {  // silly
         max_rc = 10e18;
-      else
-        max_rc = -1.0;
+        rc_idx_b.clear();
+      } else {
+        candidates_idx_b.clear();
+      }
 
       // Select all possible candidates of particle A
       candidates_b = potential_candidates.equal_range(idx_a);
-
-      rc_idx_b.clear();
-
-      for (integrator::ReactionMap::iterator jt = candidates_b.first;
-          jt != candidates_b.second; ++jt) {
-        boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(jt->second.second.reaction_id);
+      // Iterate over potential candidates
+      for (integrator::ReactionMap::iterator jt = candidates_b.first; jt != candidates_b.second; ++jt) {
         real reaction_rate = jt->second.second.reaction_rate;
         real reaction_r_sqr = jt->second.second.reaction_r_sqr;
 
         if (is_nearest_) {  // select nearest neighbour.
           if (reaction_r_sqr < max_rc)
             max_rc = reaction_r_sqr;
-        } else {
-          if (reaction_rate > max_rc)
-            max_rc = reaction_rate;
+          // distance => (idx_b, reaction_id)
+          rc_idx_b.insert(std::make_pair(reaction_r_sqr, std::make_pair(jt->second.first, jt->second.second)));
+        } else {  // select randomly
+          candidates_idx_b.push_back(std::make_pair(jt->second.first, jt->second.second));
         }
-
-        // Use reaction coordinate, distance of reaction rate.
-        if (is_nearest_)
-          rc = reaction_r_sqr;
-        else
-          rc = reaction_rate;
-
-        // rc => (idx_b, reaction_id)
-        rc_idx_b.insert(std::make_pair(rc, std::make_pair(jt->second.first, jt->second.second)));
       }  // end preparing candidates of A.
 
-      // Found reaction with the maximum rate. If there are several candidates with the same
-      // rate, then we choose randomly.
-      int bucket_size = rc_idx_b.count(max_rc);
+      // Decide, select randomly candidate or select closes neighbour
+      if (is_nearest_) {
+        int bucket_size = rc_idx_b.count(max_rc);
 
-      int pick_offset = 0;
-      if (bucket_size > 1)
-        // Pick up random number in given range.
-        pick_offset = (*rng_)(bucket_size-1);
+        int pick_offset = 0;
+        if (bucket_size > 1)
+          // Pick up random number in given range.
+          pick_offset = (*rng_)(bucket_size-1);
 
-      idx_b_reaction_id = rc_idx_b.lower_bound(max_rc);
+        LocalDistanceIdx::iterator idx_b_reaction_id = rc_idx_b.lower_bound(max_rc);
 
-      std::advance(idx_b_reaction_id, pick_offset);
+        std::advance(idx_b_reaction_id, pick_offset);
 
-      unique_list_of_candidates.insert(
-          std::make_pair(idx_a,
-                         std::make_pair(
-                             idx_b_reaction_id->second.first,
-                             idx_b_reaction_id->second.second)));
+        unique_list_of_candidates.insert(
+            std::make_pair(idx_a,
+                           std::make_pair(
+                               idx_b_reaction_id->second.first,
+                               idx_b_reaction_id->second.second)));
+      } else if (candidates_idx_b.size() > 0) {
+        longint candidate_index = (*rng_)(candidates_idx_b.size());
+        std::pair<longint, ReactionDef> selected_b = candidates_idx_b[candidate_index];
+        unique_list_of_candidates.insert(std::make_pair(idx_a, std::make_pair(selected_b.first, selected_b.second)));
+      }
     }
   }
 
@@ -760,7 +756,8 @@ void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// 
   LOG4ESPP_TRACE(theLogger, "uniqueB");
 
   typedef boost::unordered_set<longint> Indexes;
-  typedef std::multimap<real, std::pair<longint, ReactionDef> > RateParticleIdx;
+  typedef std::multimap<real, std::pair<longint, ReactionDef> > DistParticleIdx;
+  typedef std::vector<std::pair<longint, ReactionDef> > LocalCandidateIdx;
 
   System &system = getSystemRef();
   Indexes b_indexes;
@@ -775,7 +772,7 @@ void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// 
       it != potential_candidates.end(); ++it) {
     p = system.storage->lookupRealParticle(it->second.first);
 
-    if (p == NULL)
+    if (p == NULL)  // only real particles
       continue;
 
     b_indexes.insert(it->second.first);
@@ -792,63 +789,61 @@ void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// 
     real rc;
 
     // rate => idx_a, reaction_id, reaction_rate
-    RateParticleIdx rc_idx_a;
-    RateParticleIdx::iterator idx_a_reaction_id;
-    std::pair<integrator::ReactionMap::iterator,
-    integrator::ReactionMap::iterator> candidates_a;
+    DistParticleIdx rc_idx_a;
+    DistParticleIdx::iterator idx_a_reaction_id;
+    std::pair<integrator::ReactionMap::iterator, integrator::ReactionMap::iterator> candidates_a;
 
+    LocalCandidateIdx candidates_idx_a;
+    // Iterate over b particles
     for (Indexes::iterator it = b_indexes.begin(); it != b_indexes.end(); ++it) {
       idx_b = *it;
 
-      candidates_a = reverse_candidates.equal_range(idx_b);
       // Group the candidates by the reaction rate.
-      if (is_nearest_)  // silly
+      if (is_nearest_) {  // silly
         max_rc = 10e18;
-      else
-        max_rc = -1;
+        rc_idx_a.clear();
+      } else {
+        candidates_idx_a.clear();
+      }
 
-      rc_idx_a.clear();
-
-      for (integrator::ReactionMap::iterator jt = candidates_a.first;
-          jt != candidates_a.second; ++jt) {
-        boost::shared_ptr<integrator::Reaction> reaction = reaction_list_.at(jt->second.second.reaction_id);
+      // Iterates over potential candidates A.
+      candidates_a = reverse_candidates.equal_range(idx_b);
+      for (integrator::ReactionMap::iterator jt = candidates_a.first; jt != candidates_a.second; ++jt) {
         real reaction_rate = jt->second.second.reaction_rate;
         real reaction_r_sqr = jt->second.second.reaction_r_sqr;
 
         if (is_nearest_) {
           if (reaction_r_sqr < max_rc)
             max_rc = reaction_r_sqr;
+          rc_idx_a.insert(
+              std::make_pair(reaction_r_sqr, std::make_pair(jt->second.first, jt->second.second)));
         } else {
-          if (reaction_rate > max_rc)
-            max_rc = reaction_rate;
+          candidates_idx_a.push_back(std::make_pair(jt->second.first, jt->second.second));
         }
-
-        // Use reaction coordinate, distance of reaction rate.
-        if (is_nearest_)
-          rc = reaction_r_sqr;
-        else
-          rc = reaction_rate;
-
-        rc_idx_a.insert(
-            std::make_pair(rc, std::make_pair(jt->second.first, jt->second.second)));
       }
 
-      // Found reaction with the maximum rate. If there are several candidates
-      // then select randomly.
-      int bucket_size = rc_idx_a.count(max_rc);
-      int pick_offset = 0;
-      if (bucket_size > 1)
-        pick_offset = (*rng_)(bucket_size-1);
+      // Decide, select randomly candidate or select closest neighbour
+      if (is_nearest_) {
+        int bucket_size = rc_idx_a.count(max_rc);
+        int pick_offset = 0;
+        if (bucket_size > 1)
+          pick_offset = (*rng_)(bucket_size - 1);
 
-      idx_a_reaction_id = rc_idx_a.lower_bound(max_rc);
+        idx_a_reaction_id = rc_idx_a.lower_bound(max_rc);
 
-      std::advance(idx_a_reaction_id, pick_offset);
+        std::advance(idx_a_reaction_id, pick_offset);
 
-      effective_candidates.insert(
-          std::make_pair(
-              idx_a_reaction_id->second.first,
-              std::make_pair(idx_b,
-                             idx_a_reaction_id->second.second)));
+        effective_candidates.insert(
+            std::make_pair(
+                idx_a_reaction_id->second.first,
+                std::make_pair(idx_b,
+                               idx_a_reaction_id->second.second)));
+      } else {  // pick randomly
+        longint candidate_index = (*rng_)(candidates_idx_a.size());
+        std::pair<longint, ReactionDef> selected_a = candidates_idx_a[candidate_index];
+        effective_candidates.insert(
+            std::make_pair(selected_a.first, std::make_pair(idx_b, selected_a.second)));
+      }
     }
   }
 }
