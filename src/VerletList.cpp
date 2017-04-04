@@ -229,7 +229,7 @@ void DynamicExcludeList::registerPython() {
 
     isDynamicExList = true;
 
-    //dynamicExList_->onListUpdated.connect()
+    dynamicExList_->onListUpdated.connect(boost::bind(&VerletList::rebuild, this));
 
     // proxy signals from DynamicExclude list to signals of VerletList.
     dynamicExcludeList->onPairExclude.connect(onPairExclude);
