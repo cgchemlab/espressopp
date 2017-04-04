@@ -85,19 +85,30 @@ class ChemicalConversionTypeSequence : public Observable {
 class ChemicalConversionTypeState : public Observable {
  public:
   ChemicalConversionTypeState(shared_ptr<System> system, longint p_type, longint p_state, longint total) :
-      Observable(system), total_value_(total), p_state_(p_state), p_type_(p_type) {
+      Observable(system), total_value_(total) {
+    result_type = real_scalar;
+    absolute_value_ = false;
+    type_state_.insert(std::make_pair(p_type, p_state));
+  }
+
+  ChemicalConversionTypeState(shared_ptr<System> system, longint p_type, longint p_state)
+      : Observable(system)  {
+    result_type = real_scalar;
+    absolute_value_ = true;
+    type_state_.insert(std::make_pair(p_type, p_state));
+  }
+
+  ChemicalConversionTypeState(shared_ptr<System> system, longint total) : Observable(system), total_value_(total)  {
     result_type = real_scalar;
     absolute_value_ = false;
   }
 
-  ChemicalConversionTypeState(shared_ptr<System> system, longint p_type, longint p_state)
-      : Observable(system), p_type_(p_type), p_state_(p_state) {
-    result_type = real_scalar;
-    absolute_value_ = true;
-  }
-
   ~ChemicalConversionTypeState() {}
   real compute_real() const;
+
+  void count_type(longint type, longint state) {
+    type_state_.insert(std::make_pair(type, state));
+  }
 
   boost::signals2::signal1<void, real> onValue;
 
@@ -105,8 +116,8 @@ class ChemicalConversionTypeState : public Observable {
  private:
   bool absolute_value_;
   real total_value_;
-  longint p_type_;
-  longint p_state_;
+
+  boost::unordered_map<longint, longint> type_state_;
 };
 
 }  // end namespace analysis

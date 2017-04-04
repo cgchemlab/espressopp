@@ -87,13 +87,22 @@ class ChemicalConversionLocal(ObservableLocal, analysis_ChemicalConversion):
 
 class ChemicalConversionTypeStateLocal(ObservableLocal, analysis_ChemicalConversionTypeState):
     """The (local) compute of conversion."""
-    def __init__(self, system, particle_type, particle_state, total_count=None):
+    def __init__(self, system, particle_type=None, particle_state=None, total_count=None):
         if pmi.workerIsActive():
-            if total_count is None:
+            if particle_state is None:
+                particle_state = -1
+            if particle_type is None and total_count is not None:
+                cxxinit(self, analysis_ChemicalConversionTypeState, system, total_count)
+            elif total_count is None:
                 cxxinit(self, analysis_ChemicalConversionTypeState, system, particle_type, particle_state)
             else:
                 cxxinit(self, analysis_ChemicalConversionTypeState, system, particle_type, particle_state, total_count)
 
+    def count_type(self, type_id, state=None):
+        if pmi.workerIsActive():
+            if state is None:
+                state = -1
+            self.cxxclass.count_type(self, type_id, state)
 
 class ChemicalConversionTypeSequenceLocal(ObservableLocal, analysis_ChemicalConversionTypeSequence):
     """The (local) compute of conversion."""
@@ -114,6 +123,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.analysis.ChemicalConversionTypeStateLocal',
+            pmicall=['count_type']
         )
 
     class ChemicalConversionTypeSequence(Observable):
