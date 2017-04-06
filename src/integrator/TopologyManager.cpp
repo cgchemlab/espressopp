@@ -1125,6 +1125,8 @@ void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_e
 void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
   real time0 = wallTimer.getElapsedTime();
 
+  bool update_fixed_pairs = removed_edges.size() > 0;
+
   for (SetPairs::iterator it = removed_edges.begin(); it != removed_edges.end(); ++it) {
     for (std::vector<shared_ptr<FixedTripleList> >::iterator ftl = triples_.begin(); ftl != triples_.end(); ++ftl) {
       (*ftl)->removeByBond(it->first, it->second);
@@ -1134,12 +1136,10 @@ void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
       (*fql)->removeByBond(it->first, it->second);
     }
   }
-  if (update_angles_) {
-    for (std::vector<shared_ptr<FixedTripleList> >::iterator it = triples_.begin(); it != triples_.end(); ++it) {
-      (*it)->updateParticlesStorage();
+  if (update_fixed_pairs) {
+    for (std::vector<shared_ptr<FixedTripleList> >::iterator ftl = triples_.begin(); ftl != triples_.end(); ++ftl) {
+      (*ftl)->updateParticlesStorage();
     }
-  }
-  if (update_dihedrals_) {
     for (std::vector<shared_ptr<FixedQuadrupleList> >::iterator fql = quadruples_.begin();
          fql != quadruples_.end(); ++fql) {
       (*fql)->updateParticlesStorage();

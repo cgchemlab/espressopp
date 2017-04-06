@@ -735,14 +735,8 @@ void ChemicalReaction::uniqueA(integrator::ReactionMap &potential_candidates) {/
                                idx_b_reaction_id->second.first,
                                idx_b_reaction_id->second.second)));
       } else if (candidates_idx_b.size() > 0) {
-        std::vector<long> weights;
-        weights.reserve(candidates_idx_b.size());
-
-        for (LocalCandidateIdx::iterator itt = candidates_idx_b.begin(); itt != candidates_idx_b.end(); ++itt) {
-          weights.push_back(itt->second.reaction_rate);
-        }
-        boost::random::discrete_distribution<> weight_rng(weights);
-        longint candidate_index = weight_rng(*(rng_->getBoostRNG()));
+        longint candidate_length = candidates_idx_b.size();
+        longint candidate_index = (*rng_)(candidate_length);
 
         std::pair<longint, ReactionDef> selected_b = candidates_idx_b[candidate_index];
         unique_list_of_candidates.insert(std::make_pair(idx_a, std::make_pair(selected_b.first, selected_b.second)));
@@ -847,15 +841,8 @@ void ChemicalReaction::uniqueB(integrator::ReactionMap &potential_candidates,// 
                 std::make_pair(idx_b,
                                idx_a_reaction_id->second.second)));
       } else {  // pick randomly
-        // Created a list of weights.
-        std::vector<long> weights;
-        weights.reserve(candidates_idx_a.size());
-
-        for (LocalCandidateIdx::iterator itt = candidates_idx_a.begin(); itt != candidates_idx_a.end(); ++itt) {
-          weights.push_back(itt->second.reaction_rate);
-        }
-        boost::random::discrete_distribution<> weight_rng(weights);
-        longint candidate_index = weight_rng(*(rng_->getBoostRNG()));
+        longint candidate_length = candidates_idx_a.size();
+        longint candidate_index = (*rng_)(candidate_length);
 
         std::pair<longint, ReactionDef> selected_a = candidates_idx_a[candidate_index];
         effective_candidates.insert(
