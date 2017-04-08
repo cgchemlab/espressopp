@@ -583,16 +583,48 @@ void TopologyManager::exchangeData() {
   // Collect all message from other CPUs. Both for res_id and new graph edges.
   typedef std::vector<std::vector<longint> > GlobalMerge;
   GlobalMerge global_merge_sets;
-
-  // Pack data
   std::vector<longint> output;
+
+  // Edges to remove is a spacial case, it depends on local particle type
+  // that is somewhere on some CPU, yet we want that that graph_
+  // is synchronized among all CPUs. So first we have to synchronize
+  // edges to remove that will contains edges to remove at some distance.
   output.push_back(nb_edges_root_to_remove_.size());
+  output.insert(output.end(), nb_edges_root_to_remove_.begin(), nb_edges_root_to_remove_.end());
+
+  // Synchronize those data
+  mpi::all_gather(*(system_->comm), output, global_merge_sets);
+
+  // Process only neighbour edges to remove.
+  SetPids global_nb_edges_root_to_remove;
+  for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
+    for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
+      longint nb_edges_root_to_remove_size = *(itm++);
+      for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
+        longint particle_id = *(itm++);
+        global_nb_edges_root_to_remove.insert(particle_id);
+      }
+    }
+  }
+  // Look for those edges at every CPUs.
+  // End merging data from other nodes. Now apply it.
+
+  for (SetPids::iterator it = global_nb_edges_root_to_remove.begin();
+       it != global_nb_edges_root_to_remove.end(); ++it) {
+    removeNeighbourEdges(*it, removedEdges_);
+  }
+  LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
+
+  // Clean output for next use
+  output.clear();
+  global_merge_sets.clear();
+
+  // Collect data from CPUs
   output.push_back(nb_distance_particles_.size() / 3);  // vector of particles to updates.
   output.push_back(newEdges_.size());  // vector of new edges.
   output.push_back(removedEdges_.size());  // vector of edges to remove.
   output.push_back(new_local_particle_properties_.size());
 
-  output.insert(output.end(), nb_edges_root_to_remove_.begin(), nb_edges_root_to_remove_.end());
   output.insert(output.end(), nb_distance_particles_.begin(), nb_distance_particles_.end());
 
   for (std::vector<std::pair<longint, longint> >::iterator it = newEdges_.begin();
@@ -617,27 +649,19 @@ void TopologyManager::exchangeData() {
   // Merge data from other nodes and perform local actions if particle is present.
 
   // Merged data from all nodes.
-
-  SetPids global_nb_edges_root_to_remove;
   MapPairsDist global_nb_distance_particles;
   SetPairs global_new_edge;
-  SetPairs global_remove_edge;
   SetPids global_new_local_particle_properties;
+  SetPairs global_remove_edge;
 
   LOG4ESPP_DEBUG(theLogger, "begin merge data from all nodes");
 
   for (GlobalMerge::iterator gms = global_merge_sets.begin(); gms != global_merge_sets.end(); gms++) {
     for (std::vector<longint>::iterator itm = gms->begin(); itm != gms->end();) {
-      longint nb_edges_root_to_remove_size = *(itm++);
       longint nb_distance_particles_size = *(itm++);
       longint new_edge_size = *(itm++);
       longint remove_edge_size = *(itm++);
       longint new_local_particle_properties_size = *(itm++);
-
-      for (int i = 0; i < nb_edges_root_to_remove_size; i++) {
-        longint particle_id = *(itm++);
-        global_nb_edges_root_to_remove.insert(particle_id);
-      }
 
       for (int i = 0; i < nb_distance_particles_size; i++) {
         longint root_id = *(itm++);
@@ -678,14 +702,6 @@ void TopologyManager::exchangeData() {
 
   LOG4ESPP_DEBUG(theLogger, "end merging data from other nodes, apply it");
 
-
-  // End merging data from other nodes. Now apply it.
-  for (SetPids::iterator it = global_nb_edges_root_to_remove.begin();
-       it != global_nb_edges_root_to_remove.end(); ++it) {
-    removeNeighbourEdges(*it, global_remove_edge);
-  }
-  LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
-
   removeAnglesDihedrals(global_remove_edge);
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
@@ -713,7 +729,6 @@ void TopologyManager::exchangeData() {
 
   if (system_->comm->rank() == 0) {
     std::vector<longint> sizes;
-    sizes.push_back(global_nb_edges_root_to_remove.size());
     sizes.push_back(global_nb_distance_particles.size());
     sizes.push_back(global_new_edge.size());
     sizes.push_back(global_remove_edge.size());
@@ -721,7 +736,6 @@ void TopologyManager::exchangeData() {
     mpi::broadcast(*(system_->comm), sizes, 0);
   } else {
     std::vector<longint> sizes;
-    sizes.push_back(global_nb_edges_root_to_remove.size());
     sizes.push_back(global_nb_distance_particles.size());
     sizes.push_back(global_new_edge.size());
     sizes.push_back(global_remove_edge.size());
@@ -1111,7 +1125,7 @@ bool TopologyManager::isPathExists(GraphMap &g, longint node1, longint node2) {
   return found_path;
 }
 
-void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove) {
+void TopologyManager::removeNeighbourEdges(size_t pid, std::vector<std::pair<longint, longint>> &edges_to_remove) {
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
 
@@ -1155,13 +1169,11 @@ void TopologyManager::removeNeighbourEdges(size_t pid, SetPairs &edges_to_remove
               type_p1 = p1_current->type();
               type_p2 = p1_node->type();
               if (pair_types_at_distance.count(std::make_pair(type_p1, type_p2)) != 0) {
-                if (edges_to_remove.count(std::make_pair(node, current_node)) == 0) {
-                  longint f1 = node;
-                  longint f2 = current_node;
-                  if (f1 > f2)
-                    std::swap(f1, f2);
-                  edges_to_remove.insert(std::make_pair(f1, f2));
-                }
+                longint f1 = node;
+                longint f2 = current_node;
+                if (f1 > f2)
+                  std::swap(f1, f2);
+                edges_to_remove.push_back(std::make_pair(f1, f2));
               }
             }
           }
