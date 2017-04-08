@@ -467,7 +467,7 @@ class TopologyManager: public Extension {
    * @param pid The root pid.
    * @param edges_to_remove The list of edges to remove.
    */
-  void removeNeighbourEdges(size_t pid, std::vector<std::pair<longint, longint>> edges_to_remove);
+  void removeNeighbourEdges(size_t pid, std::vector<std::pair<longint, longint> > &edges_to_remove);
   std::set<longint> nb_bond_distances_;
   longint max_bond_nb_distance_;
   std::vector<longint> nb_edges_root_to_remove_;  //<! Stores the pairs: distance; particle_id1, particle_id2

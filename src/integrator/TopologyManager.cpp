@@ -1125,7 +1125,7 @@ bool TopologyManager::isPathExists(GraphMap &g, longint node1, longint node2) {
   return found_path;
 }
 
-void TopologyManager::removeNeighbourEdges(size_t pid, std::vector<std::pair<longint, longint>> &edges_to_remove) {
+void TopologyManager::removeNeighbourEdges(size_t pid, std::vector<std::pair<longint, longint> > &edges_to_remove) {
   std::map<longint, longint> visitedDistance;
   std::queue<longint> Q;
 
