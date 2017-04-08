@@ -1,21 +1,21 @@
 /*
-  Copyright (C) 2016
+  Copyright (C) 2016-2017
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -146,52 +146,47 @@ bool FixedTripleListLambda::add(longint pid1, longint pid2, longint pid3) {
 }
 
 bool FixedTripleListLambda::remove(longint pid1, longint pid2, longint pid3) {
-  bool found = true;
-  // Checks locality.
-  Particle *p1 = storage->lookupLocalParticle(pid1);
-  Particle *p2 = storage->lookupRealParticle(pid2);
-  Particle *p3 = storage->lookupLocalParticle(pid3);
-
-  if (!p2) {
-    found = false;
-  } else {
-    std::stringstream msg;
-    if (!p1) {
-      msg << "adding error: triple particle p1 " << pid1 <<
-          " does not exists here and cannot be added";
-      msg << " triplet: " << pid1 << "-" << pid2 << "-" << pid3;
-      throw std::runtime_error(msg.str());
-    }
-    if (!p3) {
-      msg << "adding error: triple particle p3 " << pid3 <<
-          " does not exists here and cannot be added";
-      msg << " triplet: " << pid1 << "-" << pid2 << "-" << pid3;
-      throw std::runtime_error(msg.str());
-    }
-  }
 
   bool returnVal = false;
-  if (found) {
-    // Remove entries.
-    std::pair<TriplesLambda::iterator, TriplesLambda::iterator> equalRange =
-        triplesLambda_.equal_range(pid2);
-    if (equalRange.first != triplesLambda_.end()) {
-      // otherwise test whether the triple already exists
-      for (TriplesLambda::iterator it = equalRange.first; it != equalRange.second;) {
-          if ((it->second.first == pid1 && it->second.second.first == pid3) ||
-              (it->second.first == pid3 && it->second.second.first == pid1)) {
-          LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
-                                                      << "-" << it->second.second.first);
-          onTupleRemoved(it->second.first, it->first, it->second.second.first);
-          it = triplesLambda_.erase(it);
-          returnVal = true;
-        } else {
-          ++it;
-        }
+  // Remove entries.
+  std::pair<TriplesLambda::iterator, TriplesLambda::iterator> equalRange =
+      triplesLambda_.equal_range(pid2);
+  if (equalRange.first != triplesLambda_.end()) {
+    // otherwise test whether the triple already exists
+    for (TriplesLambda::iterator it = equalRange.first; it != equalRange.second;) {
+        if ((it->second.first == pid1 && it->second.second.first == pid3) ||
+            (it->second.first == pid3 && it->second.second.first == pid1)) {
+        LOG4ESPP_DEBUG(theLogger, "removed triple " << it->first << "-" << it->second.first
+                                                    << "-" << it->second.second.first);
+        onTupleRemoved(it->second.first, it->first, it->second.second.first);
+        it = triplesLambda_.erase(it);
+        returnVal = true;
+      } else {
+        ++it;
       }
     }
   }
   return returnVal;
+}
+
+
+bool FixedTripleListLambda::removeByBond(longint pid1, longint pid2) {
+  bool return_val = false;
+
+  for (TriplesLambda::iterator it = triplesLambda_.begin(); it != triplesLambda_.end();) {
+    longint a1 = it->second.first;
+    longint a2 = it->first;
+    longint a3 = it->second.second.first;
+    if ((a1 == pid1 && a2 == pid2) || (a2 == pid1 && a3 == pid2) ||
+        (a1 == pid2 && a2 == pid1) || (a2 == pid2 && a3 == pid1)) {
+      it = triplesLambda_.erase(it);
+      return_val = true;
+    } else {
+      ++it;
+    }
+  }
+
+  return return_val;
 }
 
 int FixedTripleListLambda::totalSize() {

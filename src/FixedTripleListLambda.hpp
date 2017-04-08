@@ -64,6 +64,7 @@ class FixedTripleListLambda: public FixedTripleList {
   void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
   void onParticlesChanged();
   bool remove(longint pid1, longint pid2, longint pid3);
+  bool removeByBond(longint pid1, longint pid2);
   void updateParticlesStorage();
 
   python::list getTriples();

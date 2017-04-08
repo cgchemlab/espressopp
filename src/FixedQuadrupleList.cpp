@@ -143,6 +143,7 @@ namespace espressopp {
         onTupleAdded(pid1, pid2, pid3, pid4);
         LOG4ESPP_DEBUG(theLogger, "added fixed quadruple to global quadruple list: " << pid1 << "-" << pid2
             << "-" << pid3 << "-" << pid4);
+        std::cout << "added Q:" << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4 << std::endl;
       } else {
         LOG4ESPP_INFO(theLogger, "quadruple " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4
             << " already exists");
@@ -266,9 +267,11 @@ namespace espressopp {
       longint q2 = it->second.first;
       longint q3 = it->second.second;
       longint q4 = it->second.third;
-      if ((q1 == pid1 && q2 == pid2) || (q2 == pid1 && q3 == pid2) || (q3 == pid1 && q4 == pid2) ||
-          (q1 == pid2 && q2 == pid1) || (q2 == pid2 && q3 == pid1) || (q3 == pid2 && q4 == pid1)) {
+      if ((q1 == pid1 && q2 == pid2) || (q1 == pid2 && q2 == pid1) ||
+          (q2 == pid1 && q3 == pid2) || (q2 == pid2 && q3 == pid1) ||
+          (q3 == pid1 && q4 == pid2) || (q3 == pid2 && q4 == pid1)) {
         onTupleRemoved(q1, q2, q3, q4);
+        std::cout << "remove " << q1 << "-" << q2 << "-" << q3 << "-" << q4 << " b:" << pid1 << ":" << pid2 << std::endl;
         LOG4ESPP_DEBUG(theLogger, "dihedral " << q1 << q2 << q3 << q4 << " removed");
         it = globalQuadruples.erase(it);
         return_val = true;
@@ -276,6 +279,20 @@ namespace espressopp {
         ++it;
       }
     }
+
+    // remove it after
+    for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end();it++) {
+      longint q1 = it->first;
+      longint q2 = it->second.first;
+      longint q3 = it->second.second;
+      longint q4 = it->second.third;
+      if ((q1 == pid1 && q2 == pid2) || (q1 == pid2 && q2 == pid1) ||
+          (q2 == pid1 && q3 == pid2) || (q2 == pid2 && q3 == pid1) ||
+          (q3 == pid1 && q4 == pid2) || (q3 == pid2 && q4 == pid1)) {
+        std::cout << "dih: " << q1 << "-" << q2 << "-" << q3 << "-" << q4 << " b:" << pid1 << ":" << pid2 << "wtf?" << std::endl;
+      }
+    }
+
     return return_val;
   }
 
@@ -428,6 +445,8 @@ namespace espressopp {
       if (p1 == NULL) {
         std::stringstream msg;
         msg << "quadruple particle p1 " << it->first << " does not exists here";
+        msg << "#" << it->first << "-" << it->second.first << "-" << it->second.second;
+        msg << "-" << it->second.third;
         err.setException( msg.str() );
       }
 	  lastpid1 = it->first;
@@ -436,18 +455,24 @@ namespace espressopp {
       if (p2 == NULL) {
         std::stringstream msg;
         msg << "quadruple particle p2 " << it->second.first << " does not exists here";
+        msg << "#" << it->first << "-" << it->second.first << "-" << it->second.second;
+        msg << "-" << it->second.third;
         err.setException( msg.str() );
       }
       p3 = storage->lookupLocalParticle(it->second.second);
       if (p3 == NULL) {
         std::stringstream msg;
         msg << "quadruple particle p3 " << it->second.second << " does not exists here";
+        msg << "#" << it->first << "-" << it->second.first << "-" << it->second.second;
+        msg << "-" << it->second.third;
         err.setException( msg.str() );
       }
       p4 = storage->lookupLocalParticle(it->second.third);
       if (p4 == NULL) {
         std::stringstream msg;
         msg << "quadruple particle p4 " << it->second.third << " does not exists here";
+        msg << "#" << it->first << "-" << it->second.first << "-" << it->second.second;
+        msg << "-" << it->second.third;
         err.setException( msg.str() );
       }
       this->add(p1, p2, p3, p4);
@@ -470,7 +495,7 @@ namespace espressopp {
         p1 = storage->lookupRealParticle(it->first);
         if (p1 == NULL) {
           std::stringstream msg;
-          msg << "quadruple particle p1 " << it->first << " does not exists here";
+          msg << "quadruple particle p1 " << it->first << " does not exists here (updateParticleStorage)";
           throw std::runtime_error(msg.str());
         }
         lastpid1 = it->first;
@@ -478,19 +503,19 @@ namespace espressopp {
       p2 = storage->lookupLocalParticle(it->second.first);
       if (p2 == NULL) {
         std::stringstream msg;
-        msg << "quadruple particle p2 " << it->second.first << " does not exists here";
+        msg << "quadruple particle p2 " << it->second.first << " does not exists here (updaeParticleStorage)";
         throw std::runtime_error(msg.str());
       }
       p3 = storage->lookupLocalParticle(it->second.second);
       if (p3 == NULL) {
         std::stringstream msg;
-        msg << "quadruple particle p3 " << it->second.second << " does not exists here";
+        msg << "quadruple particle p3 " << it->second.second << " does not exists here (updateParticleStorage)";
         throw std::runtime_error(msg.str());
       }
       p4 = storage->lookupLocalParticle(it->second.third);
       if (p4 == NULL) {
         std::stringstream msg;
-        msg << "quadruple particle p4 " << it->second.third << " does not exists here";
+        msg << "quadruple particle p4 " << it->second.third << " does not exists here (updateParticleStorage)";
         throw std::runtime_error(msg.str());
       }
       this->add(p1, p2, p3, p4);

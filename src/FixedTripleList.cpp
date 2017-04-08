@@ -234,33 +234,17 @@ namespace espressopp {
 
   bool FixedTripleList::removeByBond(longint pid1, longint pid2) {
     bool return_val = false;
-    std::pair<GlobalTriples::iterator, GlobalTriples::iterator> equal_range;
-    equal_range = globalTriples.equal_range(pid1);
-    if (equal_range.first != globalTriples.end()) {
-      for (GlobalTriples::iterator it = equal_range.first; it != equal_range.second;) {
-        if (it->second.first == pid2 || it->second.second == pid2) {
-          LOG4ESPP_DEBUG(
-              theLogger, "remove triple " << it->first << "-" << it->second.first
-                                          << "-" << it->second.second << " bond: " << pid1 << "-" << pid2);
-          onTupleRemoved(it->second.first, it->first, it->second.second);
-          it = globalTriples.erase(it);
-        } else {
-          ++it;
-        }
-      }
-    }
-    equal_range = globalTriples.equal_range(pid2);
-    if (equal_range.first != globalTriples.end()) {
-      for (GlobalTriples::iterator it = equal_range.first; it != equal_range.second;) {
-        if (it->second.first == pid1 || it->second.second == pid1) {
-          LOG4ESPP_DEBUG(
-              theLogger, "remove triple " << it->first << "-" << it->second.first
-                                          << "-" << it->second.second << " bond: " << pid1 << "-" << pid2);
-          onTupleRemoved(it->second.first, it->first, it->second.second);
-          it = globalTriples.erase(it);
-        } else {
-          ++it;
-        }
+
+    for (GlobalTriples::iterator it = globalTriples.begin(); it != globalTriples.end();) {
+      longint a1 = it->second.first;
+      longint a2 = it->first;
+      longint a3 = it->second.second;
+      if ((a1 == pid1 && a2 == pid2) || (a2 == pid1 && a3 == pid2) ||
+          (a1 == pid2 && a2 == pid1) || (a2 == pid2 && a3 == pid1)) {
+        it = globalTriples.erase(it);
+        return_val = true;
+      } else {
+        ++it;
       }
     }
     return return_val;

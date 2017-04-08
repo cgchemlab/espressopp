@@ -937,6 +937,7 @@ void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
   bool update_fixed_pairs = removed_edges.size() > 0;
 
   for (SetPairs::iterator it = removed_edges.begin(); it != removed_edges.end(); ++it) {
+    std::cout << "removeBond: " << it->first << "-" << it->second << std::endl;
     for (std::vector<shared_ptr<FixedTripleList> >::iterator ftl = triples_.begin(); ftl != triples_.end(); ++ftl) {
       (*ftl)->removeByBond(it->first, it->second);
     }

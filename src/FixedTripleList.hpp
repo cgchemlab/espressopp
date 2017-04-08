@@ -60,7 +60,7 @@ namespace espressopp {
 	    virtual bool iadd(longint pid1, longint pid2, longint pid3);
 
 		virtual bool remove(longint pid1, longint pid2, longint pid3);
-		bool removeByBond(longint pid1, longint pid2);
+		virtual bool removeByBond(longint pid1, longint pid2);
 
 		virtual void beforeSendParticles(ParticleList& pl, class OutBuffer &buf);
 		virtual void afterRecvParticles(ParticleList& pl, class InBuffer &buf);

@@ -166,48 +166,44 @@ bool FixedQuadrupleListLambda::add(longint pid1, longint pid2, longint pid3, lon
 }
 
 bool FixedQuadrupleListLambda::remove(longint pid1, longint pid2, longint pid3, longint pid4) {
-  bool found = true;
   System &system = storage->getSystemRef();
 
-  Particle *p1 = storage->lookupRealParticle(pid1);
-  Particle *p2 = storage->lookupLocalParticle(pid2);
-  Particle *p3 = storage->lookupLocalParticle(pid3);
-  Particle *p4 = storage->lookupLocalParticle(pid4);
-  if (!p1) {
-    found = false;
-  } else {
-    std::stringstream msg;
-    if (!p2) {
-      msg << "quadruple particle p2 " << pid2 << " does not exists here and cannot be added";
-      throw std::runtime_error(msg.str());
-    }
-    if (!p3) {
-      msg << "quadruple particle p3 " << pid3 << " does not exists here and cannot be added";
-      throw std::runtime_error(msg.str());
-    }
-    if (!p4) {
-      msg << "quadruple particle p4 " << pid4 << " does not exists here and cannot be added";
-      throw std::runtime_error(msg.str());
-    }
-  }
-
   bool returnVal = false;
-  if (found) {
-    std::pair<QuadruplesLambda::iterator, QuadruplesLambda::iterator> equalRange
-        = quadruplesLambda_.equal_range(pid1);
-    if (equalRange.first != quadruplesLambda_.end()) {
-      for (QuadruplesLambda::iterator it = equalRange.first; it != equalRange.second;)
-        if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
-          onTupleRemoved(pid1, pid2, pid3, pid4);
-          returnVal = true;
-          it = quadruplesLambda_.erase(it);
-        } else {
-          ++it;
-        }
-    }
+  std::pair<QuadruplesLambda::iterator, QuadruplesLambda::iterator> equalRange
+      = quadruplesLambda_.equal_range(pid1);
+  if (equalRange.first != quadruplesLambda_.end()) {
+    for (QuadruplesLambda::iterator it = equalRange.first; it != equalRange.second;)
+      if (it->second.first == Triple<longint, longint, longint>(pid2, pid3, pid4)) {
+        onTupleRemoved(pid1, pid2, pid3, pid4);
+        returnVal = true;
+        it = quadruplesLambda_.erase(it);
+      } else {
+        ++it;
+      }
   }
   return returnVal;
 }
+  
+bool FixedQuadrupleListLambda::removeByBond(longint pid1, longint pid2) {
+    bool return_val = false;
+    // TODO(jakub): this has to be changed in more efficient way.
+    for (QuadruplesLambda::iterator it = quadruplesLambda_.begin(); it != quadruplesLambda_.end();) {
+      longint q1 = it->first;
+      longint q2 = it->second.first.first;
+      longint q3 = it->second.first.second;
+      longint q4 = it->second.first.third;
+      if ((q1 == pid1 && q2 == pid2) || (q2 == pid1 && q3 == pid2) || (q3 == pid1 && q4 == pid2) ||
+          (q1 == pid2 && q2 == pid1) || (q2 == pid2 && q3 == pid1) || (q3 == pid2 && q4 == pid1)) {
+        onTupleRemoved(q1, q2, q3, q4);
+        LOG4ESPP_DEBUG(theLogger, "dihedral " << q1 << q2 << q3 << q4 << " removed");
+        it = quadruplesLambda_.erase(it);
+        return_val = true;
+      } else {
+        ++it;
+      }
+    }
+    return return_val;
+  }
 
 python::list FixedQuadrupleListLambda::getQuadruples() {
   python::tuple quadruple;

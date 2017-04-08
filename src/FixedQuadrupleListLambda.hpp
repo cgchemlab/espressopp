@@ -68,6 +68,7 @@ class FixedQuadrupleListLambda : public FixedQuadrupleList {
   bool iadd(longint pid1, longint pid2, longint pid3, longint pid4);
 
   bool remove(longint pid1, longint pid2, longint pid3, longint pid4);
+  virtual bool removeByBond(longint pid1, longint pid2);
 
   void beforeSendParticles(ParticleList &pl, class OutBuffer &buf);
   void afterRecvParticles(ParticleList &pl, class InBuffer &buf);
