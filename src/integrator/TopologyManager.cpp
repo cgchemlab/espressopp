@@ -613,7 +613,6 @@ void TopologyManager::exchangeData() {
        it != global_nb_edges_root_to_remove.end(); ++it) {
     removeNeighbourEdges(*it, removedEdges_);
   }
-  LOG4ESPP_DEBUG(theLogger, "finish apply removeNeighbourEdges: " << global_remove_edge.size());
 
   // Clean output for next use
   output.clear();
