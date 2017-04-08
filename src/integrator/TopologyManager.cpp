@@ -20,8 +20,8 @@
 
 #include "TopologyManager.hpp"
 
-#include <queue>
 #include <resolv.h>
+#include <queue>
 #include <fstream>
 
 #include "boost/format.hpp"
@@ -360,15 +360,6 @@ void TopologyManager::newEdge(longint pid1, longint pid2) {
     std::cout << system_->comm->rank() << ": residues " << rpid1 << "-" << rpid2 << " already connected" << std::endl;
     std::cout << system_->comm->rank() << ": new bond " << pid1 << "-" << pid2 << " will connect again those residues" << std::endl;
     throw std::runtime_error("Residues already connected");
-  }
-  LOG4ESPP_DEBUG(theLogger, "newEdge: " << pid1 << "-" << pid2);
-  if ((pid1 == 3056 && pid2 == 3737) || (pid1 == 3737 && pid2 == 3056)) {
-    Particle *p1 = system_->storage->lookupLocalParticle(pid1);
-    Particle *p2 = system_->storage->lookupLocalParticle(pid2);
-    std::cout << "Connecting " << pid1 << " t:" << p1->type() << "-" << pid2 << " t:" << p2->type() << std::endl;
-  }
-  if ((rpid1 == 764 && rpid2 == 935) || (rpid1 == 935 && rpid2 == 764)) {
-    std::cout << "Connecting residue " << rpid1 << "-" << rpid2 << " bond: " << pid1 << "-" << pid2 << std::endl;
   }*/
   newResEdge(rpid1, rpid2);
 
@@ -533,7 +524,7 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
           }
         }
       }
-      delete graph_r1;
+      delete graph_r1;  // TODO(jakub): memory leak, there are points to set<longint> that will be not removed.
       delete graph_r2;
     }
   }
@@ -559,6 +550,8 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
   bool removed;
   if (fpl) {
     removed = fpl->remove(pid1, pid2);
+    if (removed && (pid1 == 883 || pid2 == 883))
+      std::cout << "removed bond:" << pid1 << "-" << pid2 << std::endl;
   } else {
     std::stringstream ss;
     ss << "Tuple for pair " << pid1 << "-" << pid2 << " of types " << t1 << "-" << t2 << " not found";
@@ -685,6 +678,7 @@ void TopologyManager::exchangeData() {
 
   LOG4ESPP_DEBUG(theLogger, "end merging data from other nodes, apply it");
 
+
   // End merging data from other nodes. Now apply it.
   for (SetPids::iterator it = global_nb_edges_root_to_remove.begin();
        it != global_nb_edges_root_to_remove.end(); ++it) {
@@ -695,11 +689,14 @@ void TopologyManager::exchangeData() {
   removeAnglesDihedrals(global_remove_edge);
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
+    std::cout << system_->comm->rank() << "# delete edge: " << it->first << "-" << it->second << std::endl;
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply deleteEdge: " << global_remove_edge.size());
 
   for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); it++) {
     newEdge(it->first, it->second);
+    if (it->first == 883 || it->second == 883)
+      std::cout << "new edge: " << it->first << "-" << it->second << std::endl;
   }
   LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
 
@@ -714,6 +711,37 @@ void TopologyManager::exchangeData() {
     updateParticleProperties(*it);
   }
 
+  if (system_->comm->rank() == 0) {
+    std::vector<longint> sizes;
+    sizes.push_back(global_nb_edges_root_to_remove.size());
+    sizes.push_back(global_nb_distance_particles.size());
+    sizes.push_back(global_new_edge.size());
+    sizes.push_back(global_remove_edge.size());
+    sizes.push_back(global_new_local_particle_properties.size());
+    mpi::broadcast(*(system_->comm), sizes, 0);
+  } else {
+    std::vector<longint> sizes;
+    sizes.push_back(global_nb_edges_root_to_remove.size());
+    sizes.push_back(global_nb_distance_particles.size());
+    sizes.push_back(global_new_edge.size());
+    sizes.push_back(global_remove_edge.size());
+    sizes.push_back(global_new_local_particle_properties.size());
+    std::vector<longint> root_sizes;
+    mpi::broadcast(*(system_->comm), root_sizes, 0);
+    for (int i = 0; i < root_sizes.size(); i++) {
+      if (root_sizes[i] != sizes[i]) {
+        std::cout << "i: " << i << "root: " << root_sizes[i] << " local: " << sizes[i] << std::endl;
+
+        std::cout << "sizes: ";
+        for (int j = 0; j < root_sizes.size(); j++)
+          std::cout << root_sizes[j] << ":" << sizes[j] << " ";
+        std::cout << std::endl;
+
+        throw std::runtime_error("Wrong input data");
+      }
+    }
+  }
+
   // Generate missing angles, dihedrals, 1-4 pairs
   generateNewAnglesDihedrals(global_new_edge);
 
@@ -726,6 +754,26 @@ void TopologyManager::exchangeData() {
   new_local_particle_properties_.clear();
 
   is_dirty_ = false;
+
+  // Last check (Only for DEBUG)
+  if (system_->comm->rank() == 0) {
+    longint edge_number = 0;
+    for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+      edge_number += it->second->size();
+    }
+    mpi::broadcast(*(system_->comm), edge_number, 0);
+  } else {
+    longint root_edge_number = 0;
+    longint local_edge_number = 0;
+    mpi::broadcast(*(system_->comm), root_edge_number, 0);
+    for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
+      local_edge_number += it->second->size();
+    }
+    if (local_edge_number != root_edge_number) {
+      std::cout << system_->comm->rank() << " has " << local_edge_number << " root: " << root_edge_number << std::endl;
+      throw std::runtime_error("Graphs not syncrhonized");
+    }
+  }
 
   timeExchangeData += wallTimer.getElapsedTime() - time0;
   LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
@@ -794,6 +842,7 @@ void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
         reverse_order = true;
       }
 
+      // Check if p1 is real (or p4 if reverse order)
       if ((reverse_order && p4->ghost()) || (!reverse_order && p1->ghost()))
         continue;
 
@@ -937,7 +986,6 @@ void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
   bool update_fixed_pairs = removed_edges.size() > 0;
 
   for (SetPairs::iterator it = removed_edges.begin(); it != removed_edges.end(); ++it) {
-    std::cout << "removeBond: " << it->first << "-" << it->second << std::endl;
     for (std::vector<shared_ptr<FixedTripleList> >::iterator ftl = triples_.begin(); ftl != triples_.end(); ++ftl) {
       (*ftl)->removeByBond(it->first, it->second);
     }
@@ -1272,14 +1320,14 @@ bool TopologyManager::isNeighbourParticleInState(
     }
     if (num_type > 1) {
       std::stringstream ss;
-      ss << "multiple neigbhours around root=" << root_id << " num=" << num_type << " type=" << nb_type_id << " [";
+      ss << "multiple neighbours around root=" << root_id << " num=" << num_type << " type=" << nb_type_id << " [";
       for (std::set<longint>::iterator it = adj->begin(); it != adj->end(); ++it) {
         ss << *it << ",";
       }
       ss << "]";
       std::cout << ss.str() << std::endl;
       return false;
-      //throw std::runtime_error(ss.str());
+      // throw std::runtime_error(ss.str());
     } else if (num_type == 1) {
       longint p_state = p->state();
       return (p_state >= min_state && p_state < max_state);
