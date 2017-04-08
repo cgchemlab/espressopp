@@ -699,6 +699,35 @@ void TopologyManager::exchangeData() {
     }
   }
 
+  if (system_->comm->rank() == 0) {
+    std::vector<longint> sizes;
+    sizes.push_back(global_nb_distance_particles.size());
+    sizes.push_back(global_new_edge.size());
+    sizes.push_back(global_remove_edge.size());
+    sizes.push_back(global_new_local_particle_properties.size());
+    mpi::broadcast(*(system_->comm), sizes, 0);
+  } else {
+    std::vector<longint> sizes;
+    sizes.push_back(global_nb_distance_particles.size());
+    sizes.push_back(global_new_edge.size());
+    sizes.push_back(global_remove_edge.size());
+    sizes.push_back(global_new_local_particle_properties.size());
+    std::vector<longint> root_sizes;
+    mpi::broadcast(*(system_->comm), root_sizes, 0);
+    for (int i = 0; i < root_sizes.size(); i++) {
+      if (root_sizes[i] != sizes[i]) {
+        std::cout << "i: " << i << "root: " << root_sizes[i] << " local: " << sizes[i] << std::endl;
+
+        std::cout << "sizes: ";
+        for (int j = 0; j < root_sizes.size(); j++)
+          std::cout << root_sizes[j] << ":" << sizes[j] << " ";
+        std::cout << std::endl;
+
+        throw std::runtime_error("Wrong input data");
+      }
+    }
+  }
+
   LOG4ESPP_DEBUG(theLogger, "end merging data from other nodes, apply it");
 
   removeAnglesDihedrals(global_remove_edge);
@@ -1129,7 +1158,7 @@ void TopologyManager::removeNeighbourEdges(size_t pid, std::vector<std::pair<lon
   std::queue<longint> Q;
 
   Particle *root = system_->storage->lookupLocalParticle(pid);
-  if (!root)
+  if (root == NULL)
     return;
 
   Q.push(root->id());

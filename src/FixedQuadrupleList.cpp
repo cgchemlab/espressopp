@@ -143,7 +143,6 @@ namespace espressopp {
         onTupleAdded(pid1, pid2, pid3, pid4);
         LOG4ESPP_DEBUG(theLogger, "added fixed quadruple to global quadruple list: " << pid1 << "-" << pid2
             << "-" << pid3 << "-" << pid4);
-        std::cout << "added Q:" << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4 << std::endl;
       } else {
         LOG4ESPP_INFO(theLogger, "quadruple " << pid1 << "-" << pid2 << "-" << pid3 << "-" << pid4
             << " already exists");
