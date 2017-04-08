@@ -347,16 +347,6 @@ class TopologyManager: public Extension {
    * Update registered FixedQuadrupleLists with new entries.
    */
   void defineDihedrals(std::set<Quadruplets> &quadruplets);
-  void define14tuples(std::set<Quadruplets> &quadruplets);
-  /**
-   * Update registered FixedTripleList with new entries.
-   */
-  void undefineAngles(std::set<Triplets> &triplets);
-  /**
-   * Update registered FixedQuadrupleLists with new entries.
-   */
-  void undefineDihedrals(std::set<Quadruplets> &quadruplets);
-  void undefine14tuples(std::set<Quadruplets> &quadruplets);
 
   /**
    * Based on topology, generate missing angles and dihedrals around newly
