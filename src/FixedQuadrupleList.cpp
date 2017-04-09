@@ -270,7 +270,6 @@ namespace espressopp {
           (q2 == pid1 && q3 == pid2) || (q2 == pid2 && q3 == pid1) ||
           (q3 == pid1 && q4 == pid2) || (q3 == pid2 && q4 == pid1)) {
         onTupleRemoved(q1, q2, q3, q4);
-        std::cout << "remove " << q1 << "-" << q2 << "-" << q3 << "-" << q4 << " b:" << pid1 << ":" << pid2 << std::endl;
         LOG4ESPP_DEBUG(theLogger, "dihedral " << q1 << q2 << q3 << q4 << " removed");
         it = globalQuadruples.erase(it);
         return_val = true;
@@ -278,20 +277,6 @@ namespace espressopp {
         ++it;
       }
     }
-
-    // remove it after
-    for (GlobalQuadruples::iterator it = globalQuadruples.begin(); it != globalQuadruples.end();it++) {
-      longint q1 = it->first;
-      longint q2 = it->second.first;
-      longint q3 = it->second.second;
-      longint q4 = it->second.third;
-      if ((q1 == pid1 && q2 == pid2) || (q1 == pid2 && q2 == pid1) ||
-          (q2 == pid1 && q3 == pid2) || (q2 == pid2 && q3 == pid1) ||
-          (q3 == pid1 && q4 == pid2) || (q3 == pid2 && q4 == pid1)) {
-        std::cout << "dih: " << q1 << "-" << q2 << "-" << q3 << "-" << q4 << " b:" << pid1 << ":" << pid2 << "wtf?" << std::endl;
-      }
-    }
-
     return return_val;
   }
 

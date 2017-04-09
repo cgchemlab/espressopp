@@ -342,11 +342,11 @@ class TopologyManager: public Extension {
   /**
    * Update registered FixedTripleList with new entries.
    */
-  void defineAngles(std::set<Triplets> &triplets);
+  void defineAngles(const std::set<Triplets> &triplets);
   /**
    * Update registered FixedQuadrupleLists with new entries.
    */
-  void defineDihedrals(std::set<Quadruplets> &quadruplets);
+  void defineDihedrals(const std::set<Quadruplets> &quadruplets);
 
   /**
    * Based on topology, generate missing angles and dihedrals around newly
@@ -357,8 +357,8 @@ class TopologyManager: public Extension {
                                std::set<Quadruplets> &quadruplets,
                                std::set<Triplets> &triplets);
 
-  void generateNewAnglesDihedrals(SetPairs set);
-  void removeAnglesDihedrals(SetPairs removed_edges);
+  void generateNewAnglesDihedrals(const SetPairs &set);
+  void removeAnglesDihedrals(const SetPairs &removed_edges);
 
   /**
    * Exchange new topology and res_id data among cpus.

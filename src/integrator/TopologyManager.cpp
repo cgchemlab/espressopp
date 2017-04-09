@@ -536,6 +536,10 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
 
   Particle *p1 = system_->storage->lookupLocalParticle(pid1);
   Particle *p2 = system_->storage->lookupLocalParticle(pid2);
+
+  if (p1 == NULL || p2 == NULL)
+    return false;
+
   if (p1->ghost() && !p2->ghost()) {
     std::swap(pid1, pid2);
   } else if (p1->ghost() && p2->ghost()) {
@@ -699,95 +703,34 @@ void TopologyManager::exchangeData() {
     }
   }
 
-  if (system_->comm->rank() == 0) {
-    std::vector<longint> sizes;
-    sizes.push_back(global_nb_distance_particles.size());
-    sizes.push_back(global_new_edge.size());
-    sizes.push_back(global_remove_edge.size());
-    sizes.push_back(global_new_local_particle_properties.size());
-    mpi::broadcast(*(system_->comm), sizes, 0);
-  } else {
-    std::vector<longint> sizes;
-    sizes.push_back(global_nb_distance_particles.size());
-    sizes.push_back(global_new_edge.size());
-    sizes.push_back(global_remove_edge.size());
-    sizes.push_back(global_new_local_particle_properties.size());
-    std::vector<longint> root_sizes;
-    mpi::broadcast(*(system_->comm), root_sizes, 0);
-    for (int i = 0; i < root_sizes.size(); i++) {
-      if (root_sizes[i] != sizes[i]) {
-        std::cout << "i: " << i << "root: " << root_sizes[i] << " local: " << sizes[i] << std::endl;
-
-        std::cout << "sizes: ";
-        for (int j = 0; j < root_sizes.size(); j++)
-          std::cout << root_sizes[j] << ":" << sizes[j] << " ";
-        std::cout << std::endl;
-
-        throw std::runtime_error("Wrong input data");
-      }
-    }
-  }
-
-  LOG4ESPP_DEBUG(theLogger, "end merging data from other nodes, apply it");
-
   removeAnglesDihedrals(global_remove_edge);
   for (SetPairs::iterator it = global_remove_edge.begin(); it != global_remove_edge.end(); ++it) {
     deleteEdge(it->first, it->second);
-    std::cout << system_->comm->rank() << "# delete edge: " << it->first << "-" << it->second << std::endl;
   }
-  LOG4ESPP_DEBUG(theLogger, "finish apply deleteEdge: " << global_remove_edge.size());
 
   for (SetPairs::iterator it = global_new_edge.begin(); it != global_new_edge.end(); it++) {
     newEdge(it->first, it->second);
-    if (it->first == 883 || it->second == 883)
-      std::cout << "new edge: " << it->first << "-" << it->second << std::endl;
   }
-  LOG4ESPP_DEBUG(theLogger, "finish apply newEdge: " << global_new_edge.size());
 
   for (MapPairsDist::iterator it = global_nb_distance_particles.begin();
       it != global_nb_distance_particles.end(); ++it) {
     updateParticlePropertiesAtDistance(it->first.second, it->second);
   }
-  LOG4ESPP_DEBUG(theLogger, "finish apply updateParticlePropertiesAtDistance: " << global_nb_distance_particles.size());
 
   for (SetPids::iterator it = global_new_local_particle_properties.begin();
        it != global_new_local_particle_properties.end(); ++it) {
     updateParticleProperties(*it);
   }
 
-  if (system_->comm->rank() == 0) {
-    std::vector<longint> sizes;
-    sizes.push_back(global_nb_distance_particles.size());
-    sizes.push_back(global_new_edge.size());
-    sizes.push_back(global_remove_edge.size());
-    sizes.push_back(global_new_local_particle_properties.size());
-    mpi::broadcast(*(system_->comm), sizes, 0);
-  } else {
-    std::vector<longint> sizes;
-    sizes.push_back(global_nb_distance_particles.size());
-    sizes.push_back(global_new_edge.size());
-    sizes.push_back(global_remove_edge.size());
-    sizes.push_back(global_new_local_particle_properties.size());
-    std::vector<longint> root_sizes;
-    mpi::broadcast(*(system_->comm), root_sizes, 0);
-    for (int i = 0; i < root_sizes.size(); i++) {
-      if (root_sizes[i] != sizes[i]) {
-        std::cout << "i: " << i << "root: " << root_sizes[i] << " local: " << sizes[i] << std::endl;
-
-        std::cout << "sizes: ";
-        for (int j = 0; j < root_sizes.size(); j++)
-          std::cout << root_sizes[j] << ":" << sizes[j] << " ";
-        std::cout << std::endl;
-
-        throw std::runtime_error("Wrong input data");
-      }
-    }
-  }
-
   // Generate missing angles, dihedrals, 1-4 pairs
   generateNewAnglesDihedrals(global_new_edge);
 
-  LOG4ESPP_DEBUG(theLogger, "finish apply updateParticleProperties: " << global_new_local_particle_properties.size());
+  // If some particles were removed then the FixedPairList have to be updated.
+  if (global_remove_edge.size() > 0) {
+    for (std::vector<shared_ptr<FixedPairList> >::iterator fpls = tuples_.begin(); fpls != tuples_.end(); fpls++) {
+      (*fpls)->updateParticlesStorage();
+    }
+  }
 
   newEdges_.clear();
   removedEdges_.clear();
@@ -798,6 +741,7 @@ void TopologyManager::exchangeData() {
   is_dirty_ = false;
 
   // Last check (Only for DEBUG)
+#ifdef LOG4ESPP_DEBUG_ENABLED
   if (system_->comm->rank() == 0) {
     longint edge_number = 0;
     for (GraphMap::iterator it = graph_->begin(); it != graph_->end(); ++it) {
@@ -813,15 +757,16 @@ void TopologyManager::exchangeData() {
     }
     if (local_edge_number != root_edge_number) {
       std::cout << system_->comm->rank() << " has " << local_edge_number << " root: " << root_edge_number << std::endl;
-      throw std::runtime_error("Graphs not syncrhonized");
+      throw std::runtime_error("Graphs not synchronized");
     }
   }
+#endif
 
   timeExchangeData += wallTimer.getElapsedTime() - time0;
   LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
 }
 
-void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
+void TopologyManager::defineAngles(const std::set<Triplets> &triplets) {
   LOG4ESPP_DEBUG(theLogger, "entering update angles");
   longint t1, t2, t3;
   shared_ptr<FixedTripleList> ftl;
@@ -862,7 +807,7 @@ void TopologyManager::defineAngles(std::set<Triplets> &triplets) {
   LOG4ESPP_DEBUG(theLogger, "leaving update angles");
 }
 
-void TopologyManager::defineDihedrals(std::set<Quadruplets> &quadruplets) {
+void TopologyManager::defineDihedrals(const std::set<Quadruplets> &quadruplets) {
   LOG4ESPP_DEBUG(theLogger, "entering update dihedrals");
   longint t1, t2, t3, t4;
   shared_ptr<FixedQuadrupleList> fql;
@@ -1001,7 +946,7 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
   }
 }
 
-void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_edges) {
+void TopologyManager::generateNewAnglesDihedrals(const SetPairs &new_edges) {
   // Generate angles, dihedrals, based on updated graph.
   real time0 = wallTimer.getElapsedTime();
 
@@ -1022,7 +967,7 @@ void TopologyManager::generateNewAnglesDihedrals(TopologyManager::SetPairs new_e
   timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
-void TopologyManager::removeAnglesDihedrals(SetPairs removed_edges) {
+void TopologyManager::removeAnglesDihedrals(const SetPairs &removed_edges) {
   real time0 = wallTimer.getElapsedTime();
 
   bool update_fixed_pairs = removed_edges.size() > 0;
