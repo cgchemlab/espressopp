@@ -554,8 +554,6 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
   bool removed;
   if (fpl) {
     removed = fpl->remove(pid1, pid2);
-    if (removed && (pid1 == 883 || pid2 == 883))
-      std::cout << "removed bond:" << pid1 << "-" << pid2 << std::endl;
   } else {
     std::stringstream ss;
     ss << "Tuple for pair " << pid1 << "-" << pid2 << " of types " << t1 << "-" << t2 << " not found";
