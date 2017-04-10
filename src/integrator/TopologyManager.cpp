@@ -524,7 +524,7 @@ bool TopologyManager::deleteEdge(longint pid1, longint pid2) {
           }
         }
       }
-      delete graph_r1;  // TODO(jakub): memory leak, there are points to set<longint> that will be not removed.
+      delete graph_r1;  // TODO(jakub): memory leak, there are pointers to set<longint> that will be not removed.
       delete graph_r2;
     }
   }

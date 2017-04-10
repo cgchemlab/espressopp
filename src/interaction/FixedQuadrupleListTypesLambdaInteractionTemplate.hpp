@@ -68,9 +68,7 @@ class FixedQuadrupleListTypesLambdaInteractionTemplate: public Interaction, Syst
     // typeX+1 because i<ntypes
     ntypes = std::max(ntypes, std::max(std::max(std::max(type1 + 1, type2 + 1), type3+1), type4+1));
     potentialArray.at(type1, type2, type3, type4) = potential;
-    if (type1 != type4 || type2 != type3) {  // add potential in the other direction
-      potentialArray.at(type4, type3, type2, type1) = potential;
-    }
+    potentialArray.at(type4, type3, type2, type1) = potential;
   }
 
   // this is used in the innermost force-loop
