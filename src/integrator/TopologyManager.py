@@ -108,6 +108,10 @@ class TopologyManagerLocal(integrator_TopologyManager):
         if pmi.workerIsActive():
             return self.cxxclass.is_particle_connected(self, pid1, pid2)
 
+    def get_fixed_pair_list(self, type1, type2):
+        if pmi.workerIsActive():
+            return self.cxxclass.get_fixed_pair_list(self, type1, type2)
+
 
 if pmi.isController :
     class TopologyParticleProperties(object):
@@ -131,7 +135,8 @@ if pmi.isController :
                        'register_quadruplet', 'initialize_topology', 'exchange_data',
                        'is_residue_connected', 'is_particle_connected',
                        'save_topology', 'save_res_topology', 'save_residues',
-                       'has_neighbour_particle_property'
+                       'has_neighbour_particle_property',
+                       'get_fixed_pair_list'
                       ],
             pmiinvoke = [
                 'print_topology',

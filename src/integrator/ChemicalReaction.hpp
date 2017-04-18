@@ -400,6 +400,9 @@ public:
     bc_ = s_->bc;
   }
 
+  void setFixedPairList(shared_ptr<FixedPairList> fpl) { fixed_pair_list_ = fpl ;}
+  shared_ptr<FixedPairList> getFixedPairList() { return fixed_pair_list_; }
+
   bool reverse() {return reverse_; };
 
   void set_reverse(bool r) {reverse_ = r; }
@@ -574,7 +577,7 @@ class RestrictReaction : public Reaction {
  * \f[ A:B -> A + B \f]
  *
  * When this reaction is invoked, the list of bonds between particles
- * A and B is scanned, the bond is removed when those conditions occures:
+ * A and B is scanned, the bond is removed when those conditions ocurs:
  *  - distance between A and B is larger than specific cut_off distance,
  *  - the \f[ k\Delta t \Phi < W\f] when \f[k\f] is a rate
  *
@@ -611,6 +614,7 @@ public:
   }
 
   bool isValidPair(Particle &p1, Particle &p2, ReactedPair &correct_order);
+  bool isValidState(Particle &p1, Particle &p2, ReactedPair &correct_order);
 
   /** Register this class so it can be used from Python. */
   static void registerPython();

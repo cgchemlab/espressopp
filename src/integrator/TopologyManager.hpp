@@ -285,6 +285,8 @@ class TopologyManager: public Extension {
   python::list getMoleculeIds();
   python::list getMolecule(longint mol_id);
 
+  shared_ptr<FixedPairList> getTuple(longint type_1, longint type_2);
+
   /**
    * Handle signal from FixedPairList that new bond was created.
    */

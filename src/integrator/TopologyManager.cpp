@@ -1484,6 +1484,37 @@ python::list TopologyManager::getTimers() {
   return ret;
 }
 
+python::list TopologyManager::getMoleculeIds() {
+  python::list ret;
+
+  for (GraphMap::iterator it = molecules_->begin(); it != molecules_->end(); it++) {
+    ret.append(it->first);
+  }
+
+  return ret;
+}
+python::list TopologyManager::getMolecule(longint mol_id) {
+  python::list ret;
+
+  if (molecules_->find(mol_id) != molecules_->end()) {
+    std::set<longint> *pset = molecules_->at(mol_id);
+    for (std::set<longint>::iterator its = pset->begin(); its != pset->end(); its++) {
+      ret.append(*its);
+    }
+  }
+  return ret;
+}
+
+shared_ptr<FixedPairList> TopologyManager::getTuple(longint t1, longint t2) {
+//  for (TupleMap::iterator it = tupleMap_.begin(); it != tupleMap_.end(); ++it) {
+//    for (boost::unordered_map<longint, shared_ptr<FixedPairList> >::iterator itt = it->second.begin(); itt != it->second.end(); ++itt) {
+//      std::cout << it->first << "-" << itt->first << ":" << &(*(itt->second)) << std::endl;
+//    }
+//  }
+  shared_ptr<FixedPairList> fpl = tupleMap_[t1][t2];
+  return fpl;
+}
+
 
 void TopologyManager::registerPython() {
   using namespace espressopp::python;  // NOLINT
@@ -1517,28 +1548,10 @@ void TopologyManager::registerPython() {
       .def("get_molecule_ids", &TopologyManager::getMoleculeIds)
       .def("get_molecule", &TopologyManager::getMolecule)
       .def("get_molecule_id", &TopologyManager::getMoleculeId)
-      .def("get_residue_id", &TopologyManager::getResId);
+      .def("get_residue_id", &TopologyManager::getResId)
+      .def("get_fixed_pair_list", &TopologyManager::getTuple);
 }
-python::list TopologyManager::getMoleculeIds() {
-  python::list ret;
 
-  for (GraphMap::iterator it = molecules_->begin(); it != molecules_->end(); it++) {
-    ret.append(it->first);
-  }
-
-  return ret;
-}
-python::list TopologyManager::getMolecule(longint mol_id) {
-  python::list ret;
-
-  if (molecules_->find(mol_id) != molecules_->end()) {
-    std::set<longint> *pset = molecules_->at(mol_id);
-    for (std::set<longint>::iterator its = pset->begin(); its != pset->end(); its++) {
-      ret.append(*its);
-    }
-  }
-  return ret;
-}
 
 }  // end namespace integrator
 }  // end namespace espressopp

@@ -256,7 +256,9 @@ void Reaction::registerPython() {
       .def("add_postprocess", &Reaction::addPostProcess)
       .def("add_constraint", &Reaction::addConstraint)
       .def("set_reaction_cutoff", &Reaction::set_reaction_cutoff)
-      .def("get_reaction_cutoff", &Reaction::reaction_cutoff);
+      .def("get_reaction_cutoff", &Reaction::reaction_cutoff)
+      .def("set_fixed_pair_list", &Reaction::setFixedPairList)
+      .def("get_fixed_pair_list", &Reaction::getFixedPairList);
 }
 
 /** Restricted reaction. */
@@ -317,11 +319,48 @@ void RestrictReaction::registerPython() {
           .def("add_constraint", &RestrictReaction::addConstraint)
           .def("set_reaction_cutoff", &RestrictReaction::set_reaction_cutoff)
           .def("get_reaction_cutoff", &Reaction::reaction_cutoff)
-          .def("define_connection", &RestrictReaction::defineConnection);
+          .def("define_connection", &RestrictReaction::defineConnection)
+          .def("set_fixed_pair_list", &RestrictReaction::setFixedPairList)
+          .def("get_fixed_pair_list", &RestrictReaction::getFixedPairList);
 }
 
 /** DissociationReaction */
 LOG4ESPP_LOGGER(DissociationReaction::theLogger, "DissociationReaction");
+
+bool DissociationReaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_order) {
+  int p1_state = p1.state();
+  int p2_state = p2.state();
+
+  bool ret_val = false;
+  // Case when both types are the same.
+  if ((type_1_ == type_2_) && (p1.type() == type_1_) && (p1.type() == p2.type())) {
+    if ((p1_state >= min_state_1_) && (p1_state < max_state_1_) &&
+        (p2_state >= min_state_2_) && (p2_state < max_state_2_)) {
+      correct_order.first = &p1;
+      correct_order.second = &p2;
+      ret_val = true;
+    } else if ((p2_state >= min_state_1_) && (p2_state < max_state_1_) &&
+        (p1_state >= min_state_2_) && (p1_state < max_state_2_)) {
+      correct_order.first = &p2;
+      correct_order.second = &p1;
+      ret_val = true;
+    }
+  } else {  // inhomogeneous case.
+    if (  (p1.type() == type_1_) && (p2.type() == type_2_)
+        && ((p1_state >= min_state_1_) && (p1_state < max_state_1_))
+        && ((p2_state >= min_state_2_) && (p2_state < max_state_2_)) ) {
+      correct_order.first = &p1;
+      correct_order.second = &p2;
+      ret_val = true;
+    } else if (  (p1.type() == type_2_) && (p2.type() == type_1_)
+        && ((p1_state >= min_state_2_) && (p1_state < max_state_2_))
+        && ((p2_state >= min_state_1_) && (p2_state < max_state_1_)) ) {
+      correct_order.first = &p2;
+      correct_order.second = &p1;
+      ret_val = true;
+    }
+  }
+}
 
 /** Checks if the particles pair is valid. */
 bool DissociationReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
@@ -412,7 +451,10 @@ void DissociationReaction::registerPython() {
       .add_property("cutoff", &DissociationReaction::cutoff, &DissociationReaction::set_cutoff)
       .add_property("active", &DissociationReaction::active, &DissociationReaction::set_active)
       .def("add_postprocess", &DissociationReaction::addPostProcess)
-      .def("add_constraint", &DissociationReaction::addConstraint);
+      .def("add_constraint", &DissociationReaction::addConstraint)
+      .def("set_fixed_pair_list", &DissociationReaction::setFixedPairList)
+      .def("get_fixed_pair_list", &DissociationReaction::getFixedPairList);
 }
+
 }  // namespace integrator
 }  // namespace espressopp

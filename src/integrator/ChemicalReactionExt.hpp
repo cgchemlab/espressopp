@@ -24,7 +24,7 @@
 
 #include "boost/unordered_map.hpp"
 #include "boost/signals2.hpp"
-#include "boost/container/map.hpp"
+//#include "boost/container/map.hpp"
 #include "boost/serialization/map.hpp"
 
 #include <fstream>

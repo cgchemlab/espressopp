@@ -444,7 +444,13 @@ class DissociationReactionLocal(integrator_DissociationReaction):
                     0 - both, 1 - reactant A, 2 - reactant B.
         """
         if pmi.workerIsActive():
-            self.cxxclass.add_postprocess(self, post_process, reactant_switch)
+            name_switch = {'both': 0, 'type_1': 1, 'type_2': 2}
+            self.cxxclass.add_postprocess(self, post_process, name_switch.get(reactant_switch, reactant_switch))
+
+    def set_reaction_cutoff(self, reaction_cutoff):
+        """Set cutoff object."""
+        if pmi.workerIsActive():
+            self.cxxclass.set_reaction_cutoff(self, reaction_cutoff)
 
     def add_constraint(self, constraint, reactant_switch=0):
         if pmi.workerIsActive():
@@ -533,6 +539,8 @@ if pmi.isController:
                 'set_reaction_cutoff',
                 'get_reaction_cutoff',
                 'add_constraint',
+                'get_fixed_pair_list',
+                'set_fixed_pair_list'
             ),
             pmiproperty=(
                 'type_1',
@@ -561,7 +569,9 @@ if pmi.isController:
                 'set_reaction_cutoff',
                 'get_reaction_cutoff',
                 'define_connection',
-                'add_constraint'
+                'add_constraint',
+                'get_fixed_pair_list',
+                'set_fixed_pair_list'
             ),
             pmiproperty=(
                 'type_1',
@@ -587,7 +597,9 @@ if pmi.isController:
                 cls='espressopp.integrator.DissociationReactionLocal',
                 pmicall=(
                     'add_postprocess',
-                    'add_constraint'
+                    'add_constraint',
+                    'get_fixed_pair_list',
+                    'set_fixed_pair_list'
                 ),
                 pmiproperty=(
                     'type_1',
