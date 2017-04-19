@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2016
+  Copyright (C) 2016-2017
       Jakub Krajniak (jkrajniak at gmail.com)
       Zidan Zhang (zidan.zhang at kuleuven.be)
 
@@ -129,7 +129,8 @@ void ATRPActivator::updateParticles() {
     }
 
     std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange;
-    for (int n = 0; n < num_per_interval_ && n < all_pids_state.size();) {
+    longint num_part = 0;
+    for (int n = 0; num_part < num_per_interval_ && n < all_pids_state.size(); num_part++) {
       // Activate or deactivate given pid.
       longint p_id = all_pids_state[n++];
       longint p_type = all_pids_state[n++];
