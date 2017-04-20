@@ -122,35 +122,34 @@ void ATRPActivator::updateParticles() {
   if (system.comm->rank() == 0) {
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
 
-    struct ParticleP {
-      longint p_id;
-      longint p_type;
-      longint p_state;
-    };
 
     // Root CPU select randomly :num_per_interval particles. Flat the list.
-    std::map<longint, ParticleP> all_pids_state;
+    std::map<longint, ATRPParticleP> all_pids_state;
     for (std::vector<std::vector<longint > >::iterator it = global_type_pids.begin(); it != global_type_pids.end(); ++it) {
       for (std::vector<longint>::iterator itt = it->begin(); itt != it->end();) {
         longint p_id = *(itt++);
         longint p_type = *(itt++);
         longint p_state = *(itt++);
-        ParticleP p;
-        p.p_id = p_id;
-        p.p_type = p_type;
-        p.p_state = p_state;
-        all_pids_state.insert(std::make_pair<longint, ParticleP>(p_id, p));
+        ATRPParticleP p(p_id, p_type, p_state);
+        all_pids_state.insert(std::make_pair<longint, ATRPParticleP>(p_id, p));
       }
     }
 
-    shared_ptr<esutil::RNG> rng = system.rng;
-
     longint num_particles = all_pids_state.size();
+    std::cout << "num_particles: " << num_particles << std::endl;
+    for (int n = 0; n < num_particles; n++) {
+      std::map<longint, ATRPParticleP>::iterator itmap1 = all_pids_state.begin();
+      std::advance(itmap1, n);
+      ATRPParticleP pp = itmap1->second;
+      std::cout << pp.p_id << " " << pp.p_type << " " << pp.p_state << std::endl;
+    }
     std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange;
     for (int n = 0; n < num_particles; n++) {
       // Activate or deactivate given pid.
 
-      ParticleP pp = all_pids_state[(*rng)(num_particles)];
+      std::map<longint, ATRPParticleP>::iterator itmap = all_pids_state.begin();
+      std::advance(itmap, (*rng_)(num_particles));
+      ATRPParticleP pp = itmap->second;
 
       longint p_id = pp.p_id;
       longint p_type = pp.p_type;
@@ -164,14 +163,12 @@ void ATRPActivator::updateParticles() {
           found = true;
           if (it->second.is_activator) {
             if (W < ratio_deactivator_*k_deactivate_) {
-              p_state += it->second.delta_state;  // update chemical state.
               ratio_deactivator_ -= delta_catalyst_;
               ratio_activator_ += delta_catalyst_;
               selected_pids_state.push_back(p_id);
             }
           } else {
             if (W < ratio_activator_*k_activate_) {
-              p_state += it->second.delta_state;  // update chemical state.
               ratio_activator_ -= delta_catalyst_;
               ratio_deactivator_ += delta_catalyst_;
               selected_pids_state.push_back(p_id);

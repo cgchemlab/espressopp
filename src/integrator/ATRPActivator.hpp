@@ -57,6 +57,18 @@ struct ReactiveCenter {
   }
 };
 
+struct ATRPParticleP {
+  ATRPParticleP() { }
+  ATRPParticleP(longint pid, longint ptype, longint pstate) {
+    p_id = pid;
+    p_type = ptype;
+    p_state = pstate;
+  }
+  longint p_id;
+  longint p_type;
+  longint p_state;
+};
+
 class ATRPActivator: public Extension {
  public:
   ATRPActivator(shared_ptr<System> system, longint interval, longint num_per_interval, real ratio_activator,
