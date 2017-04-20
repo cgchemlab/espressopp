@@ -46,6 +46,7 @@ ATRPActivator::ATRPActivator(
   stats_filename_ = "atrp_stats.dat";
 
   extensionOrder = Extension::beforeReaction;
+  max_property_id_ = -1;
 
   resetTimers();
 }
@@ -65,8 +66,11 @@ void ATRPActivator::addReactiveCenter(longint type_id,
                                       longint delta_state) {
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::addReactiveCenter type_id: " << type_id << " state:" << state
                             << " is_activator:" << is_activator << " delta_state:" << delta_state);
+  max_property_id_++;
   species_map_.insert(std::make_pair(
-      std::make_pair(type_id, state), ReactiveCenter(state, is_activator, delta_state, pp)));
+      std::make_pair(type_id, state),
+      ReactiveCenter(state, is_activator, delta_state, max_property_id_)));
+  property_map_.insert(std::make_pair(max_property_id_, pp));
 }
 
 void ATRPActivator::updateParticles() {
@@ -112,60 +116,64 @@ void ATRPActivator::updateParticles() {
 
   // Every CPU sends list of particle ids to root CPU.
   std::vector<std::vector<longint> > global_type_pids;
-  std::vector<longint> selected_pids_state;
+  std::vector<longint> selected_pids;
 
   if (system.comm->rank() == 0) {
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
 
-
     // Root CPU select randomly :num_per_interval particles. Flat the list.
-    std::map<longint, ATRPParticleP> all_pids_state;
-    for (std::vector<std::vector<longint > >::iterator it = global_type_pids.begin(); it != global_type_pids.end(); ++it) {
+    std::vector<ATRPParticleP> all_pids_state;
+    for (std::vector<std::vector<longint > >::iterator it = global_type_pids.begin();
+            it != global_type_pids.end(); ++it) {
       for (std::vector<longint>::iterator itt = it->begin(); itt != it->end();) {
         longint p_id = *(itt++);
         longint p_type = *(itt++);
         longint p_state = *(itt++);
         ATRPParticleP p(p_id, p_type, p_state);
-        all_pids_state.insert(std::make_pair<longint, ATRPParticleP>(p_id, p));
+        all_pids_state.push_back(p);
       }
     }
 
     longint num_particles = all_pids_state.size();
-    std::cout << "num_particles: " << num_particles << std::endl;
-    for (int n = 0; n < num_particles; n++) {
-      std::map<longint, ATRPParticleP>::iterator itmap1 = all_pids_state.begin();
-      std::advance(itmap1, n);
-      ATRPParticleP pp = itmap1->second;
-      std::cout << pp.p_id << " " << pp.p_type << " " << pp.p_state << std::endl;
-    }
-    std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange;
-    for (int n = 0; n < num_particles; n++) {
+    for (int n = 0; n < all_pids_state.size(); n++) {
       // Activate or deactivate given pid.
+      longint idx = (*rng_)(num_particles);
+      ATRPParticleP *pp = &(all_pids_state[idx]);
 
-      std::map<longint, ATRPParticleP>::iterator itmap = all_pids_state.begin();
-      std::advance(itmap, (*rng_)(num_particles));
-      ATRPParticleP pp = itmap->second;
-
-      longint p_id = pp.p_id;
-      longint p_type = pp.p_type;
-      longint p_state = pp.p_state;
+      longint p_id = pp->p_id;
+      longint p_type = pp->p_type;
+      longint p_state = pp->p_state;
 
       if (species_map_.count(std::make_pair(p_type, p_state)) == 1) {
         ReactiveCenter rc = species_map_[std::make_pair(p_type, p_state)];
         real W = (*rng_)();
+        shared_ptr<TopologyParticleProperties> prop = property_map_[rc.property_id];
         if (rc.is_activator) {
           if (W < ratio_deactivator_*k_deactivate_) {
             ratio_deactivator_ -= delta_catalyst_;
             ratio_activator_ += delta_catalyst_;
-            selected_pids_state.push_back(p_id);
+            pp->updated = true;
+            pp->property_id = rc.property_id;
+            pp->p_state += rc.delta_state;
+            pp->p_type = prop->type();
           }
         } else {
           if (W < ratio_activator_*k_activate_) {
             ratio_activator_ -= delta_catalyst_;
             ratio_deactivator_ += delta_catalyst_;
-            selected_pids_state.push_back(p_id);
+            pp->updated = true;
+            pp->property_id = rc.property_id;
+            pp->p_state += rc.delta_state;
+            pp->p_type = prop->type();
           }
         }
+      }
+    }
+    for (std::vector<ATRPParticleP>::iterator it = all_pids_state.begin(); it != all_pids_state.end(); it++) {
+      if (it->updated) {
+        selected_pids.push_back(it->p_id);
+        selected_pids.push_back(it->p_state);
+        selected_pids.push_back(it->property_id);
       }
     }
   } else {
@@ -174,25 +182,22 @@ void ATRPActivator::updateParticles() {
 
   // Broadcast selected particles id to all CPUs.
   // TODO(jakub): instead of broadcast all selected pids, send only to CPUs that posses those particles.
-  mpi::broadcast(*(system.comm), selected_pids_state, 0);
-  //mpi::broadcast(*(system.comm), ratio_activator_, 0);
-  //mpi::broadcast(*(system.comm), ratio_deactivator_, 0);
+  mpi::broadcast(*(system.comm), selected_pids, 0);
 
   // On every CPU, iterate over list of pids. If particle is on this CPU then process it.
   std::vector<Particle *> modified_particles;
-  for (int n = 0; n < selected_pids_state.size(); n++) {
-    longint p_pid = selected_pids_state[n];
+  for (std::vector<longint>::iterator it = selected_pids.begin(); it != selected_pids.end();) {
+    longint p_pid = *(it++);
+    longint final_state = *(it++);
+    longint property_id = *(it++);
     Particle *p = system.storage->lookupRealParticle(p_pid);  // check if particle is on this CPU.
     if (p) {
-      bool found = false;
-      if (species_map_.count(std::make_pair(p->type(), p->state())) == 1) {
-        ReactiveCenter rc = species_map_[std::make_pair(p->type(), p->state())];
-        p->state() += rc.delta_state;
-        if (rc.new_property->updateParticleProperties(p)) {
-          modified_particles.push_back(p)
-        } else {
-          throw std::runtime_error("Could not update properties of particle. Strange!");
-        }
+      shared_ptr<TopologyParticleProperties> pp = property_map_[property_id];
+      p->state() = final_state;
+      if (pp->updateParticleProperties(p)) {
+        modified_particles.push_back(p);
+      } else {
+        throw std::runtime_error("Could not update properties of particle. Strange!");
       }
     }
   }

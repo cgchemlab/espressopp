@@ -33,6 +33,7 @@
 #include "storage/NodeGrid.hpp"
 #include "storage/DomainDecomposition.hpp"
 #include "TopologyManager.hpp"
+#include "boost/serialization/set.hpp"
 
 namespace espressopp {
 namespace integrator {
@@ -41,19 +42,18 @@ struct ReactiveCenter {
   longint state;  ///<! minimal chemical state
   bool is_activator;
   longint delta_state;  ///<! update of chemical potential
-  shared_ptr<TopologyParticleProperties> new_property;  ///<! new property
+  longint property_id;   ///<! id of new property
 
   ReactiveCenter() {
     state = -1;
     delta_state = 0;
   }
 
-  ReactiveCenter(longint state_, bool is_activator_, longint delta_state_,
-                 shared_ptr<TopologyParticleProperties> new_property_) {
+  ReactiveCenter(longint state_, bool is_activator_, longint delta_state_, longint property_id_) {
     state = state_;
     is_activator = is_activator_;
     delta_state = delta_state_;
-    new_property = new_property_;
+    property_id = property_id_;
   }
 };
 
@@ -67,6 +67,8 @@ struct ATRPParticleP {
   longint p_id;
   longint p_type;
   longint p_state;
+  longint property_id;
+  bool updated;
 };
 
 class ATRPActivator: public Extension {
@@ -103,6 +105,9 @@ class ATRPActivator: public Extension {
   // type_id,state -> definition
   typedef boost::unordered_map<std::pair<longint, longint>, ReactiveCenter> SpeciesMap;
   SpeciesMap species_map_;
+
+  std::map<longint, shared_ptr<TopologyParticleProperties> > property_map_;
+  longint max_property_id_;
 
   shared_ptr<esutil::RNG> rng_;
 
