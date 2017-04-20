@@ -65,7 +65,8 @@ void ATRPActivator::addReactiveCenter(longint type_id,
                                       longint delta_state) {
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::addReactiveCenter type_id: " << type_id << " state:" << state
                             << " is_activator:" << is_activator << " delta_state:" << delta_state);
-  species_map_.insert(std::make_pair(type_id, ReactiveCenter(state, is_activator, delta_state, pp)));
+  species_map_.insert(std::make_pair(
+      std::make_pair(type_id, state), ReactiveCenter(state, is_activator, delta_state, pp)));
 }
 
 void ATRPActivator::updateParticles() {
@@ -101,17 +102,11 @@ void ATRPActivator::updateParticles() {
   for (espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
     Particle &p = *cit;
     bool found = false;
-    if (species_map_.count(p.type()) != 0) {
-      // Check if the particle is in the given state.
-      std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p.type());
-      for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (p.state() == it->second.state) {
-          local_type_pids_state.push_back(p.id());
-          local_type_pids_state.push_back(p.type());
-          local_type_pids_state.push_back(p.state());
-          found = true;
-        }
-      }
+    std::pair<longint, longint> key(p.type(), p.state());
+    if (species_map_.count(key) != 0) {
+      local_type_pids_state.push_back(p.id());
+      local_type_pids_state.push_back(p.type());
+      local_type_pids_state.push_back(p.state());
     }
   }
 
@@ -155,24 +150,20 @@ void ATRPActivator::updateParticles() {
       longint p_type = pp.p_type;
       longint p_state = pp.p_state;
 
-      equalRange = species_map_.equal_range(p_type);
-      bool found = false;
-      for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (p_state == it->second.state) {
-          real W = (*rng_)();
-          found = true;
-          if (it->second.is_activator) {
-            if (W < ratio_deactivator_*k_deactivate_) {
-              ratio_deactivator_ -= delta_catalyst_;
-              ratio_activator_ += delta_catalyst_;
-              selected_pids_state.push_back(p_id);
-            }
-          } else {
-            if (W < ratio_activator_*k_activate_) {
-              ratio_activator_ -= delta_catalyst_;
-              ratio_deactivator_ += delta_catalyst_;
-              selected_pids_state.push_back(p_id);
-            }
+      if (species_map_.count(std::make_pair(p_type, p_state)) == 1) {
+        ReactiveCenter rc = species_map_[std::make_pair(p_type, p_state)];
+        real W = (*rng_)();
+        if (rc.is_activator) {
+          if (W < ratio_deactivator_*k_deactivate_) {
+            ratio_deactivator_ -= delta_catalyst_;
+            ratio_activator_ += delta_catalyst_;
+            selected_pids_state.push_back(p_id);
+          }
+        } else {
+          if (W < ratio_activator_*k_activate_) {
+            ratio_activator_ -= delta_catalyst_;
+            ratio_deactivator_ += delta_catalyst_;
+            selected_pids_state.push_back(p_id);
           }
         }
       }
@@ -194,17 +185,13 @@ void ATRPActivator::updateParticles() {
     Particle *p = system.storage->lookupRealParticle(p_pid);  // check if particle is on this CPU.
     if (p) {
       bool found = false;
-      std::pair<SpeciesMap::iterator, SpeciesMap::iterator> equalRange = species_map_.equal_range(p->type());
-      for (SpeciesMap::iterator it = equalRange.first; it != equalRange.second && !found; ++it) {
-        if (p->state() == it->second.state) {
-          found = true;
-          p->state() += it->second.delta_state;
-          if (it->second.new_property->updateParticleProperties(p)) {
-            LOG4ESPP_DEBUG(theLogger, "update property of particle " << p->id());
-            modified_particles.push_back(p);
-          } else {
-            throw std::runtime_error("Could not update properties of particle. Strange!");
-          }
+      if (species_map_.count(std::make_pair(p->type(), p->state())) == 1) {
+        ReactiveCenter rc = species_map_[std::make_pair(p->type(), p->state())];
+        p->state() += rc.delta_state;
+        if (rc.new_property->updateParticleProperties(p)) {
+          modified_particles.push_back(p)
+        } else {
+          throw std::runtime_error("Could not update properties of particle. Strange!");
         }
       }
     }

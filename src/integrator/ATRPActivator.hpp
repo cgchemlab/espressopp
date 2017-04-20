@@ -100,7 +100,8 @@ class ATRPActivator: public Extension {
 
   std::vector<real> stats_k_activator;
 
-  typedef boost::unordered_multimap<longint, ReactiveCenter> SpeciesMap;
+  // type_id,state -> definition
+  typedef boost::unordered_map<std::pair<longint, longint>, ReactiveCenter> SpeciesMap;
   SpeciesMap species_map_;
 
   shared_ptr<esutil::RNG> rng_;
