@@ -46,7 +46,7 @@ ATRPActivator::ATRPActivator(
   stats_filename_ = "atrp_stats.dat";
 
   extensionOrder = Extension::beforeReaction;
-  max_property_id_ = -1;
+  max_property_id_ = 0;
 
   resetTimers();
 }
@@ -66,11 +66,15 @@ void ATRPActivator::addReactiveCenter(longint type_id,
                                       longint delta_state) {
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::addReactiveCenter type_id: " << type_id << " state:" << state
                             << " is_activator:" << is_activator << " delta_state:" << delta_state);
-  max_property_id_++;
+  if (species_map_.find(std::make_pair(type_id, state)) != species_map_.end()) {
+    std::cout << "type_id=" << type_id << " state=" << state << " already defined!";
+    throw std::runtime_error("ATRPActivator: duplicated entry in species_map_");
+  }
   species_map_.insert(std::make_pair(
       std::make_pair(type_id, state),
       ReactiveCenter(state, is_activator, delta_state, max_property_id_)));
   property_map_.insert(std::make_pair(max_property_id_, pp));
+  max_property_id_++;
 }
 
 void ATRPActivator::updateParticles() {
@@ -122,71 +126,84 @@ void ATRPActivator::updateParticles() {
   std::vector<longint> selected_pids;
   longint total_N = 0;
 
-  if (system.comm->rank() == 0) {
-    mpi::gather(*(system.comm), my_N, &total_N, 0);
+  longint my_rank = system.comm->rank();
+
+  if (my_rank == 0) {
+    // Get the total number of particles.
+    mpi::reduce(*(system.comm), my_N, total_N, std::plus<longint>(), 0);
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
 
     // Root CPU select randomly :num_per_interval particles. Flat the list.
-    std::map<longint, ATRPParticleP> all_pids_state;
+    std::map<longint, ATRPParticleP*> all_pids_state;
     for (std::vector<std::vector<longint > >::iterator it = global_type_pids.begin();
             it != global_type_pids.end(); ++it) {
       for (std::vector<longint>::iterator itt = it->begin(); itt != it->end();) {
         longint p_id = *(itt++);
         longint p_type = *(itt++);
         longint p_state = *(itt++);
-        ATRPParticleP p(p_id, p_type, p_state);
-        all_pids_state.insert(std::make_pair(p_id, p));
+        ATRPParticleP *atrpParticleP = new ATRPParticleP(p_id, p_type, p_state);
+        all_pids_state.insert(std::make_pair(p_id, atrpParticleP));
       }
     }
 
     longint num_particles = all_pids_state.size();
     // MC step
+    longint accept = 0;
+    longint act = 0;
+    longint dact = 0;
     for (int n = 0; n < total_N; n++) {  // internal MC trial
       // Activate or deactivate given pid.
       longint idx = (*rng_)(total_N + 1);
       if (all_pids_state.find(idx) == all_pids_state.end())
         continue;
 
-      ATRPParticleP *pp = &(all_pids_state[idx]);
+      accept++;
+      ATRPParticleP *atrpParticleP = all_pids_state.at(idx);
+      if (!atrpParticleP->init)
+        throw std::runtime_error("wrong atrpParticleP");
 
-      longint p_id = pp->p_id;
-      longint p_type = pp->p_type;
-      longint p_state = pp->p_state;
+      longint p_id = atrpParticleP->p_id;
+      longint p_type = atrpParticleP->p_type;
+      longint p_state = atrpParticleP->p_state;
 
       if (species_map_.count(std::make_pair(p_type, p_state)) == 1) {
-        ReactiveCenter rc = species_map_[std::make_pair(p_type, p_state)];
+        ReactiveCenter rc = species_map_.at(std::make_pair(p_type, p_state));
         real W = (*rng_)();
-        shared_ptr<TopologyParticleProperties> prop = property_map_[rc.property_id];
+        shared_ptr<TopologyParticleProperties> prop = property_map_.at(rc.property_id);
         if (rc.is_activator) {
           if (W < ratio_deactivator_*k_deactivate_) {
             ratio_deactivator_ -= delta_catalyst_;
             ratio_activator_ += delta_catalyst_;
-            pp->updated = true;
-            pp->property_id = rc.property_id;
-            pp->p_state += rc.delta_state;
-            pp->p_type = prop->type();
+            atrpParticleP->updated = true;
+            atrpParticleP->property_id = rc.property_id;
+            atrpParticleP->p_state += rc.delta_state;
+            atrpParticleP->p_type = prop->type();
+            dact++;
           }
         } else {
           if (W < ratio_activator_*k_activate_) {
             ratio_activator_ -= delta_catalyst_;
             ratio_deactivator_ += delta_catalyst_;
-            pp->updated = true;
-            pp->property_id = rc.property_id;
-            pp->p_state += rc.delta_state;
-            pp->p_type = prop->type();
+            atrpParticleP->updated = true;
+            atrpParticleP->property_id = rc.property_id;
+            atrpParticleP->p_state += rc.delta_state;
+            atrpParticleP->p_type = prop->type();
+            act++;
           }
         }
       }
     }
-    for (std::map<longint, ATRPParticleP>::iterator it = all_pids_state.begin(); it != all_pids_state.end(); it++) {
-      if (it->second.updated) {
-        selected_pids.push_back(it->second.p_id);
-        selected_pids.push_back(it->second.p_state);
-        selected_pids.push_back(it->second.property_id);
+    for (std::map<longint, ATRPParticleP*>::iterator it = all_pids_state.begin(); it != all_pids_state.end(); it++) {
+      if (it->second->updated) {
+        selected_pids.push_back(it->second->p_id);
+        selected_pids.push_back(it->second->p_state);
+        selected_pids.push_back(it->second->property_id);
       }
+      delete it->second;  // let's clean up
     }
+    std::cout << "accept: " << accept << " reject: " << (total_N - accept) << " activate: " << act << " deactivate: " << dact << std::endl;
   } else {
-    mpi::gather(*(system.comm), my_N, &total_N, 0);
+    mpi::reduce(*(system.comm), my_N, total_N, std::plus<longint>(), 0);
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
   }
 

@@ -58,17 +58,23 @@ struct ReactiveCenter {
 };
 
 struct ATRPParticleP {
-  ATRPParticleP() { }
+  ATRPParticleP() {
+    init = false;
+  }
   ATRPParticleP(longint pid, longint ptype, longint pstate) {
     p_id = pid;
     p_type = ptype;
     p_state = pstate;
+    updated = false;
+    property_id = -1;
+    init = true;
   }
   longint p_id;
   longint p_type;
   longint p_state;
   longint property_id;
   bool updated;
+  bool init;
 };
 
 class ATRPActivator: public Extension {
