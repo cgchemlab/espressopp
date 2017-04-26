@@ -102,6 +102,8 @@ void ATRPActivator::updateParticles() {
   std::vector<longint> local_type_pids_state;
   CellList cl = system.storage->getRealCells();
 
+  longint my_N = 0;
+
   // TODO(jakub): this is expensive part
   for (espressopp::iterator::CellListIterator cit(cl); !cit.isDone(); ++cit) {
     Particle &p = *cit;
@@ -112,17 +114,20 @@ void ATRPActivator::updateParticles() {
       local_type_pids_state.push_back(p.type());
       local_type_pids_state.push_back(p.state());
     }
+    my_N++;
   }
 
   // Every CPU sends list of particle ids to root CPU.
   std::vector<std::vector<longint> > global_type_pids;
   std::vector<longint> selected_pids;
+  longint total_N = 0;
 
   if (system.comm->rank() == 0) {
+    mpi::gather(*(system.comm), my_N, &total_N, 0);
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
 
     // Root CPU select randomly :num_per_interval particles. Flat the list.
-    std::vector<ATRPParticleP> all_pids_state;
+    std::map<longint, ATRPParticleP> all_pids_state;
     for (std::vector<std::vector<longint > >::iterator it = global_type_pids.begin();
             it != global_type_pids.end(); ++it) {
       for (std::vector<longint>::iterator itt = it->begin(); itt != it->end();) {
@@ -130,14 +135,18 @@ void ATRPActivator::updateParticles() {
         longint p_type = *(itt++);
         longint p_state = *(itt++);
         ATRPParticleP p(p_id, p_type, p_state);
-        all_pids_state.push_back(p);
+        all_pids_state.insert(std::make_pair(p_id, p));
       }
     }
 
     longint num_particles = all_pids_state.size();
-    for (int n = 0; n < all_pids_state.size(); n++) {
+    // MC step
+    for (int n = 0; n < total_N; n++) {  // internal MC trial
       // Activate or deactivate given pid.
-      longint idx = (*rng_)(num_particles);
+      longint idx = (*rng_)(total_N) + 1;
+      if (all_pids_state.find(idx) == all_pids_state.end())
+        continue;
+
       ATRPParticleP *pp = &(all_pids_state[idx]);
 
       longint p_id = pp->p_id;
@@ -177,6 +186,7 @@ void ATRPActivator::updateParticles() {
       }
     }
   } else {
+    mpi::gather(*(system.comm), my_N, &total_N, 0);
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
   }
 
