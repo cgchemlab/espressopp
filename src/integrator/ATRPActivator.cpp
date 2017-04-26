@@ -143,7 +143,7 @@ void ATRPActivator::updateParticles() {
     // MC step
     for (int n = 0; n < total_N; n++) {  // internal MC trial
       // Activate or deactivate given pid.
-      longint idx = (*rng_)(total_N) + 1;
+      longint idx = (*rng_)(total_N + 1);
       if (all_pids_state.find(idx) == all_pids_state.end())
         continue;
 
@@ -178,11 +178,11 @@ void ATRPActivator::updateParticles() {
         }
       }
     }
-    for (std::vector<ATRPParticleP>::iterator it = all_pids_state.begin(); it != all_pids_state.end(); it++) {
-      if (it->updated) {
-        selected_pids.push_back(it->p_id);
-        selected_pids.push_back(it->p_state);
-        selected_pids.push_back(it->property_id);
+    for (std::map<longint, ATRPParticleP>::iterator it = all_pids_state.begin(); it != all_pids_state.end(); it++) {
+      if (it->second.updated) {
+        selected_pids.push_back(it->second.p_id);
+        selected_pids.push_back(it->second.p_state);
+        selected_pids.push_back(it->second.property_id);
       }
     }
   } else {
