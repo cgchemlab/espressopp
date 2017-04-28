@@ -88,5 +88,5 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.ATRPActivatorLocal',
-            pmiproperty = ['stats_filename'],
+            pmiproperty = ['stats_filename', 'select_from_all'],
             pmicall = ['update_particles', 'add_reactive_center', 'save_statistics'])

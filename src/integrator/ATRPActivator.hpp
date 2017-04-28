@@ -106,6 +106,8 @@ class ATRPActivator: public Extension {
   real k_deactivate_;
   std::string stats_filename_;
 
+  bool select_from_all_;
+
   std::vector<real> stats_k_activator;
 
   // type_id,state -> definition

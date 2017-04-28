@@ -153,15 +153,33 @@ void ATRPActivator::updateParticles() {
     longint accept = 0;
     longint act = 0;
     longint dact = 0;
-    for (int n = 0; n < total_N; n++) {  // internal MC trial
-      // Activate or deactivate given pid.
-      longint idx = (*rng_)(total_N + 1);
-      if (all_pids_state.find(idx) == all_pids_state.end())
-        continue;
 
-      accept++;
-      ATRPParticleP *atrpParticleP = all_pids_state.at(idx);
-      if (!atrpParticleP->init)
+    // If the switch is false then we limited this loop
+    if (!select_from_all_)
+      total_N = num_particles;
+    std::cout << "select_from_all_: " << select_from_all_ << std::endl;
+
+    longint idx = 0;
+    ATRPParticleP *atrpParticleP;
+    std::map<longint, ATRPParticleP*>::iterator it_all_pids_state;
+
+    for (int n = 0; n < total_N; n++) {  // internal MC trial
+      if (select_from_all_) {
+        idx = (*rng_)(total_N + 1);
+        if (all_pids_state.find(idx) == all_pids_state.end())
+          continue;
+
+        accept++;
+        atrpParticleP = all_pids_state.at(idx);
+      } else {
+        idx = (*rng_)(total_N);
+        it_all_pids_state = all_pids_state.begin();
+        std::advance(it_all_pids_state, idx);
+        atrpParticleP = it_all_pids_state->second;
+        accept++;
+      }
+
+      if (atrpParticleP == NULL || !atrpParticleP->init)
         throw std::runtime_error("wrong atrpParticleP");
 
       longint p_id = atrpParticleP->p_id;
