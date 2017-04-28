@@ -48,6 +48,8 @@ ATRPActivator::ATRPActivator(
   extensionOrder = Extension::beforeReaction;
   max_property_id_ = 0;
 
+  select_from_all_ = true;
+
   resetTimers();
 }
 
@@ -429,6 +431,7 @@ void ATRPActivator::registerPython() {
   class_<ATRPActivator, shared_ptr<ATRPActivator>, bases<Extension> >
       ("integrator_ATRPActivator", init<shared_ptr<System>, longint, longint, real, real, real, real, real>())
       .add_property("stats_filename", make_getter(&ATRPActivator::stats_filename_), make_setter(&ATRPActivator::stats_filename_))
+      .add_property("select_from_all", make_getter(&ATRPActivator::select_from_all_), make_setter(&ATRPActivator::select_from_all_))
       .def("add_reactive_center", &ATRPActivator::addReactiveCenter)
       .def("update_particles", &ATRPActivator::updateParticles)
       .def("save_statistics", &ATRPActivator::saveStatistics)

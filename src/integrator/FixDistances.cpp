@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2015-2016
+  Copyright (C) 2015,2016,2017
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -84,8 +84,7 @@ void FixDistances::connect() {
 
 void FixDistances::onAftIntV() {
   real time0 = wallTimer.getElapsedTime();
-  if (!has_types_)
-    return;
+
   std::vector<std::pair<Particle*, Particle*> > affected_particles;
 
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end(); ) {
