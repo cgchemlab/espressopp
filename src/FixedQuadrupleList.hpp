@@ -81,8 +81,8 @@ namespace espressopp {
 
     virtual int totalSize();
 
-    boost::signals2::signal4 <void, longint, longint, longint, longint> onTupleAdded;
-    boost::signals2::signal4 <void, longint, longint, longint, longint> onTupleRemoved;
+    boost::signals2::signal<void (longint, longint, longint, longint)> onTupleAdded;
+    boost::signals2::signal<void (longint, longint, longint, longint)> onTupleRemoved;
 
     static void registerPython();
 
