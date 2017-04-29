@@ -28,8 +28,6 @@
 #include <utility>
 #include <vector>
 
-#include "boost/range/algorithm/random_shuffle.hpp"
-
 #include "storage/Storage.hpp"
 #include "iterator/CellListIterator.hpp"
 #include "esutil/RNG.hpp"
