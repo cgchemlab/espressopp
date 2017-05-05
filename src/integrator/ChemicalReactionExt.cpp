@@ -386,14 +386,6 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
   for (ReactionMap::iterator it = mm.begin(); it != mm.end(); it++) {
     idx_a = it->first;  // particle id
     idx_b = it->second.first;  // particle id
-    reaction_idx = it->second.second.reaction_id;  // reaction id
-    reaction_rate = it->second.second.reaction_rate;   // reaction rate for this pair.
-    reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
-    p_order = it->second.second.order;
-
-    // residues
-    longint rid1 = tm_->getResId(idx_a);
-    longint rid2 = tm_->getResId(idx_b);
 
     // skip particle pairs that are already in the list.
     if (particle_idx.count(idx_a) != 0 || particle_idx.count(idx_b) != 0) {
@@ -401,11 +393,17 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
       continue;
     }
 
+    // residues
+    longint rid1 = tm_->getResId(idx_a);
+    longint rid2 = tm_->getResId(idx_b);
+
+    // Skip if the residues are already in the connection list.
     if (residue_idx.find(rid1) != residue_idx.end() || residue_idx.find(rid2) != residue_idx.end()) {
       LOG4ESPP_DEBUG(theLogger, "skip pair " << idx_a << "-" << idx_b << " residues already in the reaction");
       continue;
     }
 
+    // Keep order correct.
     if (idx_a > idx_b) {
       std::swap(idx_a, idx_b);
       if (p_order == 1)
@@ -413,6 +411,11 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
       else
         p_order = 1;
     }
+
+    reaction_idx = it->second.second.reaction_id;  // reaction id
+    reaction_rate = it->second.second.reaction_rate;   // reaction rate for this pair.
+    reaction_r_sqr = it->second.second.reaction_r_sqr;  // reaction distance for this pair.
+    p_order = it->second.second.order;
 
     out.insert(
         std::make_pair(
@@ -423,7 +426,8 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     residue_idx.insert(rid1);
     residue_idx.insert(rid2);
   }
-  // Make pairs unique among cpus
+
+  // Make pairs unique among CPUs, use master process to handle it.
   std::vector<ReactionMap> global_maps;
   if (getSystem()->comm->rank() == 0) {
     particle_idx.clear();
@@ -435,7 +439,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
     // Collect maps from all cpus.
     mpi::gather(*(getSystem()->comm), out, global_maps, 0);
 
-    mm.clear();  // clearn mm, it's already in global_maps
+    mm.clear();  // clear mm, it's already in global_maps
     // iterate over CPUs maps and check the particle lists. First In First Served idea;
     for (std::vector<ReactionMap>::iterator it_rms = global_maps.begin(); it_rms != global_maps.end(); it_rms++) {
       for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end(); it++) {
@@ -453,6 +457,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
         }
         if (valid && !reaction->intramolecular()) {
           valid &= !(molecule_map.count(mid1) == 1 && molecule_map.at(mid1).count(mid2) == 1);
+          valid &= !tm_->isSameMolecule(idx_a, idx_b);
         }
 
         if (valid) {
@@ -461,14 +466,19 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
         }
 
         if (valid) {
+          // particle in use
           particle_idx.insert(idx_a);
           particle_idx.insert(idx_b);
+          // residues in use;
           residue_idx.insert(rid1);
           residue_idx.insert(rid2);
+          // update local residue map
           residue_map[rid1].insert(rid2);
           residue_map[rid2].insert(rid1);
+          // update local molecule map
           molecule_map[mid1].insert(mid2);
           molecule_map[mid2].insert(mid1);
+          // insert part in output list.
           mm.insert(std::make_pair(idx_a, std::make_pair(idx_b, it->second.second)));
         }
       }
