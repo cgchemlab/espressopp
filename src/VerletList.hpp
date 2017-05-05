@@ -65,10 +65,13 @@ class DynamicExcludeList {
 
  private:
   shared_ptr<integrator::MDIntegrator> integrator_;
+  shared_ptr<System> system_;
   shared_ptr<ExcludeList> exList;
   // Helper lists.
   std::vector<longint> exList_add;
   std::vector<longint> exList_remove;
+
+  bool is_dirty;
 
   /**
    * Update list among all CPUs.

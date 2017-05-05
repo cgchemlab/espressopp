@@ -44,6 +44,9 @@ DynamicExcludeList::DynamicExcludeList(shared_ptr<integrator::MDIntegrator> inte
   connect();
   exList_remove.clear();
   exList_add.clear();
+  is_dirty = false;
+
+  system_ = integrator->getSystem();
 }
 
 DynamicExcludeList::~DynamicExcludeList() {
@@ -94,26 +97,29 @@ void DynamicExcludeList::observe_quadruple(shared_ptr<FixedQuadrupleList> fql) {
 
 void DynamicExcludeList::updateList() {
   LOG4ESPP_INFO(theLogger, "Update dynamic list.");
+  // check is dirty flag on all processes.
+  bool global_is_dirty;
+  mpi::all_reduce(*(system_->comm), is_dirty, global_is_dirty, std::logical_or<bool>());
+
+  if (!global_is_dirty)  // skip update
+    return;
+
   // Collect state from all CPUs.
   std::vector<longint> out_buffer;
-  std::vector<std::vector<longint> > in_buffer;
 
   // Prepare output.
+  out_buffer.reserve(2 + exList_remove.size() + exList_add.size());
   out_buffer.push_back(exList_remove.size() / 2);
   out_buffer.push_back(exList_add.size() / 2);
-  for (std::vector<longint>::iterator it = exList_remove.begin(); it != exList_remove.end(); ++it) {
-    out_buffer.push_back(*it);
-  }
-  for (std::vector<longint>::iterator it = exList_add.begin(); it != exList_add.end(); ++it) {
-    out_buffer.push_back(*it);
-  }
+  out_buffer.insert(out_buffer.end(), exList_remove.begin(), exList_remove.end());
+  out_buffer.insert(out_buffer.end(), exList_add.begin(), exList_add.end());
 
-  // Gather everywhere everything.
+  // Gather everywhere updates and apply.
+  std::vector<std::vector<longint> > in_buffer;
   mpi::all_gather(*(integrator_->getSystem()->comm), out_buffer, in_buffer);
   //Update list.
   LOG4ESPP_DEBUG(theLogger, "update data from " << in_buffer.size());
 
-  bool is_dirty = false;
   for (std::vector<std::vector<longint> >::iterator it = in_buffer.begin(); it != in_buffer.end(); it++) {
     for (std::vector<longint>::iterator itm = it->begin(); itm != it->end();) {
       longint remove_size = *(itm++);
@@ -125,7 +131,6 @@ void DynamicExcludeList::updateList() {
         exList->erase(std::make_pair(f1, f2));
         exList->erase(std::make_pair(f2, f1));
         onPairUnexclude(f1, f2);
-        is_dirty = true;
       }
       for (int i = 0; i < add_size; i++) {
         longint f1 = *(itm++);
@@ -133,15 +138,15 @@ void DynamicExcludeList::updateList() {
         exList->insert(std::make_pair(f1, f2));
         exList->insert(std::make_pair(f2, f1));
         onPairExclude(f1, f2);
-        is_dirty = true;
       }
     }
   }
   exList_remove.clear();
   exList_add.clear();
+  is_dirty = false;
 
-  if (is_dirty)
-    onListUpdated();
+  // Rebuild list.
+  onListUpdated();
 
   LOG4ESPP_DEBUG(theLogger, "leave DynamicExcludeList::updateList");
 }
@@ -158,6 +163,7 @@ void DynamicExcludeList::exclude(longint pid1, longint pid2) {
   LOG4ESPP_INFO(theLogger, "new exclude pair " << pid1 << "-" << pid2);
   exList_add.push_back(pid1);
   exList_add.push_back(pid2);
+  is_dirty = true;
   onPairExclude(pid1, pid2);
 }
 
@@ -165,6 +171,7 @@ void DynamicExcludeList::unexclude(longint pid1, longint pid2) {
   LOG4ESPP_INFO(theLogger, "removed exclude pair " << pid1 << "-" << pid2);
   exList_remove.push_back(pid1);
   exList_remove.push_back(pid2);
+  is_dirty = true;
   onPairUnexclude(pid1, pid2);
 }
 
@@ -308,7 +315,7 @@ void DynamicExcludeList::registerPython() {
 
     // see if it's in the exclusion list (both directions)
     if (exList->count(std::make_pair(pt1.id(), pt2.id())) == 1) return;
-    if (exList->count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
+    //if (exList->count(std::make_pair(pt2.id(), pt1.id())) == 1) return;
 
     vlPairs.add(pt1, pt2); // add pair to Verlet List
   }
@@ -346,6 +353,7 @@ void DynamicExcludeList::registerPython() {
         dynamicExcludeList->exclude(pid1, pid2);
       } else {
         exList->insert(std::make_pair(pid1, pid2));
+        exList->insert(std::make_pair(pid2, pid1));
         onPairExclude(pid1, pid2);
       }
       return true;
@@ -403,6 +411,7 @@ void DynamicExcludeList::registerPython() {
       .def("getVerletCutoff", &VerletList::getVerletCutoff)
       .def("setVerletCutoff", &VerletList::setVerletCutoff)
       .def("get_timers", &VerletList::getTimers)
+      .def("excludeListSize", &VerletList::excludeListSize)
       ;
   }
 

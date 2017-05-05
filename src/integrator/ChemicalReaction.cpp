@@ -108,15 +108,10 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_ord
   LOG4ESPP_DEBUG(theLogger, "entering Reaction::isValidPair");
 
   if (isValidState(p1, p2, particle_order)) {
-    real W = (*rng_)();
-    real p = rate_;
-    // Multiply by time step and interval.
-    // p *= (*dt_) * (*interval_);
-
-    particle_order.reaction_rate = p;
+    particle_order.reaction_rate = rate_;
     particle_order.r_sqr = 0.0;
 
-    if ((W < p) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+    if (((*rng_)() < rate_) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
       bool valid = true;
       for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
            it != reaction_constraint_T1.end(); ++it) {

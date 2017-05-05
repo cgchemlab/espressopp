@@ -216,5 +216,5 @@ if pmi.isController:
       cls = 'espressopp.VerletListLocal',
       pmiproperty = [ 'builds' ],
       pmicall = [ 'totalSize', 'exclude', 'connect', 'disconnect', 'getVerletCutoff', 'setVerletCutoff' ],
-      pmiinvoke = [ 'getAllPairs', 'get_timers' ]
+      pmiinvoke = [ 'getAllPairs', 'get_timers', 'excludeListSize' ]
     )
