@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2016
+  Copyright (C) 2016,2017
       Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
@@ -82,19 +82,19 @@ namespace espressopp {
         int getNumberOfExtensions();
 
         // signals to extend the integrator
-        boost::signals2::signal0 <void> runInit; // initialization of run()
-        boost::signals2::signal0 <void> recalc1; // inside recalc, before updateForces()
-        boost::signals2::signal0 <void> recalc2; // inside recalc, after  updateForces()
-        boost::signals2::signal0 <void> befIntP; // before integrate1()
-        boost::signals2::signal1 <void, real&> inIntP; // inside end of integrate1()
-        boost::signals2::signal0 <void> aftIntP; // after  integrate1()
-        boost::signals2::signal0 <void> aftInitF; // after initForces()
-        boost::signals2::signal0 <void> aftCalcF; // after calcForces()
-        boost::signals2::signal0 <void> befIntV; // before integrate2()
-        boost::signals2::signal0 <void> aftIntV; // after  integrate2()
-        boost::signals2::signal0 <void> aftIntV2; // after  integrate2() - second case after the first
+        boost::signals2::signal<void ()> runInit; // initialization of run()
+        boost::signals2::signal<void ()> recalc1; // inside recalc, before updateForces()
+        boost::signals2::signal<void ()> recalc2; // inside recalc, after  updateForces()
+        boost::signals2::signal<void ()> befIntP; // before integrate1()
+        boost::signals2::signal<void (real&)> inIntP; // inside end of integrate1()
+        boost::signals2::signal<void ()> aftIntP; // after  integrate1()
+        boost::signals2::signal<void ()> aftInitF; // after initForces()
+        boost::signals2::signal<void ()> aftCalcF; // after calcForces()
+        boost::signals2::signal<void ()> befIntV; // before integrate2()
+        boost::signals2::signal<void ()> aftIntV; // after  integrate2()
+        boost::signals2::signal<void ()> aftIntV2;
 
-        boost::signals2::signal1 <void, real&> onSetTimeStep;
+        boost::signals2::signal<void (real&)> onSetTimeStep;
 
 
         /** Register this class so it can be used from Python. */

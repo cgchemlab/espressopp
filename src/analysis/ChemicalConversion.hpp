@@ -49,7 +49,7 @@ class ChemicalConversion : public Observable {
   ~ChemicalConversion() {}
   real compute_real() const;
 
-  boost::signals2::signal1<void, real> onValue;
+  boost::signals2::signal<void (real)> onValue;
 
   static void registerPython();
  private:
@@ -73,7 +73,7 @@ class ChemicalConversionTypeSequence : public Observable {
     type_seq_ = in_seq;
   }
 
-  boost::signals2::signal1<void, real> onValue;
+  boost::signals2::signal<void (real)> onValue;
 
   static void registerPython();
  private:
@@ -110,7 +110,7 @@ class ChemicalConversionTypeState : public Observable {
     type_state_.insert(std::make_pair(type, state));
   }
 
-  boost::signals2::signal1<void, real> onValue;
+  boost::signals2::signal<void (real)> onValue;
 
   static void registerPython();
  private:

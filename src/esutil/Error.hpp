@@ -99,7 +99,7 @@ namespace espressopp {
 
       void checkException();
 
-      boost::signals2::signal0 <void> onException;
+      boost::signals2::signal<void ()> onException;
 
     private:    
 

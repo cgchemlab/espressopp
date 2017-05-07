@@ -46,7 +46,7 @@ class ATRPActivatorStats : public Observable {
   real compute_real() const;
   std::vector<real> compute_real_vector();
 
-  boost::signals2::signal1<void, real> onValue;
+  boost::signals2::signal<void (real)> onValue;
 
   static void registerPython();
  private:

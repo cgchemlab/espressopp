@@ -74,8 +74,8 @@ namespace espressopp {
 	    virtual int size() { return globalTriples.size(); }
 	    virtual int totalSize();
 
-	    boost::signals2::signal3 <void, longint, longint, longint> onTupleAdded;
-	    boost::signals2::signal3 <void, longint, longint, longint> onTupleRemoved;
+	    boost::signals2::signal<void (longint, longint, longint)> onTupleAdded;
+	    boost::signals2::signal<void (longint, longint, longint)> onTupleRemoved;
 
 		static void registerPython();
 	

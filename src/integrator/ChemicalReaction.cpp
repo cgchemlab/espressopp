@@ -108,15 +108,10 @@ bool Reaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_ord
   LOG4ESPP_DEBUG(theLogger, "entering Reaction::isValidPair");
 
   if (isValidState(p1, p2, particle_order)) {
-    real W = (*rng_)();
-    real p = rate_;
-    // Multiply by time step and interval.
-    // p *= (*dt_) * (*interval_);
-
-    particle_order.reaction_rate = p;
+    particle_order.reaction_rate = rate_;
     particle_order.r_sqr = 0.0;
 
-    if ((W < p) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
+    if (((*rng_)() < rate_) && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
       bool valid = true;
       for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
            it != reaction_constraint_T1.end(); ++it) {
@@ -149,8 +144,8 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_ord
   if (topology_manager_->isParticleConnected(p1.id(), p2.id()))
     return false;
 
-  // if (!intramolecular_ && topology_manager_->isSameMolecule(p1.id(), p2.id()))
-  //   return false;
+  if (!intramolecular_ && topology_manager_->isSameMolecule(p1.id(), p2.id()))
+     return false;
 
   int p1_state = p1.state();
   int p2_state = p2.state();

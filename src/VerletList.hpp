@@ -57,18 +57,21 @@ class DynamicExcludeList {
   void observe_triple(shared_ptr<FixedTripleList> ftl);
   void observe_quadruple(shared_ptr<FixedQuadrupleList> fql);
 
-  boost::signals2::signal0 <void> onListUpdated;
-  boost::signals2::signal2 <void, longint, longint> onPairExclude;
-  boost::signals2::signal2 <void, longint, longint> onPairUnexclude;
+  boost::signals2::signal<void ()> onListUpdated;
+  boost::signals2::signal<void (longint, longint)> onPairExclude;
+  boost::signals2::signal<void (longint, longint)> onPairUnexclude;
   
   static void registerPython();
 
  private:
   shared_ptr<integrator::MDIntegrator> integrator_;
+  shared_ptr<System> system_;
   shared_ptr<ExcludeList> exList;
   // Helper lists.
   std::vector<longint> exList_add;
   std::vector<longint> exList_remove;
+
+  bool is_dirty;
 
   /**
    * Update list among all CPUs.
@@ -136,8 +139,8 @@ class DynamicExcludeList {
     /** Register this class so it can be used from Python. */
     static void registerPython();
 
-    boost::signals2::signal2 <void, longint, longint> onPairExclude;
-    boost::signals2::signal2 <void, longint, longint> onPairUnexclude;
+    boost::signals2::signal<void (longint, longint)> onPairExclude;
+    boost::signals2::signal<void (longint, longint)> onPairUnexclude;
 
   protected:
 

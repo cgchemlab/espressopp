@@ -22,7 +22,7 @@
 #include "ChangeParticleType.hpp"
 
 #include "esutil/RNG.hpp"
-#include "boost/range/algorithm.hpp"
+#include "boost/range/algorithm/random_shuffle.hpp"
 
 namespace espressopp {
 namespace integrator {
