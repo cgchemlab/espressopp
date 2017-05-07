@@ -1,6 +1,7 @@
 /*
-  Copyright (C) 2016
+  Copyright (C) 2016,2017
       Jakub Krajniak (jkrajniak at gmail.com)
+      Zidan Zhang (zidan.zhang at kuleuven.be)
 
   This file is part of ESPResSo++.
 
@@ -21,8 +22,11 @@
 #ifndef _INTEGRATOR_ATRPActivator_HPP
 #define _INTEGRATOR_ATRPActivator_HPP
 
-#include <algorithm>
-#include <esutil/Timer.hpp>
+#include <map>
+#include <utility>
+#include <string>
+#include <vector>
+#include "esutil/Timer.hpp"
 #include "types.hpp"
 #include "logging.hpp"
 #include "Extension.hpp"
@@ -82,7 +86,7 @@ class ATRPActivator: public Extension {
   ATRPActivator(shared_ptr<System> system, longint interval, longint num_per_interval, real ratio_activator,
                 real ratio_deactivator, real delta_catalyst, real k_activate, real k_deactivate);
 
-  virtual ~ATRPActivator() {};
+  virtual ~ATRPActivator() {}
 
   void addReactiveCenter(longint type_id,
                          longint state,
@@ -145,7 +149,7 @@ class ATRPActivator: public Extension {
   python::list getTimers();
 };
 
-}
-}
+}  // namespace integrator
+}  // namespace espressopp
 
 #endif
