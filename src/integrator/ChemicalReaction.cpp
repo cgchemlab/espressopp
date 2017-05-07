@@ -144,8 +144,8 @@ bool Reaction::isValidState(Particle &p1, Particle &p2, ReactedPair &correct_ord
   if (topology_manager_->isParticleConnected(p1.id(), p2.id()))
     return false;
 
-  // if (!intramolecular_ && topology_manager_->isSameMolecule(p1.id(), p2.id()))
-  //   return false;
+  if (!intramolecular_ && topology_manager_->isSameMolecule(p1.id(), p2.id()))
+     return false;
 
   int p1_state = p1.state();
   int p2_state = p2.state();
