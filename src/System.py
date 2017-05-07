@@ -154,6 +154,7 @@ class SystemLocal(_espressopp.System):
             self._interaction2id = {
                 k: v if v < interaction_id else v - 1
                 for k, v in self._interaction2id.iteritems()
+                if v != interaction_id
                 }
             self._interaction_pid = max(self._interaction2id.values()) + 1
 
