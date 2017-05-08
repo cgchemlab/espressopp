@@ -19,9 +19,16 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <fstream>
-#include "python.hpp"
 #include "ATRPActivator.hpp"
+
+#include <fstream>
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <utility>
+#include <string>
+#include <vector>
+#include "python.hpp"
 
 #include "esutil/RNG.hpp"
 //#include "boost/range/algorithm.hpp"
@@ -38,7 +45,7 @@ ATRPActivator::ATRPActivator(
     real ratio_deactivator, real delta_catalyst, real k_activate, real k_deactivate)
     : Extension(system), interval_(interval), num_per_interval_(num_per_interval),
       ratio_activator_(ratio_activator), ratio_deactivator_(ratio_deactivator), delta_catalyst_(delta_catalyst),
-      k_activate_(k_activate), k_deactivate_(k_deactivate){
+      k_activate_(k_activate), k_deactivate_(k_deactivate) {
   LOG4ESPP_INFO(theLogger, "ATRPActivator constructed");
 
   // Set RNG.
@@ -156,7 +163,6 @@ void ATRPActivator::updateParticles() {
     // If the switch is false then we limited this loop
     if (!select_from_all_)
       total_N = num_particles;
-    std::cout << "select_from_all_: " << select_from_all_ << std::endl;
 
     longint idx = 0;
     ATRPParticleP *atrpParticleP;
@@ -220,7 +226,6 @@ void ATRPActivator::updateParticles() {
       }
       delete it->second;  // let's clean up
     }
-    std::cout << "accept: " << accept << " reject: " << (total_N - accept) << " activate: " << act << " deactivate: " << dact << std::endl;
   } else {
     mpi::reduce(*(system.comm), my_N, total_N, std::plus<longint>(), 0);
     mpi::gather(*(system.comm), local_type_pids_state, global_type_pids, 0);
@@ -413,7 +418,7 @@ void ATRPActivator::saveStatistics(std::string filename) {
     std::fstream fs(filename.c_str(), std::fstream::out);
     fs << "# step ratio_activator ratio_deactivator" << std::endl;
     for (std::vector<real>::iterator it = stats_k_activator.begin(); it != stats_k_activator.end();) {
-      int step = (int) *(it++);
+      int step = static_cast<int>(*(it++));
       real ratio_activator = *(it++);
       real ratio_deactivator = *(it++);
       fs << step << " " << std::scientific << ratio_activator << " " << std::scientific << ratio_deactivator
@@ -444,8 +449,12 @@ void ATRPActivator::registerPython() {
 
   class_<ATRPActivator, shared_ptr<ATRPActivator>, bases<Extension> >
       ("integrator_ATRPActivator", init<shared_ptr<System>, longint, longint, real, real, real, real, real>())
-      .add_property("stats_filename", make_getter(&ATRPActivator::stats_filename_), make_setter(&ATRPActivator::stats_filename_))
-      .add_property("select_from_all", make_getter(&ATRPActivator::select_from_all_), make_setter(&ATRPActivator::select_from_all_))
+      .add_property("stats_filename",
+          make_getter(&ATRPActivator::stats_filename_),
+          make_setter(&ATRPActivator::stats_filename_))
+      .add_property("select_from_all",
+          make_getter(&ATRPActivator::select_from_all_),
+          make_setter(&ATRPActivator::select_from_all_))
       .def("add_reactive_center", &ATRPActivator::addReactiveCenter)
       .def("update_particles", &ATRPActivator::updateParticles)
       .def("save_statistics", &ATRPActivator::saveStatistics)
