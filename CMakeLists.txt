@@ -67,6 +67,20 @@ if(VAMPIRTRACE)
    add_definitions( -DVTRACE )
 endif(VAMPIRTRACE)
 
+#####################
+# Calipre
+#####################
+option(USE_CALIPRE "Enables generic context annotation system")
+option(CALIPRE_ROOT "Root of Calipre installation")
+if (USE_CALIPRE)
+    message(STATUS "Enabling Calipre")
+    include_directories(${CALIPRE_ROOT}/include)
+    find_library(CALIPRE_LIBRARIES
+            NAMES caliper-mpiwrap caliper
+            PATHS ${CALIPRE_ROOT}/lib)
+    message(${CALIPRE_LIBRARIES})
+endif()
+
 ########################################################################
 #Process MPI settings
 ########################################################################

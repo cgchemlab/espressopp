@@ -50,6 +50,11 @@ endif(EXTERNAL_BOOST)
 
 add_library(_espressopp ${ESPRESSO_SOURCES})
 target_link_libraries(_espressopp ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MPI_LIBRARIES} ${FFTW3_LIBRARIES} ${VAMPIRTRACE_LIBRARIES} ${HDF5_LIBRARIES})
+
+if (USE_CALIPRE)
+  target_link_libraries(_espressopp ${CALIPRE_LIBRARIES})
+endif()
+
 #python libs have not prefix (default would be 'lib')
 set_target_properties(_espressopp PROPERTIES PREFIX "" SUFFIX ".so" LIBRARY_OUTPUT_DIRECTORY ..)
 install(TARGETS _espressopp LIBRARY DESTINATION ${PYTHON_INSTDIR} ARCHIVE DESTINATION ${PYTHON_INSTDIR})
