@@ -83,7 +83,6 @@ void FixDistances::connect() {
 }
 
 void FixDistances::onAftIntV() {
-  real time0 = wallTimer.getElapsedTime();
 
   std::vector<std::pair<Particle*, Particle*> > affected_particles;
 
@@ -116,12 +115,9 @@ void FixDistances::onAftIntV() {
     }
   }
 
-  timeUpdateList += wallTimer.getElapsedTime() - time0;
 }
 
 void FixDistances::restore_positions() {
-  real time0 = wallTimer.getElapsedTime();
-
   const bc::BC &bc = *(system_->bc);
   real dt2 = integrator->getTimeStep()*integrator->getTimeStep();
   for (Triplets::iterator it = distance_triplets_.begin(); it != distance_triplets_.end();
@@ -174,7 +170,6 @@ void FixDistances::restore_positions() {
       dst->setV(0.0);
     }
   }
-  timeRestorePosition += wallTimer.getElapsedTime() - time0;
 }
 
 std::vector<Particle*> FixDistances::release_particle(longint anchor_id, int nr_) {
@@ -229,7 +224,6 @@ void FixDistances::add_triplet(longint anchor, longint target, real distance, bo
 }
 
 void FixDistances::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
-  real time0 = wallTimer.getElapsedTime();
   std::vector<longint> toSend;
   std::vector<real> toSendReal;
   int n;
@@ -252,11 +246,9 @@ void FixDistances::beforeSendParticles(ParticleList &pl, OutBuffer &buf) {
   }
   buf.write(toSend);
   buf.write(toSendReal);
-  timeComm += wallTimer.getElapsedTime() - time0;
 }
 
 void FixDistances::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
-  real time0 = wallTimer.getElapsedTime();
   std::vector<longint> received;
   std::vector<real> receivedDistance;
   longint pid1, pid2, n;
@@ -281,7 +273,6 @@ void FixDistances::afterRecvParticles(ParticleList &pl, InBuffer &buf) {
         "ATTENTION: read garbage during receiving particles\n");
   }
   LOG4ESPP_INFO(theLogger, "received fixed pair list after receive particles");
-  timeComm += wallTimer.getElapsedTime() - time0;
 }
 
 void FixDistances::printTriplets() {

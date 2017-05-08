@@ -80,7 +80,6 @@ void ATRPActivator::addReactiveCenter(longint type_id,
 }
 
 void ATRPActivator::updateParticles() {
-  real time0 = wallTimer.getElapsedTime();
   if (integrator->getStep() % (interval_) != 0)
     return;
 
@@ -251,7 +250,6 @@ void ATRPActivator::updateParticles() {
   // Synchronize all processess
   (*system.comm).barrier();
 
-  timeUpdateParticles += wallTimer.getElapsedTime() - time0;
 
   // Update neighbour ghosts
   updateGhost(modified_particles);
@@ -265,7 +263,6 @@ void ATRPActivator::updateParticles() {
  * storage::DomainDecomposition::doGhostCommunication
  */
 void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particles) {  // NOLINT
-  real time0 = wallTimer.getElapsedTime();
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost begin");
 
   int kCrCommTag = 0x69;
@@ -408,7 +405,6 @@ void ATRPActivator::updateGhost(const std::vector<Particle *> &modified_particle
   }
 
   LOG4ESPP_DEBUG(theLogger, "ATRPActivator::updateGhost end");
-  timeUpdateGhost += wallTimer.getElapsedTime() - time0;
 }
 
 void ATRPActivator::saveStatistics(std::string filename) {

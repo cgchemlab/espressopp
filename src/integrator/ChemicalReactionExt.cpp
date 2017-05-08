@@ -133,7 +133,6 @@ void ChemicalReaction::React() {
   potential_pairs_.clear();
   effective_pairs_.clear();
 
-  wallTimer.startMeasure();
   // loop over VL pairs
   for (PairList::Iterator it(verlet_list_->getPairs()); it.isValid(); ++it) {
     Particle &p1 = *it->first;
@@ -162,9 +161,6 @@ void ChemicalReaction::React() {
 
   LOG4ESPP_DEBUG(theLogger, "found " << potential_pairs_.size() << " potential pairs to react");
 
-  timeLoopPair += wallTimer.stopMeasure();
-
-  wallTimer.startMeasure();
   sendMultiMap(potential_pairs_);
 
   // Here, reduce number of partners to each A to 1
@@ -176,33 +172,26 @@ void ChemicalReaction::React() {
   uniqueB(potential_pairs_, effective_pairs_);
   // Distribute effective pairs
   sendMultiMap(effective_pairs_);
-  timeComm += wallTimer.stopMeasure();
 
   sortParticleReactionList(effective_pairs_);
 
   // Use effective_pairs_ to apply the reaction.
   std::set<Particle *> modified_particles;
 
-  wallTimer.startMeasure();
   // First, remove pairs.
   applyDR(modified_particles);
-  timeApplyDR += wallTimer.stopMeasure();
 
   // Synchronize, all cpus should finish dissocition part.
   (*system.comm).barrier();
 
-  wallTimer.startMeasure();
   // Now, accept new pairs.
   applyAR(modified_particles);
-  timeApplyAR += wallTimer.stopMeasure();
 
   // Synchronize, all cpus should finish association part.
   (*system.comm).barrier();
 
-  wallTimer.startMeasure();
   // Update the ghost particles.
   updateGhost(modified_particles);
-  timeUpdateGhost += wallTimer.stopMeasure();
 
   if (save_pd_) {
     savePairDistances(pd_filename_);

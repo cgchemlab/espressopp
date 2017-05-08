@@ -100,7 +100,6 @@ TopologyManager::TopologyManager(shared_ptr<System> system) :
 
   update_angles_ = update_dihedrals_ = update_14pairs_ = false;
   generate_new_angles_dihedrals_ = false;
-  wallTimer.reset();
 
   resetTimers();
 
@@ -568,14 +567,12 @@ bool TopologyManager::removeBond(longint pid1, longint pid2) {
  */
 void TopologyManager::exchangeData() {
   LOG4ESPP_DEBUG(theLogger, "entering exchangeData");
-  real time0 = wallTimer.getElapsedTime();
 
   // Check the is_dirty_ flag on all CPUs, if somewhere is true then do the exchangeData steps.
   bool global_is_dirty = false;
   mpi::all_reduce(*(system_->comm), is_dirty_, global_is_dirty, std::logical_or<bool>());
 
   if (!global_is_dirty) {
-    timeExchangeData += wallTimer.getElapsedTime() - time0;
     LOG4ESPP_DEBUG(theLogger,
                    "step: " << integrator->getStep() << " leaving exchangeData, no need to update: "
                             << global_is_dirty);
@@ -760,7 +757,6 @@ void TopologyManager::exchangeData() {
   }
 #endif
 
-  timeExchangeData += wallTimer.getElapsedTime() - time0;
   LOG4ESPP_DEBUG(theLogger, "leaving exchangeData");
 }
 
@@ -946,8 +942,6 @@ void TopologyManager::generateAnglesDihedrals(longint pid1,
 
 void TopologyManager::generateNewAnglesDihedrals(const SetPairs &new_edges) {
   // Generate angles, dihedrals, based on updated graph.
-  real time0 = wallTimer.getElapsedTime();
-
   std::set<Quadruplets> new_quadruplets_;
   std::set<Triplets> new_triplets_;
 
@@ -961,13 +955,9 @@ void TopologyManager::generateNewAnglesDihedrals(const SetPairs &new_edges) {
     defineDihedrals(new_quadruplets_);
   // if (update_14pairs_)
   //  define14tuples(new_quadruplets_);
-
-  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 void TopologyManager::removeAnglesDihedrals(const SetPairs &removed_edges) {
-  real time0 = wallTimer.getElapsedTime();
-
   bool update_fixed_pairs = removed_edges.size() > 0;
 
   for (SetPairs::iterator it = removed_edges.begin(); it != removed_edges.end(); ++it) {
@@ -988,7 +978,6 @@ void TopologyManager::removeAnglesDihedrals(const SetPairs &removed_edges) {
       (*fql)->updateParticlesStorage();
     }
   }
-  timeGenerateAnglesDihedrals += wallTimer.getElapsedTime() - time0;
 }
 
 std::vector<longint> TopologyManager::getNodesAtDistances(longint root) {
@@ -1180,13 +1169,11 @@ void TopologyManager::registerNeighbourBondToRemove(longint type_id,
 
 
 void TopologyManager::invokeNeighbourPropertyChange(Particle &root) {
-  real time0 = wallTimer.getElapsedTime();
   std::vector<longint> nb = getNodesAtDistances(root.id());
   LOG4ESPP_DEBUG(theLogger, "inovokeNeighbourPropertyChange from root=" << root.id()
                                                                         << " generates=" << nb.size()
                                                                         << " of neighbour particles");
   nb_distance_particles_.insert(nb_distance_particles_.end(), nb.begin(), nb.end());
-  timeUpdateNeighbourProperty += wallTimer.getElapsedTime() - time0;
 
   is_dirty_ = true;
 }
@@ -1261,11 +1248,9 @@ void TopologyManager::registerLocalPropertyChange(longint type_id, shared_ptr<To
 }
 
 bool TopologyManager::isResiduesConnected(longint pid1, longint pid2) {
-  real time0 = wallTimer.getElapsedTime();
   longint rid1 = pid_rid[pid1];
   longint rid2 = pid_rid[pid2];
   bool ret = (res_graph_->count(rid1) == 1 && res_graph_->at(rid1)->count(rid2) == 1);
-  timeIsResidueConnected += wallTimer.getElapsedTime() - time0;
   return ret;
 }
 
