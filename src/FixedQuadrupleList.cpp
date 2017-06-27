@@ -26,9 +26,6 @@
 #include <sstream>
 #include "FixedQuadrupleList.hpp"
 
-//#include <vector>
-//#include <utility>
-//#include <algorithm>
 #include <boost/bind.hpp>
 #include "storage/Storage.hpp"
 #include "Buffer.hpp"
@@ -535,5 +532,4 @@ namespace espressopp {
       .def("getAllQuadruples", &FixedQuadrupleList::getAllQuadruples)
      ;
   }
-
 }

@@ -50,6 +50,10 @@ espressopp.FixedQuadrupleList
 		:type quadruplelist: 
 		:rtype: 
 
+.. function:: espressopp.FixedQuadrupleList.clean_and_remove()
+        remove the FixedPairList and disconnect
+
+
 .. function:: espressopp.FixedQuadrupleList.getQuadruples()
 
 		:rtype: 
@@ -92,6 +96,10 @@ class FixedQuadrupleListLocal(_espressopp.FixedQuadrupleList):
             for quadruple in quadruplelist:
                 pid1, pid2, pid3, pid4 = quadruple
                 self.cxxclass.add(self, pid1, pid2, pid3, pid4)
+
+    def clean_and_remove(self):
+        if pmi.workerIsActive():
+            self.cxxclass.clean_and_remove(self)
 
     def getQuadruples(self):
 

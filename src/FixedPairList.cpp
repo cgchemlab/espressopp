@@ -375,7 +375,6 @@ namespace espressopp {
 
     System& system = storage->getSystemRef();
     esutil::Error err(system.comm);
-
     this->clear();
     longint lastpid1 = -1;
     Particle *p1;
@@ -403,7 +402,6 @@ namespace espressopp {
       }
       this->add(p1, p2);
     }
-
     err.checkException();
     
     LOG4ESPP_INFO(theLogger, "regenerated local fixed pair list from global list");
