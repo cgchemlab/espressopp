@@ -67,6 +67,7 @@ ChemicalReaction::ChemicalReaction(shared_ptr<System> system, shared_ptr<VerletL
   reverse_reaction_list_ = ReactionList();
 
   save_pd_ = false;
+  max_per_interval_ = std::numeric_limits<longint>::max();
 
   resetTimers();
 }
@@ -430,8 +431,11 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
 
     mm.clear();  // clear mm, it's already in global_maps
     // iterate over CPUs maps and check the particle lists. First In First Served idea;
+
+    longint reaction_counter = 0;
+
     for (std::vector<ReactionMap>::iterator it_rms = global_maps.begin(); it_rms != global_maps.end(); it_rms++) {
-      for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end(); it++) {
+      for (ReactionMap::iterator it = it_rms->begin(); it != it_rms->end() && reaction_counter < max_per_interval_; it++) {
         longint idx_a = it->first;
         longint idx_b = it->second.first;
         shared_ptr<integrator::Reaction> reaction = reaction_list_[it->second.second.reaction_id];
@@ -469,6 +473,7 @@ void ChemicalReaction::sortParticleReactionList(ReactionMap &mm) {
           molecule_map[mid2].insert(mid1);
           // insert part in output list.
           mm.insert(std::make_pair(idx_a, std::make_pair(idx_b, it->second.second)));
+          reaction_counter++;
         }
       }
     }
@@ -1143,7 +1148,8 @@ void ChemicalReaction::registerPython() {
     .def("get_reaction_num_intra_inter_counters", &ChemicalReaction::getReactionNumIntraInterCounters)
     .add_property("pair_distances_filename", &ChemicalReaction::pd_filename_, &ChemicalReaction::set_pd_filename)
     .add_property("interval", &ChemicalReaction::interval, &ChemicalReaction::set_interval)
-    .add_property("nearest_mode", &ChemicalReaction::is_nearest, &ChemicalReaction::set_is_nearest);
+    .add_property("nearest_mode", &ChemicalReaction::is_nearest, &ChemicalReaction::set_is_nearest)
+    .add_property("max_per_interval", make_getter(&ChemicalReaction::max_per_interval_), make_setter(&ChemicalReaction::max_per_interval_));
 }
 
 }  // namespace integrator

@@ -463,7 +463,7 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.integrator.ChemicalReactionLocal',
-            pmiproperty=('interval','nearest_mode', 'pair_distances_filename'),
+            pmiproperty=('interval','nearest_mode', 'pair_distances_filename', 'max_per_interval'),
             pmicall=(
                 'add_reaction', 'clear_pair_distances', 'save_pair_distances',
                 'get_reaction', 'save_reaction_counters', 'save_intra_inter_counter'

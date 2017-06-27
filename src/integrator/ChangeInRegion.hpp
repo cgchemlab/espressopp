@@ -36,9 +36,16 @@ namespace integrator {
 
 class ChangeInRegion: public Extension {
  public:
-  ChangeInRegion(shared_ptr<System> system, shared_ptr<ParticleRegion> particle_region);
+  /*** Select particles with probability p. */
+  ChangeInRegion(shared_ptr<System> system, shared_ptr<ParticleRegion> particle_region, real p);
+  /*** Select only num_part */
+  ChangeInRegion(shared_ptr<System> system, shared_ptr<ParticleRegion> particle_region, long num_part);
+  /*** Select only percentage of particles that are in the region. */
+  ChangeInRegion(shared_ptr<System> system, shared_ptr<ParticleRegion> particle_region, long xxx, real percentage);
 
-  virtual ~ChangeInRegion() {};
+  virtual ~ChangeInRegion() {
+    disconnect();
+  };
 
   void setParticleProperties(longint type_id, shared_ptr<TopologyParticleProperties> pp) {
     type_particleProperties.insert(std::make_pair(type_id, pp));
@@ -69,11 +76,16 @@ class ChangeInRegion: public Extension {
   boost::signals2::connection sig_aftIntV;
   shared_ptr<ParticleRegion> particleRegion;
   real p_;  ///!< Probability of changing the values.
+  longint num_particles_;
+  real percentage_;
+  std::string stats_filename_;
 
   std::map<longint, shared_ptr<TopologyParticleProperties> > type_particleProperties;
   std::map<longint, int> type_flags;
 
-  void updateParticles();
+  void updateParticlesProb();
+  void updateParticlesFlux();
+  void updateParticlesPercentage();
   void connect();
   void disconnect();
 

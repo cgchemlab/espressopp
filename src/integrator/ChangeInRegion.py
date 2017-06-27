@@ -1,4 +1,4 @@
-#  Copyright (C) 2016
+#  Copyright (C) 2016-2017
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #  
 #  This file is part of ESPResSo++.
@@ -58,9 +58,16 @@ from espressopp.integrator.Extension import *
 from _espressopp import integrator_ChangeInRegion
 
 class ChangeInRegionLocal(ExtensionLocal, integrator_ChangeInRegion):
-    def __init__(self, system, particleGroup):
+    def __init__(self, system, particleGroup, prob=None, p_num=None, p_num_percentage=None):
         if pmi.workerIsActive():
-            cxxinit(self, integrator_ChangeInRegion, system, particleGroup)
+            if prob:
+                cxxinit(self, integrator_ChangeInRegion, system, particleGroup, prob)
+            elif p_num:
+                cxxinit(self, integrator_ChangeInRegion, system, particleGroup, p_num)
+            elif p_num_percentage:
+                cxxinit(self, integrator_ChangeInRegion, system, particleGroup, 0, p_num_percentage)
+            else:
+                raise RuntimeError('prob, p_num, p_percentage have to be specified')
 
     def set_flags(self, type_id, reset_velocity, reset_force, remove_particle=False):
         if pmi.workerIsActive():
@@ -76,5 +83,5 @@ if pmi.isController :
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.ChangeInRegionLocal',
             pmicall = ['set_particle_properties', 'update_particles', 'set_flags'],
-            pmiproperty = ('p',)
+            pmiproperty = ('stats_filename',)
             )

@@ -213,6 +213,9 @@ private:
   std::string pd_filename_;
   bool save_pd_;
 
+  /// Maximum number of reactions per interval
+  longint max_per_interval_;
+
   python::list getTimers();
 
   // Debug function.
