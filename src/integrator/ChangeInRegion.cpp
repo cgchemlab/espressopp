@@ -274,8 +274,8 @@ void ChangeInRegion::registerPython() {
       .def(init<shared_ptr<System>, shared_ptr<ParticleRegion>, long>())
       .def(init<shared_ptr<System>, shared_ptr<ParticleRegion>, long, real>())
       .add_property("stats_filename",
-                    make_setter(&ChangeInRegion::stats_filename_),
-                    make_getter(&ChangeInRegion::stats_filename_))
+                    make_getter(&ChangeInRegion::stats_filename_),
+                    make_setter(&ChangeInRegion::stats_filename_))
       .def("set_particle_properties", &ChangeInRegion::setParticleProperties)
       .def("set_flags", &ChangeInRegion::setFlags)
       .def("update_particles_prob", &ChangeInRegion::updateParticlesProb)
