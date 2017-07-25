@@ -168,6 +168,12 @@ void TopologyManager::observeTuple(shared_ptr<FixedPairList> fpl) {
 /** Registers methods, those FixedList are only to updated and no to take data. */
 void TopologyManager::registerTuple(
     shared_ptr<FixedPairList> fpl, longint type1, longint type2) {
+  if (tupleMap_.count(type1) > 0 && tupleMap_.at(type1).count(type2) > 0) {
+    if (tupleMap_[type1][type2] != fpl) {
+      std::cout << "Tuple for pair type " << type1 << "-" << type2 << " already defined" << std::endl;
+      throw std::runtime_error("Tuple defined.");
+    }
+  }
   tuples_.push_back(fpl);
   tupleMap_[type1][type2] = fpl;
   tupleMap_[type2][type1] = fpl;
