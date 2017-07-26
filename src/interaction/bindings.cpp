@@ -89,6 +89,7 @@
 #include "SingleParticlePotential.hpp"
 
 #include "MultiTabulated.hpp"
+#include "MultiMixedTabulated.hpp"
 #include "MixedTabulated.hpp"
 #include "TabulatedCapped.hpp"
 
@@ -164,6 +165,7 @@ namespace espressopp {
       CoulombKSpaceP3M::registerPython();
 
       MultiTabulated::registerPython();
+      MultiMixedTabulated::registerPython();
       MixedTabulated::registerPython();
     }
   }

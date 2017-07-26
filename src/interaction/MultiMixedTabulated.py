@@ -1,4 +1,4 @@
-#  Copyright (C) 2016
+#  Copyright (C) 2017
 #      Jakub Krajniak (jkrajniak at gmail.com)
 #  
 #  This file is part of ESPResSo++.
@@ -18,34 +18,44 @@
 
 
 r"""
-*****************************************
-**espressopp.interaction.MultiTabulated**
-*****************************************
+**********************************************
+**espressopp.interaction.MultiMixedTabulated**
+**********************************************
 
 This class of non-bonded tabulated potential allows to select table depends on the chemical conversion.
 First step is to register table for certain range of conversion by method `register_table`
 
-.. function:: espressopp.interaction.MultiTabulated(itype, cutoff)
+This kind of potential effectively mix two tabulated potentials, based
+on the input conversion value :math:`x`
 
+.. math::
+    U_{eff} = xU_I + (1-x)U_{II}
+
+where :math:`x` is a parameter that can change during the simulation. :math:`U_I` is table_1 and :math:`U_{II}` is table_2.
+
+For given conversion the table1 and table2 are selected from the registered tables and are used to calculated effective force and
+energy.
+
+
+.. function:: espressopp.interaction.MultiMixedTabulated(itype, cutoff)
+
+        :param itype: The type of interpolation, 1 - linear, 2 - Akima, 3 - Cubic
+        :type itype: int
 		:param cutoff: (default: infinity)
 		:type cutoff: float
 
-.. function:: espressopp.interaction.MultiTabuleted.register_table(filename, itype, chem_conv_obs, min_value, max_value, default=False)
+.. function:: espressopp.interaction.MultiTabulated.register_table(filename, chem_conv_obs, min_value, max_value)
 
         :param filename: The filename with the table.
         :type filename: str
-        :param itype: The type of interpolation, 1 - linear, 2 - Akima, 3 - Cubic
-        :type itype: int
         :param chem_conv_obs: The instance of analysis.ChemicalConversion object.
         :type chem_conv_obs: espressopp.analysis.ChemicalConversion
         :param min_value: The minimum value of the conversion to use registered table.
         :type min_value: float
         :param max_value: The maximum value of the conversion to use registered table.
         :type max_value: float
-        :param default: If set to true, this table will be used if for given conversion there is no other registered table
-        :type default: bool
 
-.. function:: espressopp.interaction.VerletListMultiTabulated(vl)
+.. function:: espressopp.interaction.VerletListMultiMixedTabulated(vl)
 
 		:param vl: The VerletList object.
 		:type vl: espressopp.VerletList.
@@ -56,22 +66,22 @@ from espressopp.esutil import *
 
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
-from _espressopp import interaction_MultiTabulated, interaction_VerletListMultiTabulated
+from _espressopp import interaction_MultiMixedTabulated, interaction_VerletListMultiMixedTabulated
 
 
-class MultiTabulatedLocal(PotentialLocal, interaction_MultiTabulated):
-    def __init__(self, cutoff=infinity):
+class MultiMixedTabulatedLocal(PotentialLocal, interaction_MultiMixedTabulated):
+    def __init__(self, itype, cutoff=infinity):
         if pmi.workerIsActive():
-            cxxinit(self, interaction_MultiTabulated, cutoff)
+            cxxinit(self, interaction_MultiMixedTabulated, itype, cutoff)
 
-    def register_table(self, filename, itype, chem_conv_obs, min_value, max_value, default=False):
+    def register_table(self, tab1, tab2, chem_conv_obs, min_value, max_value):
         if pmi.workerIsActive():
-            self.cxxclass.register_table(self, filename, itype, chem_conv_obs, min_value, max_value, default)
+            self.cxxclass.register_table(self, tab1, tab2, chem_conv_obs, min_value, max_value)
 
-class VerletListMultiTabulatedLocal(InteractionLocal, interaction_VerletListMultiTabulated):
+class VerletListMultiMixedTabulatedLocal(InteractionLocal, interaction_VerletListMultiMixedTabulated):
     def __init__(self, vl):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_VerletListMultiTabulated, vl)
+            cxxinit(self, interaction_VerletListMultiMixedTabulated, vl)
 
     def setPotential(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -82,16 +92,15 @@ class VerletListMultiTabulatedLocal(InteractionLocal, interaction_VerletListMult
             return self.cxxclass.getPotential(self, type1, type2)
 
 if pmi.isController:
-    class MultiTabulated(Potential):
-        'The MultiTabulated potential.'
+    class MultiMixedTabulated(Potential):
         pmiproxydefs = dict(
-            cls='espressopp.interaction.MultiTabulatedLocal',
+            cls='espressopp.interaction.MultiMixedTabulatedLocal',
             pmicall=['register_table']
         )
 
-    class VerletListMultiTabulated(Interaction):
+    class VerletListMultiMixedTabulated(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls='espressopp.interaction.VerletListMultiTabulatedLocal',
+            cls='espressopp.interaction.VerletListMultiMixedTabulatedLocal',
             pmicall=['setPotential', 'getPotential']
         )

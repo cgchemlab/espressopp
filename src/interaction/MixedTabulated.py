@@ -28,7 +28,7 @@ on the input parameter.
 .. math::
     U_{eff} = xU_I + (1-x)U_{II}
 
-where :math:`x` is a parameter that can change during the simulation.
+where :math:`x` is a parameter that can change during the simulation. U_I is table_1 and U_II is table_2.
 
 
 .. function:: espressopp.interaction.MixedTabulated(itype, table1, table2, conversion, cutoff)
@@ -46,7 +46,7 @@ where :math:`x` is a parameter that can change during the simulation.
         :param cutoff: (default: infinity)
         :type cutoff: float
 
-.. function:: espressopp.interaction.VerletListMixedTabulated(vl, fixedtupleList)
+.. function:: espressopp.interaction.VerletListMixedTabulated(vl)
 
 		:param vl: The VerletList object.
 		:type vl: espressopp.VerletList.

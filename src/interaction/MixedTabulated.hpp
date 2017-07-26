@@ -41,13 +41,14 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
     setShift(0.0);
     setCutoff(infinity);
     interpolationType = 0;
+    mix_value_ = 0.0;
   }
 
   MixedTabulated(longint itype,
                  const char *filename1,
                  const char *filename2,
                  shared_ptr<analysis::ChemicalConversion> chm,
-                 real _mix_value,
+                 real mix_value,
                  real cutoff) {
     setShift(0.0);
     setCutoff(cutoff);
@@ -76,16 +77,15 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
       default:
         throw std::runtime_error("wrong itype");
     }
-    mix_value_ = _mix_value;
+    mix_value_ = mix_value;
     // Connect onValue signal.
     chm->onValue.connect(boost::bind(&MixedTabulated::onValue, this, _1));
-
   }
 
   MixedTabulated(longint itype,
                  const char *filename1,
                  const char *filename2,
-                 real _mix_value,
+                 real mix_value,
                  real cutoff) {
     setShift(0.0);
     setCutoff(cutoff);
@@ -114,8 +114,7 @@ class MixedTabulated: public PotentialTemplate<MixedTabulated> {
       default:
         throw std::runtime_error("wrong itype");
     }
-    mix_value_ = _mix_value;
-
+    mix_value_ = mix_value;
   }
 
   /** Returns energy value for given distance square. */
