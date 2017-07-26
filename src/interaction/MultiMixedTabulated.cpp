@@ -79,7 +79,7 @@ void MultiMixedTabulated::registerTableOnRange(
 }
 
 void MultiMixedTabulated::onValue(real min_value, real max_value, shared_ptr<Interpolation> table1, shared_ptr<Interpolation> table2, real value) {
-  if (value >= min_value && value < max_value) {
+  if (value > min_value && value <= max_value) {
     current_table1 = table1;
     current_table2 = table2;
   }

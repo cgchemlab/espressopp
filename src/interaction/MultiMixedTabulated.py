@@ -33,9 +33,15 @@ on the input conversion value :math:`x`
 
 where :math:`x` is a parameter that can change during the simulation. :math:`U_I` is table_1 and :math:`U_{II}` is table_2.
 
-For given conversion the table1 and table2 are selected from the registered tables and are used to calculated effective force and
+For given conversion :math:`val` the table1, table2 are selected from the registered tables and are used to calculated effective force and
 energy.
 
+The table1,table2 is selected iff.
+
+.. math::
+    p2 > val <= p2
+
+where :math:`val` is the current conversion and :math:`p1`,:math:`p2` are the set condtions.
 
 .. function:: espressopp.interaction.MultiMixedTabulated(itype, cutoff)
 
