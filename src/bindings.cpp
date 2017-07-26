@@ -47,6 +47,7 @@
 #include <FixedQuadrupleAngleList.hpp>
 #include <FixedTupleList.hpp>
 #include <FixedTupleListAdress.hpp>
+#include <FixedLocalTupleList.hpp>
 #include <Real3D.hpp>
 #include <Quaternion.hpp>
 #include <Tensor.hpp>
@@ -90,6 +91,7 @@ void espressopp::registerPython() {
   espressopp::FixedQuadrupleAngleList::registerPython();
   espressopp::FixedTupleList::registerPython();
   espressopp::FixedTupleListAdress::registerPython();
+  espressopp::FixedLocalTupleList::registerPython();
   espressopp::Real3D::registerPython();
   espressopp::Quaternion::registerPython();
   espressopp::RealND::registerPython();

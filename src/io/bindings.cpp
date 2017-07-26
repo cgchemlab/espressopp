@@ -27,8 +27,11 @@
 #include "DumpH5MD.hpp"
 #include "DumpTopology.hpp"
 #include "FileBackup.hpp"
-
 #include "ReadNumpy.hpp"
+
+#ifdef HAS_GROMACS
+#include "DumpXTC.hpp"
+#endif
 
 namespace espressopp {
   namespace io{
@@ -39,6 +42,9 @@ namespace espressopp {
       DumpH5MD::registerPython();
       DumpTopology::registerPython();
       ReadNumpy::registerPython();
+#ifdef HAS_GROMACS
+      DumpXTC::registerPython();
+#endif
     }
   }
 }
