@@ -73,13 +73,12 @@ void MultiMixedTabulated::registerTableOnRange(
   if (!current_table2)
     current_table2 = table2;
 
-  chm->onValue.connect(
-      boost::bind(&MultiMixedTabulated::onValue, this, min_value, max_value, table1, table2, _1)
-  );
+  chm->onValue.connect(boost::bind(&MultiMixedTabulated::onValue, this, min_value, max_value, table1, table2, _1));
 }
 
-void MultiMixedTabulated::onValue(real min_value, real max_value, shared_ptr<Interpolation> table1, shared_ptr<Interpolation> table2, real value) {
-  if (value > min_value && value <= max_value) {
+void MultiMixedTabulated::onValue(
+    real min_value, real max_value, shared_ptr<Interpolation> table1, shared_ptr<Interpolation> table2, real value) {
+  if (value >= min_value && value < max_value) {
     current_table1 = table1;
     current_table2 = table2;
     // scaled value to fit into the region (min_value, max_value] => (0, 1]
@@ -101,8 +100,7 @@ void MultiMixedTabulated::registerPython() {
       ("interaction_VerletListMultiMixedTabulated", init<shared_ptr<VerletList> >())
       .def("setPotential", &VerletListMultiMixedTabulated::setPotential)
       .def("getPotential", &VerletListMultiMixedTabulated::getPotentialPtr);
-
 }
 
-}
-}
+}  // end namespace interaction
+}  // end namespace espressopp
