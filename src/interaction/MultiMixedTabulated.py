@@ -74,7 +74,6 @@ from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_MultiMixedTabulated
 from _espressopp import interaction_VerletListMultiMixedTabulated
-from _espressopp import interaction_VerletListDynamicResolutionMultiMixedTabulated
 
 
 class MultiMixedTabulatedLocal(PotentialLocal, interaction_MultiMixedTabulated):
