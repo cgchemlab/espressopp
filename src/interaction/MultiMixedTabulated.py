@@ -72,7 +72,9 @@ from espressopp.esutil import *
 
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
-from _espressopp import interaction_MultiMixedTabulated, interaction_VerletListMultiMixedTabulated
+from _espressopp import interaction_MultiMixedTabulated
+from _espressopp import interaction_VerletListMultiMixedTabulated
+from _espressopp import interaction_VerletListDynamicResolutionMultiMixedTabulated
 
 
 class MultiMixedTabulatedLocal(PotentialLocal, interaction_MultiMixedTabulated):
@@ -86,15 +88,15 @@ class MultiMixedTabulatedLocal(PotentialLocal, interaction_MultiMixedTabulated):
 
 class VerletListMultiMixedTabulatedLocal(InteractionLocal, interaction_VerletListMultiMixedTabulated):
     def __init__(self, vl):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             cxxinit(self, interaction_VerletListMultiMixedTabulated, vl)
 
     def setPotential(self, type1, type2, potential):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             self.cxxclass.setPotential(self, type1, type2, potential)
 
     def getPotential(self, type1, type2):
-        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+        if pmi.workerIsActive():
             return self.cxxclass.getPotential(self, type1, type2)
 
 if pmi.isController:

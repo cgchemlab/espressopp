@@ -82,8 +82,9 @@ void MultiMixedTabulated::onValue(real min_value, real max_value, shared_ptr<Int
   if (value > min_value && value <= max_value) {
     current_table1 = table1;
     current_table2 = table2;
+    // scaled value to fit into the region (min_value, max_value] => (0, 1]
+    mix_value_ = (value - min_value) / (max_value - min_value);
   }
-  mix_value_ = value;
 }
 
 /** Register Python interface. */
