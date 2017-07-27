@@ -144,6 +144,7 @@ Not okay for an itp file containing lines like:
    
 import math
 import espressopp
+import re
 from topology_helper import *
 from operator import itemgetter # for sorting a dict
 
@@ -1378,12 +1379,17 @@ def convertTable(gro_in_file, esp_out_file, sigma=1.0, epsilon=1.0, c6=1.0, c12=
 
     # determine file type
     bonded, angle, dihedral = False, False, False
-    if gro_in_file[6] == "b":
+
+    re_bond = re.compile('.*_b[0-9]+.*')
+    re_angle = re.compile('.*_a[0-9]+.*')
+    re_dihedral = re.compile('.*_d[0-9]+.*')
+
+    if re.match(re_bond, gro_in_file):
         bonded = True
-    if gro_in_file[6] == "a":
+    elif re.match(re_angle, gro_in_file):
         angle  = True
         bonded = True
-    if gro_in_file[6] == "d":
+    elif re.match(re_dihedral, gro_in_file):
         dihedral = True
         bonded = True
 
