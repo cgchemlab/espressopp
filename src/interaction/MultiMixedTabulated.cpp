@@ -37,9 +37,6 @@ void MultiMixedTabulated::registerTableOnRange(
     real min_value,
     real max_value) {
 
-  LOG4ESPP_INFO(theLogger,
-                "registerTable tab1=" << tab1 << " tab2=" << tab2 << " type=" << interpolationType
-                << " min_val=" << min_value << " max_val=" << max_value);
   boost::mpi::communicator world;
   shared_ptr<Interpolation> table1;
   shared_ptr<Interpolation> table2;
@@ -74,6 +71,7 @@ void MultiMixedTabulated::registerTableOnRange(
     current_table2 = table2;
 
   chm->onValue.connect(boost::bind(&MultiMixedTabulated::onValue, this, min_value, max_value, table1, table2, _1));
+  LOG4ESPP_INFO(theLogger, "registered tab1: " << tab1 << "tab2: " << tab2 << " [" << min_value << "," << max_value << ")");
 }
 
 void MultiMixedTabulated::onValue(

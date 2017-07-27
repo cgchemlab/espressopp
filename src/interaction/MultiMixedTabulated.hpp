@@ -68,7 +68,6 @@ class MultiMixedTabulated: public PotentialTemplate<MultiMixedTabulated> {
 
       return val;
     } else {
-      LOG4ESPP_ERROR(theLogger, "interpolationType = " << interpolationType);
       return 0.0;
     }
   }
