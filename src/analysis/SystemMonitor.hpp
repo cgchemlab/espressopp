@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2016
+  Copyright (c) 2015-2017
       Jakub Krajniak (jkrajniak at gmail.com)
 
   This file is part of ESPResSo++.
@@ -40,6 +40,33 @@
 namespace espressopp {
 namespace analysis {
 
+/**
+ * Base class for SystemMonitor output formats.
+ */
+class SystemMonitorOutput {
+  friend class SystemMonitor;
+  public:
+    virtual void write() = 0;
+    void setSystem(shared_ptr<System> system) {
+      system_ = system;
+    }
+
+    void setKeys(shared_ptr<std::vector<std::string> > keys) {
+      keys_ = keys;
+    }
+
+    void setValues(shared_ptr<std::vector<real> > val) {
+      values_ = val;
+    }
+
+    static void registerPython();
+
+  protected:
+    shared_ptr<std::vector<std::string> > keys_;
+    shared_ptr<std::vector<real> > values_;
+    shared_ptr<System> system_;
+    static LOG4ESPP_DECL_LOGGER(theLogger);
+};
 
 /**
  * Output of SystemMonitor writen to CSV file.
@@ -47,8 +74,7 @@ namespace analysis {
  * @param file_name The output file name.
  * @param delimiter The separator of fields.
  */
-class SystemMonitorOutputCSV {
-  friend class SystemMonitor;
+class SystemMonitorOutputCSV : public SystemMonitorOutput {
  public:
   SystemMonitorOutputCSV(std::string file_name, std::string delimiter) :
       file_name_(file_name), delimiter_(delimiter) {
@@ -56,19 +82,18 @@ class SystemMonitorOutputCSV {
   }
   void write();
 
-  void setSystem(shared_ptr<System> system) {
-    system_ = system;
-  }
-
   static void registerPython();
 
  private:
-  shared_ptr<std::vector<std::string> > keys_;
-  shared_ptr<std::vector<real> > values_;
   std::string file_name_;
-  shared_ptr<System> system_;
   std::string delimiter_;
   bool header_written_;
+};
+
+class SystemMonitorOutputDummy : public SystemMonitorOutput {
+ public:
+  void write() { }
+  static void registerPython();
 };
 
 
@@ -77,7 +102,7 @@ class SystemMonitor : public ParticleAccess {
   typedef std::vector<std::pair<std::string, shared_ptr<Observable> > > ObservableList;
   SystemMonitor(shared_ptr< System > system,
                 shared_ptr<integrator::MDIntegrator> integrator,
-                shared_ptr<SystemMonitorOutputCSV> output):
+                shared_ptr<SystemMonitorOutput> output):
         ParticleAccess(system),
         system_(system),
         integrator_(integrator),
@@ -85,9 +110,9 @@ class SystemMonitor : public ParticleAccess {
     header_ = make_shared<std::vector<std::string> >();
     values_ = make_shared<std::vector<real> >();
 
-    output_->system_ = system;
-    output_->keys_ = header_;
-    output_->values_ = values_;
+    output_->setKeys(header_);
+    output_->setValues(values_);
+    output_->setSystem(system);
 
     header_shown_ = false;
     if (system->comm->rank() == 0) {
@@ -99,8 +124,8 @@ class SystemMonitor : public ParticleAccess {
     elapsed_time_ = true;
   }
 
-  ~SystemMonitor() {
-  }
+  ~SystemMonitor() { }
+
   void perform_action();
   void info();
 
@@ -122,7 +147,7 @@ class SystemMonitor : public ParticleAccess {
   shared_ptr<System> system_;
   shared_ptr<integrator::MDIntegrator> integrator_;
 
-  shared_ptr<SystemMonitorOutputCSV> output_;
+  shared_ptr<SystemMonitorOutput> output_;
   ObservableList observables_;
 
   real total_energy_;

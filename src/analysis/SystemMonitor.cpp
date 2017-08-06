@@ -142,13 +142,26 @@ void SystemMonitor::registerPython() {
 }
 
 /** Implementation of SystemMonitorOutputs. **/
+
+void SystemMonitorOutput::registerPython() {
+  using namespace espressopp::python;  // NOLINT
+  class_<SystemMonitorOutput, boost::noncopyable>
+    ("analysis_SystemMonitorOutput", no_init);
+}
+
 void SystemMonitorOutputCSV::registerPython() {
   using namespace espressopp::python;  // NOLINT
-  class_<SystemMonitorOutputCSV>
+  class_<SystemMonitorOutputCSV, bases<SystemMonitorOutput> >
     ("analysis_SystemMonitorOutputCSV", init<
         std::string,  // file_name
-        std::string  // deflimiter
+        std::string  // delimiter
         >());
+}
+
+void SystemMonitorOutputDummy::registerPython() {
+  using namespace espressopp::python;  // NOLINT
+  class_<SystemMonitorOutputDummy, bases<SystemMonitorOutput> >
+      ("analysis_SystemMonitorOutputDummy", init<>());
 }
 
 void SystemMonitorOutputCSV::write() {

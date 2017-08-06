@@ -80,13 +80,21 @@ from espressopp import pmi
 
 from espressopp.analysis.AnalysisBase import *  #NOQA
 from _espressopp import analysis_SystemMonitor
+from _espressopp import analysis_SystemMonitorOutput
 from _espressopp import analysis_SystemMonitorOutputCSV
+from _espressopp import analysis_SystemMonitorOutputDummy
 
 
-class SystemMonitorOutputCSVLocal(analysis_SystemMonitorOutputCSV):
+class SystemMonitorOutputCSVLocal(analysis_SystemMonitorOutputCSV, analysis_SystemMonitorOutput):
     def __init__(self, file_name, delimiter='\t'):
         if pmi.workerIsActive():
             cxxinit(self, analysis_SystemMonitorOutputCSV, file_name, delimiter)
+
+
+class SystemMonitorOutputDummyLocal(analysis_SystemMonitorOutputDummy, analysis_SystemMonitorOutput):
+    def __init__(self):
+        if pmi.workerIsActive():
+            cxxinit(self, analysis_SystemMonitorOutputDummy)
 
 
 class SystemMonitorLocal(analysis_SystemMonitor):
@@ -107,6 +115,9 @@ class SystemMonitorLocal(analysis_SystemMonitor):
             self.cxxclass.dump(self)
 
 if pmi.isController:
+    class SystemMonitorDummy:
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(cls='espressopp.analysis.SystemMonitorOutputDummyLocal')
     class SystemMonitorOutputCSV:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(cls='espressopp.analysis.SystemMonitorOutputCSVLocal')
