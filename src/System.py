@@ -156,7 +156,11 @@ class SystemLocal(_espressopp.System):
                 for k, v in self._interaction2id.iteritems()
                 if v != interaction_id
                 }
-            self._interaction_pid = max(self._interaction2id.values()) + 1
+            interaction_ids = self._interaction2id.values()
+            if interaction_ids:
+                self._interaction_pid = max(interaction_idx) + 1
+            else:
+                self._interaction_pid = 0
 
     def getAllInteractions(self):
         if pmi.workerIsActive():

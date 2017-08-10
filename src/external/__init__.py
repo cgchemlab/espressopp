@@ -20,6 +20,6 @@
 
 
 try:
-  from espressopp.external.transformations import *
+  from espressopp.external.Transformations import *
 except:
   print 'Warning: numpy module not available'
