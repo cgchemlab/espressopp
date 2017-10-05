@@ -24,7 +24,6 @@
 #include <vector>
 #include "SystemMonitor.hpp"
 #include "integrator/MDIntegrator.hpp"
-#include <iomanip>
 #include <boost/format.hpp>
 
 namespace espressopp {

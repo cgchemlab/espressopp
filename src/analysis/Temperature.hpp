@@ -1,4 +1,6 @@
 /*
+  Copyright (C) 2017
+      Jakub Krajniak (jkrajniak at gmail.com)
   Copyright (C) 2012,2013
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
@@ -75,9 +77,7 @@ namespace espressopp {
                           count += 1;
                       }
                   }
-            }
-
-            else{   // If not, use CG particle itself for calculation.
+            } else {   // If not, use CG particle itself for calculation.
                   if (!has_types || valid_type_ids.count(cit->type())) {
                       Real3D vel = cit->velocity();
                       v2sum += cit->mass() * (vel * vel);
@@ -88,9 +88,7 @@ namespace espressopp {
           }
 
           myN = count;
-      }
-
-      else{  // No AdResS - just iterate over all particles
+      } else {  // No AdResS - just iterate over all particles
           CellList realCells = system.storage->getRealCells();
           for (CellListIterator cit(realCells); !cit.isDone(); ++cit) {
             Real3D vel = cit->velocity();
