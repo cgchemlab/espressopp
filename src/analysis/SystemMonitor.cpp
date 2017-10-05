@@ -131,7 +131,7 @@ void SystemMonitor::registerPython() {
       ("analysis_SystemMonitor", init<
           shared_ptr<System>,
           shared_ptr<integrator::MDIntegrator>,
-          shared_ptr<SystemMonitorOutputCSV>
+          shared_ptr<SystemMonitorOutput>
           >())
       .add_property("total_energy", make_getter(&SystemMonitor::total_energy_))
       .add_property("potential_energy", make_getter(&SystemMonitor::potential_energy_))
