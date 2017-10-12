@@ -360,7 +360,7 @@ class ReactionLocal(integrator_Reaction):
             self.cxxclass.add_constraint(self, constraint, name_switch.get(reactant_switch, reactant_switch))
 
 
-class RestrictReactionLocal(integrator_Reaction):
+class RestrictReactionLocal(integrator_RestrictReaction):
     """Synthesis reaction."""
     def __init__(self, type_1, type_2, delta_1, delta_2, min_state_1, max_state_1,
                  min_state_2, max_state_2, cutoff, rate, fpl):

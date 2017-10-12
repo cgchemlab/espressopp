@@ -262,7 +262,7 @@ LOG4ESPP_LOGGER(RestrictReaction::theLogger, "RestrictReaction");
 /** Checks if the particles pair is valid. */
 bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &particle_order) {
   LOG4ESPP_DEBUG(theLogger, "entering RestrictReaction::isValidPair");
-
+  bool valid = true;
   if (isConnected(p1.id(), p2.id())) {
     if (isValidState(p1, p2, particle_order)) {
       particle_order.reaction_rate = MAX_REAL;   // set as maximum reaction rate
@@ -271,11 +271,10 @@ bool RestrictReaction::isValidPair(Particle &p1, Particle &p2, ReactedPair &part
       return false;
     }
   } else {
-
+    return false;
   }
 
-  if (reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
-    bool valid = true;
+  if (valid && reaction_cutoff_->check(p1, p2, particle_order.r_sqr)) {
     for (ReactionConstraintList::iterator it = reaction_constraint_T1.begin();
          it != reaction_constraint_T1.end(); ++it) {
       valid = valid && (*it)->checkPair(particle_order.first, particle_order.second);

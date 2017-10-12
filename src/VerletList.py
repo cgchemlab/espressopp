@@ -124,6 +124,11 @@ class DynamicExcludeListLocal(_espressopp.DynamicExcludeList):
                     self.cxxclass.exclude(self, pid1, pid2)
                 self.cxxclass.update(self)
 
+    def exclude_from(self, exclusionlist):
+        if pmi.workerIsActive():
+            for e1, e2 in exclusionlist:
+                self.exclude(e1, e2)
+
     def exclude(self, pid1, pid2):
         if pmi.workerIsActive():
             self.cxxclass.exclude(self, pid1, pid2)
@@ -206,7 +211,7 @@ if pmi.isController:
         cls='espressopp.DynamicExcludeListLocal',
         pmiproperty=['is_dirty', 'size'],
         pmicall=['exclude', 'unexclude', 'connect', 'disconnect', 'observe_tuple',
-                 'observe_triple', 'observe_quadruple', 'update'],
+                 'observe_triple', 'observe_quadruple', 'update', 'exclude_from'],
         pmiinvoke=['get_list']
     )
 
