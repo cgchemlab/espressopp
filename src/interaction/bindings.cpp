@@ -92,6 +92,7 @@
 #include "MultiMixedTabulated.hpp"
 #include "MixedTabulated.hpp"
 #include "TabulatedCapped.hpp"
+#include "FENELennardJones.hpp"
 
 namespace espressopp {
   namespace interaction {
@@ -126,6 +127,7 @@ namespace espressopp {
       TabulatedCapped::registerPython();
       FENE::registerPython();
       FENECapped::registerPython();
+      FENELennardJones::registerPython();
       Harmonic::registerPython();
       HarmonicUnique::registerPython();
       Quartic::registerPython();

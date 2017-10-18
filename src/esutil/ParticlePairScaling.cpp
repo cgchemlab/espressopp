@@ -38,13 +38,6 @@ void ParticlePairScaling::deleteParticlePair(longint pid1, longint pid2) {
   particle_pair_scale_.erase(std::make_pair(pid2, pid1));
 }
 
-void ParticlePairScaling::registerPython() {
-  using namespace espressopp::python;
-
-  class_<ParticlePairScaling, shared_ptr<ParticlePairScaling>, boost::noncopyable>
-      ("esutil_ParticlePairScaling", init<real, real, shared_ptr<VerletList>, shared_ptr<integrator::MDIntegrator> >());
-}
-
 real ParticlePairScaling::getPairScaling(longint pid1, longint pid2) {
   ParticlePairScale::const_iterator it = particle_pair_scale_.find(std::make_pair(pid1, pid2));
   if (it == particle_pair_scale_.end()) {
@@ -65,6 +58,13 @@ void ParticlePairScaling::incrementAllScaleFactors() {
       ++it;
     }
   }
+}
+
+void ParticlePairScaling::registerPython() {
+  using namespace espressopp::python;
+
+  class_<ParticlePairScaling, shared_ptr<ParticlePairScaling>, boost::noncopyable>
+      ("esutil_ParticlePairScaling", init<real, real, shared_ptr<VerletList>, shared_ptr<integrator::MDIntegrator> >());
 }
 
 }

@@ -53,6 +53,7 @@ from espressopp.interaction.SoftCosine import *
 from espressopp.interaction.Tabulated import *
 from espressopp.interaction.FENE import *
 from espressopp.interaction.FENECapped import *
+from espressopp.interaction.FENELennardJones import *
 from espressopp.interaction.Harmonic import *
 from espressopp.interaction.Quartic import *
 from espressopp.interaction.VSphereSelf import *
