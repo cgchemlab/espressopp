@@ -314,6 +314,8 @@ class TopologyManager: public Extension {
    */
   python::list getNeighbourLists();
 
+  std::vector<shared_ptr<FixedTripleList> > getTriples();
+
   static void registerPython();
 
  private:

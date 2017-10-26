@@ -136,7 +136,7 @@ if pmi.isController :
                        'is_residue_connected', 'is_particle_connected',
                        'save_topology', 'save_res_topology', 'save_residues',
                        'has_neighbour_particle_property',
-                       'get_fixed_pair_list'
+                       'get_fixed_pair_list', 'get_fixed_triple_list'
                       ],
             pmiinvoke = [
                 'print_topology',

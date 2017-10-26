@@ -79,6 +79,8 @@
 #include "MaxAvgMinForce.hpp"
 #include "ATRPActivatorStats.hpp"
 
+#include "AngleDistribution.hpp"
+
 namespace espressopp {
   namespace analysis {
     void registerPython() {
@@ -144,6 +146,8 @@ namespace espressopp {
 
       MaxForce::registerPython();
       ATRPActivatorStats::registerPython();
+
+      AngleDistribution::registerPython();
     }
   }
 }

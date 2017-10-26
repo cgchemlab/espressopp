@@ -190,6 +190,10 @@ void TopologyManager::registerTriple(shared_ptr<FixedTripleList> ftl,
   generate_new_angles_dihedrals_ = true;
 }
 
+std::vector<shared_ptr<FixedTripleList> > TopologyManager::getTriples() {
+  return triples_;
+}
+
 void TopologyManager::registerQuadruple(shared_ptr<FixedQuadrupleList> fql, longint type1,
                                         longint type2, longint type3, longint type4) {
   quadrupleMap_[type1][type2][type3][type4] = fql;
@@ -1534,7 +1538,8 @@ void TopologyManager::registerPython() {
       .def("get_molecule", &TopologyManager::getMolecule)
       .def("get_molecule_id", &TopologyManager::getMoleculeId)
       .def("get_residue_id", &TopologyManager::getResId)
-      .def("get_fixed_pair_list", &TopologyManager::getTuple);
+      .def("get_fixed_pair_list", &TopologyManager::getTuple)
+      .def("get_fixed_triple_list", &TopologyManager::getTriples);
 }
 
 
