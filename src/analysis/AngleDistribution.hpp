@@ -26,6 +26,8 @@
 #include "python.hpp"
 #include "types.hpp"
 #include "FixedTripleList.hpp"
+#include "integrator/TopologyManager.hpp"
+#include <set>
 
 namespace espressopp {
 namespace analysis {
@@ -43,7 +45,11 @@ class AngleDistribution : public Observable {
   static void registerPython();
 
  private:
-  void registerTriplet(shared_ptr<FixedTripleList> ftl) { ftlList.push_back(ftl); }
+  void registerTriplet(shared_ptr<FixedTripleList> ftl) { ftlList.insert(ftl); }
+  void loadFromTopologyManager(shared_ptr<integrator::TopologyManager> topol_man) {
+    auto triples = topol_man->getTriples();
+    ftlList.insert(triples.begin(), triples.end());
+  }
 
   /**
    * Return angle between p1-p2-p3 particles.
@@ -54,7 +60,7 @@ class AngleDistribution : public Observable {
    */
   real computeAngle(Real3D dist12, Real3D dist32) const;
 
-  std::vector<shared_ptr<FixedTripleList> > ftlList;
+  std::set<shared_ptr<FixedTripleList> > ftlList;
 };
 
 }  // end namespace analysis

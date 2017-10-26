@@ -50,11 +50,14 @@ real AngleDistribution::compute() const { return -1.0; }
 python::list AngleDistribution::computeArray(int splitN) const {
   const bc::BC &bc = *getSystemRef().bc;  // boundary conditions
   std::vector<real> angles;
-  real histogram[splitN] = {0};
-  real dtheta = M_PI / (real)splitN;
+  real histogram[splitN];
+  for (int i = 0; i < splitN; i++)
+    histogram[i] = 0.0;
+  real dtheta = M_PI / (real) splitN;
   // Iterate over FTL and over angles.
   for (auto ftlIt = ftlList.begin(); ftlIt != ftlList.end(); ftlIt++) {
-    for (FixedTripleList::TripleList::Iterator it(**ftlIt); it.isValid(); ++it) {
+    auto ftl = *ftlIt;
+    for (FixedTripleList::TripleList::Iterator it(*ftl); it.isValid(); ++it) {
       Particle &p1 = *it->first;
       Particle &p2 = *it->second;
       Particle &p3 = *it->third;
@@ -62,12 +65,14 @@ python::list AngleDistribution::computeArray(int splitN) const {
       bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
       bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
       real angle = computeAngle(dist12, dist32);
-      int bin = floor(angle / dtheta);
+      int bin = floor(angle/dtheta);
       histogram[bin] += 1.0;
     }
   }
 
-  real totHistogram[splitN] = {0};
+  real totHistogram[splitN];
+  for (int i = 0; i < splitN; i++)
+    totHistogram[i] = 0.0;
   boost::mpi::all_reduce(*mpiWorld, histogram, splitN, totHistogram, std::plus<real>());
 
   python::list pyli;
@@ -100,6 +105,7 @@ void AngleDistribution::registerPython() {
   class_<AngleDistribution, bases<Observable> >("analysis_AngleDistribution",
                                                 init<shared_ptr<System> >())
       .def("register_triplet", &AngleDistribution::registerTriplet)
+      .def("load_from_topology_manager", &AngleDistribution::loadFromTopologyManager)
       .def("compute", &AngleDistribution::computeArray);
 }
 

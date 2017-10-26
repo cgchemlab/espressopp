@@ -52,12 +52,11 @@ class AngleDistributionLocal(ObservableLocal, analysis_AngleDistribution):
 
     def compute(self, n):
         if pmi.workerIsActive():
-            self.cxxclass.compute(self, n)
+            return self.cxxclass.compute(self, n)
 
-    def fetch_triplet_from_topology_manager(self, tm):
+    def load_from_topology_manager(self, tm):
         if pmi.workerIsActive():
-            for ftl in tm.get_fixed_triple_list():
-                self.cxx.register_triplet(self, ftl)
+            self.cxxclass.load_from_topology_manager(self, tm)
 
 if pmi.isController:
     class AngleDistribution(Observable):

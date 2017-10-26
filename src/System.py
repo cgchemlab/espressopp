@@ -160,7 +160,7 @@ class SystemLocal(_espressopp.System):
                 }
             interaction_ids = self._interaction2id.values()
             if interaction_ids:
-                self._interaction_pid = max(interaction_idx) + 1
+                self._interaction_pid = max(interaction_ids) + 1
             else:
                 self._interaction_pid = 0
 
