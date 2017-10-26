@@ -1,20 +1,20 @@
 #  Copyright (C) 2017
 #      Jakub Krajniak (jkrajniak at gmail.com)
-#  
+#
 #  This file is part of ESPResSo++.
-#  
+#
 #  ESPResSo++ is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  ESPResSo++ is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 r"""
@@ -98,21 +98,26 @@ from _espressopp import interaction_FixedPairListTypesFENELennardJones
 from _espressopp import interaction_FixedPairListLambdaFENELennardJones
 from _espressopp import interaction_FixedPairListTypesLambdaFENELennardJones
 
+
 class FENELennardJonesLocal(PotentialLocal, interaction_FENELennardJones):
 
-    def __init__(self, K=1.0, r0=0.0, rMax=1.0, 
+    def __init__(self, K=1.0, r0=0.0, rMax=1.0,
                  sigma=1.0, epsilon=1.0, cutoff=infinity, shift=0.0):
         if pmi.workerIsActive():
             if shift == "auto":
-                cxxinit(self, interaction_FENELennardJones, K, r0, rMax, sigma, cutoff)
+                cxxinit(self, interaction_FENELennardJones,
+                        K, r0, rMax, sigma, cutoff)
             else:
-                cxxinit(self, interaction_FENELennardJones, K, r0, rMax, sigma, epsilon, cutoff, shift)
+                cxxinit(self, interaction_FENELennardJones, K,
+                        r0, rMax, sigma, epsilon, cutoff, shift)
+
 
 class FixedPairListFENELennardJonesLocal(InteractionLocal, interaction_FixedPairListFENELennardJones):
 
     def __init__(self, system, vl, potential):
         if pmi.workerIsActive():
-            cxxinit(self, interaction_FixedPairListFENELennardJones, system, vl, potential)
+            cxxinit(self, interaction_FixedPairListFENELennardJones,
+                    system, vl, potential)
 
     def setPotential(self, potential):
         if pmi.workerIsActive():
@@ -129,6 +134,7 @@ class FixedPairListFENELennardJonesLocal(InteractionLocal, interaction_FixedPair
     def getFixedPairList(self):
         if pmi.workerIsActive():
             return self.cxxclass.getFixedPairList(self)
+
 
 class FixedPairListTypesFENELennardJonesLocal(InteractionLocal, interaction_FixedPairListTypesFENELennardJones):
     def __init__(self, system, vl):
@@ -151,11 +157,13 @@ class FixedPairListTypesFENELennardJonesLocal(InteractionLocal, interaction_Fixe
         if pmi.workerIsActive():
             return self.cxxclass.getFixedPairList(self)
 
+
 class FixedPairListLambdaFENELennardJonesLocal(InteractionLocal, interaction_FixedPairListLambdaFENELennardJones):
 
     def __init__(self, system, fpl, potential):
         if pmi.workerIsActive():
-            cxxinit(self, interaction_FixedPairListLambdaFENELennardJones, system, fpl, potential)
+            cxxinit(self, interaction_FixedPairListLambdaFENELennardJones,
+                    system, fpl, potential)
 
     def setPotential(self, potential):
         if pmi.workerIsActive():
@@ -165,15 +173,16 @@ class FixedPairListLambdaFENELennardJonesLocal(InteractionLocal, interaction_Fix
         if pmi.workerIsActive():
             self.cxxclass.setFixedPairList(self, fixedpairlist)
 
-
     def getFixedPairList(self):
         if pmi.workerIsActive():
             return self.cxxclass.getFixedPairList(self)
 
+
 class FixedPairListTypesLambdaFENELennardJonesLocal(InteractionLocal, interaction_FixedPairListTypesLambdaFENELennardJones):
     def __init__(self, system, fpl):
         if pmi.workerIsActive():
-            cxxinit(self, interaction_FixedPairListTypesLambdaFENELennardJones, system, fpl)
+            cxxinit(
+                self, interaction_FixedPairListTypesLambdaFENELennardJones, system, fpl)
 
     def setPotential(self, type1, type2, potential):
         if pmi.workerIsActive():
@@ -195,34 +204,38 @@ class FixedPairListTypesLambdaFENELennardJonesLocal(InteractionLocal, interactio
 if pmi.isController:
     class FENELennardJones(Potential):
         pmiproxydefs = dict(
-            cls = 'espressopp.interaction.FENELennardJonesLocal',
-            pmiproperty = ['K', 'r0', 'rMax', 'sigma', 'epsilon']
-            )
+            cls='espressopp.interaction.FENELennardJonesLocal',
+            pmiproperty=['K', 'r0', 'rMax', 'sigma', 'epsilon']
+        )
 
     class FixedPairListFENELennardJones(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.interaction.FixedPairListFENELennardJonesLocal',
-            pmicall = ['setPotential','getPotential','setFixedPairList', 'getFixedPairList']
-            )
+            cls='espressopp.interaction.FixedPairListFENELennardJonesLocal',
+            pmicall=['setPotential', 'getPotential',
+                     'setFixedPairList', 'getFixedPairList']
+        )
 
     class FixedPairListLambdaFENELennardJones(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls='espressopp.interaction.FixedPairListLambdaFENELennardJonesLocal',
-            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+            pmicall=['setPotential', 'getPotential',
+                     'setFixedPairList', 'getFixedPairList']
         )
 
     class FixedPairListTypesFENELennardJones(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.interaction.FixedPairListTypesFENELennardJonesLocal',
-            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+            cls='espressopp.interaction.FixedPairListTypesFENELennardJonesLocal',
+            pmicall=['setPotential', 'getPotential',
+                     'setFixedPairList', 'getFixedPairList']
         )
 
     class FixedPairListTypesLambdaFENELennardJones(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
-            cls =  'espressopp.interaction.FixedPairListTypesLambdaFENELennardJonesLocal',
-            pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+            cls='espressopp.interaction.FixedPairListTypesLambdaFENELennardJonesLocal',
+            pmicall=['setPotential', 'getPotential',
+                     'setFixedPairList', 'getFixedPairList']
         )
