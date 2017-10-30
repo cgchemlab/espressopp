@@ -200,13 +200,13 @@ class DumpH5MDLocal(io_DumpH5MD):
         self.particle_group = part
 
         if self.static_box:
-            self.box = part.create_box(
+            part.create_box(
                 dimension=3,
                 boundary=['periodic', 'periodic', 'periodic'],
                 store='fixed',
                 data=np.array([ed_i for ed_i in self.system.bc.boxL], dtype=self.float_type))
         else:
-            self.box = part.box(
+            part.create_box(
                 dimension=3,
                 boundary=['periodic', 'periodic', 'periodic'],
                 store='time', time=True,
@@ -375,7 +375,7 @@ class DumpH5MDLocal(io_DumpH5MD):
 
         # Store box values at every time step
         if not self.static_box:
-            self.box.edges.append(
+            self.particle_group.box.edges.append(
                 np.array([edge_i for edge_i in self.system.bc.boxL], dtype=self.float_type),
                 step,
                 time, collective=collective_write)
