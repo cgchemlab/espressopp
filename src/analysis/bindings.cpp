@@ -80,6 +80,7 @@
 #include "ATRPActivatorStats.hpp"
 
 #include "AngleDistribution.hpp"
+#include "BoxSize.hpp"
 
 namespace espressopp {
   namespace analysis {
@@ -148,6 +149,7 @@ namespace espressopp {
       ATRPActivatorStats::registerPython();
 
       AngleDistribution::registerPython();
+      BoxSize::registerPython();
     }
   }
 }

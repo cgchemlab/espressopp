@@ -74,3 +74,4 @@ from espressopp.analysis.Resolution import *
 from espressopp.analysis.MaxAvgMinForce import *
 from espressopp.analysis.ATRPActivatorStats import *
 from espressopp.analysis.AngleDistribution import *
+from espressopp.analysis.BoxSize import *
