@@ -39,7 +39,8 @@ from _espressopp import integrator_TopologyParticleProperties
 
 
 class TopologyParticlePropertiesLocal(integrator_TopologyParticleProperties):
-    def __init__(self, type=None, mass=None, q=None, lambda_adr=None, incr_state=None, state=None):
+    def __init__(self, type=None, mass=None, q=None, lambda_adr=None, incr_state=None, state=None,
+                 velocity=None, force=None):
         if pmi.workerIsActive():
             cxxinit(self, integrator_TopologyParticleProperties)
             if incr_state is not None and state is not None:
@@ -56,6 +57,10 @@ class TopologyParticlePropertiesLocal(integrator_TopologyParticleProperties):
                 self.incr_state = incr_state
             if state is not None:
                 self.state = state
+            if velocity is not None:
+                self.v = velocity
+            if force is not None:
+                self.f = force
 
     def set_min_max_state(self, min_state, max_state):
         if pmi.workerIsActive():

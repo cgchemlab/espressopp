@@ -86,5 +86,5 @@ if pmi.isController :
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.LangevinThermostatLocal',
             pmiproperty = [ 'gamma', 'temperature', 'adress' ],
-            pmicall = ['addExclusions', 'add_valid_type_id', 'remove_valid_type_id', 'add_valid_types']
+            pmicall = ['addExclusions', 'removeExclpid', 'add_valid_type_id', 'remove_valid_type_id', 'add_valid_types']
             )

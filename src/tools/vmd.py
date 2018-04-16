@@ -76,7 +76,7 @@ def drain_socket(sock):
     res = select.select([sock],[],[],0)[0]
   return
 
-def connect(system, molsize=10, pqrfile=False, vmd_path='vmd'):
+def connect(system, molsize=10, pqrfile=False, vmd_path='vmd', pdbfile=True, typenames=None):
   """Connects to the VMD.
 
     :param espressopp.system system: The system object.
@@ -88,10 +88,10 @@ def connect(system, molsize=10, pqrfile=False, vmd_path='vmd'):
     :returns: Socket to the VMD.
 
   """
-  espressopp.tools.psfwrite("vmd.psf", system, molsize=molsize, maxdist=system.bc.boxL[0]/2)
+  espressopp.tools.psfwrite("vmd.psf", system, molsize=molsize, maxdist=system.bc.boxL[0]/2, typenames=typenames)
   if pqrfile==True:
     espressopp.tools.pqrwrite("vmd.pqr", system, molsize=molsize)
-  else:
+  elif pdbfile:
     espressopp.tools.pdbwrite("vmd.pdb", system, molsize=molsize)
   initsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
   hostname = socket.gethostname()
@@ -112,13 +112,14 @@ def connect(system, molsize=10, pqrfile=False, vmd_path='vmd'):
     vmdfile.write("mol load psf vmd.psf pqr vmd.pqr\n")
   else:
     vmdfile.write("mol load psf vmd.psf pdb vmd.pdb\n")
+    #vmdfile.write("mol load pdb vmd.pdb\n")
   vmdfile.write("logfile vmd.log\n")
   vmdfile.write("rotate stop\n")
   vmdfile.write("logfile off\n")
   # vmdfile.write("mol modstyle 0 0 CPK 0.500000 0.500000 8.000000 6.000000\n")
   vmdfile.write("mol modstyle 0 0 VDW 0.4 20\n")
-  vmdfile.write("mol modcolor 0 0 SegName\n")
-  vmdfile.write("color Segname {T000} 3\n")
+  vmdfile.write("mol modcolor 0 0 TypeName\n")
+  #vmdfile.write("color Segname {T000} 3\n")
 
   #vmdfile.write("mol delrep 0 top\n")
   #vmdfile.write("mol representation CPK 0.500000 0.500000 8.000000 6.000000\n")

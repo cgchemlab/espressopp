@@ -49,6 +49,8 @@ void TopologyParticleProperties::registerPython() {
       .add_property("mass", make_getter(&TopologyParticleProperties::mass_), &TopologyParticleProperties::setMass)
       .add_property("state", make_getter(&TopologyParticleProperties::state_), &TopologyParticleProperties::setState)
       .add_property("q", make_getter(&TopologyParticleProperties::q_), &TopologyParticleProperties::setQ)
+      .add_property("v", make_getter(&TopologyParticleProperties::v_), &TopologyParticleProperties::setV)
+      .add_property("f", make_getter(&TopologyParticleProperties::f_), &TopologyParticleProperties::setF)
       .add_property("incr_state", make_getter(&TopologyParticleProperties::incr_state_),
                     &TopologyParticleProperties::setIncrState)
       .add_property("res_id", make_getter(&TopologyParticleProperties::res_id_),
@@ -75,6 +77,17 @@ bool TopologyParticleProperties::updateParticleProperties(Particle *p) {
       p->setResId(res_id_);
     if (change_flag_ & CHANGE_LAMBDA)
       p->setLambda(lambda_);
+    // vector quantities
+    if (change_flag_ & CHANGE_V) {
+      Real3D v = p->velocity();
+      Real3D u = (1/v.abs())*v;
+      p->setV(u*v_);
+    }
+    if (change_flag_ & CHANGE_F) {
+      Real3D f = p->force();
+      Real3D u = (1/f.abs())*f;
+      p->setF(u*f_);
+    }
     return true;
   }
   return false;

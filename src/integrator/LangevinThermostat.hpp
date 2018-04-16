@@ -65,7 +65,9 @@ namespace espressopp {
         void thermalizeAdr(); // same as above, for AdResS
 
         /** Add pid to exclusionlist */
-        void addExclpid(int pid) { exclusions.insert(pid); }
+        void addExclpid(int pid) { has_excl = true; exclusions.insert(pid); }
+
+        void removeExclpid(int pid) { exclusions.erase(pid); has_excl = exclusions.size() > 0; }
 
         /** very nasty: if we recalculate force when leaving/reentering the integrator,
             a(t) and a((t-dt)+dt) are NOT equal in the vv algorithm. The random
@@ -92,6 +94,7 @@ namespace espressopp {
                                        _thermalize, _thermalizeAdr;
         boost::unordered_set<longint> valid_type_ids;
         bool has_types;
+        bool has_excl;
         boost::signals2::connection _initialize_onSetTimeStep;
 
         void frictionThermo(class Particle&);

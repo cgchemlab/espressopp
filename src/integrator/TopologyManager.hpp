@@ -122,6 +122,19 @@ class TopologyParticleProperties {
     lambda_ = l;
     change_flag_ |= CHANGE_LAMBDA;
   }
+
+  real force() { return f_; }
+  void setF(real f) {
+    f_ = f;
+    change_flag_ |= CHANGE_F;
+  }
+
+  real velocity() { return v_; }
+  void setV(real v) {
+    v_ = v;
+    change_flag_ |= CHANGE_V;
+  }
+
   bool updateParticleProperties(Particle *p);
 
   bool isValid(Particle *p);
@@ -136,7 +149,10 @@ class TopologyParticleProperties {
         min_state_ == r.min_state_ &&
         max_state_ == r.max_state_ &&
         incr_state_ == r.incr_state_ &&
-        change_flag_ == r.change_flag_);
+        change_flag_ == r.change_flag_ &&
+        f_ == r.f_ &&
+        v_ == r.v_
+        );
   }
   static void registerPython();
 
@@ -146,6 +162,7 @@ class TopologyParticleProperties {
     output << " ,lambda_adr=" << tpp.lambda_ << " ,incr_state=" << tpp.incr_state_;
     output << " ,change_flag=" << tpp.change_flag_ << " ,min_state=" << tpp.min_state_;
     output << " ,max_state=" << tpp.max_state_ << " ,condition=" << tpp.condition_;
+    output << " ,force=" << tpp.f_ << ", v=" << tpp.v_;
     return output;
   }
 
@@ -157,7 +174,9 @@ class TopologyParticleProperties {
     CHANGE_STATE = 8,  // 3
     CHANGE_RESID = 16,  // 4
     CHANGE_LAMBDA = 32,  // 5
-    INCR_STATE = 64  // 6
+    INCR_STATE = 64,  // 6
+    CHANGE_V = 128, // 7
+    CHANGE_F = 256 // 8
   };
 
   size_t type_id_;
@@ -168,6 +187,8 @@ class TopologyParticleProperties {
   longint res_id_;
   longint incr_state_;
   longint change_flag_;
+  real v_;
+  real f_;
   bool condition_;
   longint min_state_;
   longint max_state_;

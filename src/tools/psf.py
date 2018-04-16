@@ -87,7 +87,7 @@ def psfwrite(filename, system, maxdist=None, molsize=4, typenames=None):
       q      = particle.q
       mass   = particle.mass
       if typenames:
-	  name=typenames[type]
+          name = typenames[type]
       st = "%8d T%5d    UNX  %-4s %-4s  %9.6f%14.4f\n" % (pid+addToPid, mol, name, name, q, mass)
       file.write(st)
       pid    += 1

@@ -48,6 +48,7 @@ namespace espressopp {
       adress = false;
       exclusions.clear();
       has_types = false;
+      has_excl = false;
 
       if (!system->rng) {
         throw std::runtime_error("system has no RNG");
@@ -136,7 +137,7 @@ namespace espressopp {
 
       for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
 
-        if(exclusions.count((*cit).id()) == 0 || (!has_types || valid_type_ids.count(cit->type())))
+        if((!has_excl || exclusions.count(cit->id()) == 0) && (!has_types || valid_type_ids.count(cit->type())))
         {
           frictionThermo(*cit);
         }
@@ -155,7 +156,7 @@ namespace espressopp {
       ParticleList& adrATparticles = system.storage->getAdrATParticles();
       for (std::vector<Particle>::iterator it = adrATparticles.begin();
               it != adrATparticles.end(); it++) {
-        if(exclusions.count((*it).id()) == 0 || (!has_types || valid_type_ids.count(it->type())))
+        if((!has_excl || exclusions.count((*it).id()) == 0) && (!has_types || valid_type_ids.count(it->type())))
         {
           frictionThermo(*it);
         }
@@ -246,6 +247,7 @@ namespace espressopp {
         .def("add_valid_type_id", &LangevinThermostat::setTypeId)
         .def("remove_valid_type_id", &LangevinThermostat::unsetTypeId)
         .def("addExclpid", &LangevinThermostat::addExclpid)
+        .def("removeExclpid", &LangevinThermostat::removeExclpid)
         .add_property("adress", &LangevinThermostat::getAdress, &LangevinThermostat::setAdress)
         .add_property("gamma", &LangevinThermostat::getGamma, &LangevinThermostat::setGamma)
         .add_property("temperature", &LangevinThermostat::getTemperature, &LangevinThermostat::setTemperature)

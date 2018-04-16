@@ -53,6 +53,7 @@ from espressopp.integrator.LBInitPeriodicForce import *
 from espressopp.integrator.LBInitPopUniform import *
 from espressopp.integrator.LBInitPopWave import *
 from espressopp.integrator.ExtForce import *
+from espressopp.integrator.ExtVelocity import *
 from espressopp.integrator.CapForce import *
 from espressopp.integrator.ExtAnalyze import *
 from espressopp.integrator.Settle import *
