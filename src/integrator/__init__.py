@@ -69,3 +69,4 @@ from espressopp.integrator.DynamicResolution import *
 
 from espressopp.integrator.ChangeParticleType import *
 from espressopp.integrator.ATRPActivator import *
+from espressopp.integrator.GeneralReactionScheme import *

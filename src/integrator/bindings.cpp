@@ -67,6 +67,7 @@
 #include "ChangeInRegion.hpp"
 #include "ChangeParticleType.hpp"
 #include "ATRPActivator.hpp"
+#include "GeneralReactionScheme.hpp"
 
 #include "EmptyExtension.hpp"
 
@@ -141,6 +142,8 @@ namespace espressopp {
       ChangeInRegion::registerPython();
       ChangeParticleType::registerPython();
       ATRPActivator::registerPython();
+
+      GeneralReactionScheme::registerPython();
 
       EmptyExtension::registerPython();
     }
