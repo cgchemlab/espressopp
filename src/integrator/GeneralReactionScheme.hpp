@@ -27,6 +27,8 @@
 #include "Real3D.hpp"
 #include "Particle.hpp"
 #include "iterator/CellListIterator.hpp"
+#include "bc/BC.hpp"
+
 
 namespace espressopp {
 namespace integrator {
@@ -44,8 +46,49 @@ class GeneralReactionScheme: public Extension {
   static void registerPython();
 
  private:
+  class ParticleData {
+   public:
+    ParticleData(Particle &p) {
+      id = p.id();
+      type = p.type();
+      position = p.position();
+      state = p.state();
+      res_id = p.res_id();
+    }
+    ParticleData() {
+      id = 0;
+      type = 0;
+      position = Real3D(0.0);
+      state = 0;
+      res_id = 0;
+    }
+    size_t id;
+    longint type;
+    Real3D position;
+    longint state;
+    longint res_id;
+   private:
+    friend class boost::serialization::access;
+    template<class Archive>
+    /**
+     * Serialization to send data through MPI
+     *
+     * @tparam Archive
+     * @param ar
+     * @param version
+     */
+    void serialize(Archive & ar, const unsigned int version) {
+      ar & id;
+      ar & type;
+      ar & position;
+      ar & state;
+      ar & res_id;
+    }
+  };
+
   boost::signals2::connection sig_aftIntV;
   int interval_;
+  shared_ptr<bc::BC> bc_;
 
   void connect();
   void disconnect();

@@ -35,10 +35,12 @@ from espressopp import pmi
 from espressopp.integrator.Extension import *
 from _espressopp import integrator_GeneralReactionScheme
 
+
 class GeneralReactionSchemeLocal(ExtensionLocal, integrator_GeneralReactionScheme):
-    def __init__(self, system):
+    def __init__(self, system, interval):
         if pmi.workerIsActive():
-            cxxinit(self, integrator_GeneralReactionScheme, system)
+            cxxinit(self, integrator_GeneralReactionScheme, system, interval)
+
 
 if pmi.isController :
     class GeneralReactionScheme(Extension):

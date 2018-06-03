@@ -10,28 +10,7 @@ except ImportError:
     from mpi4py import MPI
 
 
-class ESPPTestCase(unittest.TestCase):
-    def setUp(self):
-        self.system, self.integrator = self.create_system()
-        self.vl = espressopp.VerletList(self.system, cutoff=2.5)
-        self.part_prop = ('id', 'type', 'pos', 'res_id', 'state')
-        particle_list = [
-            (1, 1, espressopp.Real3D(2.0, 2.0, 2.0), 1, 1),
-            (2, 2, espressopp.Real3D(2.5, 2.0, 2.0), 2, 1)
-        ]
-        self.system.storage.addParticles(particle_list, *self.part_prop)
-        self.fpl1 = espressopp.FixedPairList(self.system.storage)
-
-        topology_manager = espressopp.integrator.TopologyManager(self.system)
-        topology_manager.observe_tuple(self.fpl1)
-        topology_manager.initialize_topology()
-        self.topology_manager = topology_manager
-        self.integrator.addExtension(topology_manager)
-
-        self.ar = espressopp.integrator.ChemicalReaction(
-            self.system, self.vl, self.system.storage, topology_manager, 1)
-        self.integrator.addExtension(self.ar)
-        super(ESPPTestCase, self).setUp()
+d
 
     def create_system(self):
         box = (10, 10, 10)
@@ -579,7 +558,7 @@ class TestCaseExchangeReaction(ESPPTestCase):
         self.assertItemsEqual(self.ftl232.getAllTriples(), [(5, 6, 7)])
         self.assertItemsEqual(self.ftl123.getAllTriples(), [(4, 5, 6), (6, 7, 8), (10, 11, 12)])
 
-        self.assertEqual(self.dynamic_exclude.size, 32)
+        self.assertEqual(self.dynamic_exclude.size, 36)
 
 
 if __name__ == '__main__':

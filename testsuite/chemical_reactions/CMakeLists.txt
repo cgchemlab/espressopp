@@ -1,4 +1,6 @@
 add_test(chemical_reactions ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/chemical_reactions.py)
 add_test(atrp_activator ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/atrp_activator.py)
+add_test(general_reaction_scheme ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/general_reaction_scheme.py)
 set_tests_properties(chemical_reactions PROPERTIES ENVIRONMENT "${TEST_ENV}")
 set_tests_properties(atrp_activator PROPERTIES ENVIRONMENT "${TEST_ENV}")
+set_tests_properties(general_reaction_scheme PROPERTIES ENVIRONMENT "${TEST_ENV}")
