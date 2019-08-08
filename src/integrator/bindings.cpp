@@ -53,7 +53,6 @@
 #include "LBInitPopUniform.hpp"
 #include "LBInitPopWave.hpp"
 #include "ExtForce.hpp"
-#include "ExtVelocity.hpp"
 #include "CapForce.hpp"
 #include "ExtAnalyze.hpp"
 #include "Settle.hpp"
@@ -106,7 +105,6 @@ namespace espressopp {
       LBInitPopUniform::registerPython();
       LBInitPopWave::registerPython();
       ExtForce::registerPython();
-      ExtVelocity::registerPython();
       CapForce::registerPython();
       ExtAnalyze::registerPython();
       Settle::registerPython();
